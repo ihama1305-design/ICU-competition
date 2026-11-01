@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICU Floor Viewer</title>
+<style>
+  :root {
+    --bg: #e9ecee; --panel: rgba(255,255,255,0.92); --ink: #1d2226; --muted: #5f6870; --line: #d5dade;
+    --accent: #1f7a7a; --shadow: 0 6px 24px rgba(20,30,40,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #1a1e22; --panel: rgba(30,35,40,0.92); --ink: #e8edf1; --muted: #9aa5ae; --line: #374048; --shadow: 0 6px 24px rgba(0,0,0,0.45); }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  #bar { position: fixed; top: 12px; left: 12px; right: 12px; max-width: 760px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #bar h1 { font-size: 14px; margin: 0 6px 0 2px; font-weight: 650; }
+  #bar .status { color: var(--muted); font-size: 12px; width: 100%; margin: 0 2px; }
+  button.v { font: inherit; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+  button.v[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.v:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  label.sw { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; padding: 4px 6px; user-select: none; }
+  #info { position: fixed; left: 12px; bottom: 12px; padding: 10px 14px; max-width: min(420px, calc(100vw - 24px)); display: none; }
+  #info h3 { margin: 0; font-size: 15px; }
+  #info p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+  #help { position: fixed; right: 12px; bottom: 12px; padding: 8px 12px; color: var(--muted); font-size: 12px; max-width: 280px; }
+  #load { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); }
+  @media (max-width: 640px) { #help { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="load">Loading model…</div>
+<div id="bar" class="card">
+  <h1 id="title">ICU floor</h1>
+  <span id="places"></span>
+  <label class="sw"><input type="checkbox" id="ceil"> Ceiling</label>
+  <div class="status" id="status"></div>
+</div>
+<div id="info" class="card"><h3 id="infoName"></h3><p id="infoMeta"></p></div>
+<div id="help" class="card">Drag to orbit, right-drag to pan, scroll to zoom. Click anything to name it.</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const GLB = "__GLB_BASE64__";
+const PLACES = __PLACES_JSON__;
+const META = __META_JSON__;
+window.__viewerErrors = [];
+addEventListener("error", e => window.__viewerErrors.push(String(e.message)));
+
+const LABELS = [
+  [/bed$/, "ICU bed"], [/pendant$/, "Ceiling supply pendant (gas outlets, shelves)"], [/monitor$/, "Patient monitor"],
+  [/pumps$/, "Infusion pumps"], [/ventilator$/, "Ventilator"], [/iv_pole$/, "IV pole"], [/recliner$/, "Patient recliner"],
+  [/visitor_chair$/, "Visitor chair"], [/overbed_table$/, "Overbed table"], [/exam_light$/, "Examination light"],
+  [/^curtains/, "Privacy curtains"], [/^room_feature_walls/, "Feature wall panel, TV and bed rails"],
+  [/^walls/, "Walls (from the record drawing)"], [/^wall_caps/, "Wall section cut"], [/^door_leaves/, "Doors"],
+  [/^door_frames|^door_heads/, "Door frames"], [/^front_glazing/, "Glazed patient-room front (sliding + swing)"],
+  [/^observation_windows/, "Observation window (sill 1.0 m, head 1.4 m)"], [/^facade_glass/, "Curtain wall glazing"],
+  [/^facade_fins/, "External fins"], [/^facade_blinds/, "Roller blinds"], [/^facade_upstand/, "Facade upstand (700 mm)"],
+  [/^facade_mullions|^facade_transom/, "Curtain wall frame"], [/^joinery_ledge/, "Nurse station transaction ledge"],
+  [/^joinery/, "Joinery (counters, desks)"], [/^basin/, "Hand-wash basin"], [/^nurse_ws|^obs_ws/, "Workstation"],
+  [/chair/, "Office chair"], [/^crash_cart/, "Crash cart"], [/^stretcher/, "Stretcher"], [/^handrails/, "Corridor handrail"],
+  [/^bumper/, "Wall protection rail"], [/^skirting/, "Coved skirting"], [/^floor_rooms/, "Patient room floor (sheet vinyl)"],
+  [/^floor_vinyl/, "Corridor floor (sheet vinyl)"], [/^slab/, "Floor slab"], [/^ceiling_panels/, "LED ceiling panels"],
+  [/^ceiling/, "Ceiling"],
+];
+function label(name) {
+  for (const [re, l] of LABELS) if (re.test(name)) return l;
+  return name.replace(/_/g, " ");
+}
+document.getElementById("title").textContent = META.name;
+document.getElementById("status").textContent = `${META.rooms} furnished patient rooms · ${META.status}`;
+
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#e9ecee");
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.6;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f94, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-30, 40, 20); scene.add(sun);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 600);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
+const ceilingParts = [];
+const pickables = [];
+const bytes = Uint8Array.from(atob(GLB), c => c.charCodeAt(0));
+new GLTFLoader().parse(bytes.buffer, "", gltf => {
+  const root = gltf.scene;
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    pickables.push(o);
+    if (/^ceiling|exam_light/.test(o.name) || /^ceiling|exam_light/.test(o.parent?.name || "")) ceilingParts.push(o);
+  });
+  scene.add(root);
+  setCeiling(false);
+  go("Whole floor", false);
+  document.getElementById("load").remove();
+  window.__viewerReady = true;
+}, err => { window.__viewerErrors.push(String(err)); document.getElementById("load").textContent = "Could not load the model."; });
+
+function setCeiling(on) { ceilingParts.forEach(o => o.visible = on); document.getElementById("ceil").checked = on; }
+document.getElementById("ceil").addEventListener("change", e => setCeiling(e.target.checked));
+
+const placesEl = document.getElementById("places");
+const btns = {};
+for (const name of Object.keys(PLACES)) {
+  const b = document.createElement("button"); b.className = "v"; b.textContent = name; b.setAttribute("aria-pressed", "false");
+  b.addEventListener("click", () => go(name, true)); placesEl.appendChild(b); btns[name] = b;
+}
+let anim = null;
+function go(name, smooth) {
+  const p = PLACES[name];
+  Object.entries(btns).forEach(([k, b]) => b.setAttribute("aria-pressed", String(k === name)));
+  const inside = name === "Patient room" || name === "Nurse station";
+  setCeiling(inside);
+  camera.fov = inside ? 70 : 45; camera.updateProjectionMatrix();
+  const e = new THREE.Vector3(...p.eye), l = new THREE.Vector3(...p.look);
+  if (!smooth) { camera.position.copy(e); controls.target.copy(l); controls.update(); return; }
+  const e0 = camera.position.clone(), l0 = controls.target.clone(), t0 = performance.now();
+  anim = t => { const k = Math.min(1, (t - t0) / 700), s = k * k * (3 - 2 * k);
+    camera.position.lerpVectors(e0, e, s); controls.target.lerpVectors(l0, l, s); if (k >= 1) anim = null; };
+}
+window.__go = go;
+
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+canvas.addEventListener("pointerdown", e => down = [e.clientX, e.clientY]);
+canvas.addEventListener("pointerup", e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+  pick(e.clientX, e.clientY);
+});
+function pick(x, y) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(pickables.filter(o => o.visible), false).find(h => !/glass/i.test(h.object.material?.name || ""));
+  const info = document.getElementById("info");
+  if (!hit) { info.style.display = "none"; return null; }
+  let o = hit.object; while (o.parent && o.parent.type !== "Scene" && !/^room\d+_|^[a-z_]+$/.test(o.name)) o = o.parent;
+  const name = o.name || hit.object.name;
+  document.getElementById("infoName").textContent = label(name.replace(/^room\d+_/, "").replace(/\.\d+$/, "").replace(/_\d+$/, ""));
+  const m = name.match(/^room(\d+)_/);
+  document.getElementById("infoMeta").textContent = (m ? `Patient room ${m[1]} · ` : "") + `object: ${name}`;
+  info.style.display = "block";
+  return name;
+}
+window.__pick = pick;
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize); resize();
+renderer.setAnimationLoop(t => { if (anim) anim(t); controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
