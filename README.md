@@ -13,7 +13,7 @@ furnished with a typical ICU kit, and the scene is rendered with Blender Cycles.
 | `renders/*.png` | Cycles renders: whole-floor cutaway, close cutaway, patient room, bedside, view through the observation window, corridor and nurse station, top plan |
 | `output/icu.blend` | Editable Blender scene with collections Shell, Ceiling, Facade, Doors, Glazing, Joinery, Equipment, Lights, Cameras |
 | `output/icu.glb` | The same model for any 3D tool (Y-up, metres, flat colours) |
-| `output/viewer/index.html` | Opens in a browser. Orbit, First person (walk with W A S D; walls stop you) and Top views, a ceiling switch, a list of rooms and objects with confidence, click-to-name, and a plan minimap you can click to jump |
+| `output/viewer/index.html` | Opens in a browser. Drag **Place person** onto any open floor spot to walk from that person's eyes (W A S D, Shift to run, V for a view from behind; walls stop you). Also Orbit and Top views, a ceiling switch, a list of rooms and objects with confidence, click-to-name, and a plan minimap you can click to jump |
 | `REPORT.md` | How it was built, what is accurate and what is assumed |
 
 Only `renders/` is committed. `output/` (the .blend, .glb and viewer, about 30 MB) is generated locally by `scripts/run_all.sh`.
