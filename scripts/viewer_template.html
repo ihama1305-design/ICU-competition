@@ -1,49 +1,122 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ICU Floor Viewer</title>
+<title>SSMC ICU Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
+  /* Layout: full-bleed 3D canvas; floating toolbar (top left), object list (right), minimap (bottom right),
+     info card (bottom left). Clinical teal accent on a cool grey, confidence in traffic-light dots. */
   :root {
-    --bg: #e9ecee; --panel: rgba(255,255,255,0.92); --ink: #1d2226; --muted: #5f6870; --line: #d5dade;
-    --accent: #1f7a7a; --shadow: 0 6px 24px rgba(20,30,40,0.12);
+    --bg: #e6eaec; --panel: rgba(250, 252, 252, 0.93); --ink: #1b2227; --muted: #5a666e; --line: #d2d9dd;
+    --accent: #17766f; --accent-ink: #ffffff; --hover: rgba(23, 118, 111, 0.10); --current: rgba(23, 118, 111, 0.18);
+    --hi: #2f9a52; --med: #d0921a; --low: #cf4a3e; --tip-bg: rgba(18, 24, 28, 0.88); --tip-ink: #ffffff;
+    --shadow: 0 8px 28px rgba(20, 34, 44, 0.14);
+    --ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --g: 12px;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #1a1e22; --panel: rgba(30,35,40,0.92); --ink: #e8edf1; --muted: #9aa5ae; --line: #374048; --shadow: 0 6px 24px rgba(0,0,0,0.45); }
+    :root:not([data-theme="light"]) {
+      --bg: #171c20; --panel: rgba(28, 34, 39, 0.93); --ink: #e7ecef; --muted: #9aa7b0; --line: #34404a;
+      --accent: #3fb3a8; --accent-ink: #0d1a1c; --hover: rgba(63, 179, 168, 0.12); --current: rgba(63, 179, 168, 0.22);
+      --tip-bg: rgba(240, 245, 247, 0.92); --tip-ink: #10171b; --shadow: 0 8px 28px rgba(0, 0, 0, 0.45); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171c20; --panel: rgba(28, 34, 39, 0.93); --ink: #e7ecef; --muted: #9aa7b0; --line: #34404a;
+    --accent: #3fb3a8; --accent-ink: #0d1a1c; --hover: rgba(63, 179, 168, 0.12); --current: rgba(63, 179, 168, 0.22);
+    --tip-bg: rgba(240, 245, 247, 0.92); --tip-ink: #10171b; --shadow: 0 8px 28px rgba(0, 0, 0, 0.45); color-scheme: dark;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
-  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.4 var(--ui); }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-  #bar { position: fixed; top: 12px; left: 12px; right: 12px; max-width: 760px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  #bar h1 { font-size: 14px; margin: 0 6px 0 2px; font-weight: 650; }
+  #bar { position: fixed; top: calc(var(--g) + env(safe-area-inset-top, 0px)); left: calc(var(--g) + env(safe-area-inset-left, 0px));
+    max-width: calc(100vw - 2 * var(--g) - 340px); padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #bar h1 { font-size: 14px; margin: 0 6px 0 2px; font-weight: 600; white-space: nowrap; text-wrap: balance; }
   #bar .status { color: var(--muted); font-size: 12px; width: 100%; margin: 0 2px; }
+  #bar .help { color: var(--muted); font-size: 12px; width: 100%; margin: 0 2px; }
+  kbd { font: 11px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
   button.v { font: inherit; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
-  button.v[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.v:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.v:hover { background: var(--hover); }
+  button.v[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button:focus-visible, .row:focus-visible, #c:focus-visible, #mini:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   label.sw { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; padding: 4px 6px; user-select: none; }
-  #info { position: fixed; left: 12px; bottom: 12px; padding: 10px 14px; max-width: min(420px, calc(100vw - 24px)); display: none; }
-  #info h3 { margin: 0; font-size: 15px; }
-  #info p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
-  #help { position: fixed; right: 12px; bottom: 12px; padding: 8px 12px; color: var(--muted); font-size: 12px; max-width: 280px; }
+  #side { position: fixed; top: calc(var(--g) + env(safe-area-inset-top, 0px)); right: calc(var(--g) + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--g) + 236px + env(safe-area-inset-bottom, 0px)); width: 318px; display: flex; flex-direction: column; overflow: hidden; }
+  #side header { padding: 12px 14px 8px; border-bottom: 1px solid var(--line); }
+  #side header h2 { font-size: 13px; margin: 0 0 6px; font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 12px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+  .dot.high { background: var(--hi); } .dot.med { background: var(--med); } .dot.low { background: var(--low); }
+  #list { overflow-y: auto; padding: 6px 6px 12px; min-height: 0; }
+  .grp { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 10px 8px 4px; }
+  .row { display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; font: inherit; color: inherit;
+    background: transparent; border: 0; border-radius: 8px; padding: 6px 8px; cursor: pointer; }
+  .row:hover { background: var(--hover); }
+  .row[aria-current="true"] { background: var(--current); }
+  .row .tx { min-width: 0; display: flex; flex-direction: column; }
+  .row .lb { font-size: 13px; }
+  .row .id { font: 11px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #mini { position: fixed; right: calc(var(--g) + env(safe-area-inset-right, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px));
+    width: 220px; height: 220px; padding: 0; cursor: crosshair; overflow: hidden; }
+  #mini canvas { width: 100%; height: 100%; display: block; border-radius: 11px; }
+  #mini .cap { position: absolute; left: 8px; top: 6px; font-size: 11px; color: var(--muted); pointer-events: none; }
+  #info { position: fixed; left: calc(var(--g) + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px));
+    padding: 12px 14px; width: min(440px, calc(100vw - 2 * var(--g) - 250px)); }
+  #info h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  #info .meta { color: var(--muted); font: 12px var(--mono); margin-bottom: 6px; }
+  #info p { margin: 0; font-size: 13px; max-width: 65ch; }
+  #tip { position: fixed; pointer-events: none; padding: 4px 8px; border-radius: 6px; background: var(--tip-bg); color: var(--tip-ink);
+    font-size: 12px; white-space: nowrap; transform: translate(12px, 12px); z-index: 5; }
+  #pad { position: fixed; left: calc(var(--g) + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + 8px + env(safe-area-inset-bottom, 0px));
+    display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); gap: 6px; }
+  #pad button { font: 18px var(--ui); border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); touch-action: none; }
+  #pad .up { grid-column: 2; grid-row: 1; } #pad .lt { grid-column: 1; grid-row: 2; } #pad .dn { grid-column: 2; grid-row: 2; } #pad .rt { grid-column: 3; grid-row: 2; }
   #load { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); }
-  @media (max-width: 640px) { #help { display: none; } }
+  #toggleSide { display: none; }
+  @media (max-width: 820px) {
+    #bar { max-width: calc(100vw - 2 * var(--g)); right: calc(var(--g) + env(safe-area-inset-right, 0px)); }
+    #bar .help { display: none; }
+    #side { top: auto; left: var(--g); right: var(--g); width: auto; height: 46vh; bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px));
+      transform: translateY(calc(100% + 24px)); transition: transform .2s ease; z-index: 4; }
+    #side.open { transform: none; }
+    #toggleSide { display: inline-block; }
+    #mini { width: 132px; height: 132px; top: calc(var(--g) + var(--bar-h, 150px) + 8px + env(safe-area-inset-top, 0px)); bottom: auto; }
+    #info { width: calc(100vw - 2 * var(--g)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px)); }
+    body.walking #info { bottom: calc(var(--g) + 130px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @media (prefers-reduced-motion: reduce) { #side { transition: none; } }
 </style>
-</head>
-<body>
-<canvas id="c"></canvas>
-<div id="load">Loading model…</div>
-<div id="bar" class="card">
-  <h1 id="title">ICU floor</h1>
-  <span id="places"></span>
+
+<canvas id="c" tabindex="0" aria-label="3D model of the SSMC 4th-floor ICU"></canvas>
+<div id="load">Loading the ICU model…</div>
+<div id="bar" class="card" role="toolbar" aria-label="View controls">
+  <h1 id="title">SSMC ICU, 4th floor</h1>
+  <button class="v" data-view="orbit" aria-pressed="true">Orbit</button>
+  <button class="v" data-view="first" aria-pressed="false">First person</button>
+  <button class="v" data-view="top" aria-pressed="false">Top</button>
   <label class="sw"><input type="checkbox" id="ceil"> Ceiling</label>
+  <button class="v" id="toggleSide" aria-controls="side" aria-expanded="false">Objects</button>
   <div class="status" id="status"></div>
+  <div class="help" id="help"></div>
 </div>
-<div id="info" class="card"><h3 id="infoName"></h3><p id="infoMeta"></p></div>
-<div id="help" class="card">Drag to orbit, right-drag to pan, scroll to zoom. Click anything to name it.</div>
+<aside id="side" class="card" aria-label="Objects">
+  <header>
+    <h2>Rooms and objects</h2>
+    <div class="legend"><span><span class="dot high"></span> high</span><span><span class="dot med"></span> medium</span><span><span class="dot low"></span> low confidence</span></div>
+  </header>
+  <div id="list"></div>
+</aside>
+<div id="mini" class="card" tabindex="0" role="img" aria-label="Floor plan minimap. Click a spot to go there."><canvas id="miniC" width="440" height="440"></canvas><span class="cap">Plan · click to go there</span></div>
+<div id="info" class="card" aria-live="polite" hidden><h3 id="iTitle"></h3><div class="meta" id="iMeta"></div><p id="iNotes"></p></div>
+<div id="tip" hidden></div>
+<div id="pad" hidden aria-label="Walk controls">
+  <button class="up" data-k="f" aria-label="Walk forward">▲</button><button class="lt" data-k="tl" aria-label="Turn left">◀</button>
+  <button class="dn" data-k="b" aria-label="Walk back">▼</button><button class="rt" data-k="tr" aria-label="Turn right">▶</button>
+</div>
+
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -56,122 +129,348 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const GLB = "__GLB_BASE64__";
-const PLACES = __PLACES_JSON__;
-const META = __META_JSON__;
+const GLB_B64 = "__GLB_BASE64__";
+const OBJECTS = __OBJECTS_JSON__;
+const VIEW = __VIEW_JSON__;
+const MINIMAP = "__MINIMAP_B64__";
 window.__viewerErrors = [];
 addEventListener("error", e => window.__viewerErrors.push(String(e.message)));
+addEventListener("unhandledrejection", e => window.__viewerErrors.push(String(e.reason)));
 
-const LABELS = [
-  [/bed$/, "ICU bed"], [/pendant$/, "Ceiling supply pendant (gas outlets, shelves)"], [/monitor$/, "Patient monitor"],
-  [/pumps$/, "Infusion pumps"], [/ventilator$/, "Ventilator"], [/iv_pole$/, "IV pole"], [/recliner$/, "Patient recliner"],
-  [/visitor_chair$/, "Visitor chair"], [/overbed_table$/, "Overbed table"], [/exam_light$/, "Examination light"],
-  [/^curtains/, "Privacy curtains"], [/^room_feature_walls/, "Feature wall panel, TV and bed rails"],
-  [/^walls/, "Walls (from the record drawing)"], [/^wall_caps/, "Wall section cut"], [/^door_leaves/, "Doors"],
-  [/^door_frames|^door_heads/, "Door frames"], [/^front_glazing/, "Glazed patient-room front (sliding + swing)"],
-  [/^observation_windows/, "Observation window (sill 1.0 m, head 1.4 m)"], [/^facade_glass/, "Curtain wall glazing"],
-  [/^facade_fins/, "External fins"], [/^facade_blinds/, "Roller blinds"], [/^facade_upstand/, "Facade upstand (700 mm)"],
-  [/^facade_mullions|^facade_transom/, "Curtain wall frame"], [/^joinery_ledge/, "Nurse station transaction ledge"],
-  [/^joinery/, "Joinery (counters, desks)"], [/^basin/, "Hand-wash basin"], [/^nurse_ws|^obs_ws/, "Workstation"],
-  [/chair/, "Office chair"], [/^crash_cart/, "Crash cart"], [/^stretcher/, "Stretcher"], [/^handrails/, "Corridor handrail"],
-  [/^bumper/, "Wall protection rail"], [/^skirting/, "Coved skirting"], [/^floor_rooms/, "Patient room floor (sheet vinyl)"],
-  [/^floor_vinyl/, "Corridor floor (sheet vinyl)"], [/^slab/, "Floor slab"], [/^ceiling_panels/, "LED ceiling panels"],
-  [/^ceiling/, "Ceiling"],
-];
-function label(name) {
-  for (const [re, l] of LABELS) if (re.test(name)) return l;
-  return name.replace(/_/g, " ");
-}
-document.getElementById("title").textContent = META.name;
-document.getElementById("status").textContent = `${META.rooms} furnished patient rooms · ${META.status}`;
+const meta = Object.fromEntries(OBJECTS.map(o => [o.id, o]));
+const rules = OBJECTS.map(o => [new RegExp(o.match), o.id]);
+const objIdFor = name => { for (const [re, id] of rules) if (re.test(name)) return id; return null; };
+document.getElementById("status").textContent = VIEW.status;
+
+// world (x east, y north, z up) <-> three (x, y up, -z north)
+const W2T = (x, y, z = 0) => new THREE.Vector3(x, z, -y);
 
 const canvas = document.getElementById("c");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#e9ecee");
+const css = () => getComputedStyle(document.documentElement);
+const setBg = () => { scene.background = new THREE.Color(css().getPropertyValue("--bg").trim() || "#e6eaec"); };
+setBg();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", setBg);
+new MutationObserver(setBg).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.6;
-scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f94, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-30, 40, 20); scene.add(sun);
-const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 600);
+scene.environmentIntensity = 0.55;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9096, 1.0));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.set(-30, 40, 10);
+scene.add(sun);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 800);
+camera.rotation.order = "YXZ";
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.495;
 
-const ceilingParts = [];
-const pickables = [];
-const bytes = Uint8Array.from(atob(GLB), c => c.charCodeAt(0));
-new GLTFLoader().parse(bytes.buffer, "", gltf => {
+const meshes = [], groups = {}, colliders = [], ceilingParts = [];
+let hovered = null, selected = null, mode = "orbit";
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  document.documentElement.style.setProperty("--bar-h", document.getElementById("bar").offsetHeight + "px");
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+
+const collideRe = new RegExp(VIEW.collide);
+const bin = Uint8Array.from(atob(GLB_B64), c => c.charCodeAt(0));
+new GLTFLoader().parse(bin.buffer, "", gltf => {
   const root = gltf.scene;
-  root.traverse(o => {
-    if (!o.isMesh) return;
-    pickables.push(o);
-    if (/^ceiling|exam_light/.test(o.name) || /^ceiling|exam_light/.test(o.parent?.name || "")) ceilingParts.push(o);
-  });
   scene.add(root);
-  setCeiling(false);
-  go("Whole floor", false);
+  root.updateMatrixWorld(true);
+  for (const top of root.children) {
+    const id = objIdFor(top.name);
+    top.traverse(n => {
+      if (!n.isMesh) return;
+      n.userData.objId = id;
+      n.userData.top = top.name;
+      n.material = n.material.clone();
+      n.userData.baseEmissive = n.material.emissive ? n.material.emissive.clone() : null;
+      n.userData.glass = (n.material.transmission || 0) > 0 || n.material.opacity < 0.99;
+      meshes.push(n);
+      if (id) (groups[id] ||= []).push(n);
+      if (id === "ceiling") ceilingParts.push(n);
+      if (collideRe.test(top.name)) colliders.push(n);
+    });
+  }
+  buildList();
+  setView("orbit");
   document.getElementById("load").remove();
   window.__viewerReady = true;
-}, err => { window.__viewerErrors.push(String(err)); document.getElementById("load").textContent = "Could not load the model."; });
+}, err => {
+  document.getElementById("load").textContent = "The model could not be loaded: " + err;
+  window.__viewerErrors.push(String(err));
+});
 
-function setCeiling(on) { ceilingParts.forEach(o => o.visible = on); document.getElementById("ceil").checked = on; }
+function setCeiling(on) {
+  document.getElementById("ceil").checked = on;
+  for (const n of ceilingParts) n.visible = on;
+}
 document.getElementById("ceil").addEventListener("change", e => setCeiling(e.target.checked));
 
-const placesEl = document.getElementById("places");
-const btns = {};
-for (const name of Object.keys(PLACES)) {
-  const b = document.createElement("button"); b.className = "v"; b.textContent = name; b.setAttribute("aria-pressed", "false");
-  b.addEventListener("click", () => go(name, true)); placesEl.appendChild(b); btns[name] = b;
+// ---------------------------------------------------------------- views
+const HELP = {
+  orbit: "Drag to orbit · right-drag or two fingers to pan · scroll or pinch to zoom · click anything to name it",
+  first: "<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · drag or <kbd>←</kbd><kbd>→</kbd> to look · doors and glass fronts let you through, walls don't",
+  top: "Drag to pan · scroll or pinch to zoom · click anything to name it",
+};
+let yaw = 0, pitch = 0;
+const walkPos = W2T(...VIEW.first.eye);
+function lookAtYawPitch(from, to) {
+  const d = to.clone().sub(from);
+  yaw = Math.atan2(-d.x, -d.z);
+  pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
 }
-let anim = null;
-function go(name, smooth) {
-  const p = PLACES[name];
-  Object.entries(btns).forEach(([k, b]) => b.setAttribute("aria-pressed", String(k === name)));
-  const inside = name === "Patient room" || name === "Nurse station";
-  setCeiling(inside);
-  camera.fov = inside ? 70 : 45; camera.updateProjectionMatrix();
-  const e = new THREE.Vector3(...p.eye), l = new THREE.Vector3(...p.look);
-  if (!smooth) { camera.position.copy(e); controls.target.copy(l); controls.update(); return; }
-  const e0 = camera.position.clone(), l0 = controls.target.clone(), t0 = performance.now();
-  anim = t => { const k = Math.min(1, (t - t0) / 700), s = k * k * (3 - 2 * k);
-    camera.position.lerpVectors(e0, e, s); controls.target.lerpVectors(l0, l, s); if (k >= 1) anim = null; };
-}
-window.__go = go;
+lookAtYawPitch(W2T(...VIEW.first.eye), W2T(...VIEW.first.look));
+const walkStart = { pos: walkPos.clone(), yaw, pitch };
 
-const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-let down = null;
-canvas.addEventListener("pointerdown", e => down = [e.clientX, e.clientY]);
-canvas.addEventListener("pointerup", e => {
-  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
-  pick(e.clientX, e.clientY);
+function setView(v) {
+  mode = v;
+  document.body.classList.toggle("walking", v === "first");
+  document.querySelectorAll("button[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+  document.getElementById("help").innerHTML = HELP[v];
+  document.getElementById("pad").hidden = !(v === "first" && matchMedia("(pointer: coarse)").matches);
+  controls.enabled = v !== "first";
+  camera.up.set(0, 1, 0);
+  if (v === "first") {
+    camera.fov = 68;
+    camera.position.copy(walkPos);
+    camera.rotation.set(pitch, yaw, 0);
+    setCeiling(true);
+    canvas.focus({ preventScroll: true });
+  } else if (v === "top") {
+    camera.fov = 40;
+    const [cx, cy] = VIEW.top.center, s = VIEW.top.size;
+    const d = s / (2 * Math.tan(THREE.MathUtils.degToRad(20))) * 1.05;
+    camera.position.copy(W2T(cx, cy - 0.001, d));
+    controls.target.copy(W2T(cx, cy, 0));
+    setCeiling(false);
+  } else {
+    camera.fov = 45;
+    camera.position.copy(W2T(...VIEW.orbit.eye));
+    controls.target.copy(W2T(...VIEW.orbit.look));
+    setCeiling(false);
+  }
+  camera.updateProjectionMatrix();
+  if (v !== "first") controls.update();
+  resize();
+}
+document.querySelectorAll("button[data-view]").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+window.__view = v => { setView(v); return mode; };
+
+// ---------------------------------------------------------------- walking
+const keys = new Set();
+const pad = { f: 0, b: 0, tl: 0, tr: 0 };
+addEventListener("keydown", e => {
+  if (mode !== "first" || e.target.closest("input, button, [role=toolbar] *")) return;
+  keys.add(e.code);
+  if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
 });
+addEventListener("keyup", e => keys.delete(e.code));
+addEventListener("blur", () => keys.clear());
+document.querySelectorAll("#pad button").forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener("pointerdown", e => { pad[k] = 1; b.setPointerCapture(e.pointerId); e.preventDefault(); });
+  for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) b.addEventListener(ev, () => { pad[k] = 0; });
+});
+const ray = new THREE.Raycaster();
+function blocked(from, dir, dist) {
+  for (const h of [0.3, 1.0]) {
+    ray.set(new THREE.Vector3(from.x, h, from.z), dir);
+    ray.far = dist + VIEW.radius;
+    if (ray.intersectObjects(colliders, false).length) return true;
+  }
+  return false;
+}
+function tryMove(m) {
+  const len = m.length();
+  if (len < 1e-6 || blocked(camera.position, m.clone().normalize(), len)) return false;
+  camera.position.add(m);
+  return true;
+}
+function insideWall(p) {
+  ray.set(new THREE.Vector3(p.x, VIEW.ceiling + 1, p.z), new THREE.Vector3(0, -1, 0));
+  ray.far = VIEW.ceiling + 1.05;
+  return ray.intersectObjects(colliders, false).some(h => h.point.y > 0.2);
+}
+function stepWalk(dt) {
+  const k = c => keys.has(c);
+  const turn = (k("ArrowLeft") || pad.tl ? 1 : 0) - (k("ArrowRight") || pad.tr ? 1 : 0);
+  yaw += turn * 1.6 * dt;
+  const f = (k("KeyW") || k("ArrowUp") || pad.f ? 1 : 0) - (k("KeyS") || k("ArrowDown") || pad.b ? 1 : 0);
+  const s = (k("KeyD") ? 1 : 0) - (k("KeyA") ? 1 : 0);
+  if (f || s) {
+    const speed = (k("ShiftLeft") || k("ShiftRight") ? 3.2 : 1.4) * dt;
+    const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    const m = fwd.multiplyScalar(f).add(right.multiplyScalar(s)).normalize().multiplyScalar(speed);
+    if (!tryMove(m)) { tryMove(new THREE.Vector3(m.x, 0, 0)) || tryMove(new THREE.Vector3(0, 0, m.z)); }
+  }
+  camera.position.y = VIEW.eye;
+  camera.rotation.set(pitch, yaw, 0);
+  walkPos.copy(camera.position);
+}
+
+// ---------------------------------------------------------------- highlight, select, list
+function paint() {
+  for (const m of meshes) if (m.userData.baseEmissive) m.material.emissive.copy(m.userData.baseEmissive);
+  const tint = (id, c) => (groups[id] || []).forEach(m => m.userData.baseEmissive && m.material.emissive.set(c));
+  if (hovered && hovered !== selected) tint(hovered, 0x0f3d3a);
+  if (selected) tint(selected, 0x17766f);
+}
+const label = id => (meta[id] ? meta[id].label : id);
+function select(id, frame) {
+  selected = id;
+  paint();
+  document.querySelectorAll(".row").forEach(r => r.setAttribute("aria-current", String(r.dataset.id === id)));
+  const card = document.getElementById("info");
+  if (!id) { card.hidden = true; return; }
+  const o = meta[id] || { id, label: id, group: "", confidence: "", notes: "" };
+  card.hidden = false;
+  document.getElementById("iTitle").textContent = o.label;
+  document.getElementById("iMeta").textContent = `${o.group} · ${o.confidence} confidence`;
+  document.getElementById("iNotes").textContent = o.notes || "";
+  const row = document.querySelector(`.row[data-id="${CSS.escape(id)}"]`);
+  if (row) row.scrollIntoView({ block: "nearest" });
+  if (!frame) return;
+  if (o.entry && mode === "first") {
+    camera.position.copy(W2T(...o.entry.eye));
+    lookAtYawPitch(W2T(...o.entry.eye), W2T(...o.entry.look));
+    walkPos.copy(camera.position);
+    return;
+  }
+  if (mode === "first") return;
+  const box = new THREE.Box3();
+  (groups[id] || []).forEach(m => box.expandByObject(m));
+  if (box.isEmpty()) return;
+  const c = box.getCenter(new THREE.Vector3()), r = Math.max(4, box.getSize(new THREE.Vector3()).length() * 0.7);
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  controls.target.copy(c);
+  camera.position.copy(c.clone().add(dir.multiplyScalar(r)));
+  controls.update();
+}
+window.__select = id => { select(id, true); return document.getElementById("iTitle").textContent; };
+
+function buildList() {
+  const list = document.getElementById("list");
+  const order = [...new Set(OBJECTS.map(o => o.group))];
+  for (const grp of order) {
+    const items = OBJECTS.filter(o => o.group === grp && groups[o.id]);
+    if (!items.length) continue;
+    const h = document.createElement("div"); h.className = "grp"; h.textContent = grp; list.appendChild(h);
+    for (const o of items) {
+      const b = document.createElement("button");
+      b.className = "row"; b.dataset.id = o.id;
+      b.innerHTML = `<span class="dot ${o.confidence}" title="${o.confidence} confidence"></span><span class="tx"><span class="lb"></span><span class="id"></span></span>`;
+      b.querySelector(".lb").textContent = o.label;
+      b.querySelector(".id").textContent = o.sub || "";
+      b.addEventListener("click", () => { select(o.id, true); if (innerWidth <= 820) toggleSide(false); });
+      b.addEventListener("mouseenter", () => { hovered = o.id; paint(); });
+      b.addEventListener("mouseleave", () => { hovered = null; paint(); });
+      list.appendChild(b);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- picking + pointer
+const ndc = new THREE.Vector2();
 function pick(x, y) {
   const r = canvas.getBoundingClientRect();
   ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(pickables.filter(o => o.visible), false).find(h => !/glass/i.test(h.object.material?.name || ""));
-  const info = document.getElementById("info");
-  if (!hit) { info.style.display = "none"; return null; }
-  let o = hit.object; while (o.parent && o.parent.type !== "Scene" && !/^room\d+_|^[a-z_]+$/.test(o.name)) o = o.parent;
-  const name = o.name || hit.object.name;
-  document.getElementById("infoName").textContent = label(name.replace(/^room\d+_/, "").replace(/\.\d+$/, "").replace(/_\d+$/, ""));
-  const m = name.match(/^room(\d+)_/);
-  document.getElementById("infoMeta").textContent = (m ? `Patient room ${m[1]} · ` : "") + `object: ${name}`;
-  info.style.display = "block";
-  return name;
+  ray.far = Infinity;
+  const hits = ray.intersectObjects(meshes, false).filter(h => {
+    let p = h.object; while (p) { if (!p.visible) return false; p = p.parent; } return h.object.userData.objId;
+  });
+  const solid = hits.find(h => !h.object.userData.glass);
+  const h = solid || hits[0];
+  return h ? h.object.userData.objId : null;
 }
-window.__pick = pick;
+window.__pick = (x, y) => { const id = pick(x, y); select(id, false); return id; };
+const tip = document.getElementById("tip");
+let down = null, last = null;
+canvas.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; last = [e.clientX, e.clientY]; if (mode === "first") canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", e => {
+  if (mode === "first" && down && last) {
+    yaw -= (e.clientX - last[0]) * 0.0045;
+    pitch = Math.max(-1.3, Math.min(1.3, pitch - (e.clientY - last[1]) * 0.0045));
+    last = [e.clientX, e.clientY];
+    tip.hidden = true;
+    return;
+  }
+  if (e.pointerType !== "mouse") return;
+  const id = pick(e.clientX, e.clientY);
+  if (id !== hovered) { hovered = id; paint(); }
+  if (id) { tip.textContent = label(id); tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px"; tip.hidden = false; }
+  else tip.hidden = true;
+});
+canvas.addEventListener("pointerleave", () => { hovered = null; paint(); tip.hidden = true; });
+canvas.addEventListener("pointerup", e => {
+  const wasClick = down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= 5;
+  down = last = null;
+  if (wasClick) select(pick(e.clientX, e.clientY), false);
+});
 
-function resize() {
-  const w = innerWidth, h = innerHeight;
-  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+const side = document.getElementById("side"), tog = document.getElementById("toggleSide");
+function toggleSide(open) { side.classList.toggle("open", open); tog.setAttribute("aria-expanded", String(open)); }
+tog.addEventListener("click", () => toggleSide(!side.classList.contains("open")));
+
+// ---------------------------------------------------------------- minimap
+const mini = document.getElementById("miniC"), mctx = mini.getContext("2d");
+const plan = new Image();
+plan.src = "data:image/jpeg;base64," + MINIMAP;
+const M = VIEW.minimap;  // orthographic plan: centre (cx, cy), side S metres
+const toMini = (x, y) => [((x - M.cx) / M.S + 0.5) * mini.width, (0.5 - (y - M.cy) / M.S) * mini.height];
+const fromMini = (u, v) => [M.cx + (u / mini.width - 0.5) * M.S, M.cy + (0.5 - v / mini.height) * M.S];
+function drawMini() {
+  mctx.clearRect(0, 0, mini.width, mini.height);
+  if (plan.complete) mctx.drawImage(plan, 0, 0, mini.width, mini.height);
+  const p = mode === "first" ? camera.position : controls.target;
+  const [u, v] = toMini(p.x, -p.z);
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const a = Math.atan2(-dir.z, dir.x);
+  const accent = css().getPropertyValue("--accent").trim() || "#17766f";
+  mctx.fillStyle = accent; mctx.globalAlpha = 0.25;
+  mctx.beginPath(); mctx.moveTo(u, v); mctx.arc(u, v, 34, -a - 0.55, -a + 0.55); mctx.closePath(); mctx.fill();
+  mctx.globalAlpha = 1; mctx.beginPath(); mctx.arc(u, v, 6, 0, Math.PI * 2); mctx.fill();
+  mctx.strokeStyle = "#ffffff"; mctx.lineWidth = 2; mctx.stroke();
 }
-addEventListener("resize", resize); resize();
-renderer.setAnimationLoop(t => { if (anim) anim(t); controls.update(); renderer.render(scene, camera); });
+function miniGo(clientX, clientY) {
+  const r = mini.getBoundingClientRect();
+  const [x, y] = fromMini((clientX - r.left) / r.width * mini.width, (clientY - r.top) / r.height * mini.height);
+  const p = W2T(x, y, VIEW.eye);
+  if (mode === "first") {
+    if (insideWall(p)) return false;
+    camera.position.copy(p); walkPos.copy(p);
+  } else {
+    const off = camera.position.clone().sub(controls.target);
+    controls.target.copy(W2T(x, y, 0)); camera.position.copy(controls.target.clone().add(off)); controls.update();
+  }
+  return true;
+}
+mini.addEventListener("click", e => miniGo(e.clientX, e.clientY));
+window.__miniGo = (x, y) => { const r = mini.getBoundingClientRect(); return miniGo(r.left + x * r.width, r.top + y * r.height); };
+window.__camera = () => { const p = camera.position; return [p.x, -p.z, p.y]; };
+window.__teleport = (x, y) => { camera.position.copy(W2T(x, y, VIEW.eye)); walkPos.copy(camera.position); return window.__camera(); };
+window.__walk = async (code, ms) => { keys.add(code); await new Promise(r => setTimeout(r, ms)); keys.delete(code); return window.__camera(); };
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (mode === "first") stepWalk(dt); else controls.update();
+  renderer.render(scene, camera);
+  drawMini();
+});
 </script>
-</body>
-</html>
