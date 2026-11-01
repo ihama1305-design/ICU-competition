@@ -1,0 +1,12 @@
+# Python 3.13 (the bpy 5.2 wheel needs 3.13)
+pymupdf          # reads the vector CAD layers in the record drawing PDF
+numpy
+scipy
+pillow
+opencv-python-headless
+shapely
+trimesh
+manifold3d       # wall booleans (window cut-outs, door headers)
+mapbox_earcut
+bpy==5.2.3       # Blender as a module: scene, Cycles renders, .blend and .glb
+playwright       # headless viewer test; then: python -m playwright install chromium
