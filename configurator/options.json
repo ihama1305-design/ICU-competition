@@ -1,0 +1,192 @@
+{
+  "_": "Everything a person can choose, and what each choice does. Effects use a fixed vocabulary, handled in main.js: color, material, visible, addon, light, glass, blinds. `check` is where 08_check_configurator.py looks to see that an option changes the room.",
+  "version": 1,
+  "sections": [
+    {
+      "id": "walls", "label": "Walls", "groups": [
+        {
+          "id": "paint", "label": "Paint", "control": "swatches", "default": "cloud", "custom": { "effect": { "do": "color", "material": "cfg_paint" } },
+          "check": { "view": "family", "time": "afternoon" },
+          "note": { "text": "All shown as wipeable, scrubbable finishes." },
+          "options": [
+            { "id": "cloud", "label": "Cloud white", "swatch": "#ECE9E2", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#ECE9E2" }] },
+            { "id": "sand", "label": "Warm sand", "swatch": "#E4D6BF", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#E4D6BF" }] },
+            { "id": "clay", "label": "Soft clay", "swatch": "#D9BFA6", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#D9BFA6" }] },
+            { "id": "butter", "label": "Butter", "swatch": "#F1E4B8", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#F1E4B8" }] },
+            { "id": "blush", "label": "Blush", "swatch": "#EBD5CC", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#EBD5CC" }] },
+            { "id": "sage", "label": "Sage", "swatch": "#C9D4C2", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#C9D4C2" }] },
+            { "id": "mist", "label": "Sea mist", "swatch": "#CFE0DF", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#CFE0DF" }] },
+            { "id": "teal", "label": "Pale teal", "swatch": "#B7D6D4", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#B7D6D4" }] },
+            { "id": "sky", "label": "Powder blue", "swatch": "#C8D9E6", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#C8D9E6" }] },
+            { "id": "dove", "label": "Dove grey", "swatch": "#D5D6D3", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#D5D6D3" }] }
+          ]
+        },
+        {
+          "id": "feature", "label": "Feature wall", "control": "choice", "default": "wood",
+          "check": { "view": "family", "time": "afternoon" },
+          "options": [
+            { "id": "none", "label": "None", "effects": [{ "do": "material", "target": "feature", "look": "none" }] },
+            { "id": "wood", "label": "Wood-look", "effects": [{ "do": "material", "target": "feature", "look": "wood" }] },
+            { "id": "fabric", "label": "Acoustic fabric", "effects": [{ "do": "material", "target": "feature", "look": "fabric" }] },
+            { "id": "dunes", "label": "Dunes mural", "effects": [{ "do": "material", "target": "feature", "look": "dunes" }] },
+            { "id": "sea", "label": "Sea mural", "effects": [{ "do": "material", "target": "feature", "look": "sea" }] },
+            { "id": "mashrabiya", "label": "Mashrabiya", "effects": [{ "do": "material", "target": "feature", "look": "mashrabiya" }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "surfaces", "label": "Floor and ceiling", "groups": [
+        {
+          "id": "floor", "label": "Vinyl floor", "control": "choice", "default": "sand",
+          "check": { "view": "family", "time": "afternoon" },
+          "options": [
+            { "id": "sand", "label": "Warm sand", "effects": [{ "do": "material", "target": "floor", "look": "sand" }] },
+            { "id": "oak", "label": "Pale oak", "effects": [{ "do": "material", "target": "floor", "look": "oak" }] },
+            { "id": "terrazzo", "label": "Terrazzo", "effects": [{ "do": "material", "target": "floor", "look": "terrazzo" }] },
+            { "id": "slate", "label": "Cool slate", "effects": [{ "do": "material", "target": "floor", "look": "slate" }] }
+          ]
+        },
+        {
+          "id": "ceiling", "label": "Ceiling above the bed", "control": "choice", "default": "plain",
+          "check": { "view": "family", "time": "afternoon" },
+          "options": [
+            { "id": "plain", "label": "Plain", "effects": [{ "do": "addon", "id": "sky", "on": false }] },
+            { "id": "sky", "label": "Printed sky", "effects": [{ "do": "addon", "id": "sky", "on": true }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lighting", "label": "Lighting", "groups": [
+        {
+          "id": "scheme", "label": "Scheme", "control": "choice", "default": "panels",
+          "check": { "view": "family", "time": "night" },
+          "options": [
+            { "id": "panels", "label": "Ceiling panels", "effects": [{ "do": "light", "scheme": { "kind": "panels", "rect": 30, "fill": 0.4, "panel": 2.2 } }] },
+            { "id": "cove", "label": "Cove", "effects": [{ "do": "light", "scheme": { "kind": "cove", "rect": 3.2, "fill": 0.34, "strip": 5, "glow": 0.42 } }] },
+            { "id": "downlights", "label": "Downlights", "effects": [{ "do": "light", "scheme": { "kind": "downlights", "spot": 26, "fill": 0.12, "disc": 7 } }] },
+            { "id": "slot", "label": "Linear slot", "effects": [{ "do": "light", "scheme": { "kind": "slot", "rect": 44, "fill": 0.26, "strip": 8 } }] },
+            {
+              "id": "circadian", "label": "Circadian", "effects": [{ "do": "light", "scheme": { "kind": "cove", "circadian": true, "rect": 3.4, "fill": 0.36, "strip": 5, "glow": 0.44 }, "kelvin": "auto" }],
+              "sets": { "temperature": "auto" },
+              "note": {
+                "text": "Tunable white that follows the day and dims at night. The evidence is mixed: a pilot of 74 patients in redesigned rooms with dynamic lighting saw less delirium (46% against 76%), but it wasn't randomised and changed more than the lights. A randomised trial of 734 patients found bright dynamic light alone didn't reduce delirium.",
+                "sources": [
+                  { "label": "Spies et al., Crit Care Med 2024", "url": "https://pubmed.ncbi.nlm.nih.gov/38112493/" },
+                  { "label": "Simons et al., Lancet Respir Med 2016", "url": "https://pubmed.ncbi.nlm.nih.gov/26895652/" }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "temperature", "label": "Colour temperature", "control": "choice", "default": "k4000",
+          "check": { "view": "family", "time": "night" },
+          "options": [
+            { "id": "k2700", "label": "2700 K", "effects": [{ "do": "light", "kelvin": 2700 }] },
+            { "id": "k3000", "label": "3000 K", "effects": [{ "do": "light", "kelvin": 3000 }] },
+            { "id": "k4000", "label": "4000 K", "effects": [{ "do": "light", "kelvin": 4000 }] },
+            { "id": "auto", "label": "Circadian (auto)", "effects": [{ "do": "light", "kelvin": "auto" }] }
+          ]
+        },
+        {
+          "id": "reading", "label": "Bed reading light", "control": "choice", "default": "off",
+          "check": { "view": "family", "time": "night" },
+          "options": [
+            { "id": "off", "label": "Off", "effects": [{ "do": "light", "reading": false }] },
+            { "id": "on", "label": "On", "effects": [{ "do": "light", "reading": true }] }
+          ]
+        },
+        {
+          "id": "nightlight", "label": "Amber night light", "control": "choice", "default": "off",
+          "check": { "view": "family", "time": "night" },
+          "options": [
+            { "id": "off", "label": "Off", "effects": [{ "do": "light", "nightLight": "off" }] },
+            { "id": "on", "label": "On", "effects": [{ "do": "light", "nightLight": "on" }] },
+            { "id": "rounds", "label": "Rounds mode", "effects": [{ "do": "light", "nightLight": "rounds" }], "note": { "text": "After dark the main lights go off and only the low amber light stays on, for staff to do rounds with less light in the room." } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "privacy", "label": "Privacy", "groups": [
+        {
+          "id": "front", "label": "Glazed front", "control": "choice", "default": "clear",
+          "check": { "view": "entrance", "time": "afternoon" },
+          "note": {
+            "rooms": ["W1"],
+            "text": "This is an isolation room. Whichever option you choose, its door needs a seal along the bottom and testing against positive and negative pressure, so the room holds its pressure.",
+            "sources": [{ "label": "Stanley Access, ICU doors", "url": "https://stanleyaccess.com/node/2536" }]
+          },
+          "options": [
+            { "id": "clear", "label": "Clear with curtain", "effects": [{ "do": "glass", "mode": "clear" }, { "do": "visible", "part": "cfg_curtain", "on": true }] },
+            {
+              "id": "smart", "label": "Smart glass", "effects": [{ "do": "glass", "mode": "smart" }, { "do": "visible", "part": "cfg_curtain", "on": false }],
+              "note": {
+                "text": "Switchable glass replaces the curtain: a wall switch takes it from clear to opaque, so staff can still see in when they need to. Door makers sell it for ICU sliding doors. CDC guidance counts curtain edges as high-touch surfaces.",
+                "sources": [
+                  { "label": "Stanley Access, ICU doors", "url": "https://stanleyaccess.com/node/2536" },
+                  { "label": "ASSA ABLOY SL Hygienic ICU", "url": "https://assaabloyentrance.com/nz/en/documents/health/NZ-SL-Hygienic-ICU-BROCHURE.pdf" },
+                  { "label": "CDC environmental services", "url": "https://www.cdc.gov/infection-control/hcp/environmental-control/environmental-services.html" }
+                ]
+              }
+            },
+            { "id": "blinds", "label": "Integral blinds", "effects": [{ "do": "glass", "mode": "blinds" }, { "do": "visible", "part": "cfg_curtain", "on": false }], "note": { "text": "Blinds sealed between the panes of glass replace the curtain." } }
+          ]
+        },
+        {
+          "id": "switch", "label": "Wall switch", "control": "choice", "default": "clear", "requires": { "front": "smart" },
+          "check": { "view": "entrance", "time": "afternoon", "first": { "front": "smart" } },
+          "note": { "text": "Or select the switch on the wall beside the door." },
+          "options": [
+            { "id": "clear", "label": "Clear", "effects": [{ "do": "glass", "opaque": false }] },
+            { "id": "opaque", "label": "Opaque", "effects": [{ "do": "glass", "opaque": true }] }
+          ]
+        },
+        {
+          "id": "frost", "label": "Frosted band", "control": "choice", "default": "on",
+          "check": { "view": "entrance", "time": "afternoon" },
+          "options": [
+            { "id": "on", "label": "On", "effects": [{ "do": "visible", "part": "cfg_front_frost", "on": true }] },
+            { "id": "off", "label": "Off", "effects": [{ "do": "visible", "part": "cfg_front_frost", "on": false }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "outside", "label": "Window and outside", "groups": [
+        {
+          "id": "blinds", "label": "Window blinds", "control": "choice", "default": "up",
+          "check": { "view": "bed_window", "time": "afternoon" },
+          "options": [
+            { "id": "up", "label": "Up", "effects": [{ "do": "blinds", "level": 0 }] },
+            { "id": "half", "label": "Half down", "effects": [{ "do": "blinds", "level": 0.5, "blackout": false }] },
+            { "id": "down", "label": "Roller, down", "effects": [{ "do": "blinds", "level": 1, "blackout": false }] },
+            { "id": "blackout", "label": "Blackout", "effects": [{ "do": "blinds", "level": 1, "blackout": true }] }
+          ]
+        },
+        {
+          "id": "palms", "label": "Date palms", "control": "choice", "default": "on",
+          "check": { "view": "bed_window", "time": "afternoon" },
+          "note": {
+            "text": "Planting stays outside the glass. CDC guidance says not to allow fresh flowers or potted plants in patient-care areas for immunosuppressed patients.",
+            "sources": [{ "label": "CDC environmental guidelines", "url": "https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm" }]
+          },
+          "options": [
+            { "id": "on", "label": "On", "effects": [{ "do": "addon", "id": "palms", "on": true }] },
+            { "id": "off", "label": "Off", "effects": [{ "do": "addon", "id": "palms", "on": false }] }
+          ]
+        },
+        {
+          "id": "planting", "label": "Low desert planting", "control": "choice", "default": "off",
+          "check": { "view": "window", "time": "afternoon" },
+          "options": [
+            { "id": "off", "label": "Off", "effects": [{ "do": "addon", "id": "planting", "on": false }] },
+            { "id": "on", "label": "On", "effects": [{ "do": "addon", "id": "planting", "on": true }] }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -233,7 +233,17 @@ Each phase is its own branch off an up-to-date `main`, with a PR. If the previou
 - **The patio is a concept.** It shows no structure, and it doesn't address fall risk for delirious patients, wind or dust. I'd add a one-line note on fall risk to the patio warning, unless you'd rather not.
 - **`docs/` is public.** GitHub Pages serves the repo root, so the brief and this plan will be reachable once committed. Neither contains drawings.
 
-## 7. Sources for the delirium note
+## 7. What the clinical notes can claim
+
+Checked in phase 3 against the published abstracts, the door makers' own pages and CDC guidance.
+
+- **Smart glass:** the brief's "easier to clean between patients" isn't used. The one article that might support it (Healthcare Design, on Memorial Sloan Kettering) refuses automated access, and nothing else read says so. The note says what the sources do: door makers sell switchable glass for ICU sliding doors, and CDC counts curtain edges as high-touch surfaces. If you can open that article and it supports the claim, it can go back.
+- **Isolation seals:** confirmed by Stanley Access: a seal along the bottom, tested against positive and negative pressure.
+- **Delirium:** both papers confirmed from their abstracts. Spies et al. (PMID 38112493): prospective observational pilot, 74 patients, 46% against 76%, p = 0.017. Simons et al. (PMID 26895652): randomised, 734 patients, 38% against 33%, p = 0.16, stopped early for futility.
+- **Plants:** CDC says not to allow fresh or dried flowers or potted plants in patient-care areas for immunosuppressed patients. It doesn't restrict them for immunocompetent patients, so the note is limited to the immunosuppressed.
+- **Fish tanks, for phase 4:** CDC is firmer than the brief assumes: "Avoid placing decorative fountains and fish tanks in patient-care areas" (Category IB), and restrict "fish in tanks" from patient-care and isolation areas. Decide the default before building it.
+
+## 8. Sources for the delirium note
 
 - [HFM: design features influencing circadian rhythm](https://www.hfmmagazine.com/design-features-influencing-circadian-rhythm) (Spies et al.)
 - [Medical Dialogues: modified ICU design with dynamic lighting](https://medicaldialogues.in/critical-care/news/modified-icu-design-integrating-dynamic-lighting-system-may-reduce-delirium-severity-122743) (Spies et al.)

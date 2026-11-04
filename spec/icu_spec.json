@@ -663,7 +663,7 @@
   "_note": "dir is where Pages publishes from; the repo serves main from its root"
  },
  "configurator": {
-  "_note": "proposal only: this doesn't change the as-built scene. Coordinates are world metres. W1's layout comes from kit.room_overrides; W3's bed is turned here so the window is beside the patient, as in W1. W3's drawn bed circle is centred at (10.31, 20.7)",
+  "_note": "proposal only: this doesn't change the as-built scene. Coordinates are world metres. W1's layout comes from kit.room_overrides; W3's bed is turned here so the window is beside the patient, as in W1. `kit` moves the ventilator behind the patient's head so it doesn't stand between them and the window. W3's drawn bed circle is centred at (10.31, 20.7)",
   "rooms": {
    "W1": {
     "label_at": [
@@ -829,6 +829,54 @@
        -1
       ]
      }
+    },
+    "fixtures": {
+     "downlights": [
+      [
+       9.3,
+       30.7
+      ],
+      [
+       9.3,
+       28.3
+      ],
+      [
+       12.9,
+       30.8
+      ],
+      [
+       12.9,
+       28.7
+      ],
+      [
+       15.3,
+       30.0
+      ],
+      [
+       17.1,
+       30.0
+      ]
+     ],
+     "slots": [
+      [
+       12.4,
+       27.7,
+       12.4,
+       31.2
+      ],
+      [
+       13.2,
+       30.0,
+       17.6,
+       30.0
+      ]
+     ]
+    },
+    "kit": {
+     "ventilator": [
+      1.5,
+      -0.2
+     ]
     }
    },
    "W3": {
@@ -1016,6 +1064,54 @@
        -1
       ]
      }
+    },
+    "fixtures": {
+     "downlights": [
+      [
+       7.9,
+       21.5
+      ],
+      [
+       7.9,
+       19.1
+      ],
+      [
+       12.0,
+       21.6
+      ],
+      [
+       12.4,
+       20.2
+      ],
+      [
+       13.9,
+       20.7
+      ],
+      [
+       6.6,
+       20.2
+      ]
+     ],
+     "slots": [
+      [
+       11.7,
+       19.4,
+       11.7,
+       22.0
+      ],
+      [
+       12.2,
+       20.7,
+       14.4,
+       20.7
+      ]
+     ]
+    },
+    "kit": {
+     "ventilator": [
+      1.5,
+      -0.2
+     ]
     }
    }
   }

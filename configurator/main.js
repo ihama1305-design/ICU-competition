@@ -1,8 +1,14 @@
 // Room configurator: a design proposal, built on the as-built model of one room.
+import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Stage, W2T } from "./stage.js";
 import { Rig, inside } from "./cameras.js";
 import { Daylight, sunAt } from "./sky.js";
+import { Lighting } from "./lights.js";
+import { FrontGlass } from "./glass.js";
+import { applyLook } from "./surfaces.js";
+import { setAddon } from "./addons.js";
+import { Panel } from "./panel.js";
 
 window.__configErrors = [];
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
@@ -15,13 +21,18 @@ const NIGHT_FROM = 18.4;
 const $ = id => document.getElementById(id);
 
 const canvas = $("c"), panel = $("panel");
-const stage = new Stage(canvas);
+const query = new URLSearchParams(location.search);
+// phones and small screens skip bloom and glass transmission, and get fewer lights
+const tier = query.get("tier") || (matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 600 ? "low" : "high");
+const stage = new Stage(canvas, tier);
 const controls = new OrbitControls(stage.camera, canvas);
 const state = { room: "W1", view: "family", hour: STOPS.afternoon };
 let dirty = true, lastDayHour = STOPS.afternoon;
 const invalidate = () => { dirty = true; };
 const rig = new Rig(stage.camera, controls, W2T, invalidate);
 const daylight = new Daylight(stage.scene, SITE, W2T);
+const lighting = new Lighting(stage, daylight, tier);
+const glass = new FrontGlass(tier);
 controls.addEventListener("change", invalidate);
 rig.onView = (name, isDoll) => {
   // going up: the ceiling goes first, so the camera doesn't pass through it. Coming down: it returns on arrival
@@ -34,7 +45,7 @@ rig.onArrive = name => { if (name !== "dollhouse") stage.setCeiling(true); inval
 // ---------------------------------------------------------------- layout
 function resize() {
   const w = innerWidth, h = innerHeight;
-  stage.renderer.setSize(w, h, false);
+  stage.resize(w, h);
   stage.camera.aspect = w / h;
   const rect = panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
@@ -64,10 +75,16 @@ const clock = h => {
 };
 const isNight = h => h >= NIGHT_FROM;
 
+function relight() {
+  const day = daylight.apply(state.hour);
+  lighting.update(state.hour, day);
+  invalidate();
+}
+
 function setTime(h) {
   state.hour = h;
   if (!isNight(h)) lastDayHour = h;
-  daylight.apply(h);
+  relight();
   stage.renderer.shadowMap.needsUpdate = true;
   const slider = $("time");
   slider.value = String(h);
@@ -91,10 +108,14 @@ async function setRoom(label, { keepView = true } = {}) {
   stage.show(room);
   rig.setRoom(room.meta);
   daylight.setCentre((room.meta.room[0] + room.meta.room[2]) / 2, (room.meta.room[1] + room.meta.room[3]) / 2);
-  daylight.apply(state.hour);
+  lighting.setRoom(room);
+  glass.setRoom(room);
+  applyAll();
+  relight();
   rig.view = null;
   rig.go(keepView ? state.view : "family", { instant: true });
   stage.setCeiling(state.view !== "dollhouse");
+  panelUi?.sync(selected, label);
   status.textContent = room.meta.isolation ? "With its ante room and toilet." : "Opens straight onto the corridor.";
   invalidate();
 }
@@ -134,14 +155,86 @@ canvas.addEventListener("keydown", e => {
   rig.orbitBy(...map);
 });
 
+// ---------------------------------------------------------------- options, from options.json
+let optionData = null, panelUi = null;
+const selected = {};
+const optionOf = (groupId, optionId) => groupById(groupId).options.find(o => o.id === optionId);
+const groupById = id => optionData.sections.flatMap(s => s.groups).find(g => g.id === id);
+
+const EFFECTS = {
+  color: e => { for (const n of Object.values(stage.current.parts).flat()) if (n.material.name === e.material) n.material.color.set(e.value); },
+  material: e => applyLook(stage.current, e.target, e.look),
+  visible: e => { (stage.current.parts[e.part] || []).forEach(n => { n.visible = e.on; }); },
+  addon: e => { setAddon(stage.current, e.id, e.on); stage.refreshCeiling(); },
+  light: e => {
+    const p = { ...e };
+    delete p.do;
+    lighting.set(p);
+  },
+  glass: e => glass.set(e),
+  blinds: e => {
+    (stage.current.parts.cfg_blinds || []).forEach(n => {
+      n.visible = e.level > 0;
+      if (e.blackout !== undefined) n.material.color.set(e.blackout ? "#3c4145" : "#e9e4d8");
+    });
+    const node = stage.current.root.getObjectByName("cfg_blinds");
+    if (node) node.scale.y = Math.max(0.001, e.level);
+  },
+};
+
+function runEffects(group, optionId) {
+  if (optionId === "custom") {
+    EFFECTS[group.custom.effect.do]({ ...group.custom.effect, value: selected[`${group.id}:custom`] });
+    return;
+  }
+  for (const e of optionOf(group.id, optionId).effects) EFFECTS[e.do](e);
+}
+
+/** Bring a newly shown room up to the current selections. */
+function applyAll() {
+  for (const s of optionData.sections) for (const g of s.groups) runEffects(g, selected[g.id]);
+  stage.renderer.shadowMap.needsUpdate = true;
+}
+
+function setOption(groupId, optionId, custom) {
+  const group = groupById(groupId);
+  if (custom !== undefined) selected[`${groupId}:custom`] = custom;
+  selected[groupId] = optionId;
+  runEffects(group, optionId);
+  const also = optionId === "custom" ? null : optionOf(groupId, optionId).sets;
+  for (const [g, o] of Object.entries(also || {})) {
+    selected[g] = o;
+    runEffects(groupById(g), o);
+  }
+  stage.renderer.shadowMap.needsUpdate = true;
+  relight();
+  panelUi.sync(selected, state.room);
+}
+
+// the wall switch in the room works too
+const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
+let pressAt = null;
+canvas.addEventListener("pointerdown", e => { pressAt = [e.clientX, e.clientY]; });
+canvas.addEventListener("pointerup", e => {
+  if (!pressAt || Math.hypot(e.clientX - pressAt[0], e.clientY - pressAt[1]) > 6) return;
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  if (!glass.switchTargets().length) return;
+  ray.setFromCamera(pointer, stage.camera);
+  // the nearest solid thing along the ray has to be the switch: it can't be pressed through a wall
+  const shown = o => { for (let n = o; n; n = n.parent) if (!n.visible) return false; return true; };
+  const hit = ray.intersectObject(stage.current.root, true).find(h => shown(h.object) && !h.object.material.transparent && !h.object.material.transmission);
+  if (hit && glass.isSwitch(hit.object)) setOption("switch", selected.switch === "opaque" ? "clear" : "opaque");
+});
+
 // ---------------------------------------------------------------- drawing: only when something has changed
 function frame(now) {
   requestAnimationFrame(frame);
   if (!rig.meta) return;
   if (rig.update(now)) dirty = true;
+  if (glass.update(now)) dirty = true;
   if (dirty) {
     dirty = false;
-    stage.renderer.render(stage.scene, stage.camera);
+    stage.draw();
     window.__configFrames = (window.__configFrames || 0) + 1;
   }
 }
@@ -154,7 +247,7 @@ function fail(err) {
 
 // ---------------------------------------------------------------- for the headless check
 window.__config = {
-  state: () => ({ ...state, night: isNight(state.hour), sun: sunAt(state.hour, SITE), moving: !!rig.tween, ceiling: stage.current?.ceiling.every(n => n.visible) }),
+  state: () => ({ ...state, night: isNight(state.hour), sun: sunAt(state.hour, SITE), moving: !!rig.tween, ceiling: stage.ceilingOn, roomBox: rig.meta?.room }),
   views: () => Object.keys(rig.meta.cameras),
   room: label => setRoom(label),
   camera: (name, opts) => rig.go(name, opts),
@@ -174,16 +267,42 @@ window.__config = {
     return out;
   },
   ceiling: () => rig.meta.ceiling,
-  anchors: () => Object.keys(stage.current.anchors),
+  anchors: () => Object.fromEntries(Object.entries(stage.current.anchors).map(([k, a]) => { const v = new THREE.Vector3(); a.getWorldPosition(v); return [k, [v.x, -v.z, v.y]]; })),
+  tier,
+  set: setOption,
+  selected: () => ({ ...selected }),
+  options: () => optionData,
+  fading: () => glass.fading,
+  /** Stand in front of the wall switch and return where it is on screen. */
+  frameSwitch: () => {
+    const f = rig.meta.front, a = stage.current.anchors.switch, p = new THREE.Vector3();
+    a.getWorldPosition(p);
+    p.y = 1.2;
+    rig.go("family", { instant: true });
+    stage.camera.position.copy(p).add(W2T(f.inward[0] * 1.2, f.inward[1] * 1.2, 0.1));
+    controls.target.copy(p);
+    controls.update();
+    stage.camera.updateMatrixWorld();
+    invalidate();
+    const s = p.clone().project(stage.camera);
+    return { x: ((s.x + 1) / 2) * innerWidth, y: ((1 - s.y) / 2) * innerHeight };
+  },
 };
 
-resize();
-setTime(state.hour);
-setRoom(state.room, { keepView: true }).then(() => {
+async function boot() {
+  const res = await fetch("options.json");
+  if (!res.ok) throw new Error(`options.json: HTTP ${res.status}`);
+  optionData = await res.json();
+  for (const sec of optionData.sections) for (const g of sec.groups) selected[g.id] = g.default;
+  panelUi = new Panel($("options"), optionData, setOption);
+  resize();
+  await setRoom(state.room, { keepView: true });
+  setTime(state.hour);
   $("load").hidden = true;
   requestAnimationFrame(frame);
   requestAnimationFrame(() => requestAnimationFrame(() => {
     canvas.classList.remove("pending");
     window.__configReady = true;
   }));
-}).catch(fail);
+}
+boot().catch(fail);
