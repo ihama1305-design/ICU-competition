@@ -79,6 +79,30 @@ figcaption { margin-top: 10px; font-size: 0.9rem; line-height: 1.45; color: var(
   .hero .wrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; }
 }
 
+/* room carousel: each room and its caption in a snapping scroller, so it still swipes without the script */
+.rooms { display: grid; gap: 12px; min-width: 0; }
+.rooms-tabs { display: flex; gap: 4px; padding: 4px; justify-self: start; max-width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
+.rooms-tabs [role="tab"] { flex: 1 1 auto; min-height: 44px; padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 0.95rem; font-weight: 600; white-space: nowrap; cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in), color var(--t-exit) var(--ease-in); }
+.rooms-tabs small { font-family: var(--mono); font-size: 0.82em; font-weight: 400; }
+.rooms-tabs [role="tab"][aria-selected="true"] { background: var(--teal); color: #fff; transition: transform var(--t-spring) var(--spring), background-color var(--t-enter) var(--ease-out), color var(--t-enter) var(--ease-out); }
+.rooms-tabs [role="tab"]:active { transform: scale(var(--press)); transition: transform var(--t-press) var(--spring); }
+.rooms-track { position: relative; display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.rooms-track::-webkit-scrollbar { display: none; }
+.rooms-track > [role="tabpanel"] { flex: 0 0 92%; min-width: 0; scroll-snap-align: center; scroll-snap-stop: always; }
+.rooms-track a:focus-visible { outline-offset: -3px; }
+.rooms-track figcaption { transition: opacity var(--t-enter) var(--ease-out); }
+.rooms-track > [inert] figcaption { opacity: 0; transition: opacity var(--t-exit) var(--ease-in); }
+@media (hover: hover) {
+  .rooms-tabs [role="tab"][aria-selected="false"]:hover { background: var(--teal-soft); color: var(--text); transition: transform var(--t-spring) var(--spring), background-color var(--t-enter) var(--ease-out), color var(--t-enter) var(--ease-out); }
+}
+@media (max-width: 400px) {
+  .rooms-tabs { justify-self: stretch; }
+  .rooms-tabs [role="tab"] { flex: 1 1 0; min-width: 0; padding-inline: 8px; font-size: 0.875rem; line-height: 1.2; white-space: normal; }
+}
+@media (min-width: 720px) {
+  .rooms-track > [role="tabpanel"] { flex-basis: 100%; }
+}
+
 /* sections */
 .section { padding-block: clamp(48px, 7vw, 88px); }
 .section + .section { border-top: 1px solid var(--border); }
@@ -184,8 +208,8 @@ a img { transition: transform var(--t-zoom-out) var(--ease-in); }
 /* the hero is the page's one entrance; it animates to the resting style, so nothing stays hidden if animations don't run */
 @keyframes rise { from { opacity: 0; transform: translateY(var(--rise)); } }
 @keyframes settle { from { transform: scale(var(--settle)); } }
-.hero-copy > *, .hero figure { animation: rise var(--t-reveal) var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * var(--stagger)); }
-.hero-copy > :nth-child(2), .hero figure { --i: 1; }
+.hero-copy > *, .rooms { animation: rise var(--t-reveal) var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+.hero-copy > :nth-child(2), .rooms { --i: 1; }
 .hero-copy > :nth-child(3) { --i: 2; }
 .hero-copy > :nth-child(4) { --i: 3; }
 .hero-copy > :nth-child(5) { --i: 4; }

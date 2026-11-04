@@ -66,21 +66,19 @@ cams = spec["cameras"]
 EYE = 1.6
 
 # patient rooms, numbered by wing from north to south
-mid_x = sum(p[0] for p in spec["plan"]["outline"]["points"]) / len(spec["plan"]["outline"]["points"])
-rooms = sorted(idx["rooms"], key=lambda r: (r["front"][0] > mid_x, -r["front"][1]))
-objects, counters = [], {"W": 0, "E": 0}
-for r in rooms:
-    wing = "E" if r["front"][0] > mid_x else "W"
-    counters[wing] += 1
+objects = []
+for r in planlib.label_rooms(idx["rooms"], spec):
     iso = any("ISOLATION" in n for n in r["names"])
     fx, fy = r["front"]; nx, ny = r["front_normal_in"]; hx, hy = r["head"]
     objects.append({
         "id": r["id"], "group": "Patient rooms", "confidence": "low", "match": f"^{r['id']}_",
-        "label": f"Room {wing}{counters[wing]}" + (" · isolation" if iso else ""),
+        "label": f"Room {r['label']}" + (" · isolation" if iso else ""),
         "sub": f"{r['area_m2']:.1f} m² · {r['front_width']:.2f} m glazed front",
         "notes": (f"{'Isolation' if iso else 'ICU'} patient room, {r['area_m2']:.1f} m² measured to the glass line. Walls, front and "
                   "observation window come from the drawing. The bed, pendant, monitor, pumps, ventilator, chairs and curtain "
-                  "are a typical ICU kit placed the same way in every room, not SSMC's inventory."),
+                  "are a typical ICU kit, not SSMC's inventory. "
+                  + ("The layout is fitted to this room's shape, with the bed near the drawn bed circle."
+                     if iso else "It's placed the same way in every standard room.")),
         "entry": {"eye": [fx + nx * 0.6, fy + ny * 0.6, EYE], "look": [hx, hy, 1.0]},
     })
 S = [  # (id, group, label, confidence, regex on object names, notes)

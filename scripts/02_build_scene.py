@@ -425,6 +425,9 @@ exam = kit.exam_light(spec, KITC, H); bins = kit.bins(spec, KITC); disp = kit.di
 ochair = kit.office_chair(spec, KITC); wst = kit.workstation(spec, KITC)
 cart = kit.crash_cart(spec, KITC); stretch = kit.stretcher(spec, KITC)
 
+unmatched = [o["_room"] for o in K["room_overrides"] if not any(is_patient(s) and s["poly"].contains(Point(o["label_at"])) for s in spaces)]
+if unmatched:
+    raise SystemExit(f"kit.room_overrides: label_at isn't inside a patient room: {unmatched}")
 rooms_index = []
 curtain = kit.Builder()
 feat = kit.Builder()
@@ -450,15 +453,20 @@ for si, s in enumerate(spaces):
     mp = np.array([q for g in getattr(mid_line, "geoms", [mid_line]) for q in g.coords])
     lat = (mp @ x_axis).min(), (mp @ x_axis).max()
     head = head + x_axis * ((lat[0] + lat[1]) / 2 - (head + footdir * 1.1) @ x_axis)
+    # rooms the generic layout doesn't fit carry their own bed head and kit positions in the spec
+    ov = next((o for o in K["room_overrides"] if S.contains(Point(o["label_at"]))), {})
+    if "head" in ov:
+        head = np.array(ov["head"], dtype=float)
+    Kr = {**K, **ov}
     M = frame_matrix(head, footdir)
     tag = f"room{si:02d}"
     for src in [bed] + pend:
         place(src, f"{tag}_{src.name[4:]}", M, C["Equipment"])
-    place(vent, f"{tag}_ventilator", M @ T(*K["ventilator"]) @ rot_z(180), C["Equipment"])
-    place(iv, f"{tag}_iv_pole", M @ T(*K["iv_pole"]), C["Equipment"])
-    rx_, ry_, rr_ = K["recliner"]; place(recl, f"{tag}_recliner", M @ T(rx_, ry_) @ rot_z(rr_), C["Equipment"])
-    vx_, vy_, vr_ = K["visitor_chair"]; place(vchair, f"{tag}_visitor_chair", M @ T(vx_, vy_) @ rot_z(vr_), C["Equipment"])
-    place(table, f"{tag}_overbed_table", M @ T(*K["overbed_table"]) @ rot_z(180), C["Equipment"])
+    place(vent, f"{tag}_ventilator", M @ T(*Kr["ventilator"]) @ rot_z(180), C["Equipment"])
+    place(iv, f"{tag}_iv_pole", M @ T(*Kr["iv_pole"]), C["Equipment"])
+    rx_, ry_, rr_ = Kr["recliner"]; place(recl, f"{tag}_recliner", M @ T(rx_, ry_) @ rot_z(rr_), C["Equipment"])
+    vx_, vy_, vr_ = Kr["visitor_chair"]; place(vchair, f"{tag}_visitor_chair", M @ T(vx_, vy_) @ rot_z(vr_), C["Equipment"])
+    place(table, f"{tag}_overbed_table", M @ T(*Kr["overbed_table"]) @ rot_z(180), C["Equipment"])
     place(exam, f"{tag}_exam_light", M @ T(0, 1.1), C["Ceiling"])
     # privacy curtain on a ceiling track just inside the glazed front
     cw = K["curtain"]; w = h["width"]
@@ -478,24 +486,41 @@ for si, s in enumerate(spaces):
         curtain.add(q, [[0, 1, 2, 3]], "curtain")
         q2 = [(p0[0], p0[1], cw["top"]), (p1[0], p1[1], cw["top"]), (p1[0], p1[1], H - 0.04), (p0[0], p0[1], H - 0.04)]
         curtain.add(q2, [[0, 1, 2, 3]], "blind")
-    # side walls: wood-look panel with a TV on one side, bed-protection rails on both
-    fw = K["feature_wall"]
+    # wood-look panel with a TV and bed-protection rails: on the side walls, or the foot wall where the override asks for it
+    fo = ov.get("feature_wall", {})
+    fw = {**K["feature_wall"], **fo, "tv": {**K["feature_wall"]["tv"], **fo.get("tv", {})}}
     bc = head + footdir * 1.1
-    for sgn in (-1, 1):
-        ray = LineString([bc, bc + x_axis * sgn * 6])
-        hit = ray.intersection(walls_u)
-        if hit.is_empty:
-            continue
-        dmin = min(Point(bc).distance(g_) for g_ in getattr(hit, "geoms", [hit]))
-        wp = bc + x_axis * sgn * (dmin - 0.004)
-        Mw = frame_matrix(wp, footdir)
-        if sgn == -1:
-            feat.boxz(-sgn * 0.004, 0, 0.0, fw["height"], 0.012, fw["length"], "panel_wood", Mw)
-            tvw, tvd, tvh = fw["tv"]["size"]
-            feat.boxz(-sgn * (0.012 + tvd / 2), 0.3, fw["tv"]["bottom"], fw["tv"]["bottom"] + tvh, tvd, tvw, "dark_plastic", Mw)
-            feat.boxz(-sgn * (0.012 + tvd + 0.001), 0.3, fw["tv"]["bottom"] + 0.02, fw["tv"]["bottom"] + tvh - 0.02, 0.002, tvw - 0.04, "screen_dark", Mw)
-        z0, z1 = fw["bumper_z"]
-        feat.boxz(-sgn * 0.03, 0, z0, z1, 0.05, fw["length"] + 0.6, "bumper", Mw)
+    z0, z1 = fw["bumper_z"]
+    bumper_len = fw.get("bumper_length", fw["length"] + 0.6)
+
+    def to_wall(d):
+        """Distance from the bed centre to the first wall along d, or None if there's none within 6 m."""
+        hit = LineString([bc, bc + d * 6]).intersection(walls_u)
+        return None if hit.is_empty else min(Point(bc).distance(g_) for g_ in getattr(hit, "geoms", [hit]))
+
+    def tv_panel(Mw, tv_y):
+        """Panel and TV on a wall; Mw's +x points from the wall into the room."""
+        feat.boxz(0.004, 0, 0.0, fw["height"], 0.012, fw["length"], "panel_wood", Mw)
+        tvw, tvd, tvh = fw["tv"]["size"]
+        feat.boxz(0.012 + tvd / 2, tv_y, fw["tv"]["bottom"], fw["tv"]["bottom"] + tvh, tvd, tvw, "dark_plastic", Mw)
+        feat.boxz(0.012 + tvd + 0.001, tv_y, fw["tv"]["bottom"] + 0.02, fw["tv"]["bottom"] + tvh - 0.02, 0.002, tvw - 0.04, "screen_dark", Mw)
+
+    if fw.get("on") == "foot":
+        d_foot = to_wall(footdir)
+        if d_foot is None:
+            raise SystemExit(f"kit.room_overrides: no foot wall within 6 m of the bed in {s['names']}")
+        Mw = frame_matrix(bc + footdir * (d_foot - 0.004), x_axis)  # local +x is -footdir, into the room
+        tv_panel(Mw, 0.0)
+        feat.boxz(0.03, 0, z0, z1, 0.05, bumper_len, "bumper", Mw)
+    else:
+        for sgn in (-1, 1):
+            dmin = to_wall(x_axis * sgn)
+            if dmin is None:
+                continue
+            Mw = frame_matrix(bc + x_axis * sgn * (dmin - 0.004), footdir)
+            if sgn == -1:
+                tv_panel(Mw, 0.3)
+            feat.boxz(-sgn * 0.03, 0, z0, z1, 0.05, bumper_len, "bumper", Mw)
     # bins by the sink side of the front, dispensers on the wall next to the door
     rooms_index.append({"id": tag, "names": s["names"], "label_at": s["labels"][0], "head": head.round(3).tolist(), "foot_dir": footdir.round(4).tolist(),
                         "front": f.round(3).tolist(), "front_normal_in": nrm.round(4).tolist(), "front_axis": ax.round(4).tolist(),
@@ -650,6 +675,8 @@ if hero_poly.contains(Point(wm + wn * 0.4)):
     wn = -wn
 add_cam("cam_observation", (*(wm + wn * oc["back_from_glass"]), oc["eye"]), (*bedc, oc["look_z"]), lens=oc["lens"])
 add_cam("cam_aerial_close", tuple(cams["aerial_close"]["eye"]), tuple(cams["aerial_close"]["look"]), lens=cams["aerial_close"]["lens"])
+for name in ("iso_entry", "iso_room", "iso_window"):  # isolation room W1, in world coordinates
+    add_cam(f"cam_{name}", tuple(cams[name]["eye"]), tuple(cams[name]["look"]), lens=cams[name]["lens"])
 bx = outline.bounds
 add_cam("cam_plan", ((bx[0] + bx[2]) / 2, (spec["plan"]["cut_south_y"] + bx[3]) / 2, 60.0),
         ((bx[0] + bx[2]) / 2, (spec["plan"]["cut_south_y"] + bx[3]) / 2, 0.0), ortho=max(bx[2] - bx[0], bx[3] - spec["plan"]["cut_south_y"]) + 2)
@@ -662,6 +689,7 @@ os.makedirs(os.path.join(ROOT, "output"), exist_ok=True)
 bpy.ops.file.pack_all()
 # ICU_BLEND writes the scene elsewhere (a plain rebuild replaces output/icu.blend)
 bpy.ops.wm.save_as_mainfile(filepath=os.environ.get("ICU_BLEND") or os.path.join(ROOT, "output", "icu.blend"), compress=True)
+planlib.label_rooms(rooms_index, spec)
 json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "spaces": len(spaces)},
           open(os.path.join(ROOT, "build", "scene_index.json"), "w"), indent=1)
 tri = sum(len(o.data.polygons) for o in scene.objects if o.type == "MESH" and o.users_collection[0] != KITC)

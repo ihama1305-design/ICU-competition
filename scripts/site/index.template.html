@@ -50,10 +50,27 @@
         <div><dt>floor modelled</dt><dd>{{FLOOR_M2}} <small>m²</small></dd></div>
       </dl>
     </div>
-    <figure>
-      <a href="{{FULL:room_entry}}"><!--IMG room_entry | An ICU patient room seen from just inside the door: a raised bed in the centre, a twin-arm ceiling pendant with monitors, a recliner, a wood-look feature wall with a TV, and blinds over a wall of windows. | (min-width: 960px) 58vw, 100vw | eager--></a>
-      <figcaption>Room W3 from just inside its glazed front. The room comes from the drawing; the equipment is a typical ICU kit, not SSMC's inventory.</figcaption>
-    </figure>
+    <div class="rooms" id="rooms">
+      <noscript><style>.rooms-tabs { display: none; }</style></noscript>
+      <div class="rooms-tabs" role="tablist" aria-label="Choose a room">
+        <button type="button" role="tab" id="tab-standard" aria-controls="room-standard" aria-selected="true">Standard room <small>W3</small></button>
+        <button type="button" role="tab" id="tab-isolation" aria-controls="room-isolation" aria-selected="false" tabindex="-1">Isolation room <small>W1</small></button>
+      </div>
+      <div class="rooms-track">
+        <div role="tabpanel" id="room-standard" aria-labelledby="tab-standard">
+          <figure>
+            <a href="{{FULL:room_entry}}"><!--IMG room_entry | An ICU patient room seen from just inside the door: a raised bed in the centre, a twin-arm ceiling pendant with monitors, a recliner, a wood-look feature wall with a TV, and blinds over a wall of windows. | (min-width: 960px) 58vw, 100vw | eager--></a>
+            <figcaption>Room W3 from just inside its glazed front. The room comes from the drawing; the equipment is a typical ICU kit, not SSMC's inventory.</figcaption>
+          </figure>
+        </div>
+        <div role="tabpanel" id="room-isolation" aria-labelledby="tab-isolation">
+          <figure>
+            <a href="{{FULL:iso_room}}"><!--IMG iso_room | An isolation patient room seen along its length: a recliner in the foreground, a raised bed beside a wood-look feature wall with a TV, a ceiling pendant with a monitor, and a wall of windows at the far end. | (min-width: 960px) 58vw, 100vw | lazy--></a>
+            <figcaption>Isolation room W1, which also has an ante room and toilet. The room comes from the drawing; the same typical kit is fitted to its shape, with the bed near the drawn bed circle.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -113,6 +130,14 @@
       <figure class="plate half">
         <a href="{{FULL:corridor}}"><!--IMG corridor | The central nurse station seen from the corridor: a long white counter with a workstation, wood handrails along the walls and a lay-in ceiling grid with LED panels. | (min-width: 720px) 50vw, 100vw | lazy--></a>
         <figcaption>The central nurse station from the corridor, with handrails and a 600 mm lay-in ceiling.</figcaption>
+      </figure>
+      <figure class="plate half">
+        <a href="{{FULL:iso_entry}}"><!--IMG iso_entry | The glazed inner door of an isolation room seen from its ante room: two glass panels with a frosted band and a teal curtain gathered behind them, and a plain wall beyond. | (min-width: 720px) 50vw, 100vw | lazy--></a>
+        <figcaption>From W1's ante room, through the inner door. With the bed near the drawn bed circle, it's out of sight from here.</figcaption>
+      </figure>
+      <figure class="plate half">
+        <a href="{{FULL:iso_window}}"><!--IMG iso_window | An isolation room's bed seen from near its foot, with a wall of windows beyond it, a visitor chair, a ventilator and a ceiling pendant holding pumps and a monitor. | (min-width: 720px) 50vw, 100vw | lazy--></a>
+        <figcaption>W1's bed and window. The window is to the patient's right here, while in standard rooms it's behind them.</figcaption>
       </figure>
     </div>
   </div>
@@ -184,8 +209,8 @@
         <tr><th scope="row">Facade: 700 mm upstand, curtain wall, fins</th><td><span class="conf med">Medium</span></td><td>Tagged upstand and drawn lines. Mullion and fin spacing are approximate.</td></tr>
         <tr><th scope="row">Ceiling height, {{CEILING}} m</th><td><span class="conf low">Low</span></td><td>Not on these sheets.</td></tr>
         <tr><th scope="row">Finishes and colours</th><td><span class="conf low">Low</span></td><td>Finish codes are on the plan. The colours are assumed.</td></tr>
-        <tr><th scope="row">Furniture and equipment</th><td><span class="conf low">Low</span></td><td>A typical kit, repeated in every room. Not an inventory of SSMC's equipment.</td></tr>
-        <tr><th scope="row">Bed position and direction</th><td><span class="conf low">Low</span></td><td>Head toward the window, foot toward the front. An assumption.</td></tr>
+        <tr><th scope="row">Furniture and equipment</th><td><span class="conf low">Low</span></td><td>A typical kit, repeated in every room and fitted to the two isolation rooms. Not an inventory of SSMC's equipment.</td></tr>
+        <tr><th scope="row">Bed position and direction</th><td><span class="conf low">Low</span></td><td>Head toward the window, foot toward the front. The two isolation rooms have the bed side-on, near the drawn bed circle. An assumption.</td></tr>
       </tbody>
     </table>
   </div>
@@ -214,5 +239,101 @@
     <p>The model shows the existing floor as a starting point. Furnishings and finishes are assumed. It isn't for clinical or construction use. The SSMC drawings themselves aren't published here.</p>
   </div>
 </footer>
+<script>
+/* Room carousel. The scroller snaps and swipes by itself; this adds the tabs, arrow keys and mouse drag. */
+(() => {
+  const root = document.getElementById("rooms");
+  const track = root.querySelector(".rooms-track");
+  const tabs = [...root.querySelectorAll('[role="tab"]')];
+  const panels = [...root.querySelectorAll('[role="tabpanel"]')];
+  const motion = () => (matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
+  const left = i => Math.max(0, Math.min(track.scrollWidth - track.clientWidth, panels[i].offsetLeft - (track.clientWidth - panels[i].offsetWidth) / 2));
+  const nearest = () => panels.reduce((best, _, n) => (Math.abs(left(n) - track.scrollLeft) < Math.abs(left(best) - track.scrollLeft) ? n : best), 0);
+  let current = 0;
+  let target = null; /* the slide the script is scrolling to: the tab already shows it, so slides passed on the way don't change it */
+  let failsafe = 0;
+
+  function select(i) {
+    current = i;
+    if (panels.some((p, n) => n !== i && p.contains(document.activeElement))) tabs[i].focus({ preventScroll: true }); /* inert would drop it */
+    tabs.forEach((t, n) => {
+      t.setAttribute("aria-selected", n === i);
+      t.tabIndex = n === i ? 0 : -1;
+    });
+    panels.forEach((p, n) => { p.inert = n !== i; });
+  }
+  function arrived() {
+    target = null;
+    clearTimeout(failsafe);
+    track.style.scrollSnapType = "";
+  }
+  function go(i) {
+    select(i);
+    if (Math.abs(track.scrollLeft - left(i)) <= 2) return arrived();
+    target = i;
+    clearTimeout(failsafe);
+    failsafe = setTimeout(arrived, 2000);
+    track.scrollTo({ left: left(i), behavior: motion() });
+  }
+
+  select(0);
+  track.addEventListener("scroll", () => {
+    if (target !== null) {
+      if (Math.abs(track.scrollLeft - left(target)) <= 2) arrived();
+    } else if (!dragging && nearest() !== current) {
+      select(nearest());
+    }
+  }, { passive: true });
+  /* the person took over; a wheel only counts if it's moving the slides rather than the page */
+  track.addEventListener("touchstart", arrived, { passive: true });
+  track.addEventListener("wheel", e => { if (!dragging && Math.abs(e.deltaX) > Math.abs(e.deltaY)) arrived(); }, { passive: true });
+  tabs.forEach((t, i) => t.addEventListener("click", () => go(i)));
+  root.addEventListener("keydown", e => {
+    const onTabs = e.target.closest('[role="tablist"]'); /* on an image link, Home and End keep scrolling the page */
+    const i = { ArrowLeft: current - 1, ArrowRight: current + 1, ...(onTabs && { Home: 0, End: tabs.length - 1 }) }[e.key];
+    if (i === undefined || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    e.preventDefault();
+    const to = Math.max(0, Math.min(tabs.length - 1, i));
+    go(to);
+    tabs[to].focus();
+  });
+
+  /* mouse drag: touch already scrolls natively. Snapping is off while the pointer is down, and a drag doesn't open the image. */
+  let dragging = false, startX = 0, startLeft = 0, moved = false, pointer = null;
+  track.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    arrived();
+    pointer = e.pointerId; startX = e.clientX; startLeft = track.scrollLeft; moved = false;
+  });
+  track.addEventListener("pointermove", e => {
+    if (e.pointerId !== pointer) return;
+    const dx = e.clientX - startX;
+    if (!moved && Math.abs(dx) < 6) return;
+    if (!moved) {
+      moved = dragging = true;
+      track.setPointerCapture(pointer);
+      track.style.scrollSnapType = "none";
+    }
+    track.scrollLeft = startLeft - dx;
+  });
+  function release(e) {
+    if (e.pointerId !== pointer) return;
+    pointer = null;
+    setTimeout(() => { moved = false; }); /* after the click this release may produce, which a drag cancels */
+    if (!dragging) return;
+    dragging = false;
+    go(nearest());
+  }
+  track.addEventListener("pointerup", release);
+  track.addEventListener("pointercancel", release);
+  track.addEventListener("dragstart", e => e.preventDefault());
+  track.addEventListener("click", e => {
+    if (moved) e.preventDefault();
+  }, true);
+
+  /* the second room shouldn't still be loading when someone switches to it */
+  addEventListener("load", () => root.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = "eager"; }));
+})();
+</script>
 </body>
 </html>

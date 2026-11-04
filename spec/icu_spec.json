@@ -370,7 +370,7 @@
   }
  },
  "kit": {
-  "_frame": "patient room local frame: origin at the bed-head centre on the floor, +Y toward the bed foot (corridor), +X to the patient's left",
+  "_frame": "patient room local frame: origin at the bed-head centre on the floor, +Y toward the bed foot (corridor), +X to the patient's right",
   "rooms": [
    "ICU PATIENT ROOM",
    "ICU ISOLATION PATIENT ROOM"
@@ -444,7 +444,79 @@
     ],
     "bottom": 1.75
    }
-  }
+  },
+  "room_overrides": [
+   {
+    "_room": "W1, isolation. Generic layout puts the bed foot on the slanted nook wall, the recliner in the nook and the TV inside a wall. The bed moves near the drawn bed circle, with the TV straight ahead on the flat 2.8 m of foot wall",
+    "label_at": [
+     11.548,
+     30.461
+    ],
+    "head": [
+     11.2,
+     30.26
+    ],
+    "iv_pole": [
+     -1.15,
+     -0.55
+    ],
+    "recliner": [
+     -1.75,
+     1.2,
+     75
+    ],
+    "visitor_chair": [
+     1.75,
+     2.1,
+     -110
+    ],
+    "feature_wall": {
+     "on": "foot",
+     "length": 2.8,
+     "bumper_length": 2.8,
+     "tv": {
+      "bottom": 1.35
+     }
+    }
+   },
+   {
+    "_room": "E1, isolation, the mirror image of W1",
+    "label_at": [
+     33.548,
+     30.509
+    ],
+    "head": [
+     33.8,
+     30.26
+    ],
+    "ventilator": [
+     -1.3,
+     0.5
+    ],
+    "iv_pole": [
+     1.15,
+     -0.55
+    ],
+    "recliner": [
+     1.75,
+     1.2,
+     -75
+    ],
+    "visitor_chair": [
+     -1.75,
+     2.1,
+     110
+    ],
+    "feature_wall": {
+     "on": "foot",
+     "length": 2.8,
+     "bumper_length": 2.8,
+     "tv": {
+      "bottom": 1.35
+     }
+    }
+   }
+  ]
  },
  "lighting": {
   "panel_size": 0.6,
@@ -487,9 +559,51 @@
    "cam_bedside": -0.6,
    "cam_corridor": -0.5,
    "cam_aerial_close": -0.8,
-   "cam_observation": -0.4
+   "cam_observation": -0.4,
+   "cam_iso_entry": -0.6,
+   "cam_iso_room": -0.6,
+   "cam_iso_window": -0.6
   },
-  "_frame": "room cameras use the hero room's local frame: x across the bed (+ = patient's left / feature-wall side is -x), y from the bed head toward the foot",
+  "_frame": "room_entry and bedside use the hero room's local frame: x across the bed (+ = patient's right, the feature wall is on the -x side), y from the bed head toward the foot. iso_* are world coordinates in isolation room W1",
+  "iso_entry": {
+   "eye": [
+    17.35,
+    27.0,
+    1.6
+   ],
+   "look": [
+    16.0,
+    30.6,
+    1.25
+   ],
+   "lens": 18
+  },
+  "iso_room": {
+   "eye": [
+    14.4,
+    30.75,
+    1.55
+   ],
+   "look": [
+    9.0,
+    28.6,
+    1.0
+   ],
+   "lens": 18
+  },
+  "iso_window": {
+   "eye": [
+    13.0,
+    28.2,
+    1.55
+   ],
+   "look": [
+    8.5,
+    30.6,
+    1.05
+   ],
+   "lens": 18
+  },
   "room_entry": {
    "eye": [
     0.9,
