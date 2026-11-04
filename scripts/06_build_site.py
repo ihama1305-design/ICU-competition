@@ -55,6 +55,16 @@ def img_tag(path, name, alt, sizes, loading):
             f'alt="{alt}" loading="{loading}" decoding="async"{prio}>')
 
 
+def settle(pg):
+    """Wait for every interface animation to finish, then for a fresh frame of the 3D view.
+
+    The software renderer runs at about 1 frame/s, so no fixed wait is safe: a transition can still be
+    running seconds later. A timeout fails the build rather than publishing a half-finished screenshot.
+    """
+    pg.wait_for_function("document.getAnimations().every(a => a.playState !== 'running')", timeout=60000)
+    pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+
+
 def capture_viewer_shots():
     """Real screenshots of the walkthrough, for the page's walkthrough section."""
     tmp = os.path.join(ROOT, "build", "shots")
@@ -71,11 +81,11 @@ def capture_viewer_shots():
         fx, fy = hero["front"]
         pg.evaluate(f"window.__teleport({fx + nx * 3.7}, {fy + ny * 3.7})")  # far enough in that the camera clears the curtain
         pg.keyboard.press("v")
-        pg.wait_for_timeout(2500)
+        settle(pg)
         pg.screenshot(path=os.path.join(tmp, "walk-behind.png"))
         pg.keyboard.press("v")
         pg.evaluate("window.__view('orbit')")
-        pg.wait_for_timeout(2500)
+        settle(pg)
         pg.screenshot(path=os.path.join(tmp, "walk-orbit.png"))
         b.close()
     return tmp
