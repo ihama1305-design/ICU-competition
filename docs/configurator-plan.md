@@ -29,7 +29,7 @@
 The side-on layout, for the configurator:
 
 - **W1:** bed head at (11.2, 30.26), foot south, built in phase 1. Its centre (11.2, 29.16) is inside the drawn bed circle (centre 11.50, 29.99, 2.69 m across), not on it. The TV goes on the south wall (usable x 9.69–12.63), straight ahead. The window is about 4.3 m to the right.
-- **W3:** bed head near (9.5, 21.05), foot south, 1.35 m off the north wall. W3's drawn bed circle is centred at (10.31, 20.7), so check this position against it. The TV goes on the south wall, 0.7 m past the foot. The window is to the right, as in W1. Exact positions get tuned by looking at them.
+- **W3:** bed head at (10.31, 21.05), foot south, 1.35 m off the north wall, built in phase 2. x comes from W3's drawn bed circle (centre 10.31, 20.7) and lines up with the flat 1.8 m of south wall, which holds a 1.75 m feature panel. The TV goes on the south wall, 0.7 m past the foot. The window is to the right, as in W1. Exact positions get tuned by looking at them.
 - **Two bed views:** "From the bed" looks ahead at the TV and ceiling. "Head turned" looks at the window and palms. No single natural view holds both, since they are about 90° apart. "Palms visible from the bed view" is met by the second one.
 - **Blinds default to up.** The current render has them more than half down, which would hide the palms.
 
@@ -115,7 +115,7 @@ Run order becomes **01, 02, 03, 04, 05, 07, 06, 08**. 07 keeps the brief's numbe
 
 ### 4.2 Why bake ambient occlusion
 
-The renders look good because Cycles computes indirect light. Three.js in real time doesn't, so a plain export will look flat, and the look is the whole point of a car-style configurator. A baked AO map adds contact shadows and doesn't depend on paint colour or time of day, so it survives every option. If seams are bad in phase 2, the fallback is a `GTAOPass`, which costs more GPU.
+The renders look good because Cycles computes indirect light. Three.js in real time doesn't, so a plain export will look flat, and the look is the whole point of a car-style configurator. A baked AO map adds contact shadows and doesn't depend on paint colour or time of day, so it survives every option. Built in phase 2 for the walls, floor and ceiling only, which have clean UVs and no seams. The furniture isn't baked.
 
 ### 4.3 Front end
 
@@ -145,7 +145,7 @@ scripts/site/configurator/
 - **Rendering on demand:** frames draw only while the camera moves, something is animating, or the TV or fish are in view.
 - **Orbit clamp:** on each change the camera is pulled back to the nearest point inside the inset polygon. Dollhouse is the exception. There the ceiling hides, except over the toilet, which is empty.
 - **No third-party assets:** TV loop, fish, murals, mashrabiya, vinyl, wood and sky ceiling are all seeded canvas or procedural, and palms, toys and patio are procedural geometry. That means no video file, no licences and no extra download. `REPORT.md` records this.
-- **Tone mapping:** start with Neutral, compare side by side with a Cycles render in phase 2 (the renders use AgX), and keep whichever matches.
+- **Tone mapping:** Neutral. Compared in phase 2 with a Cycles render from the same camera: Neutral matches the Cycles colours, while AgX in real time washes out the feature wall and chairs.
 - **Save image:** render a frame and call `toBlob` in the same tick.
 - **Test API:** `window.__configReady`, `__configErrors`, and `__config` with `apply`, `state`, `code`, `load`, `setTime`, `camera`, `renderNow` and `instant`.
 - **Labelling:** a persistent "Design proposal" tag in the panel and on the summary, plus the existing "independent student work, not endorsed by SSMC" text.
@@ -180,12 +180,12 @@ Each phase is its own branch off an up-to-date `main`, with a PR. If the previou
 3. Six presets: Entrance, From the bed, Head turned, Family zone, Window, Dollhouse. Orbit clamp. Family zone is W1's east arm (x 14–18, y 28.75–31.61) and W3's east side.
 4. Solar path, Day/Night toggle, time slider and dark exterior at night.
 5. Build through 06. Add nav and hero links.
-6. First version of `08_check_configurator.py`: HTTP server under an `/ICU-competition/` prefix to catch absolute paths, SwiftShader flags from `05`, no fixed waits.
+6. First version of `08_check_configurator.py`: HTTP server under an `/ICU-competition/` prefix to catch absolute paths, SwiftShader flags from `05`, no fixed waits. Add `07` and `08` to `run_all.sh`.
 
 **Verify:**
 - `07`, `06` and `08` pass.
 - Screenshots of every preset in both rooms, and every time stop. I check the sun patch matches the Cycles render at Afternoon, and that morning has none.
-- The clamp test drags the camera at each wall and asserts it stays inside.
+- The clamp test orbits and zooms out from each view and asserts the camera stays inside. Every route between views is also checked point by point, since SwiftShader is too slow to sample a real move.
 - `08` asserts the initial download is under 15 MB.
 
 ### Phase 3: Surfaces, lighting, smart glass, palms (`configurator-3-surfaces`)
@@ -220,7 +220,7 @@ Each phase is its own branch off an up-to-date `main`, with a PR. If the previou
 1. Keyboard and screen-reader pass, visible focus, and reduced motion for camera moves and the tour.
 2. Bottom sheet tuned on a phone viewport, using `visual-qa`.
 3. Frame-time logging on real hardware, then tuning.
-4. Add `07` and `08` to `run_all.sh`. Update `README.md`, `REPORT.md` (no third-party assets, sun assumptions, palm height, kit overrides) and site copy.
+4. Update `README.md`, `REPORT.md` (no third-party assets, sun assumptions, palm height, kit overrides) and site copy.
 5. Final check of every clinical note against its source.
 
 **Verify:** full `scripts/run_all.sh` passes, including `08`, and every "Done when" item in the brief is checked with evidence.

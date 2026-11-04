@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Room configurator: an ICU room design proposal</title>
+<meta name="description" content="A design proposal: spec an ICU patient room in 3D, from set views to daylight and night. Independent student work, built on a model of the SSMC fourth-floor ICU.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#e4eef0">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="configurator.css">
+</head>
+<body>
+<canvas id="c" class="pending" tabindex="0" aria-label="3D view of the room. Drag or use the arrow keys to look around."></canvas>
+<div id="load" role="status">Loading the room…</div>
+
+<aside id="panel" aria-label="Room options">
+  <button id="sheet" type="button" aria-controls="panelBody" aria-expanded="false" aria-label="Show the options"><span aria-hidden="true"></span></button>
+  <header>
+    <a class="back" href="../">Walk the ICU</a>
+    <h1>Room configurator</h1>
+    <p class="tag">Design proposal</p>
+  </header>
+  <div id="panelBody">
+    <section aria-labelledby="hRoom">
+      <h2 id="hRoom">Room</h2>
+      <div id="rooms" class="seg" role="group" aria-labelledby="hRoom">
+        <button type="button" data-value="W1" aria-pressed="true">Isolation <small>W1</small></button>
+        <button type="button" data-value="W3" aria-pressed="false">Standard <small>W3</small></button>
+      </div>
+      <p id="roomStatus" class="note" role="status"></p>
+    </section>
+
+    <section aria-labelledby="hView">
+      <h2 id="hView">View</h2>
+      <div id="views" class="grid" role="group" aria-labelledby="hView">
+        <button type="button" data-value="entrance" aria-pressed="false">Entrance</button>
+        <button type="button" data-value="family" aria-pressed="true">Family zone</button>
+        <button type="button" data-value="bed" aria-pressed="false">From the bed</button>
+        <button type="button" data-value="bed_window" aria-pressed="false">Head turned</button>
+        <button type="button" data-value="window" aria-pressed="false">Window</button>
+        <button type="button" data-value="dollhouse" aria-pressed="false">Dollhouse</button>
+      </div>
+      <p class="note">Drag to look around, scroll or pinch to move closer.</p>
+    </section>
+
+    <section aria-labelledby="hTime">
+      <h2 id="hTime">Time of day</h2>
+      <div id="dayNight" class="seg" role="group" aria-labelledby="hTime">
+        <button type="button" data-value="day" aria-pressed="true">Day</button>
+        <button type="button" data-value="night" aria-pressed="false">Night</button>
+      </div>
+      <label class="slider" for="time"><span>Solar time</span><output id="timeNow" for="time"></output></label>
+      <input id="time" type="range" min="6" max="22" step="0.0833" value="15.53">
+      <div id="stops" class="stops" role="group" aria-label="Times of day">
+        <button type="button" data-value="morning" aria-pressed="false">Morning</button>
+        <button type="button" data-value="midday" aria-pressed="false">Midday</button>
+        <button type="button" data-value="afternoon" aria-pressed="true">Afternoon</button>
+        <button type="button" data-value="sunset" aria-pressed="false">Sunset</button>
+        <button type="button" data-value="night" aria-pressed="false">Night</button>
+      </div>
+      <p class="note">The sun path is for Abu Dhabi's latitude in mid-March or late September. North follows the model, as in the renders.</p>
+    </section>
+
+    <footer>
+      <p>This is a proposal, not the room as built. The room shape comes from the drawing; the furnishings, finishes and layout are assumed.</p>
+      <p>Independent student work for the SSMC ICU Interior Design Student Competition. It isn't made or endorsed by Sheikh Shakhbout Medical City, and it isn't for clinical or construction use.</p>
+    </footer>
+  </div>
+</aside>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>

@@ -228,6 +228,50 @@ def make_textures():
     im.save(os.path.join(TEX, "workstation.png"))
 
 
+# ------------------------------------------------------------------ placing and exporting
+def place(src, name, M, collection):
+    """A linked copy of a kit object."""
+    ob = bpy.data.objects.new(name, src.data)
+    ob.matrix_world = Matrix(np.asarray(M).tolist())
+    collection.objects.link(ob)
+    return ob
+
+
+def frame_matrix(origin, ydir, z=0.0):
+    """Local frame: +Y along ydir (2D), Z up, origin on the floor."""
+    y = np.array([ydir[0], ydir[1], 0.0]); y /= np.linalg.norm(y)
+    x = np.array([y[1], -y[0], 0.0])
+    M = np.eye(4); M[:3, 0] = x; M[:3, 1] = y; M[:3, 2] = (0, 0, 1); M[:3, 3] = (origin[0], origin[1], z)
+    return M
+
+
+def rot_z(deg):
+    return np.array(Matrix.Rotation(math.radians(deg), 4, "Z"))
+
+
+def T(x, y, z=0.0):
+    return np.array(Matrix.Translation((x, y, z)))
+
+
+def flatten_materials():
+    """Procedural shaders don't survive glTF: reduce each material to its spec colour. Screen images and glass transmission stay."""
+    for m in bpy.data.materials:
+        if not m.node_tree:
+            continue
+        nt = m.node_tree
+        bsdf = next((n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        out = next((n for n in nt.nodes if n.type == "OUTPUT_MATERIAL"), None)
+        if not bsdf or not out:
+            continue
+        nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
+        for name in ("Base Color", "Normal"):
+            for ln in list(bsdf.inputs[name].links):
+                if ln.from_node.type != "TEX_IMAGE":
+                    nt.links.remove(ln)
+        if "spec_color" in m.keys() and not bsdf.inputs["Base Color"].links:
+            bsdf.inputs["Base Color"].default_value = hex_lin(m["spec_color"])
+
+
 # ------------------------------------------------------------------ mesh builder
 class Builder:
     """Accumulate parts (verts/faces/material) and emit one mesh object."""

@@ -19,6 +19,7 @@ from shapely.ops import unary_union
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kit  # noqa: E402
 import planlib  # noqa: E402
+from kit import T, frame_matrix, place, rot_z  # noqa: E402
 
 ROOT = planlib.ROOT
 spec = planlib.load_spec()
@@ -72,29 +73,6 @@ def extrude(polys, z0, z1):
 
 def tm_obj(name, tm, mat, collection):
     return mesh_obj(name, tm.vertices, tm.faces, mat, collection)
-
-
-def place(src, name, M, collection):
-    ob = bpy.data.objects.new(name, src.data)
-    ob.matrix_world = Matrix(np.asarray(M).tolist())
-    collection.objects.link(ob)
-    return ob
-
-
-def frame_matrix(origin, ydir, z=0.0):
-    """Local frame: +Y along ydir (2D), Z up, origin on the floor."""
-    y = np.array([ydir[0], ydir[1], 0.0]); y /= np.linalg.norm(y)
-    x = np.array([y[1], -y[0], 0.0])
-    M = np.eye(4); M[:3, 0] = x; M[:3, 1] = y; M[:3, 2] = (0, 0, 1); M[:3, 3] = (origin[0], origin[1], z)
-    return M
-
-
-def rot_z(deg):
-    return np.array(Matrix.Rotation(math.radians(deg), 4, "Z"))
-
-
-def T(x, y, z=0.0):
-    return np.array(Matrix.Translation((x, y, z)))
 
 
 # ------------------------------------------------------------------ plan geometry
@@ -690,7 +668,10 @@ bpy.ops.file.pack_all()
 # ICU_BLEND writes the scene elsewhere (a plain rebuild replaces output/icu.blend)
 bpy.ops.wm.save_as_mainfile(filepath=os.environ.get("ICU_BLEND") or os.path.join(ROOT, "output", "icu.blend"), compress=True)
 planlib.label_rooms(rooms_index, spec)
-json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "spaces": len(spaces)},
+# the 2D plan as built, for steps that work on one room (07)
+geometry = {"walls": walls_u.wkt, "inside_glass": inside_glass.wkt,
+            "spaces": [{"names": s["names"], "labels": s["labels"], "poly": s["poly"].wkt} for s in spaces]}
+json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "spaces": len(spaces), "geometry": geometry},
           open(os.path.join(ROOT, "build", "scene_index.json"), "w"), indent=1)
 tri = sum(len(o.data.polygons) for o in scene.objects if o.type == "MESH" and o.users_collection[0] != KITC)
 print(f"scene: {len(rooms_index)} patient rooms furnished, {n_l} ceiling lights, {len(spaces)} spaces, "
