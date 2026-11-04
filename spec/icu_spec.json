@@ -533,7 +533,13 @@
    "azimuth_deg": 250,
    "strength": 3.5
   },
-  "sky_strength": 0.9
+  "sky_strength": 0.9,
+  "site": {
+   "_note": "for the configurator's sun path. This declination puts the spec's sun (azimuth 250, elevation 32) on the real path at about 15:32 solar time. +y is the model's north, as in the renders; true north isn't on these sheets, so north_offset_deg can correct it later",
+   "latitude_deg": 24.45,
+   "declination_deg": -2.5,
+   "north_offset_deg": 0
+  }
  },
  "render": {
   "engine": "CYCLES",
@@ -655,5 +661,363 @@
   "repo": "https://github.com/ihama1305-design/ICU-competition",
   "dir": ".",
   "_note": "dir is where Pages publishes from; the repo serves main from its root"
+ },
+ "configurator": {
+  "_note": "proposal only: this doesn't change the as-built scene. Coordinates are world metres. W1's layout comes from kit.room_overrides; W3's bed is turned here so the window is beside the patient, as in W1. W3's drawn bed circle is centred at (10.31, 20.7)",
+  "rooms": {
+   "W1": {
+    "label_at": [
+     11.548,
+     30.461
+    ],
+    "via": [
+     [
+      16.56,
+      28.66,
+      1.5
+     ],
+     [
+      15.2,
+      29.9,
+      1.5
+     ]
+    ],
+    "cameras": {
+     "entrance": {
+      "eye": [
+       17.0,
+       27.2,
+       1.6
+      ],
+      "look": [
+       16.0,
+       30.6,
+       1.25
+      ],
+      "hfov": 90
+     },
+     "bed": {
+      "eye": [
+       11.2,
+       29.52,
+       1.3
+      ],
+      "look": [
+       11.2,
+       27.13,
+       1.63
+      ],
+      "hfov": 80
+     },
+     "bed_window": {
+      "eye": [
+       11.2,
+       29.52,
+       1.3
+      ],
+      "look": [
+       7.7,
+       29.9,
+       1.7
+      ],
+      "hfov": 80
+     },
+     "family": {
+      "eye": [
+       14.5,
+       30.72,
+       1.45
+      ],
+      "look": [
+       9.2,
+       28.6,
+       0.95
+      ],
+      "hfov": 88
+     },
+     "window": {
+      "eye": [
+       9.2,
+       29.6,
+       1.55
+      ],
+      "look": [
+       5.0,
+       30.51,
+       1.45
+      ],
+      "hfov": 72
+     },
+     "dollhouse": {
+      "eye": [
+       15.5,
+       17.0,
+       15.0
+      ],
+      "look": [
+       13.2,
+       29.2,
+       0.0
+      ],
+      "hfov": 50
+     }
+    },
+    "anchors": {
+     "console": {
+      "at": [
+       11.2,
+       27.4,
+       0.0
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "toys": {
+      "at": [
+       18.03,
+       29.3,
+       1.0
+      ],
+      "face": [
+       -1,
+       0
+      ]
+     },
+     "playmat": {
+      "at": [
+       15.8,
+       29.9,
+       0.01
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "seating": {
+      "at": [
+       16.9,
+       30.55,
+       0.0
+      ],
+      "face": [
+       0,
+       -1
+      ]
+     },
+     "aquarium": {
+      "at": [
+       14.7,
+       28.8,
+       1.3
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "reading_light": {
+      "at": [
+       11.2,
+       30.5,
+       2.1
+      ],
+      "face": [
+       0,
+       -1
+      ]
+     }
+    }
+   },
+   "W3": {
+    "label_at": [
+     10.633,
+     21.009
+    ],
+    "via": [],
+    "layout": {
+     "head": [
+      10.31,
+      21.05
+     ],
+     "foot_dir": [
+      0,
+      -1
+     ],
+     "iv_pole": [
+      -1.15,
+      -0.55
+     ],
+     "recliner": [
+      -1.75,
+      1.2,
+      75
+     ],
+     "visitor_chair": [
+      1.75,
+      2.1,
+      -110
+     ],
+     "feature_wall": {
+      "on": "foot",
+      "length": 1.75,
+      "bumper_length": 1.75,
+      "tv": {
+       "bottom": 1.35
+      }
+     }
+    },
+    "cameras": {
+     "entrance": {
+      "eye": [
+       16.2,
+       20.75,
+       1.6
+      ],
+      "look": [
+       9.5,
+       20.2,
+       1.1
+      ],
+      "hfov": 80
+     },
+     "bed": {
+      "eye": [
+       10.31,
+       20.31,
+       1.3
+      ],
+      "look": [
+       10.31,
+       18.13,
+       1.63
+      ],
+      "hfov": 80
+     },
+     "bed_window": {
+      "eye": [
+       10.31,
+       20.31,
+       1.3
+      ],
+      "look": [
+       5.9,
+       20.7,
+       1.7
+      ],
+      "hfov": 80
+     },
+     "family": {
+      "eye": [
+       13.5,
+       21.7,
+       1.45
+      ],
+      "look": [
+       8.5,
+       19.7,
+       0.95
+      ],
+      "hfov": 88
+     },
+     "window": {
+      "eye": [
+       7.5,
+       20.4,
+       1.55
+      ],
+      "look": [
+       3.3,
+       21.31,
+       1.45
+      ],
+      "hfov": 72
+     },
+     "dollhouse": {
+      "eye": [
+       12.0,
+       8.0,
+       15.0
+      ],
+      "look": [
+       10.0,
+       20.2,
+       0.0
+      ],
+      "hfov": 50
+     }
+    },
+    "anchors": {
+     "console": {
+      "at": [
+       10.31,
+       18.4,
+       0.0
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "toys": {
+      "at": [
+       11.8,
+       22.37,
+       1.0
+      ],
+      "face": [
+       0,
+       -1
+      ]
+     },
+     "playmat": {
+      "at": [
+       12.9,
+       20.7,
+       0.01
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "seating": {
+      "at": [
+       13.4,
+       19.75,
+       0.0
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "aquarium": {
+      "at": [
+       13.5,
+       19.27,
+       1.3
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "reading_light": {
+      "at": [
+       10.31,
+       21.3,
+       2.1
+      ],
+      "face": [
+       0,
+       -1
+      ]
+     }
+    }
+   }
+  }
  }
 }

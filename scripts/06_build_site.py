@@ -1,6 +1,6 @@
 """Build the GitHub Pages site (spec site.dir) from renders/, the model and scripts/site/.
 
-Run after 04_export.py, which writes viewer/ and assets/model/. Every number on the page
+Run after 04_export.py, which writes viewer/ and assets/model/, and 07_export_room.py, which adds the configurator's rooms. Every number on the page
 comes from the build, so it can't drift from the model. Uses ICU_BLEND if set, like the other steps.
 """
 import json
@@ -135,6 +135,19 @@ if left:
 open(os.path.join(SITE_DIR, "index.html"), "w").write(page)
 shutil.copyfile(os.path.join(SRC, "styles.css"), os.path.join(SITE_DIR, "styles.css"))
 shutil.copyfile(os.path.join(SRC, "favicon.svg"), os.path.join(SITE_DIR, "favicon.svg"))
+
+# the configurator page: a template and its modules, which load the rooms 07 wrote to assets/model/
+cfg_dir = os.path.join(SITE_DIR, "configurator")
+shutil.rmtree(cfg_dir, ignore_errors=True)
+shutil.copytree(os.path.join(SRC, "configurator"), cfg_dir)
+cfg_page = open(os.path.join(SRC, "configurator.template.html")).read()
+main_js = os.path.join(cfg_dir, "main.js")
+main_src = open(main_js).read()
+open(main_js, "w").write(re.sub(r"/\*SITE_JSON\*/\{.*?\}", json.dumps({k: v for k, v in spec["lighting"]["site"].items() if not k.startswith("_")}), main_src, count=1))
+left = re.findall(r"\{\{\w+\}\}", cfg_page)
+if left:
+    raise SystemExit(f"unfilled placeholders in the configurator: {left}")
+open(os.path.join(cfg_dir, "index.html"), "w").write(cfg_page)
 open(os.path.join(SITE_DIR, ".nojekyll"), "w").close()
 
 # link preview image, 1200 x 630
@@ -144,6 +157,6 @@ im = im.resize((1200, round(im.height * scale)), Image.LANCZOS)
 top = (im.height - 630) // 2
 im.crop((0, top, 1200, top + 630)).save(os.path.join(IMG, "og.jpg"), "JPEG", quality=82, optimize=True)
 
-size = sum(os.path.getsize(os.path.join(d, f)) for sub in ("assets", "viewer", "downloads")
+size = sum(os.path.getsize(os.path.join(d, f)) for sub in ("assets", "viewer", "configurator", "downloads")
            for d, _, fs in os.walk(os.path.join(SITE_DIR, sub)) for f in fs)
 print(f"  website {size / 1e6:.1f} MB; page data: {values}")

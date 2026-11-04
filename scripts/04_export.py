@@ -20,21 +20,7 @@ spec = planlib.load_spec()
 # ICU_BLEND overrides the scene to export (a rebuild writes output/icu.blend)
 bpy.ops.wm.open_mainfile(filepath=os.environ.get("ICU_BLEND") or os.path.join(ROOT, "output", "icu.blend"))
 
-for m in bpy.data.materials:
-    if not m.node_tree:
-        continue
-    nt = m.node_tree
-    bsdf = next((n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"), None)
-    out = next((n for n in nt.nodes if n.type == "OUTPUT_MATERIAL"), None)
-    if not bsdf or not out:
-        continue
-    nt.links.new(bsdf.outputs[0], out.inputs["Surface"])
-    for name in ("Base Color", "Normal"):
-        for ln in list(bsdf.inputs[name].links):
-            if ln.from_node.type != "TEX_IMAGE":
-                nt.links.remove(ln)
-    if "spec_color" in m.keys() and not bsdf.inputs["Base Color"].links:
-        bsdf.inputs["Base Color"].default_value = kit.hex_lin(m["spec_color"])
+kit.flatten_materials()
 
 for cname in ("Kit", "Lights", "Cameras", "Context"):
     c = bpy.data.collections.get(cname)

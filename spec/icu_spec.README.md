@@ -11,8 +11,9 @@ Units are metres and degrees. Blender works Z-up; the GLB is converted to Y-up o
 | `building.*` | Heights: `ceiling_height` (assumed), `door_head` (from the `H=2410` tags), `window_sill`/`window_head` (from the `WA31` tag), counter, desk and ledge heights, skirting, handrails. `facade.*` sets the upstand, glass offset, mullion and fin spacing |
 | `materials.*` | Colour (sRGB hex), roughness and metallic for every surface. Floors get a vinyl speckle, the corridor ceiling a 600 mm grid, doors and handrails a wood grain |
 | `kit.*` | Patient-room equipment in the bed-head frame: origin at the bed-head centre on the floor, +y toward the bed foot (corridor), x across the bed. `head_clearance` is the gap from the facade to the bed head. `room_overrides` gives a room its own bed head (world coordinates), kit positions and feature wall; each entry applies to the room containing its `label_at` |
-| `lighting.*` | LED panel size, grid and wattage, sun elevation/azimuth, sky strength |
+| `lighting.*` | LED panel size, grid and wattage, sun elevation/azimuth, sky strength. `site` is the configurator's sun path: latitude, the declination that puts the spec's sun on that path, and `north_offset_deg` |
 | `cameras.*` | `hero_room_label` picks the room used for the interior shots. `room_entry` and `bedside` use the bed-head frame; `iso_entry`, `iso_room` and `iso_window` are world coordinates in isolation room W1. Also the observation-camera settings, corridor and aerial eye/look points, and per-camera `exposure` |
+| `configurator.*` | The configurator's rooms, a design proposal: each room's `label_at`, its `cameras` (world `eye`, `look`, horizontal `hfov`), `anchors` for add-ons, `via` points for moves through its door and, for W3, the side-on `layout`. W1's layout is its `kit.room_overrides` entry |
 | `render.*` | Cycles samples, resolution, denoise, view transform |
 | `site.*` | The website's public URL, repo URL and publish folder (`dir`, the repo root) |
 
