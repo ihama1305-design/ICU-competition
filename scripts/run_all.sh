@@ -16,5 +16,5 @@ echo "== 03 Cycles renders";                   "$PY" -I scripts/03_render.py ${1
 echo "== 04 GLB + viewer";                     "$PY" -I scripts/04_export.py 2>&1 | grep -E '^  output/|Error|Traceback' || true
 [ -s output/icu.glb ] || { echo "export failed"; exit 1; }
 echo "== 05 viewer test (headless Chromium)";  "$PY" -I scripts/05_check_viewer.py
-echo "== 06 website (docs/)";                   "$PY" -I scripts/06_build_site.py
-echo "done -> output/icu.blend, output/icu.glb, output/viewer/index.html, renders/, docs/"
+echo "== 06 website";                           "$PY" -I scripts/06_build_site.py
+echo "done -> output/icu.blend, output/icu.glb, output/viewer/index.html, renders/, website (index.html, viewer/, assets/, downloads/)"

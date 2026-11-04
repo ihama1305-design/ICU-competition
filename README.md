@@ -33,13 +33,13 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 
 | File | What it is |
 |---|---|
-| [`docs/downloads/icu.blend`](docs/downloads/icu.blend) | Editable Blender 5.2 scene with collections Shell, Ceiling, Facade, Doors, Glazing, Joinery, Equipment, Lights, Cameras |
-| [`docs/downloads/icu.glb`](docs/downloads/icu.glb) | The same model for other 3D tools (metres, Y-up, flat colours) |
+| [`downloads/icu.blend`](downloads/icu.blend) | Editable Blender 5.2 scene with collections Shell, Ceiling, Facade, Doors, Glazing, Joinery, Equipment, Lights, Cameras |
+| [`downloads/icu.glb`](downloads/icu.glb) | The same model for other 3D tools (metres, Y-up, flat colours) |
 | [`renders/`](renders/) | Full-size Cycles renders |
 | [`REPORT.md`](REPORT.md) | How it was built, what is accurate and what is assumed |
 | [`spec/icu_spec.json`](spec/icu_spec.json) | Every height, material, equipment position, light and camera ([field guide](spec/icu_spec.README.md)) |
 | [`scripts/`](scripts/) | The pipeline, from drawing to website |
-| [`docs/`](docs/) | The published website. It is generated, so edit `scripts/site/` and rebuild instead |
+| `index.html`, `viewer/`, `assets/` | The published website, served from the repo root. It is generated, so edit `scripts/site/` and rebuild instead |
 
 ## Rebuild
 

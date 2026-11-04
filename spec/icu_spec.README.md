@@ -14,5 +14,6 @@ Units are metres and degrees. Blender works Z-up; the GLB is converted to Y-up o
 | `lighting.*` | LED panel size, grid and wattage, sun elevation/azimuth, sky strength |
 | `cameras.*` | `hero_room_label` picks the room used for the interior shots. `room_entry` and `bedside` use the bed-head frame. Also the observation-camera settings, corridor and aerial eye/look points, and per-camera `exposure` |
 | `render.*` | Cycles samples, resolution, denoise, view transform |
+| `site.*` | The website's public URL, repo URL and publish folder (`dir`, the repo root) |
 
 After changing anything, run `scripts/run_all.sh` (or `--preview`).
