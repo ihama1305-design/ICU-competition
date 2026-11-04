@@ -48,11 +48,12 @@ bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True, 
 print(f"  output/icu.glb {os.path.getsize(glb) / 1e6:.1f} MB")
 
 # a gzipped copy for the website, so the walkthrough loads faster (the viewer unpacks it)
-web_glb = os.path.join(ROOT, "docs", "assets", "model", "icu.glb.gz")
+SITE = os.path.normpath(os.path.join(ROOT, spec["site"]["dir"]))
+web_glb = os.path.join(SITE, "assets", "model", "icu.glb.gz")
 os.makedirs(os.path.dirname(web_glb), exist_ok=True)
 with open(web_glb, "wb") as fh:
     fh.write(gzip.compress(open(glb, "rb").read(), 9, mtime=0))
-print(f"  docs/assets/model/icu.glb.gz {os.path.getsize(web_glb) / 1e6:.1f} MB")
+print(f"  assets/model/icu.glb.gz {os.path.getsize(web_glb) / 1e6:.1f} MB")
 
 # ------------------------------------------------------------------ viewer
 import io  # noqa: E402
@@ -152,9 +153,9 @@ print(f"  output/viewer/index.html {os.path.getsize(vp) / 1e6:.1f} MB ({len(obje
 # website: fetches the compressed model and links back to the overview
 site = (common.replace("__GLB_BASE64__", "").replace("__GLB_URL__", "../assets/model/icu.glb.gz")
         .replace("<!--HOME_LINK-->", '<a class="v" href="../">Overview</a>'))
-sp = os.path.join(ROOT, "docs", "viewer", "index.html")
+sp = os.path.join(SITE, "viewer", "index.html")
 os.makedirs(os.path.dirname(sp), exist_ok=True)
 open(sp, "w").write(document(site, '<meta name="robots" content="noindex">\n'
                                    '<meta name="description" content="Walk through a 3D model of the SSMC 4th-floor ICU in your browser.">\n'
                                    '<link rel="icon" href="../favicon.svg" type="image/svg+xml">\n'))
-print(f"  docs/viewer/index.html {os.path.getsize(sp) / 1e6:.2f} MB")
+print(f"  viewer/index.html {os.path.getsize(sp) / 1e6:.2f} MB")

@@ -538,6 +538,8 @@
  },
  "site": {
   "url": "https://ihama1305-design.github.io/ICU-competition/",
-  "repo": "https://github.com/ihama1305-design/ICU-competition"
+  "repo": "https://github.com/ihama1305-design/ICU-competition",
+  "dir": ".",
+  "_note": "dir is where Pages publishes from; the repo serves main from its root"
  }
 }

@@ -66,7 +66,7 @@ These are read from the drawing and visible in the renders:
 ## Rebuild and edit
 
 - **Rebuild:** `scripts/run_all.sh` runs the full pipeline. Use `--preview` for quick renders.
-- **Edit the model:** open `docs/downloads/icu.blend`, or `output/icu.blend` after a rebuild. Each room's equipment is a set of linked copies, so editing one bed's mesh changes all 16.
+- **Edit the model:** open `downloads/icu.blend`, or `output/icu.blend` after a rebuild. Each room's equipment is a set of linked copies, so editing one bed's mesh changes all 16.
 - **Change numbers:** edit `spec/icu_spec.json`, such as `building.ceiling_height`, `building.window_head`, `kit.*` positions in the bed-head frame, or `cameras.*`.
 - **Debug the plan reading:** `scripts/plan_debug.py` draws the extracted plan over the CAD layers to `build/sheets/plan_debug.png`.
 

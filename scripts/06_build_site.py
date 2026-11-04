@@ -1,6 +1,6 @@
-"""Build the GitHub Pages site in docs/ from renders/, the model and scripts/site/.
+"""Build the GitHub Pages site (spec site.dir) from renders/, the model and scripts/site/.
 
-Run after 04_export.py, which writes docs/viewer/ and docs/assets/model/. Every number on the page
+Run after 04_export.py, which writes viewer/ and assets/model/. Every number on the page
 comes from the build, so it can't drift from the model. Uses ICU_BLEND if set, like the other steps.
 """
 import json
@@ -19,8 +19,8 @@ import planlib  # noqa: E402
 
 ROOT = planlib.ROOT
 spec = planlib.load_spec()
-DOCS = os.path.join(ROOT, "docs")
-IMG = os.path.join(DOCS, "assets", "img")
+SITE_DIR = os.path.normpath(os.path.join(ROOT, spec["site"]["dir"]))
+IMG = os.path.join(SITE_DIR, "assets", "img")
 SRC = os.path.join(ROOT, "scripts", "site")
 SITE_URL = spec["site"]["url"]
 REPO_URL = spec["site"]["repo"]
@@ -93,13 +93,13 @@ values = {
     "LIGHTS": str(idx["lights"]),
     "CEILING": f"{spec['building']['ceiling_height']:.2f}",
 }
-os.makedirs(os.path.join(DOCS, "downloads"), exist_ok=True)
-shutil.copyfile(BLEND, os.path.join(DOCS, "downloads", "icu.blend"))
-shutil.copyfile(GLB, os.path.join(DOCS, "downloads", "icu.glb"))
+os.makedirs(os.path.join(SITE_DIR, "downloads"), exist_ok=True)
+shutil.copyfile(BLEND, os.path.join(SITE_DIR, "downloads", "icu.blend"))
+shutil.copyfile(GLB, os.path.join(SITE_DIR, "downloads", "icu.glb"))
 mb = lambda p: f"{os.path.getsize(p) / 1e6:.1f}"  # noqa: E731
 values["BLEND_MB"] = mb(BLEND)
 values["GLB_MB"] = mb(GLB)
-values["GLB_WEB_MB"] = mb(os.path.join(DOCS, "assets", "model", "icu.glb.gz"))
+values["GLB_WEB_MB"] = mb(os.path.join(SITE_DIR, "assets", "model", "icu.glb.gz"))
 
 page = open(os.path.join(SRC, "index.template.html")).read()
 
@@ -122,10 +122,10 @@ for k, v in values.items():
 left = re.findall(r"\{\{\w+\}\}", page)
 if left:
     raise SystemExit(f"unfilled placeholders in the site: {left}")
-open(os.path.join(DOCS, "index.html"), "w").write(page)
-shutil.copyfile(os.path.join(SRC, "styles.css"), os.path.join(DOCS, "styles.css"))
-shutil.copyfile(os.path.join(SRC, "favicon.svg"), os.path.join(DOCS, "favicon.svg"))
-open(os.path.join(DOCS, ".nojekyll"), "w").close()
+open(os.path.join(SITE_DIR, "index.html"), "w").write(page)
+shutil.copyfile(os.path.join(SRC, "styles.css"), os.path.join(SITE_DIR, "styles.css"))
+shutil.copyfile(os.path.join(SRC, "favicon.svg"), os.path.join(SITE_DIR, "favicon.svg"))
+open(os.path.join(SITE_DIR, ".nojekyll"), "w").close()
 
 # link preview image, 1200 x 630
 im = Image.open(os.path.join(ROOT, "renders", "room_entry.png")).convert("RGB")
@@ -134,5 +134,6 @@ im = im.resize((1200, round(im.height * scale)), Image.LANCZOS)
 top = (im.height - 630) // 2
 im.crop((0, top, 1200, top + 630)).save(os.path.join(IMG, "og.jpg"), "JPEG", quality=82, optimize=True)
 
-size = sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(DOCS) for f in fs)
-print(f"  docs/ {size / 1e6:.1f} MB; page data: {values}")
+size = sum(os.path.getsize(os.path.join(d, f)) for sub in ("assets", "viewer", "downloads")
+           for d, _, fs in os.walk(os.path.join(SITE_DIR, sub)) for f in fs)
+print(f"  website {size / 1e6:.1f} MB; page data: {values}")
