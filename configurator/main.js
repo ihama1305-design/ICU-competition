@@ -7,10 +7,11 @@ import { Daylight, sunAt } from "./sky.js";
 import { Lighting } from "./lights.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
-import { setAddon } from "./addons.js";
+import { setAddon, setShade, setTv, syncPalms, tickAddons } from "./addons.js";
+import { decodeSpec, encodeSpec } from "./state.js";
+import { summaryContent } from "./summary.js";
 import { Panel } from "./panel.js";
 
-window.__configErrors = [];
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
 document.addEventListener("touchstart", () => {}, { passive: true }); // iOS Safari only applies :active once the page listens for touches
@@ -26,7 +27,7 @@ const query = new URLSearchParams(location.search);
 const tier = query.get("tier") || (matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 600 ? "low" : "high");
 const stage = new Stage(canvas, tier);
 const controls = new OrbitControls(stage.camera, canvas);
-const state = { room: "W1", view: "family", hour: STOPS.afternoon };
+const state = { room: "W1", view: "overview", hour: STOPS.afternoon };
 let dirty = true, lastDayHour = STOPS.afternoon;
 const invalidate = () => { dirty = true; };
 const rig = new Rig(stage.camera, controls, W2T, invalidate);
@@ -39,8 +40,13 @@ rig.onView = (name, isDoll) => {
   if (isDoll) stage.setCeiling(false);
   state.view = name;
   syncViews();
+  remember();
 };
-rig.onArrive = name => { if (name !== "dollhouse") stage.setCeiling(true); invalidate(); };
+rig.onArrive = name => {
+  if (name !== "dollhouse") stage.setCeiling(true);
+  invalidate();
+  tour.arrived();
+};
 
 // ---------------------------------------------------------------- layout
 function resize() {
@@ -55,7 +61,9 @@ function resize() {
   stage.camera.setViewOffset(w, h, coverX / 2, coverY / 2, w, h);
   rig.visible = { w: w - coverX, h: h };
   if (rig.meta) rig.fit();
-  $("panelBody").inert = phone && !panel.classList.contains("open"); // a closed sheet's controls are off-screen
+  const closed = phone && !panel.classList.contains("open"); // a closed sheet's controls are off-screen
+  $("panelBody").inert = closed;
+  panel.querySelector(".actions").inert = closed;
   stage.camera.updateProjectionMatrix();
   invalidate();
 }
@@ -65,7 +73,7 @@ panel.addEventListener("transitionend", e => { if (e.target === panel && e.prope
 
 // ---------------------------------------------------------------- controls
 function pressed(group, value) {
-  group.querySelectorAll("button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.value === value)); });
+  group.querySelectorAll("button[data-value]").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.value === value)); });
 }
 function syncViews() { pressed($("views"), state.view); }
 
@@ -91,6 +99,7 @@ function setTime(h) {
   const text = clock(h);
   slider.setAttribute("aria-valuetext", `${text} solar time`);
   $("timeNow").textContent = text;
+  remember();
   pressed($("dayNight"), isNight(h) ? "night" : "day");
   const stop = Object.entries(STOPS).find(([, v]) => Math.abs(v - h) < 0.2)?.[0];
   $("stops").querySelectorAll("button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.value === stop)); });
@@ -113,9 +122,9 @@ async function setRoom(label, { keepView = true } = {}) {
   applyAll();
   relight();
   rig.view = null;
-  rig.go(keepView ? state.view : "family", { instant: true });
+  rig.go(keepView ? state.view : "overview", { instant: true });
   stage.setCeiling(state.view !== "dollhouse");
-  panelUi?.sync(selected, label);
+  syncUi();
   status.textContent = room.meta.isolation ? "With its ante room and toilet." : "Opens straight onto the corridor.";
   invalidate();
 }
@@ -132,7 +141,14 @@ $("rooms").addEventListener("click", e => {
     $("roomStatus").textContent = "That room could not be loaded. Check your connection and try again.";
   });
 });
-$("views").addEventListener("click", e => { const b = e.target.closest("button"); if (b) rig.go(b.dataset.value); });
+$("views").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.id === "tour") { tour.toggle(); return; }
+  tour.stop();
+  rig.go(b.dataset.value);
+  remember();
+});
 $("dayNight").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (b) setTime(b.dataset.value === "night" ? STOPS.night : lastDayHour);
@@ -162,9 +178,13 @@ const optionOf = (groupId, optionId) => groupById(groupId).options.find(o => o.i
 const groupById = id => optionData.sections.flatMap(s => s.groups).find(g => g.id === id);
 
 const EFFECTS = {
-  color: e => { for (const n of Object.values(stage.current.parts).flat()) if (n.material.name === e.material) n.material.color.set(e.value); },
+  color: e => { for (const n of Object.values(stage.current.parts).flat()) if (!Array.isArray(n.material) && n.material.name === e.material) n.material.color.set(e.value); },
   material: e => applyLook(stage.current, e.target, e.look),
-  visible: e => { (stage.current.parts[e.part] || []).forEach(n => { n.visible = e.on; }); },
+  visible: e => {
+    for (const [name, meshes] of Object.entries(stage.current.parts)) {
+      if (e.part ? name === e.part : name.startsWith(e.prefix)) meshes.forEach(n => { n.visible = e.on; });
+    }
+  },
   addon: e => { setAddon(stage.current, e.id, e.on); stage.refreshCeiling(); },
   light: e => {
     const p = { ...e };
@@ -180,6 +200,8 @@ const EFFECTS = {
     const node = stage.current.root.getObjectByName("cfg_blinds");
     if (node) node.scale.y = Math.max(0.001, e.level);
   },
+  tv: e => setTv(stage.current, e),
+  shade: e => setShade(stage.current, e.kind),
 };
 
 function runEffects(group, optionId) {
@@ -190,10 +212,22 @@ function runEffects(group, optionId) {
   for (const e of optionOf(group.id, optionId).effects) EFFECTS[e.do](e);
 }
 
-/** Bring a newly shown room up to the current selections. */
-function applyAll() {
-  for (const s of optionData.sections) for (const g of s.groups) runEffects(g, selected[g.id]);
+const allGroups = () => optionData.sections.flatMap(s => s.groups);
+
+/** What depends on more than one choice, and colours for add-ons built since they were chosen. */
+function settle() {
+  syncPalms(stage.current, selected.palms === "on", selected.patio === "on");
+  setShade(stage.current, selected.shade);
+  for (const g of allGroups()) {
+    if (selected[g.id] === "custom" || optionOf(g.id, selected[g.id])?.effects.some(e => e.do === "color")) runEffects(g, selected[g.id]);
+  }
   stage.renderer.shadowMap.needsUpdate = true;
+}
+
+/** Bring the room on show up to the current selections. */
+function applyAll() {
+  for (const g of allGroups()) runEffects(g, selected[g.id]);
+  settle();
 }
 
 function setOption(groupId, optionId, custom) {
@@ -206,10 +240,127 @@ function setOption(groupId, optionId, custom) {
     selected[g] = o;
     runEffects(groupById(g), o);
   }
-  stage.renderer.shadowMap.needsUpdate = true;
+  settle();
   relight();
-  panelUi.sync(selected, state.room);
+  syncUi();
 }
+
+/** A theme is a starting point: every option goes to its default, then the theme's choices. Anything can be changed afterwards. */
+function themeSelections(theme) {
+  const out = {};
+  for (const g of allGroups()) out[g.id] = g.default;
+  return Object.assign(out, theme.sets);
+}
+
+function applyTheme(id) {
+  const theme = optionData.themes.find(t => t.id === id);
+  for (const k of Object.keys(selected)) delete selected[k];
+  Object.assign(selected, themeSelections(theme));
+  applyAll();
+  relight();
+  syncUi();
+}
+
+const currentTheme = () => optionData.themes.find(t => {
+  const want = themeSelections(t);
+  return allGroups().every(g => selected[g.id] === want[g.id]);
+});
+
+function syncUi() {
+  panelUi?.sync(selected, state.room);
+  const theme = currentTheme();
+  $("themes").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.value === theme?.id)));
+  $("themeNote").textContent = theme ? theme.blurb : "Your own combination. Choose a theme to start again from it.";
+  remember();
+}
+
+// ---------------------------------------------------------------- sharing: the room is in the URL
+const specCode = () => encodeSpec(optionData, state, selected);
+let rememberTimer = 0;
+function remember() {
+  if (!optionData || !window.__configReady) return;
+  // not on every slider event: Safari refuses more than 100 replaceState calls in 30 seconds
+  clearTimeout(rememberTimer);
+  rememberTimer = setTimeout(() => history.replaceState(null, "", `#c=${specCode()}`), 250);
+}
+
+async function applySpec(spec) {
+  for (const k of Object.keys(selected)) delete selected[k];
+  Object.assign(selected, spec.selected);
+  state.hour = spec.hour;
+  state.view = spec.view;
+  if (spec.room !== state.room || !stage.current) await setRoom(spec.room);
+  else { applyAll(); rig.go(spec.view, { instant: true }); }
+  setTime(spec.hour);
+  syncUi();
+}
+
+function shareLink() { return `${location.origin}${location.pathname}#c=${specCode()}`; }
+
+// ---------------------------------------------------------------- summary and saving a picture
+const captureBlob = () => new Promise(done => { stage.draw(); canvas.toBlob(done, "image/png"); });
+
+async function saveImage() {
+  const url = URL.createObjectURL(await captureBlob());
+  const a = Object.assign(document.createElement("a"), { href: url, download: `icu-room-${state.room}-${specCode()}.png` });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+async function openSummary() {
+  const dialog = $("summary");
+  const picture = URL.createObjectURL(await captureBlob());
+  const roomLabel = rig.meta.isolation ? `Isolation room ${state.room}, with ante room and toilet` : `Standard room ${state.room}`;
+  const body = summaryContent(optionData, selected, state.room, { roomLabel, picture, code: specCode(), theme: currentTheme()?.label });
+  $("summaryBody").replaceChildren(body);
+  $("copyStatus").textContent = "";
+  dialog.showModal();
+  dialog.addEventListener("close", () => URL.revokeObjectURL(picture), { once: true });
+}
+
+$("openSummary").addEventListener("click", () => openSummary().catch(fail));
+$("saveImage").addEventListener("click", () => saveImage().catch(fail));
+$("saveImage2").addEventListener("click", () => saveImage().catch(fail));
+$("closeSummary").addEventListener("click", () => $("summary").close());
+$("copyLink").addEventListener("click", async () => {
+  const msg = $("copyStatus");
+  try {
+    await navigator.clipboard.writeText(shareLink());
+    msg.textContent = "Link copied.";
+  } catch {
+    msg.textContent = shareLink(); // no clipboard here: show it, to copy by hand
+  }
+});
+$("themes").addEventListener("click", e => { const b = e.target.closest("button"); if (b) applyTheme(b.dataset.value); });
+addEventListener("hashchange", () => {
+  const spec = decodeSpec(optionData, location.hash);
+  if (spec && specCode() !== location.hash.slice(3)) applySpec(spec).catch(fail);
+});
+
+// ---------------------------------------------------------------- the cinematic tour
+const tour = {
+  order: ["overview", "entrance", "family", "bed", "bed_window", "window", "dollhouse", "overview"], at: -1, timer: 0, log: [],
+  get running() { return this.at >= 0; },
+  toggle() { if (this.running) this.stop(); else this.start(); },
+  start() { this.at = -1; this.log = []; this.mark(true); this.at = 0; this.step(); },
+  step() { const name = this.order[this.at]; this.log.push(name); rig.go(name); },
+  arrived() {
+    if (!this.running) return;
+    clearTimeout(this.timer);
+    // reduced motion cuts between views, so each one stays up long enough to take in
+    this.timer = setTimeout(() => {
+      if (!this.running) return;
+      this.at += 1;
+      if (this.at >= this.order.length) this.stop(); else this.step();
+    }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 3000 : 1400);
+  },
+  stop() { clearTimeout(this.timer); this.at = -1; this.mark(false); remember(); },
+  mark(on) { const b = $("tour"); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Stop tour" : "Cinematic tour"; },
+};
+// anything the person does with the view ends the tour
+canvas.addEventListener("pointerdown", () => { if (tour.running) tour.stop(); });
+canvas.addEventListener("wheel", () => { if (tour.running) tour.stop(); }, { passive: true });
+canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 
 // the wall switch in the room works too
 const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
@@ -232,6 +383,7 @@ function frame(now) {
   if (!rig.meta) return;
   if (rig.update(now)) dirty = true;
   if (glass.update(now)) dirty = true;
+  if (tickAddons(stage.current, now, stage.camera)) dirty = true;
   if (dirty) {
     dirty = false;
     stage.draw();
@@ -273,13 +425,15 @@ window.__config = {
   selected: () => ({ ...selected }),
   options: () => optionData,
   fading: () => glass.fading,
-  /** Stand in front of the wall switch and return where it is on screen. */
-  frameSwitch: () => {
-    const f = rig.meta.front, a = stage.current.anchors.switch, p = new THREE.Vector3();
+  /** Stand in front of an anchor, looking at it, and return where it is on screen. */
+  frameAnchor: (name, back = 1.2, up = 0.1) => {
+    const a = stage.current.anchors[name], p = new THREE.Vector3(), q = new THREE.Vector3(0, 0, -1);
     a.getWorldPosition(p);
-    p.y = 1.2;
-    rig.go("family", { instant: true });
-    stage.camera.position.copy(p).add(W2T(f.inward[0] * 1.2, f.inward[1] * 1.2, 0.1));
+    if (name === "switch") p.y = 1.2;
+    q.applyQuaternion(a.getWorldQuaternion(new THREE.Quaternion()));
+    rig.go("overview", { instant: true });
+    stage.camera.position.copy(p).addScaledVector(q, back);
+    stage.camera.position.y += up;
     controls.target.copy(p);
     controls.update();
     stage.camera.updateMatrixWorld();
@@ -287,22 +441,40 @@ window.__config = {
     const s = p.clone().project(stage.camera);
     return { x: ((s.x + 1) / 2) * innerWidth, y: ((1 - s.y) / 2) * innerHeight };
   },
+  code: specCode,
+  theme: applyTheme,
+  currentTheme: () => currentTheme()?.id,
+  tour: () => ({ running: tour.running, log: tour.log.slice() }),
+  startTour: () => tour.start(),
 };
 
 async function boot() {
+  window.__configStage = "fetching options";
   const res = await fetch("options.json");
   if (!res.ok) throw new Error(`options.json: HTTP ${res.status}`);
   optionData = await res.json();
   for (const sec of optionData.sections) for (const g of sec.groups) selected[g.id] = g.default;
   panelUi = new Panel($("options"), optionData, setOption);
+  $("themes").replaceChildren(...optionData.themes.map(t => Object.assign(document.createElement("button"), { type: "button", textContent: t.label })));
+  $("themes").querySelectorAll("button").forEach((b, i) => { b.dataset.value = optionData.themes[i].id; });
   resize();
+  const fromLink = location.hash ? decodeSpec(optionData, location.hash) : null;
+  if (fromLink) {
+    Object.assign(selected, fromLink.selected);
+    state.room = fromLink.room; state.view = fromLink.view; state.hour = fromLink.hour;
+  }
   await setRoom(state.room, { keepView: true });
+  window.__configStage = "setting the time";
   setTime(state.hour);
+  window.__configStage = "drawing the first frame";
+  if (location.hash && !fromLink) $("roomStatus").textContent = "That link's code couldn't be read, so this is the default room.";
   $("load").hidden = true;
   requestAnimationFrame(frame);
   requestAnimationFrame(() => requestAnimationFrame(() => {
     canvas.classList.remove("pending");
+    window.__configStage = "ready";
     window.__configReady = true;
+    remember();
   }));
 }
 boot().catch(fail);

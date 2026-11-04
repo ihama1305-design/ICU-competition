@@ -110,6 +110,23 @@ def islands(bm):
     return out
 
 
+def carve(ob, poly, name):
+    """Split a solid in two at the prism over poly: the inside becomes a new object called name."""
+    prism = trimesh.util.concatenate([trimesh.creation.extrude_polygon(g, H + 6.0) for g in getattr(poly, "geoms", [poly])])
+    prism.apply_translation((0, 0, -3.0))
+    whole = to_tm(ob)
+    inside = trimesh.boolean.intersection([whole, prism], engine="manifold", check_volume=False)
+    outside = trimesh.boolean.difference([whole, prism], engine="manifold", check_volume=False)
+    if len(inside.faces):
+        me = bpy.data.meshes.new(name)
+        me.from_pydata(inside.vertices.tolist(), [], inside.faces.tolist())
+        me.update()
+        for mat in ob.data.materials:
+            me.materials.append(mat)
+        ob.users_collection[0].objects.link(bpy.data.objects.new(name, me))
+    set_tm(ob, outside)
+
+
 def keep_parts(ob, test):
     """Delete the parts whose centre fails test(centre). Returns the centres kept."""
     bm = bmesh.new(); bm.from_mesh(ob.data)
@@ -323,7 +340,8 @@ def export_room(label, cfg):
         if ob.type != "MESH" or ob.name in kit_src:
             continue
         nm = ob.name
-        if re.match(r"room\d\d_", nm) or nm in ("room_feature_walls", "floor_rooms", "facade_blinds"):
+        # the nook's desk and chair too: the nook isn't part of the room, and its monitor pokes through the wall the aquarium hangs on
+        if re.match(r"room\d\d_|obs_(ws|chair)_", nm) or nm in ("room_feature_walls", "floor_rooms", "facade_blinds"):
             remove(ob)
         elif CUT_WIDE.match(nm):
             cut(ob, wide)
@@ -357,6 +375,25 @@ def export_room(label, cfg):
                 caps.add([(q[0], q[1], 0), (p[0], p[1], 0), (p[0], p[1], H), (q[0], q[1], H)], [[0, 1, 2, 3]], "wall")
     if caps.v:
         caps.obj("cfg_cut_caps", shell, bevel=0.0)
+
+    # the patio's opening: three mullion spacings around the middle of the room's facade, as pieces the page can hide
+    glass_mid = np.array(strip.intersection(LineString([a + n * F["glass_offset"], b + n * F["glass_offset"]]).buffer(0.1)).centroid.coords[0])
+    bm = bmesh.new(); bm.from_mesh(bpy.data.objects["facade_mullions"].data)
+    along = sorted(float((c[:2] - a) @ t) for _, c in islands(bm) if room.buffer(0.9).contains(Point(c[0], c[1])))
+    bm.free()
+    if len(along) < 4:
+        raise SystemExit(f"07: {label} has fewer than three facade bays for a patio")
+    mid = float((glass_mid - a) @ t)
+    m0, m1 = min(((along[i], along[i + 3]) for i in range(len(along) - 3)), key=lambda p: abs((p[0] + p[1]) / 2 - mid))
+    bay_w = m1 - m0; bay_c = (m0 + m1) / 2
+    bay_p = a + t * bay_c
+    bay = Polygon([a + t * (m0 + 0.05) - n * 0.6, a + t * (m1 - 0.05) - n * 0.6, a + t * (m1 - 0.05) + n * 1.5, a + t * (m0 + 0.05) + n * 1.5])
+    for nm, new in (("facade_upstand", "cfg_bay_upstand"), ("facade_sill", "cfg_bay_sill"), ("facade_glass", "cfg_bay_glass"),
+                    (f"facade_transom_{F['upstand_height']:.2f}", "cfg_bay_transom_low"), (f"facade_transom_{H - 0.02:.2f}", "cfg_bay_transom_high")):
+        carve(bpy.data.objects[nm], bay, new)
+    def in_bay(c): return bay.contains(Point(c[0], c[1]))
+    split_by_material(bpy.data.objects["facade_mullions"], in_bay, {"facade_metal": "cfg_bay_mullions"})
+    split_by_material(bpy.data.objects["facade_fins"], in_bay, {"facade_metal": "cfg_bay_fins"})
 
     if "ceiling_panels" in bpy.data.objects:  # the room's own panels, which only some lighting schemes use
         split_by_material(bpy.data.objects["ceiling_panels"], lambda c: room.contains(Point(c[0], c[1])), {"led_panel": "cfg_panels"})
@@ -406,10 +443,13 @@ def export_room(label, cfg):
     # ---------------------------------------------------------------- anchors for add-ons
     anchor("tv", (*wp, tvz + tvh / 2), -foot, equip)
     for name, a_ in cfg["anchors"].items():
+        if not room.contains(Point(a_["at"][:2])):
+            raise SystemExit(f"07: {label} anchor {name} at {a_['at'][:2]} isn't inside the room, so what's placed there would be buried in a wall")
         anchor(name, a_["at"], a_["face"], equip)
     glass_line = strip.intersection(LineString([a + n * F["glass_offset"], b + n * F["glass_offset"]]).buffer(0.1))
     gc = np.array(glass_line.centroid.coords[0])
-    anchor("patio", (*gc, 0.0), n, equip)
+    bay_at = bay_p + n * F["glass_offset"]
+    anchor("patio", (*bay_at, 0.0), n, equip)
     for i, sgn in enumerate((-1, 1)):
         anchor(f"palm_{i + 1}", (*(gc + n * 3.8 + t * sgn * 1.5), -18.0), -n, equip)
     # the wall switch for smart glass: on the wall beside the front, on the room's side
@@ -468,6 +508,8 @@ def export_room(label, cfg):
         "bed": {"head": head.round(3).tolist(), "foot": foot.round(4).tolist(), "eye": (head + foot * 0.74).round(3).tolist() + [1.3]},
         "facade": {"at": gc.round(3).tolist(), "normal": n.round(4).tolist()},
         "feature": {"length": L, "height": fw["height"]}, "fixtures": cfg["fixtures"], "wall_runs": runs,
+        "patio": {"at": bay_at.round(3).tolist(), "width": round(bay_w, 3)},
+        "table": {"at": (head + foot * Kr["overbed_table"][1] + x_axis * (Kr["overbed_table"][0] + 0.2)).round(3).tolist(), "z": 0.95},
         "front": {"at": f.round(3).tolist(), "axis": ax.round(4).tolist(), "inward": nrm.round(4).tolist(), "width": w, "height": B["door_head"]},
         "ao": ao_files, "glb": f"{stem}.glb.gz",
     }

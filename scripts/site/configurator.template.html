@@ -24,6 +24,12 @@
     <p class="tag">Design proposal</p>
   </header>
   <div id="panelBody">
+    <section aria-labelledby="hTheme">
+      <h2 id="hTheme">Theme</h2>
+      <div id="themes" class="grid" role="group" aria-labelledby="hTheme"></div>
+      <p id="themeNote" class="note" role="status"></p>
+    </section>
+
     <section aria-labelledby="hRoom">
       <h2 id="hRoom">Room</h2>
       <div id="rooms" class="seg" role="group" aria-labelledby="hRoom">
@@ -36,12 +42,14 @@
     <section aria-labelledby="hView">
       <h2 id="hView">View</h2>
       <div id="views" class="grid" role="group" aria-labelledby="hView">
+        <button type="button" data-value="overview" aria-pressed="true">Overview</button>
+        <button type="button" data-value="family" aria-pressed="false">Family zone</button>
         <button type="button" data-value="entrance" aria-pressed="false">Entrance</button>
-        <button type="button" data-value="family" aria-pressed="true">Family zone</button>
         <button type="button" data-value="bed" aria-pressed="false">From the bed</button>
         <button type="button" data-value="bed_window" aria-pressed="false">Head turned</button>
         <button type="button" data-value="window" aria-pressed="false">Window</button>
         <button type="button" data-value="dollhouse" aria-pressed="false">Dollhouse</button>
+        <button type="button" id="tour" aria-pressed="false">Cinematic tour</button>
       </div>
       <p class="note">Drag to look around, scroll or pinch to move closer.</p>
     </section>
@@ -71,7 +79,27 @@
       <p>Independent student work for the SSMC ICU Interior Design Student Competition. It isn't made or endorsed by Sheikh Shakhbout Medical City, and it isn't for clinical or construction use.</p>
     </footer>
   </div>
+  <div class="actions">
+    <button type="button" id="openSummary">Summary and share</button>
+    <button type="button" id="saveImage">Save image</button>
+  </div>
 </aside>
+
+<dialog id="summary" aria-labelledby="summaryTitle">
+  <div class="sheet">
+    <header>
+      <h2 id="summaryTitle">Your room</h2>
+      <p class="tag">Design proposal</p>
+      <button type="button" id="closeSummary" aria-label="Close the summary">Close</button>
+    </header>
+    <div id="summaryBody"></div>
+    <div class="actions">
+      <button type="button" id="copyLink">Copy link</button>
+      <button type="button" id="saveImage2">Save image</button>
+      <p id="copyStatus" class="note" role="status"></p>
+    </div>
+  </div>
+</dialog>
 
 <script type="importmap">
 { "imports": {
@@ -79,6 +107,14 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
 } }
 </script>
-<script type="module" src="main.js"></script>
+<script>
+  // If a module can't be fetched (Three.js comes from a CDN), main.js never runs: say so rather than loading for ever
+  window.__configErrors = [];
+  function moduleFailed() {
+    window.__configErrors.push("A script for this page could not be loaded.");
+    document.getElementById("load").textContent = "The page could not be loaded. Check your connection and reload the page.";
+  }
+</script>
+<script type="module" src="main.js" onerror="moduleFailed()"></script>
 </body>
 </html>

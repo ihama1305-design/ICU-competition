@@ -177,7 +177,7 @@ Each phase is its own branch off an up-to-date `main`, with a PR. If the previou
 
 1. Write polygons to the scene index. Build `07_export_room.py` with W1 and W3, including W3's side-on layout, and the AO bake.
 2. Build the template and `stage.js`, `cameras.js`, `sky.js`, plus a panel shell with room switch, camera presets and time controls.
-3. Six presets: Entrance, From the bed, Head turned, Family zone, Window, Dollhouse. Orbit clamp. Family zone is W1's east arm (x 14–18, y 28.75–31.61) and W3's east side.
+3. Seven presets: Overview, Family zone (added in phase 4 to look at the family zone, not from it), Entrance, From the bed, Head turned, Window, Dollhouse. Orbit clamp. Family zone is W1's east arm (x 14–18, y 28.75–31.61) and W3's east side.
 4. Solar path, Day/Night toggle, time slider and dark exterior at night.
 5. Build through 06. Add nav and hero links.
 6. First version of `08_check_configurator.py`: HTTP server under an `/ICU-competition/` prefix to catch absolute paths, SwiftShader flags from `05`, no fixed waits. Add `07` and `08` to `run_all.sh`.
@@ -233,6 +233,10 @@ Each phase is its own branch off an up-to-date `main`, with a PR. If the previou
 - **The patio is a concept.** It shows no structure, and it doesn't address fall risk for delirious patients, wind or dust. I'd add a one-line note on fall risk to the patio warning, unless you'd rather not.
 - **`docs/` is public.** GitHub Pages serves the repo root, so the brief and this plan will be reachable once committed. Neither contains drawings.
 
+## 6a. Open issue: the page sometimes didn't start in the check
+
+Three times in about a dozen runs of `08`, always on its first page, the page stayed on "Loading the room…". The third time, the load-stage marker showed `main.js` had never started, with nothing still downloading. A stalled download, system sleep, display sleep and plain repetition (22 clean loads) are ruled out. A failed module request fits but isn't proven. `08` now logs failed URLs, its test server accepts more connections at once, and it retries once and says so. The page itself now shows an error if a script can't load, instead of loading for ever. If `RETRY` appears in an `08` log, read the failed URL it prints.
+
 ## 7. What the clinical notes can claim
 
 Checked in phase 3 against the published abstracts, the door makers' own pages and CDC guidance.
@@ -241,7 +245,7 @@ Checked in phase 3 against the published abstracts, the door makers' own pages a
 - **Isolation seals:** confirmed by Stanley Access: a seal along the bottom, tested against positive and negative pressure.
 - **Delirium:** both papers confirmed from their abstracts. Spies et al. (PMID 38112493): prospective observational pilot, 74 patients, 46% against 76%, p = 0.017. Simons et al. (PMID 26895652): randomised, 734 patients, 38% against 33%, p = 0.16, stopped early for futility.
 - **Plants:** CDC says not to allow fresh or dried flowers or potted plants in patient-care areas for immunosuppressed patients. It doesn't restrict them for immunocompetent patients, so the note is limited to the immunosuppressed.
-- **Fish tanks, for phase 4:** CDC is firmer than the brief assumes: "Avoid placing decorative fountains and fish tanks in patient-care areas" (Category IB), and restrict "fish in tanks" from patient-care and isolation areas. Decide the default before building it.
+- **Fish tanks:** CDC is firmer than the brief assumes: "Avoid placing decorative fountains and fish tanks in patient-care areas" (Category IB), and restrict "fish in tanks" from patient-care and isolation areas. So, decided at phase 4: the digital aquarium is what the themes use, and the sealed tank stays an option carrying this note.
 
 ## 8. Sources for the delirium note
 
