@@ -355,6 +355,27 @@ for w in plan["windows"]:
 if win.v:
     win.obj("observation_windows", C["Glazing"], bevel=0.0)
 
+# full-height glazed screens tagged on the drawing, with their door leaf as drawn
+scr = kit.Builder()
+for q in spec["plan"].get("screens", []):
+    y = q["a"][1]; z0, z1 = q["z0"], q["z1"]
+    for x0, x1 in q["panes_x"]:
+        scr.box(((x0 + x1) / 2, y, (z0 + z1) / 2), (x1 - x0, 0.012, z1 - z0), "glass")
+        n_m = max(1, round((x1 - x0) / q["mullion_spacing"]))
+        for i in range(n_m + 1):
+            scr.box((x0 + (x1 - x0) * i / n_m, y, (z0 + z1) / 2), (0.05, 0.07, z1 - z0), "frame_metal")
+    scr.box(((q["a"][0] + q["b"][0]) / 2, y, (z1 - 0.05 + H) / 2), (q["b"][0] - q["a"][0], 0.08, H - z1 + 0.05), "frame_metal")
+    d = q["door"]; a_ = math.radians(d["angle_deg"]); ux, uy = math.cos(a_), math.sin(a_)
+    cx_, cy_ = d["hinge"][0] + ux * d["length"] / 2, d["hinge"][1] + uy * d["length"] / 2
+    ht = z1 - 0.1
+    scr.box((cx_, cy_, ht / 2 + 0.01), (d["length"] - 0.08, 0.012, ht - 0.08), "glass", rz=a_)
+    for s_ in (-1, 1):
+        scr.box((cx_ + ux * s_ * (d["length"] / 2 - 0.03), cy_ + uy * s_ * (d["length"] / 2 - 0.03), ht / 2 + 0.01), (0.06, 0.05, ht), "frame_metal", rz=a_)
+    for zz in (0.06, ht - 0.02):
+        scr.box((cx_, cy_, zz), (d["length"], 0.05, 0.08), "frame_metal", rz=a_)
+if scr.v:
+    scr.obj("lobby_screen", C["Glazing"], bevel=0.0)
+
 # ------------------------------------------------------------------ joinery
 basin_src = kit.basin_tap(spec, KITC)
 counters = []
@@ -639,9 +660,10 @@ for ob in list(KITC.objects):
     ob.hide_render = True
 os.makedirs(os.path.join(ROOT, "output"), exist_ok=True)
 bpy.ops.file.pack_all()
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, "output", "icu.blend"), compress=True)
+# ICU_BLEND writes the scene elsewhere (a plain rebuild replaces output/icu.blend)
+bpy.ops.wm.save_as_mainfile(filepath=os.environ.get("ICU_BLEND") or os.path.join(ROOT, "output", "icu.blend"), compress=True)
 json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "spaces": len(spaces)},
           open(os.path.join(ROOT, "build", "scene_index.json"), "w"), indent=1)
 tri = sum(len(o.data.polygons) for o in scene.objects if o.type == "MESH" and o.users_collection[0] != KITC)
 print(f"scene: {len(rooms_index)} patient rooms furnished, {n_l} ceiling lights, {len(spaces)} spaces, "
-      f"{len([o for o in scene.objects if o.type == 'MESH'])} mesh objects, ~{tri} faces -> output/icu.blend")
+      f"{len([o for o in scene.objects if o.type == 'MESH'])} mesh objects, ~{tri} faces -> {bpy.data.filepath}")

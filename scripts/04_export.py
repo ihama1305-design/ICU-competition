@@ -4,6 +4,7 @@ Procedural shaders don't survive glTF, so each material is flattened to its spec
 (the .blend keeps the full shaders). Screen images and glass transmission are kept.
 """
 import base64
+import gzip
 import json
 import os
 import sys
@@ -16,7 +17,8 @@ import planlib  # noqa: E402
 
 ROOT = planlib.ROOT
 spec = planlib.load_spec()
-bpy.ops.wm.open_mainfile(filepath=os.path.join(ROOT, "output", "icu.blend"))
+# ICU_BLEND overrides the scene to export (a rebuild writes output/icu.blend)
+bpy.ops.wm.open_mainfile(filepath=os.environ.get("ICU_BLEND") or os.path.join(ROOT, "output", "icu.blend"))
 
 for m in bpy.data.materials:
     if not m.node_tree:
@@ -44,6 +46,13 @@ glb = os.path.join(ROOT, "output", "icu.glb")
 bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True, export_yup=True,
                           export_lights=False, export_cameras=False, export_extras=False)
 print(f"  output/icu.glb {os.path.getsize(glb) / 1e6:.1f} MB")
+
+# a gzipped copy for the website, so the walkthrough loads faster (the viewer unpacks it)
+web_glb = os.path.join(ROOT, "docs", "assets", "model", "icu.glb.gz")
+os.makedirs(os.path.dirname(web_glb), exist_ok=True)
+with open(web_glb, "wb") as fh:
+    fh.write(gzip.compress(open(glb, "rb").read(), 9, mtime=0))
+print(f"  docs/assets/model/icu.glb.gz {os.path.getsize(web_glb) / 1e6:.1f} MB")
 
 # ------------------------------------------------------------------ viewer
 import io  # noqa: E402
@@ -85,6 +94,7 @@ S = [  # (id, group, label, confidence, regex on object names, notes)
     ("frames", "Openings", "Door frames", "high", "^door_frames|^door_heads", "Frames around every opening found from the drawn door leaves."),
     ("fronts", "Openings", "Glazed room fronts", "med", "^front_glazing", "2.2 m glazed front to each patient room: a swing leaf plus a sliding or fixed glass panel, with a frosted band."),
     ("obs_win", "Openings", "Observation windows", "med", "^observation_windows", "WA31 windows, sill 1.0 m and head 1.4 m as tagged on the drawing. Check against the window schedule."),
+    ("screen", "Openings", "Lobby glazed screen", "med", "^lobby_screen", "WN35 on the drawing: glass from the floor to 2.8 m, 5.8 m long, with a door drawn open. Frame spacing approximate."),
     ("glass", "Facade", "Curtain wall glass", "med", "^facade_glass", "Inner face line from the drawing; glass 0.42 m outside it."),
     ("mullions", "Facade", "Curtain wall frame", "med", "^facade_mullions|^facade_transom", "Mullion spacing about 1.1 m, approximate."),
     ("upstand", "Facade", "Upstand and sill (700 mm)", "med", "^facade_upstand|^facade_sill", "TOW +700 AFFL on the drawing."),
@@ -118,17 +128,33 @@ view = {
 im = Image.open(os.path.join(ROOT, "renders", "plan.png")).convert("RGB").resize((440, 440), Image.LANCZOS)
 buf = io.BytesIO(); im.save(buf, "JPEG", quality=82)
 tpl = open(os.path.join(ROOT, "scripts", "viewer_template.html")).read()
-page = (tpl.replace("__GLB_BASE64__", base64.b64encode(open(glb, "rb").read()).decode())
-        .replace("__OBJECTS_JSON__", json.dumps(objects, ensure_ascii=False))
-        .replace("__VIEW_JSON__", json.dumps(view))
-        .replace("__MINIMAP_B64__", base64.b64encode(buf.getvalue()).decode()))
+common = (tpl.replace("__OBJECTS_JSON__", json.dumps(objects, ensure_ascii=False))
+          .replace("__VIEW_JSON__", json.dumps(view))
+          .replace("__MINIMAP_B64__", base64.b64encode(buf.getvalue()).decode()))
+
+
+def document(page, extra_head=""):
+    head, body = page.split("</style>", 1)
+    return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+            + extra_head + head + "</style>\n</head>\n<body>\n" + body + "\n</body>\n</html>\n")
+
+
+# embedded model: output/viewer/index.html opens straight from disk, publish.html is the bare
+# page for the artifact host (which adds the document shell)
+page = common.replace("__GLB_BASE64__", base64.b64encode(open(glb, "rb").read()).decode()).replace("__GLB_URL__", "")
 os.makedirs(os.path.join(ROOT, "output", "viewer"), exist_ok=True)
-# publish.html is the bare page (the artifact host adds the document shell);
-# index.html wraps it so it opens straight from disk
 open(os.path.join(ROOT, "output", "viewer", "publish.html"), "w").write(page)
 vp = os.path.join(ROOT, "output", "viewer", "index.html")
-head, body = page.split("</style>", 1)
-open(vp, "w").write('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-                    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-                    + head + "</style>\n</head>\n<body>\n" + body + "\n</body>\n</html>\n")
+open(vp, "w").write(document(page))
 print(f"  output/viewer/index.html {os.path.getsize(vp) / 1e6:.1f} MB ({len(objects)} list entries)")
+
+# website: fetches the compressed model and links back to the overview
+site = (common.replace("__GLB_BASE64__", "").replace("__GLB_URL__", "../assets/model/icu.glb.gz")
+        .replace("<!--HOME_LINK-->", '<a class="v" href="../">Overview</a>'))
+sp = os.path.join(ROOT, "docs", "viewer", "index.html")
+os.makedirs(os.path.dirname(sp), exist_ok=True)
+open(sp, "w").write(document(site, '<meta name="robots" content="noindex">\n'
+                                   '<meta name="description" content="Walk through a 3D model of the SSMC 4th-floor ICU in your browser.">\n'
+                                   '<link rel="icon" href="../favicon.svg" type="image/svg+xml">\n'))
+print(f"  docs/viewer/index.html {os.path.getsize(sp) / 1e6:.2f} MB")

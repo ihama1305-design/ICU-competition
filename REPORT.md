@@ -13,7 +13,7 @@ The PDFs are AutoCAD exports that still carry their layers, so no tracing was ne
 |---|---|
 | `A-WALL`, `A-WALL-PATT`, `S-COLS` | Wall and column outlines. Rasterised at 2 cm, solid-filled, then turned back into polygons |
 | `A-DOOR` | Door leaves at their drawn positions. Each opening is found by casting rays from the leaf to both jambs |
-| `A-GLAZ` | Observation windows (18 panes, 0.75–1.27 m wide) |
+| `A-GLAZ` | 16 observation window panes, plus the lobby's glazed screen (`WN35 0 - 2800`), which is modelled from its tag |
 | `A-EQPM` | Joinery outlines: sink counters with basins, observation desks, the U-shaped nurse station |
 | Text | Room names, which decide floor finish, ceiling type and which rooms get the patient kit |
 
@@ -28,7 +28,7 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
 | Wall layout, room shapes, door positions | High | Vector CAD geometry, ±2–3 cm from rasterising |
 | Patient room fronts: 2.2 m glazed opening, about 1.0 m swing leaf plus a sliding/fixed glass panel | High for widths, medium for leaf type | Drawn widths. The leaf drawn in the wall plane reads as a breakaway glass door |
 | Door head height 2.41 m | High | `H=2410` tags |
-| Observation windows: sill 1.0 m, head 1.4 m | Medium | `WA31 1000-1400` tag read with the sheet legend (X = sill, Y = underside of lintel). Check against the window schedule (A5102/A5105) |
+| Observation windows: sill 1.0 m, head 1.4 m | Medium | `WA31 1000-1400` tag read with the sheet legend (X = sill, Y = underside of lintel). `WN35 0 - 2800` on the same sheet uses the same format. Check against the window schedule (A5102/A5105) |
 | Facade: 700 mm upstand, curtain wall, external fins | Medium | `TOW +700 AFFL` and the facade lines. Mullion and fin spacing are approximate |
 | Ceiling height 2.85 m | **Low** | Not on these sheets. One number in the spec |
 | Finishes and colours (LIN36/LIN37 vinyl, wall paint) | Low | Finish codes are on the plan. The colours are assumed |
@@ -60,13 +60,13 @@ These are read from the drawing and visible in the renders:
 
 1. **Observation windows are 0.4 m-tall slots** at 1.0–1.4 m (`renders/observation.png`). From the nook, a nurse sees a strip across the bed rather than the patient's face and the whole room. If the tag is right, this limits observation. Confirm it against the window schedule.
 2. **Each patient room front is fully glazed** and 2.2 m wide. Privacy depends on the curtain, and daylight can borrow through the front.
-3. **Room depth is about 6–8 m** from the corridor to the facade because the facade is slanted. Rooms at the top of the wing are deeper than those at the bottom.
+3. **Rooms run 7.2–9.0 m from the glazed front to the facade** (median 8.6 m). The slanted facade and the stepped corridor give the rooms slightly different shapes, from 30.3 to 38.5 m².
 4. **There is one central nurse station plus 8 observation nooks,** one nook for each pair of rooms. Each nook has a window into both of its rooms.
 
 ## Rebuild and edit
 
 - **Rebuild:** `scripts/run_all.sh` runs the full pipeline. Use `--preview` for quick renders.
-- **Edit the model:** open `output/icu.blend`. Each room's equipment is a set of linked copies, so editing one bed's mesh changes all 16.
+- **Edit the model:** open `docs/downloads/icu.blend`, or `output/icu.blend` after a rebuild. Each room's equipment is a set of linked copies, so editing one bed's mesh changes all 16.
 - **Change numbers:** edit `spec/icu_spec.json`, such as `building.ceiling_height`, `building.window_head`, `kit.*` positions in the bed-head frame, or `cameras.*`.
 - **Debug the plan reading:** `scripts/plan_debug.py` draws the extracted plan over the CAD layers to `build/sheets/plan_debug.png`.
 
