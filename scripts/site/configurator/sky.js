@@ -53,6 +53,8 @@ export class Daylight {
     scene.add(this.sun, this.sun.target);
     this.hemi = new THREE.HemisphereLight(0xdfeaf2, 0xbcae97, 1);
     scene.add(this.hemi);
+    this.day = 1; this.fill = 0.4; this.fillColour = new THREE.Color(0xffffff);
+    this.skyColour = new THREE.Color(0xdfeaf2); this.groundBounce = new THREE.Color(0xbcae97);
   }
 
   setCentre(x, y) { this.centre.copy(this.W2T(x, y, 1.4)); }
@@ -75,8 +77,23 @@ export class Daylight {
     this.sun.target.updateMatrixWorld();
 
     this.ground.material.color.copy(this.groundColour).multiplyScalar(0.05 + 0.95 * day); // the room's hemisphere light mustn't light up the desert at night
-    this.hemi.intensity = 0.42 + 1.3 * day;
-    this.scene.environmentIntensity = 0.3 + 0.4 * day;
+    this.day = day;
+    this.relight();
     return day;
+  }
+
+  /** The soft light that real-time rendering can't bounce: daylight, plus whatever the electric lighting gives after dark. */
+  setFill(amount, colour) {
+    this.fill = amount;
+    this.fillColour.copy(colour);
+    this.relight();
+  }
+
+  relight() {
+    const day = this.day, night = 1 - day;
+    this.hemi.intensity = 0.03 + 1.7 * day + this.fill * night * 1.05;
+    this.hemi.color.copy(this.fillColour).lerp(this.skyColour, day);
+    this.hemi.groundColor.copy(this.fillColour).multiplyScalar(0.8).lerp(this.groundBounce, day);
+    this.scene.environmentIntensity = 0.04 + 0.66 * day + this.fill * night * 0.65;
   }
 }

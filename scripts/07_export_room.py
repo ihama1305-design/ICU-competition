@@ -19,6 +19,7 @@ import bpy  # first: bpy makes bmesh importable
 import bmesh  # noqa: I001
 import numpy as np
 import trimesh
+from mathutils import Matrix
 from PIL import Image, ImageFilter
 from shapely import affinity, wkt
 from shapely.geometry import LineString, Point, Polygon
@@ -48,9 +49,10 @@ OUTLINE = Polygon(spec["plan"]["outline"]["points"])
 # floor-wide solids, cut with a boolean; everything else in the scene is made of separate parts, kept or dropped whole
 CUT_WIDE = re.compile(r"^(walls|wall_caps|slab|facade_upstand|facade_sill|facade_glass|facade_transom_.*)$")
 CUT_TIGHT = re.compile(r"^(skirting|handrails|bumper|floor_vinyl|ceiling_rooms|ceiling_grid)$")
-PARTS = re.compile(r"^(facade_mullions|facade_fins|facade_blinds|facade_blind_cassettes|door_frames|door_heads|door_leaves|"
+PARTS = re.compile(r"^(facade_mullions|facade_fins|facade_blind_cassettes|door_frames|door_heads|door_leaves|"
                    r"front_glazing|observation_windows|curtains|ceiling_panels|joinery_.*|lobby_screen)$")
-GLASS = ("cfg_facade_glass", "cfg_front_glass", "cfg_front_frost", "observation_windows", "ante_glazing", "lobby_screen", "cfg_blinds")
+# not in the shadow bake: glass doesn't occlude, and panels come and go with the lighting scheme
+NO_BAKE = ("cfg_facade_glass", "cfg_front_glass", "cfg_front_frost", "observation_windows", "ante_glazing", "lobby_screen", "cfg_panels", "ceiling_panels", "cfg_blinds")
 
 
 def to_tm(ob):
@@ -69,7 +71,7 @@ def set_tm(ob, tm):
     for mat in ob.data.materials:
         me.materials.append(mat)
     ob.data = me
-    ob.matrix_world = np.eye(4).tolist()
+    ob.matrix_world = Matrix.Identity(4)
 
 
 def remove(ob):
@@ -221,7 +223,7 @@ def wall_quad(name, Mw, x, y0, y1, z0, z1, mat, coll):
 def anchor(name, at, face, coll):
     """An empty whose local +Y faces into the room."""
     ob = bpy.data.objects.new(f"anchor_{name}", None)
-    ob.matrix_world = frame_matrix(at[:2], face, at[2]).tolist()
+    ob.matrix_world = Matrix(frame_matrix(at[:2], face, at[2]).tolist())
     coll.objects.link(ob)
     return ob
 
@@ -286,7 +288,7 @@ def export_room(label, cfg):
     kit.flatten_materials()
     room_i = next(r for r in idx["rooms"] if r["label"] == label)
     room = next(s["poly"] for s in SPACES if s["poly"].contains(Point(cfg["label_at"])))
-    layout = cfg.get("layout") or next(o for o in K["room_overrides"] if room.contains(Point(o["label_at"])))
+    layout = {**(cfg.get("layout") or next(o for o in K["room_overrides"] if room.contains(Point(o["label_at"])))), **cfg.get("kit", {})}
     head = np.array(layout["head"], float)
     foot = np.array(layout.get("foot_dir", room_i["foot_dir"]), float)
     x_axis = np.array([foot[1], -foot[0]])
@@ -321,7 +323,7 @@ def export_room(label, cfg):
         if ob.type != "MESH" or ob.name in kit_src:
             continue
         nm = ob.name
-        if re.match(r"room\d\d_", nm) or nm in ("room_feature_walls", "floor_rooms"):
+        if re.match(r"room\d\d_", nm) or nm in ("room_feature_walls", "floor_rooms", "facade_blinds"):
             remove(ob)
         elif CUT_WIDE.match(nm):
             cut(ob, wide)
@@ -356,9 +358,19 @@ def export_room(label, cfg):
     if caps.v:
         caps.obj("cfg_cut_caps", shell, bevel=0.0)
 
-    for old, new in (("facade_glass", "cfg_facade_glass"), ("facade_blinds", "cfg_blinds"), ("curtains", "cfg_curtain")):
+    if "ceiling_panels" in bpy.data.objects:  # the room's own panels, which only some lighting schemes use
+        split_by_material(bpy.data.objects["ceiling_panels"], lambda c: room.contains(Point(c[0], c[1])), {"led_panel": "cfg_panels"})
+    for old, new in (("facade_glass", "cfg_facade_glass"), ("curtains", "cfg_curtain")):
         if old in bpy.data.objects:
             bpy.data.objects[old].name = new
+    # a roller blind along the facade, hanging from its cassette: the page scales it to set how far down it is
+    glass_run = LineString([a + n * (F["glass_offset"] - 0.07) - t * 30, b + n * (F["glass_offset"] - 0.07) + t * 30]).intersection(room)
+    glass_run = max(getattr(glass_run, "geoms", [glass_run]), key=lambda g: g.length)
+    (bx0, by0), (bx1, by1) = glass_run.coords[0], glass_run.coords[-1]
+    blind_top = H - 0.08; blind_drop = blind_top - F["upstand_height"]
+    blind = uv_mesh("cfg_blinds", [(bx0, by0, 0), (bx1, by1, 0), (bx1, by1, -blind_drop), (bx0, by0, -blind_drop)], [(0, 1, 2, 3)],
+                    [(0, 1), (1, 1), (1, 0), (0, 0)], own_material("blind", "cfg_blinds"), bpy.data.collections["Facade"])
+    blind.location = (0, 0, blind_top)
     # the glazed front this room's patient sits behind, apart from any other glass nearby
     f = np.array(room_i["front"]); ax = np.array(room_i["front_axis"]); w = room_i["front_width"]
     def at_front(c):
@@ -399,14 +411,21 @@ def export_room(label, cfg):
     gc = np.array(glass_line.centroid.coords[0])
     anchor("patio", (*gc, 0.0), n, equip)
     for i, sgn in enumerate((-1, 1)):
-        anchor(f"palm_{i + 1}", (*(gc + n * 3.2 + t * sgn * 1.4), -18.0), -n, equip)
+        anchor(f"palm_{i + 1}", (*(gc + n * 3.8 + t * sgn * 1.5), -18.0), -n, equip)
+    # the wall switch for smart glass: on the wall beside the front, on the room's side
+    nrm = np.array(room_i["front_normal_in"])
+    depth = next(h["depth"] for h, hp in zip(plan["headers"], HEADERS) if hp.distance(Point(f)) < 0.5)
+    sw = next((f + ax * sgn * (w / 2 + 0.18) for sgn in (1, -1) if WALLS.contains(Point(*(f + ax * sgn * (w / 2 + 0.18))))), None)
+    if sw is None:
+        raise SystemExit(f"07: {label} has no wall beside its glazed front for the switch")
+    anchor("switch", (*(sw + nrm * (depth / 2 + 0.012)), 1.2), nrm, equip)
 
     for ob in list(bpy.data.collections["Kit"].objects):
         remove(ob)
 
     # ---------------------------------------------------------------- ambient occlusion on the shell
     setup_cycles()
-    hidden = [o for o in bpy.context.scene.objects if o.name in GLASS]
+    hidden = [o for o in bpy.context.scene.objects if o.name in NO_BAKE]
     for o in hidden:
         o.hide_render = True
     x0, y0, x1, y1 = room.bounds
@@ -435,12 +454,21 @@ def export_room(label, cfg):
     outside = [k for k, c in cfg["cameras"].items() if k != "dollhouse" and not walk.contains(Point(c["eye"][:2]))]
     if outside:
         raise SystemExit(f"07: {label} camera eyes aren't inside the walkable area: {outside}")
+    # where the walls meet the ceiling, for cove lighting: counter-clockwise, so the room is to the left of each run
+    runs, ring = [], list(orient(room.simplify(0.12)).exterior.coords)
+    for p, q in zip(ring[:-1], ring[1:]):
+        mid = Point((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
+        door = any(h.distance(mid) < 0.15 for h in HEADERS)
+        if math.dist(p, q) >= 0.4 and (door or WALLS.distance(mid) < 0.15):
+            runs.append({"a": [round(p[0], 3), round(p[1], 3)], "b": [round(q[0], 3), round(q[1], 3)], "door": door})
     sidecar = {
         "label": label, "isolation": iso, "ceiling": H, "room": [round(v, 3) for v in room.bounds],
         "walkable": [[round(x, 3), round(y, 3)] for x, y in walk.exterior.coords[:-1]],
         "cameras": cfg["cameras"], "via": cfg["via"], "panels": panels,
         "bed": {"head": head.round(3).tolist(), "foot": foot.round(4).tolist(), "eye": (head + foot * 0.74).round(3).tolist() + [1.3]},
         "facade": {"at": gc.round(3).tolist(), "normal": n.round(4).tolist()},
+        "feature": {"length": L, "height": fw["height"]}, "fixtures": cfg["fixtures"], "wall_runs": runs,
+        "front": {"at": f.round(3).tolist(), "axis": ax.round(4).tolist(), "inward": nrm.round(4).tolist(), "width": w, "height": B["door_head"]},
         "ao": ao_files, "glb": f"{stem}.glb.gz",
     }
     json.dump(sidecar, open(os.path.join(MODEL, f"{stem}.json"), "w"), indent=1)
