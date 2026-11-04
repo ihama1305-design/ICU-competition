@@ -231,6 +231,9 @@ for g in sorted(glazing, key=lambda g: -np.hypot(g["b"][0] - g["a"][0], g["b"][1
         continue
     wins.append({"a": g["a"], "b": g["b"], "length": round(ls.length, 3)})
 wins = [w for w in wins if w["length"] >= P["min_window_m"] and walls_u.distance(LineString([w["a"], w["b"]])) < 0.15]
+# A-GLAZ pieces on a full-height glazed screen (plan.screens) are not observation windows
+screens = [LineString([q["a"], q["b"]]) for q in P.get("screens", [])]
+wins = [w for w in wins if all(sc.distance(LineString([w["a"], w["b"]])) > 0.1 for sc in screens)]
 
 # ---------------------------------------------------------------- joinery (A-EQPM)
 eq = R.draw(spec, drs, {"A-EQPM"}, stroke_px=2, fill=False)

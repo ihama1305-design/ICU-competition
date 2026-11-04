@@ -38,10 +38,10 @@
   #bar .status { color: var(--muted); font-size: 12px; width: 100%; margin: 0 2px; }
   #bar .help { color: var(--muted); font-size: 12px; width: 100%; margin: 0 2px; }
   kbd { font: 11px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
-  button.v { font: inherit; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
-  button.v:hover { background: var(--hover); }
+  .v { font: inherit; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: pointer; text-decoration: none; }
+  .v:hover { background: var(--hover); }
   button.v[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  button:focus-visible, .row:focus-visible, #c:focus-visible, #mini:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:focus-visible, a:focus-visible, .row:focus-visible, #c:focus-visible, #mini:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   label.sw { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; padding: 4px 6px; user-select: none; }
   #side { position: fixed; top: calc(var(--g) + env(safe-area-inset-top, 0px)); right: calc(var(--g) + env(safe-area-inset-right, 0px));
     bottom: calc(var(--g) + 236px + env(safe-area-inset-bottom, 0px)); width: 318px; display: flex; flex-direction: column; overflow: hidden; }
@@ -100,6 +100,7 @@
 <div id="load">Loading the ICU model…</div>
 <div id="bar" class="card" role="toolbar" aria-label="View controls">
   <h1 id="title">SSMC ICU, 4th floor</h1>
+  <!--HOME_LINK-->
   <button class="v" data-view="orbit" aria-pressed="true">Orbit</button>
   <button class="v" data-view="first" aria-pressed="false">First person</button>
   <button class="v" data-view="top" aria-pressed="false">Top</button>
@@ -138,7 +139,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const GLB_B64 = "__GLB_BASE64__";
+const GLB_B64 = "__GLB_BASE64__";  // embedded model (offline file), or empty to fetch GLB_URL (website)
+const GLB_URL = "__GLB_URL__";
 const OBJECTS = __OBJECTS_JSON__;
 const VIEW = __VIEW_JSON__;
 const MINIMAP = "__MINIMAP_B64__";
@@ -196,8 +198,8 @@ addEventListener("resize", resize);
 resize();
 
 const collideRe = new RegExp(VIEW.collide);
-const bin = Uint8Array.from(atob(GLB_B64), c => c.charCodeAt(0));
-new GLTFLoader().parse(bin.buffer, "", gltf => {
+const loader = new GLTFLoader();
+const onModel = gltf => {
   const root = gltf.scene;
   scene.add(root);
   root.updateMatrixWorld(true);
@@ -221,10 +223,30 @@ new GLTFLoader().parse(bin.buffer, "", gltf => {
   setView("orbit");
   document.getElementById("load").remove();
   window.__viewerReady = true;
-}, err => {
-  document.getElementById("load").textContent = "The model could not be loaded: " + err;
+};
+const onFail = err => {
+  document.getElementById("load").textContent = "The model could not be loaded. Check your connection and reload the page.";
   window.__viewerErrors.push(String(err));
-});
+};
+async function fetchModel() {
+  // the website serves a gzipped .glb, unpacked here with a percentage while it downloads
+  const res = await fetch(GLB_URL);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const total = Number(res.headers.get("content-length")) || 0, el = document.getElementById("load");
+  const reader = res.body.getReader(), chunks = [];
+  let got = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); got += value.length;
+    if (total) el.textContent = `Loading the ICU model… ${Math.min(99, Math.round(got / total * 100))}%`;
+  }
+  const blob = new Blob(chunks), head = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+  const gz = head[0] === 0x1f && head[1] === 0x8b;  // a host may already have decoded it
+  return gz ? new Response(blob.stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer() : blob.arrayBuffer();
+}
+if (GLB_B64) loader.parse(Uint8Array.from(atob(GLB_B64), c => c.charCodeAt(0)).buffer, "", onModel, onFail);
+else fetchModel().then(buf => loader.parse(buf, "", onModel, onFail)).catch(onFail);
 
 function setCeiling(on) {
   document.getElementById("ceil").checked = on;
@@ -645,6 +667,7 @@ dropBtn.addEventListener("click", e => { if (e.detail === 0) setPlacing(!placing
 window.__drop = (x, y) => tryDrop(...window.__project(x, y));
 
 const clock = new THREE.Clock();
+if (!GLB_B64) setView("orbit");  // frame the view while the model downloads
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (fly) {

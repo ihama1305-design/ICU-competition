@@ -19,7 +19,7 @@ R = spec["render"]
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 preview = "--preview" in sys.argv
 
-bpy.ops.wm.open_mainfile(filepath=os.path.join(ROOT, "output", "icu.blend"))
+bpy.ops.wm.open_mainfile(filepath=os.environ.get("ICU_BLEND") or os.path.join(ROOT, "output", "icu.blend"))
 sc = bpy.context.scene
 sc.render.engine = "CYCLES"
 prefs = bpy.context.preferences.addons["cycles"].preferences

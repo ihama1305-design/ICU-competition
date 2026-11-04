@@ -1,7 +1,7 @@
 {
  "meta": {
   "name": "SSMC Tower D, 4th floor ICU (Part a)",
-  "spec_version": 1,
+  "spec_version": 2,
   "status": "from the as-built record drawing A1104-a rev G; heights and furnishings are assumptions",
   "units": "metres, degrees; Blender Z up, GLB Y up"
  },
@@ -158,7 +158,42 @@
      -4.7
     ]
    ]
-  }
+  },
+  "screens": [
+   {
+    "tag": "WN35 0 - 2800",
+    "_note": "glazed screen between the lobby and multipurpose room; 5.8 m with a 1.04 m door drawn open",
+    "a": [
+     18.448,
+     37.245
+    ],
+    "b": [
+     24.148,
+     37.245
+    ],
+    "z0": 0.0,
+    "z1": 2.8,
+    "panes_x": [
+     [
+      18.448,
+      22.36
+     ],
+     [
+      23.4,
+      24.148
+     ]
+    ],
+    "door": {
+     "hinge": [
+      23.4,
+      37.245
+     ],
+     "length": 1.04,
+     "angle_deg": 90
+    },
+    "mullion_spacing": 1.2
+   }
+  ]
  },
  "building": {
   "ceiling_height": 2.85,
@@ -500,5 +535,9 @@
    "lens": 20,
    "look_z": 0.85
   }
+ },
+ "site": {
+  "url": "https://ihama1305-design.github.io/ICU-competition/",
+  "repo": "https://github.com/ihama1305-design/ICU-competition"
  }
 }

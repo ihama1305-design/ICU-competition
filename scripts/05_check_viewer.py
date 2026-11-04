@@ -11,7 +11,8 @@ import sys
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-url = "file://" + os.path.join(ROOT, "output", "viewer", "index.html")
+# default: the offline file; pass a URL to test the website's copy, which fetches and unpacks the model
+url = sys.argv[1] if len(sys.argv) > 1 else "file://" + os.path.join(ROOT, "output", "viewer", "index.html")
 spec = json.load(open(os.path.join(ROOT, "spec", "icu_spec.json")))
 fail = []
 
