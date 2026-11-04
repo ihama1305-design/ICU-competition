@@ -24,6 +24,19 @@ def sheet_path(spec):
     return os.path.join(ROOT, spec["source"]["sheet"])
 
 
+def label_rooms(rooms, spec):
+    """Number patient rooms by wing from north to south (r["label"] = "W1".."W8", "E1".."E8"); return them in that order."""
+    pts = spec["plan"]["outline"]["points"]
+    mid_x = sum(p[0] for p in pts) / len(pts)
+    ordered = sorted(rooms, key=lambda r: (r["front"][0] > mid_x, -r["front"][1]))
+    counts = {"W": 0, "E": 0}
+    for r in ordered:
+        wing = "E" if r["front"][0] > mid_x else "W"
+        counts[wing] += 1
+        r["label"] = f"{wing}{counts[wing]}"
+    return ordered
+
+
 def calibration(spec):
     """Grid bubble centres (unrotated page points) -> world metres, from the spec."""
     c = spec["source"]["calibration"]

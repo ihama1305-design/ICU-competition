@@ -10,9 +10,9 @@ Units are metres and degrees. Blender works Z-up; the GLB is converted to Y-up o
 | `plan.*` | Extraction settings: which CAD layers are walls, wall-fill radius, door-leaf size filters, maximum door gap, counter size limits, the south cut line (`cut_south_y`), facade inner faces and the building `outline` |
 | `building.*` | Heights: `ceiling_height` (assumed), `door_head` (from the `H=2410` tags), `window_sill`/`window_head` (from the `WA31` tag), counter, desk and ledge heights, skirting, handrails. `facade.*` sets the upstand, glass offset, mullion and fin spacing |
 | `materials.*` | Colour (sRGB hex), roughness and metallic for every surface. Floors get a vinyl speckle, the corridor ceiling a 600 mm grid, doors and handrails a wood grain |
-| `kit.*` | Patient-room equipment in the bed-head frame: origin at the bed-head centre on the floor, +y toward the bed foot (corridor), x across the bed. `head_clearance` is the gap from the facade to the bed head |
+| `kit.*` | Patient-room equipment in the bed-head frame: origin at the bed-head centre on the floor, +y toward the bed foot (corridor), x across the bed. `head_clearance` is the gap from the facade to the bed head. `room_overrides` gives a room its own bed head (world coordinates), kit positions and feature wall; each entry applies to the room containing its `label_at` |
 | `lighting.*` | LED panel size, grid and wattage, sun elevation/azimuth, sky strength |
-| `cameras.*` | `hero_room_label` picks the room used for the interior shots. `room_entry` and `bedside` use the bed-head frame. Also the observation-camera settings, corridor and aerial eye/look points, and per-camera `exposure` |
+| `cameras.*` | `hero_room_label` picks the room used for the interior shots. `room_entry` and `bedside` use the bed-head frame; `iso_entry`, `iso_room` and `iso_window` are world coordinates in isolation room W1. Also the observation-camera settings, corridor and aerial eye/look points, and per-camera `exposure` |
 | `render.*` | Cycles samples, resolution, denoise, view transform |
 | `site.*` | The website's public URL, repo URL and publish folder (`dir`, the repo root) |
 
