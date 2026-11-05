@@ -5,8 +5,8 @@ facade     inner-face polylines of the west/east curtain walls and the mullion p
 headers    door openings (thin gaps in walls next to a door symbol), with width and axis
 leaves     door leaves (thin A-DOOR rectangles) as drawn: centre, axis, length
 glazing    internal windows (A-GLAZ) as segments
-counters   joinery outlines from A-EQPM (sinks, nurse station, observation desks)
-basins     circular basins from A-EQPM, then sink blocks: bowl on P-SANR-FIXT, tap on A-EQPM
+counters   joinery outlines from A-EQPM (sinks, nurse station, observation desks), then vanity tops from P-SANR-FIXT
+basins     circular basins from A-EQPM, then sink blocks: bowl on P-SANR-FIXT, tap on A-EQPM, then the ovals on vanity tops
 floor      floor outline (building footprint inside the cut lines)
 rooms      room names from the text layer with their label position and floor polygon
 """
@@ -258,7 +258,7 @@ def within(r, limits):
     return limits[0] < r < limits[1]
 
 
-def drain_circles(arcs):
+def drain_circles(arcs, max_gap_deg=60):
     """Full circles of drain size, as (x, y, r). A block draws one circle as several arcs, some in separate paths."""
     small = [a for a in arcs if within(a[3], SINK["drain_r_m"])]
     out = []
@@ -268,7 +268,7 @@ def drain_circles(arcs):
         same = [a for a in small if np.hypot(a[1] - cx, a[2] - cy) < 0.005]
         pts = np.concatenate([a[0] for a in same])
         ang = np.sort(np.arctan2(pts[:, 1] - cy, pts[:, 0] - cx))
-        if np.diff(np.r_[ang, ang[0] + 2 * np.pi]).max() < np.radians(60):  # no missing side
+        if np.diff(np.r_[ang, ang[0] + 2 * np.pi]).max() < np.radians(max_gap_deg):  # no missing side
             out.append((cx, cy, min(a[3] for a in same)))
     return out
 
@@ -279,15 +279,20 @@ def polylines(layer, min_segments):
             for w in [[planlib.page_to_world(spec, p) for _, p in d["items"]]]]
 
 
+def bowl_sized(hull):
+    """Whether an outline is the size of a sink's bowl. A straight run's hull is a line, which isn't."""
+    if hull.geom_type != "Polygon":
+        return False
+    corner = np.array(hull.minimum_rotated_rectangle.exterior.coords)[:3]
+    return all(within(side, SINK["size_m"]) for side in np.hypot(*np.diff(corner, axis=0).T))
+
+
 def bowl_outline(x, y, corners, rings):
     """The convex outline drawn around a drain: four corner arcs of a rounded rectangle, or a ring of straight segments."""
     near = [a[0] for a in corners if np.hypot(a[1] - x, a[2] - y) < SINK["size_m"][1]]
     for pts in ([np.concatenate(near)] if len(near) == 4 else []) + rings:
         hull = MultiPoint(pts).convex_hull
-        if not hull.contains(Point(x, y)):  # also rules out straight runs, whose hull is a line
-            continue
-        corner = np.array(hull.minimum_rotated_rectangle.exterior.coords)[:3]
-        if all(within(side, SINK["size_m"]) for side in np.hypot(*np.diff(corner, axis=0).T)):
+        if hull.contains(Point(x, y)) and bowl_sized(hull):
             return hull
     return None
 
@@ -328,6 +333,79 @@ def block_linework(block):
 
 blocks = sink_blocks()
 
+
+# ---------------------------------------------------------------- vanity tops
+# Some oval sinks have no A-EQPM at all: the top and the tap are on P-SANR-FIXT with the bowl. Only part of a top's outline
+# is drawn and the rest is wall, so a top is its front edge, the drawn line past the bowl from the tap, run back to the walls.
+VANITY = SINK["vanity"]
+
+
+def vanity_top(rim, drain, tap, edges):
+    """The top under a bowl, or None. Lines crossing the bowl and the short marks beside it aren't the front: it's the nearest
+    line past the bowl that runs square to the tap and spans the bowl's width."""
+    toward = np.array(drain) - tap
+    toward = toward / np.hypot(*toward)
+    across = np.array([toward[1], -toward[0]])
+    c = np.array(rim.envelope.centroid.coords[0])
+    outline = np.array(rim.exterior.coords) - c
+    reach, half = (outline @ toward).max(), np.abs(outline @ across).max()
+    fronts = []
+    for a, b in edges:
+        past = ((a + b) / 2 - c) @ toward
+        lo, hi = sorted(((a - c) @ across, (b - c) @ across))
+        if abs((b - a) @ toward) < VANITY["front_out_of_square_m"] and past > reach and lo < -half and hi > half:
+            fronts.append((past, a, b))
+    if not fronts:
+        return None
+    _, a, b = min(fronts, key=lambda f: f[0])
+    back = toward * VANITY["max_depth_m"]
+    free = Polygon([a, b, b - back, a - back]).difference(walls_u)
+    top = next((g for g in getattr(free, "geoms", [free]) if g.contains(rim) and g.contains(Point(tap))), None)
+    # a top that reaches the far end of the search area has no wall behind it
+    if top is None or np.ptp(np.array(top.exterior.coords) @ toward) > VANITY["max_depth_m"] - 0.01:
+        return None
+    return top
+
+
+def vanity_sinks(on_counter):
+    """Every oval bowl with a tap beside it that isn't on a counter already, with the top it stands on.
+
+    WC pans are rings too, but drawn with fewer segments and no tap. The block can draw one bowl as two paths, so the
+    outline takes in the other pieces inside the longest one's box, but not the single-line marks beside the bowl or
+    the small details of its fittings. The spout hides part of the tap's circle and, on some blocks, the drain's.
+    One block draws no drain at all, so it goes where the others draw theirs.
+    """
+    fixt = bezier_arcs("P-SANR-FIXT")
+    pieces = [p for p in polylines("P-SANR-FIXT", VANITY["ring_piece_min_segments"]) if np.ptp(p, axis=0).max() > VANITY["ring_piece_min_m"]]
+    edges = [(a, b) for _, a, b in segments({"P-SANR-FIXT"}, SINK["size_m"][0])]
+    circles = drain_circles(fixt, VANITY["tap_circle_max_gap_deg"])
+    out = []
+    for pts in polylines("P-SANR-FIXT", SINK["ring_min_segments"]):
+        if not bowl_sized(MultiPoint(pts).convex_hull):
+            continue
+        zone = MultiPoint(pts).envelope.buffer(0.001, join_style="mitre")
+        rim = MultiPoint(np.concatenate([p for p in pieces if zone.contains(MultiPoint(p))])).convex_hull
+        c = np.array(rim.envelope.centroid.coords[0])
+        if c[1] < y_cut or on_counter(Point(c)):
+            continue
+        taps = [q for q in circles if 0 < rim.distance(Point(q[:2])) < SINK["tap_reach_m"]]
+        if not taps:
+            continue
+        tap = np.array(min(taps, key=lambda q: np.hypot(q[0] - c[0], q[1] - c[1]))[:2])  # handles and side controls are further from the bowl's centre
+        inside = [a for a in fixt if within(a[3], SINK["drain_r_m"]) and rim.contains(Point(a[1], a[2]))]
+        if inside:
+            drain, drain_r = fit_circle(np.concatenate([a[0] for a in inside]))[:2], min(a[3] for a in inside)
+        else:
+            drain = tuple(c + (tap - c) / np.hypot(*(tap - c)) * VANITY["assumed_drain_from_centre_m"])
+            drain_r = VANITY["assumed_drain_r_m"]
+        top = vanity_top(rim, drain, tap, edges)
+        if top is None:
+            print(f"  oval sink at ({c[0]:.2f}, {c[1]:.2f}) has no front edge and wall behind it: no counter or basin")
+            continue
+        out.append({"top": top, "rim": rim, "bowl": rim.buffer(-SINK["rim_m"]), "drain": drain, "drain_r": drain_r, "tap": tuple(tap), "drain_drawn": bool(inside)})
+    return out
+
+
 # ---------------------------------------------------------------- joinery (A-EQPM)
 # A sink block's linework isn't the counter's outline. Left in, its tap cuts a slot in the counter and an oval rim can split one counter into three.
 linework = set().union(*(block_linework(b) for b in blocks)) if blocks else set()
@@ -364,13 +442,29 @@ n_circular = len(basins)
 # sink blocks go after the circular basins, whose list positions name their objects. A block only counts on a counter.
 counter_polys = [Polygon(c["poly"]) for c in counters]
 ring = lambda g: [[round(v, 3) for v in p] for p in g.exterior.coords]  # noqa: E731
+
+
+def drawn_basin(b):
+    """A sink block as a plan entry."""
+    c = b["rim"].envelope.centroid
+    return {"c": [round(c.x, 3), round(c.y, 3)], "rim": ring(b["rim"]), "bowl": ring(b["bowl"]),
+            "drain": [round(float(v), 3) for v in b["drain"]], "drain_r": round(b["drain_r"], 3), "tap": [round(float(v), 3) for v in b["tap"]]}
+
+
 for b in blocks:
     if not any(q.buffer(SINK["on_counter_tolerance_m"]).contains(b["rim"]) for q in counter_polys):
         print(f"  sink block at ({b['drain'][0]:.2f}, {b['drain'][1]:.2f}) isn't on a counter: no basin")
         continue
-    c = b["rim"].envelope.centroid
-    basins.append({"c": [round(c.x, 3), round(c.y, 3)], "rim": ring(b["rim"]), "bowl": ring(b["bowl"]),
-                   "drain": [round(v, 3) for v in b["drain"]], "drain_r": round(b["drain_r"], 3), "tap": [round(v, 3) for v in b["tap"]]})
+    basins.append(drawn_basin(b))
+n_blocks = len(basins) - n_circular
+
+# vanity tops go last in both lists, so no existing counter or basin changes its number
+vanities = vanity_sinks(lambda p: any(q.contains(p) for q in counter_polys))
+for v in vanities:
+    counters.append({"poly": ring(v["top"]), "vanity": True})
+    basins.append(drawn_basin(v))
+    if not v["drain_drawn"]:
+        print(f"  oval sink at ({v['rim'].envelope.centroid.x:.2f}, {v['rim'].envelope.centroid.y:.2f}) draws no drain: placed as on the others")
 
 # ---------------------------------------------------------------- floor and rooms
 floor = Polygon(P["outline"]["points"])
@@ -404,4 +498,5 @@ os.makedirs(os.path.join(planlib.ROOT, "build"), exist_ok=True)
 with open(os.path.join(planlib.ROOT, "build", "plan.json"), "w") as fh:
     json.dump(plan, fh)
 print(f"walls {len(wall_polys)} ({walls_u.area:.1f} m2), headers {len(headers)}, leaves {len(leaves)}, windows {len(wins)}, "
-      f"counters {len(counters)}, basins {len(basins)} ({n_circular} circular, {len(basins) - n_circular} sink blocks), rooms {len(rooms)}, floor {floor.area:.0f} m2")
+      f"counters {len(counters)} ({len(vanities)} vanity tops), basins {len(basins)} ({n_circular} circular, {n_blocks} sink blocks, {len(vanities)} on vanity tops), "
+      f"rooms {len(rooms)}, floor {floor.area:.0f} m2")
