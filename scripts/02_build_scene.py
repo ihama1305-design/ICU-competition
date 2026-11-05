@@ -13,8 +13,10 @@ import bpy
 import numpy as np
 import trimesh
 from mathutils import Matrix, Vector
+from scipy import ndimage
 from shapely.geometry import LineString, MultiPoint, MultiPolygon, Point, Polygon
 from shapely.ops import unary_union
+from shapely.prepared import prep
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kit  # noqa: E402
@@ -625,6 +627,65 @@ xs = np.arange(math.floor(outline.bounds[0]), outline.bounds[2], g)
 ys = np.arange(math.floor(outline.bounds[1]), outline.bounds[3], g)
 panel = kit.Builder()
 n_l = 0
+
+
+def add_panel(x, y):
+    global n_l
+    panel.box((x, y, H - 0.006), (L_, L_, 0.012), "led_panel")
+    ld = bpy.data.lights.new(f"panel_{n_l}", "AREA"); ld.shape = "SQUARE"; ld.size = L_
+    ld.energy = LT["panel_watts"]; ld.color = LT["panel_kelvin_rgb"]
+    lo = bpy.data.objects.new(f"panel_{n_l}", ld); lo.location = (x, y, H - 0.02)
+    C["Lights"].objects.link(lo); n_l += 1
+
+
+def gap_panels(poly, inner, lamps):
+    """Panels for floor the grid leaves in the dark: a pocket can fall between two grid rows and stay joined to the corridor,
+    so the space still has grid points and its fallback never runs. Looks at this space's own floor, one point at a time.
+
+    A point's light is what it gets at desk height from the panels it can see (walls run to the ceiling), as cos*cos/d^2.
+    Dark means less than min_light_share of the grid's own dimmest floor, the middle of an open cell. Each patch of dark floor
+    of at least min_area_m2 gets the spot in it that lights the most of it, on a grid row or column if one crosses it.
+    """
+    GF = LT["gap_fill"]; step = GF["sample_m"]; drop2 = (H - B["desk_height"]) ** 2
+    seen = prep(poly); inside = prep(inner)
+
+    def light(p, lamp):
+        r2 = (p[0] - lamp[0]) ** 2 + (p[1] - lamp[1]) ** 2
+        return drop2 / (drop2 + r2) ** 2 if r2 < 64 and seen.covers(LineString([p, lamp])) else 0.0
+
+    ring = (np.arange(-3, 4) + 0.5) * g
+    dark_below = GF["min_light_share"] * sum(drop2 / (drop2 + a * a + b * b) ** 2 for a in ring for b in ring)
+    gx, gy = xs[0] + g / 2, ys[0] + g / 2  # the sample points include the grid's own rows and columns
+
+    def on_grid(p):
+        return any(abs(v / g - round(v / g)) < 1e-6 for v in (p[0] - gx, p[1] - gy))
+
+    x0, y0, x1, y1 = inner.bounds
+    px = gx + step * np.arange(math.ceil((x0 - gx) / step), math.floor((x1 - gx) / step) + 1)
+    py = gy + step * np.arange(math.ceil((y0 - gy) / step), math.floor((y1 - gy) / step) + 1)
+    lit = np.full((len(py), len(px)), np.inf)  # points outside inner are never dark
+    for j, y in enumerate(py):
+        for i, x in enumerate(px):
+            if inside.contains(Point(x, y)):
+                lit[j, i] = sum(light((x, y), l) for l in lamps)
+    edge = poly.boundary
+    added = []
+    while True:
+        patches, n = ndimage.label(lit < dark_below)
+        cells = np.bincount(patches.ravel())[1:]
+        if not n or cells.max() * step * step < GF["min_area_m2"]:
+            return added
+        here = np.argwhere(patches == cells.argmax() + 1)
+        pts = [(px[i], py[j]) for j, i in here]
+        lights_up = {c: sum(lit[j, i] + light(p, c) >= dark_below for (j, i), p in zip(here, pts)) for c in ([p for p in pts if on_grid(p)] or pts)}
+        # spots within 5% of the best are as good as each other: take the one furthest from the walls, not a doorway's edge
+        spot = max((c for c, m in lights_up.items() if m >= 0.95 * max(lights_up.values())), key=lambda c: round(edge.distance(Point(c)), 6))
+        added.append(spot)
+        for j, i in np.argwhere(np.isfinite(lit)):
+            lit[j, i] += light((px[i], py[j]), spot)
+
+
+grid = []
 for s in spaces:
     inner = s["poly"].buffer(-LT["wall_clearance"])
     if inner.is_empty or s["poly"].area < 2.0:
@@ -633,11 +694,15 @@ for s in spaces:
     if not cand:
         rp = inner.representative_point(); cand = [(rp.x, rp.y)]
     for (x, y) in cand:
-        panel.box((x, y, H - 0.006), (L_, L_, 0.012), "led_panel")
-        ld = bpy.data.lights.new(f"panel_{n_l}", "AREA"); ld.shape = "SQUARE"; ld.size = L_
-        ld.energy = LT["panel_watts"]; ld.color = LT["panel_kelvin_rgb"]
-        lo = bpy.data.objects.new(f"panel_{n_l}", ld); lo.location = (x, y, H - 0.02)
-        C["Lights"].objects.link(lo); n_l += 1
+        add_panel(x, y)
+    grid.append((s, inner, cand))
+# after the whole grid, so its panels keep their numbers. Patient rooms have daylight and an exam light of their own
+filled = []
+for s, inner, cand in grid:
+    if not is_patient(s):
+        for (x, y) in gap_panels(s["poly"], inner, cand):
+            add_panel(x, y)
+            filled.append([round(float(x), 2), round(float(y), 2)])
 pobj = panel.obj("ceiling_panels", C["Ceiling"], bevel=0.0)
 pobj.visible_diffuse = False; pobj.visible_shadow = False
 for r in rooms_index:
@@ -740,8 +805,9 @@ planlib.label_rooms(rooms_index, spec)
 # the 2D plan as built, for steps that work on one room (07)
 geometry = {"walls": walls_u.wkt, "inside_glass": inside_glass.wkt,
             "spaces": [{"names": s["names"], "labels": s["labels"], "poly": s["poly"].wkt} for s in spaces]}
-json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "spaces": len(spaces), "geometry": geometry},
+json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "gap_panels": filled, "spaces": len(spaces), "geometry": geometry},
           open(os.path.join(ROOT, "build", "scene_index.json"), "w"), indent=1)
 tri = sum(len(o.data.polygons) for o in scene.objects if o.type == "MESH" and o.users_collection[0] != KITC)
+print(f"gap panels added to the grid: {filled}")
 print(f"scene: {len(rooms_index)} patient rooms furnished, {n_l} ceiling lights, {len(spaces)} spaces, "
       f"{len([o for o in scene.objects if o.type == 'MESH'])} mesh objects, ~{tri} faces -> {bpy.data.filepath}")
