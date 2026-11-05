@@ -488,7 +488,8 @@ def export_room(label, cfg):
         fh.write(gzip.compress(open(glb, "rb").read(), 9, mtime=0))
 
     door = max((h for h in HEADERS if h.distance(room) < 0.25 and Point(f).distance(h) < 0.5), key=lambda h: h.area)
-    walk = unary_union([room, door] + [p for p in near if p not in toilets] + ([stub] if not any(s["names"] == ["ANTE"] for s in SPACES if s["poly"] in near) else []))
+    # Include the attached toilet in the walkable area so the configurator can enter its bathroom view.
+    walk = unary_union([room, door] + near + ([stub] if not any(s["names"] == ["ANTE"] for s in SPACES if s["poly"] in near) else []))
     walk = walk.buffer(0.03).buffer(-0.25, join_style="mitre").intersection(OUTLINE.buffer(-0.25))
     walk = max(getattr(walk, "geoms", [walk]), key=lambda g: g.area).simplify(0.03)
     outside = [k for k, c in cfg["cameras"].items() if k != "dollhouse" and not walk.contains(Point(c["eye"][:2]))]

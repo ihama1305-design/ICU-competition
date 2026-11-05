@@ -7,7 +7,7 @@ import { Daylight, sunAt } from "./sky.js";
 import { Lighting } from "./lights.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
-import { setAddon, setShade, setTv, syncPalms, tickAddons } from "./addons.js";
+import { setAddon, setAddonLook, setShade, setTv, syncPalms, tickAddons, toggleWardrobe } from "./addons.js";
 import { decodeSpec, encodeSpec } from "./state.js";
 import { summaryContent } from "./summary.js";
 import { Panel } from "./panel.js";
@@ -78,7 +78,11 @@ panel.addEventListener("transitionend", e => { if (e.target === panel && e.prope
 function pressed(group, value) {
   group.querySelectorAll("button[data-value]").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.value === value)); });
 }
-function syncViews() { pressed($("views"), state.view); }
+function syncViews() {
+  pressed($("views"), state.view);
+  const bathroom = $("views").querySelector('[data-value="bathroom"]');
+  if (bathroom) bathroom.hidden = !!rig.meta && !rig.meta.cameras.bathroom;
+}
 
 // what the 3D view shows, for anyone who can't see it
 const viewLabel = name => $("views").querySelector(`[data-value="${name}"]`).textContent;
@@ -129,6 +133,7 @@ async function setRoom(label, { keepView = true } = {}) {
   if (state.room !== label) return; // another room was chosen while this one loaded
   stage.show(room);
   rig.setRoom(room.meta);
+  if (!room.meta.cameras[state.view]) state.view = "overview";
   daylight.setCentre((room.meta.room[0] + room.meta.room[2]) / 2, (room.meta.room[1] + room.meta.room[3]) / 2);
   lighting.setRoom(room);
   glass.setRoom(room);
@@ -179,6 +184,13 @@ $("stops").addEventListener("click", e => {
 $("time").addEventListener("input", e => setTime(Number(e.target.value)));
 
 const sheet = $("sheet");
+$("panelBody").addEventListener("click", e => {
+  const current = e.target.closest('details[name="options"] > summary')?.parentElement;
+  if (!current) return;
+  requestAnimationFrame(() => {
+    if (current.open) $("panelBody").querySelectorAll('details[name="options"][open]').forEach(other => { if (other !== current) other.open = false; });
+  });
+});
 function setSheet(open) {
   panel.classList.toggle("open", open);
   sheet.setAttribute("aria-expanded", String(open));
@@ -226,6 +238,7 @@ const EFFECTS = {
     }
   },
   addon: e => { setAddon(stage.current, e.id, e.on); stage.refreshCeiling(); },
+  addonLook: e => setAddonLook(stage.current, e.id, e.look),
   light: e => {
     const p = { ...e };
     delete p.do;
@@ -259,7 +272,7 @@ function settle() {
   syncPalms(stage.current, selected.palms === "on", selected.patio === "on");
   setShade(stage.current, selected.shade);
   for (const g of allGroups()) {
-    if (selected[g.id] === "custom" || optionOf(g.id, selected[g.id])?.effects.some(e => e.do === "color")) runEffects(g, selected[g.id]);
+    if (selected[g.id] === "custom" || optionOf(g.id, selected[g.id])?.effects.some(e => e.do === "color" || e.do === "addonLook")) runEffects(g, selected[g.id]);
   }
   stage.renderer.shadowMap.needsUpdate = true;
 }
@@ -307,6 +320,96 @@ function applyTheme(id) {
 const currentTheme = () => optionData.themes.find(t => {
   const want = themeSelections(t);
   return allGroups().every(g => selected[g.id] === want[g.id]);
+});
+
+function createProfileIdea(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  const child = data.patientType === "child";
+  const family = data.children === "yes" || data.children === "sometimes" || data.sensory === "company";
+  const longStay = data.stay === "long" || data.patientType === "longstay";
+  const theme = child ? "paediatric" : family ? "family" : longStay ? "desert" : "calm";
+  applyTheme(theme);
+  // The draft only changes visual comfort and furnishing choices. It never changes the selected room.
+  if (selected.patio === "on") setOption("patio", "off");
+  setOption("wardrobe", "on");
+  setOption("ventilation", "on");
+  setOption("soundSensor", "on");
+  if (state.room === "W1") setOption("bathroom", "on");
+  if (family) setOption("seating", "sofa");
+  if (data.sensory === "quiet") {
+    setOption("scheme", "cove");
+    setOption("temperature", "k3000");
+    setOption("tvplay", "off");
+  } else if (data.sensory === "routine") {
+    setOption("nightlight", "on");
+  }
+  const needsClearFloor = ["aid", "wheelchair", "assistance"].includes(data.mobility);
+  if (needsClearFloor) {
+    setOption("playmat", "off");
+    setOption("softtoys", "off");
+  }
+  if (longStay) setOption("wardrobeFinish", "warm");
+  const label = optionData.themes.find(t => t.id === theme)?.label || "Calm Clinical";
+  const extras = [
+    `${label} starting look`,
+    "sliding storage added at the far wall",
+    state.room === "W1" ? "W1 bathroom fixtures shown" : "no attached bathroom is modeled for W3",
+    needsClearFloor ? "floor play items removed to keep the route open" : "family and comfort options kept editable",
+  ];
+  const result = $("profileResult");
+  result.replaceChildren(
+    Object.assign(document.createElement("strong"), { textContent: "Editable room idea created" }),
+    document.createTextNode(`${extras.join(" · ")}. Your selected room stays ${state.room}. Sex and care-frequency answers did not change the draft. Other notes stay in this page and are not interpreted.`),
+  );
+  result.hidden = false;
+  syncUi();
+}
+
+$("openProfile").addEventListener("click", () => $("profile").showModal());
+$("closeProfile").addEventListener("click", () => $("profile").close());
+$("profileForm").addEventListener("submit", e => {
+  e.preventDefault();
+  createProfileIdea(e.currentTarget);
+});
+
+function setDemoReadout() {
+  const temp = Number($("demoTemp").value), humidity = Number($("demoHumidity").value);
+  $("demoTempValue").textContent = `${temp} °C`;
+  $("demoHumidityValue").textContent = `${humidity}%`;
+  const tint = temp < 22 ? "#63aecd" : temp > 25 ? "#df9762" : "#4aaeb2";
+  for (const mesh of stage.current?.parts.addon_ventilation || []) {
+    for (const mat of [mesh.material].flat()) if (mat?.name === "vent_status") mat.color.set(tint);
+  }
+  invalidate();
+}
+
+function previewSoundAlert() {
+  $("systemStatus").textContent = "Demo only: a high sound-level event was simulated. No audio was captured and no staff were contacted.";
+  for (const mesh of stage.current?.parts.addon_soundSensor || []) {
+    for (const mat of [mesh.material].flat()) if (mat?.name === "sound_indicator") mat.color.set("#e6a342");
+  }
+  invalidate();
+  setTimeout(() => {
+    for (const mesh of stage.current?.parts.addon_soundSensor || []) {
+      for (const mat of [mesh.material].flat()) if (mat?.name === "sound_indicator") mat.color.set("#55b985");
+    }
+    invalidate();
+  }, 2200);
+}
+
+$("demoTemp").addEventListener("input", setDemoReadout);
+$("demoHumidity").addEventListener("input", setDemoReadout);
+$("previewSoundAlert").addEventListener("click", previewSoundAlert);
+$("closeObjectCard").addEventListener("click", () => { $("objectCard").hidden = true; canvas.focus({ preventScroll: true }); });
+$("objectAction").addEventListener("click", e => {
+  if (e.currentTarget.dataset.action === "wardrobe") {
+    const open = toggleWardrobe(stage.current);
+    e.currentTarget.textContent = open ? "Slide doors closed" : "Slide doors open";
+    stage.renderer.shadowMap.needsUpdate = true;
+    invalidate();
+  } else if (e.currentTarget.dataset.action === "soundAlert") {
+    previewSoundAlert();
+  }
 });
 
 function syncUi() {
@@ -405,19 +508,78 @@ canvas.addEventListener("pointerdown", () => { if (tour.running) tour.stop(); })
 canvas.addEventListener("wheel", () => { if (tour.running) tour.stop(); }, { passive: true });
 canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 
-// the wall switch in the room works too
+const OBJECT_DETAILS = {
+  cfg_kit_bed: ["Adjustable ICU bed", "A modeled patient bed with a raised backrest, side rails, mattress, and bedding."],
+  cfg_kit_pendant: ["Ceiling service pendant", "A visual equipment pendant with shelves and service outlets."],
+  cfg_kit_monitor: ["Patient monitor", "A modeled bedside monitor. Its display is illustrative and is not connected to a patient."],
+  cfg_kit_pumps: ["Infusion pumps", "Visual pump units mounted at the bedside. They are not functional medical equipment."],
+  cfg_kit_ventilator: ["Ventilator model", "A static equipment model for room layout visualization; it does not provide ventilation."],
+  cfg_kit_iv_pole: ["IV pole", "A mobile pole shown as part of the room layout concept."],
+  cfg_kit_recliner: ["Patient recliner", "A visitor or recovery chair shown as a furniture concept."],
+  cfg_kit_visitor_chair: ["Visitor chair", "A chair for a family member or visitor."],
+  cfg_kit_overbed_table: ["Over-bed table", "A movable bedside table for personal items and meals."],
+  cfg_kit_exam_light: ["Examination light", "A ceiling-mounted examination light model."],
+  cfg_feature_wall: ["Feature wall", "A customizable finish panel behind the bed."],
+  cfg_tv: ["Television", "A wall-mounted television concept. The sample animation is original placeholder content."],
+  cfg_tv_screen: ["Television screen", "A display surface for the room's placeholder animation."],
+  cfg_curtain: ["Privacy curtain", "A curtain concept at the glazed room front."],
+  cfg_blinds: ["Window blinds", "Adjustable blinds at the outside window."],
+  cfg_floor: ["Room flooring", "The configurable resilient floor surface shown in this design proposal."],
+  cfg_paint_walls: ["Room walls", "The room wall finish can be changed in the Walls section."],
+  cfg_ceiling: ["Ceiling", "The room ceiling and its lighting layout."],
+  cfg_panels: ["Ceiling light panel", "A modeled ceiling light panel; the lighting scheme controls the room's lighting."],
+  cfg_front_frame: ["Glazed room front", "The room-front frame and glazing concept."],
+};
+
+function showObjectCard(info, x, y) {
+  const card = $("objectCard"), action = $("objectAction");
+  $("objectTitle").textContent = info.title;
+  $("objectDescription").textContent = info.description;
+  action.hidden = !info.action;
+  action.dataset.action = info.action || "";
+  if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
+  else if (info.action === "soundAlert") action.textContent = "Preview sound alert";
+  card.hidden = false;
+  const rect = card.getBoundingClientRect(), panelRect = panel.getBoundingClientRect();
+  let left = x + 14, top = y + 14;
+  if (left + rect.width > panelRect.left && x < panelRect.left) left = Math.max(12, panelRect.left - rect.width - 12);
+  if (left + rect.width > innerWidth - 12) left = innerWidth - rect.width - 12;
+  if (matchMedia("(max-width: 820px)").matches && top + rect.height > panelRect.top) top = Math.max(12, panelRect.top - rect.height - 10);
+  if (top + rect.height > innerHeight - 12) top = innerHeight - rect.height - 12;
+  card.style.left = `${Math.max(12, left)}px`;
+  card.style.top = `${Math.max(12, top)}px`;
+  card.tabIndex = -1;
+  card.focus({ preventScroll: true });
+}
+
+// Clicking any visible solid object identifies it. The wall switch keeps its existing interaction.
 const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
 let pressAt = null;
 canvas.addEventListener("pointerdown", e => { pressAt = [e.clientX, e.clientY]; });
 canvas.addEventListener("pointerup", e => {
   if (!pressAt || Math.hypot(e.clientX - pressAt[0], e.clientY - pressAt[1]) > 6) return;
+  pressAt = null;
   pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  if (!glass.switchTargets().length) return;
   ray.setFromCamera(pointer, stage.camera);
-  // the nearest solid thing along the ray has to be the switch: it can't be pressed through a wall
+  // Only the nearest solid object responds, so clicks don't pass through walls or equipment.
   const shown = o => { for (let n = o; n; n = n.parent) if (!n.visible) return false; return true; };
-  const hit = ray.intersectObject(stage.current.root, true).find(h => shown(h.object) && !h.object.material.transparent && !h.object.material.transmission);
-  if (hit && glass.isSwitch(hit.object)) setOption("switch", selected.switch === "opaque" ? "clear" : "opaque");
+  const hit = ray.intersectObject(stage.current.root, true).find(h => {
+    if (!shown(h.object)) return false;
+    if (glass.isSwitch(h.object)) return true;
+    return [h.object.material].flat().filter(Boolean).every(m => !m.transparent && !m.transmission);
+  });
+  if (!hit) { $("objectCard").hidden = true; return; }
+  if (glass.isSwitch(hit.object)) setOption("switch", selected.switch === "opaque" ? "clear" : "opaque");
+  let info = null;
+  for (let node = hit.object; node && node !== stage.current.root; node = node.parent) {
+    if (node.userData.itemInfo) { info = node.userData.itemInfo; break; }
+  }
+  if (!info) {
+    const top = stage.topName(hit.object, stage.current.root), known = OBJECT_DETAILS[top];
+    const label = top.replace(/^cfg_(kit_|)/, "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase()) || "Room object";
+    info = known ? { title: known[0], description: known[1] } : { title: label, description: "A modeled room surface or furnishing in this editable design proposal." };
+  }
+  showObjectCard(info, e.clientX, e.clientY);
 });
 
 // ---------------------------------------------------------------- drawing: only when something has changed
@@ -535,6 +697,7 @@ async function boot() {
     state.room = fromLink.room; state.view = fromLink.view; state.hour = fromLink.hour;
   }
   await setRoom(state.room, { keepView: true });
+  setDemoReadout();
   window.__configStage = "setting the time";
   setTime(state.hour);
   window.__configStage = "drawing the first frame";
