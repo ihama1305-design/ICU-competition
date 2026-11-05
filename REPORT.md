@@ -149,6 +149,6 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 - The stair core in the north block is shown as an empty enclosure.
 - Lift doors and toilet fittings are not modelled.
 - Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only sinks and counters from `A-EQPM` appear there.
-- The `A-EQPM` outline labelled `MED. GAS RISER` is built as a plain 0.90 m counter, because these sheets don't give its height.
+- The `A-EQPM` outline for a service riser is built as a plain 0.90 m counter, because these sheets don't give its height.
 - Glass, sky and procedural textures only look right in the Cycles renders. The GLB and viewer use flat colours.
 - Heights other than the door head and windows are assumptions (see the table above).
