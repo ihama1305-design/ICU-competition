@@ -13,8 +13,10 @@ import bpy
 import numpy as np
 import trimesh
 from mathutils import Matrix, Vector
+from scipy import ndimage
 from shapely.geometry import LineString, MultiPoint, MultiPolygon, Point, Polygon
 from shapely.ops import unary_union
+from shapely.prepared import prep
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kit  # noqa: E402
@@ -613,11 +615,13 @@ def place_seat(kind, tag, p, front, d):
         raise SystemExit(f"{kind} items at {front.round(2).tolist()} cross a wall, counter or the ledge")
     place(wst, f"{kind}_ws_{tag}", M_ws, C["Equipment"])
     place(ochair, f"{kind}_chair_{tag}", M_chair, C["Equipment"])
+    chairs.append(tuple(front - d * 0.45))
 
 
 # nurse station, observation desks, dictation desk, alcoves
 joinery = unary_union([c[0] for c in counters])
 raised = unary_union([q[0] for q in ledge])
+chairs = []
 for ci, (p, kind) in enumerate(counters):
     if kind == "nurse":
         for i, (front, d) in enumerate(nurse_seats(p)):
@@ -676,6 +680,99 @@ xs = np.arange(math.floor(outline.bounds[0]), outline.bounds[2], g)
 ys = np.arange(math.floor(outline.bounds[1]), outline.bounds[3], g)
 panel = kit.Builder()
 n_l = 0
+
+
+def add_panel(x, y):
+    global n_l
+    panel.box((x, y, H - 0.006), (L_, L_, 0.012), "led_panel")
+    ld = bpy.data.lights.new(f"panel_{n_l}", "AREA"); ld.shape = "SQUARE"; ld.size = L_
+    ld.energy = LT["panel_watts"]; ld.color = LT["panel_kelvin_rgb"]
+    lo = bpy.data.objects.new(f"panel_{n_l}", ld); lo.location = (x, y, H - 0.02)
+    C["Lights"].objects.link(lo); n_l += 1
+
+
+# direct light at desk height, as cos*cos/d^2, from the panels a point can see (walls run to the ceiling)
+drop2 = (H - B["desk_height"]) ** 2
+offsets = (np.arange(-3, 4) + 0.5) * g
+open_cell = sum(drop2 / (drop2 + a * a + b * b) ** 2 for a in offsets for b in offsets)  # the grid's own dimmest floor, the middle of an open cell
+gx, gy = xs[0] + g / 2, ys[0] + g / 2  # the sample points below include the grid's own rows and columns
+
+
+def light_in(poly):
+    seen = prep(poly)
+
+    def light(p, lamp):
+        r2 = (p[0] - lamp[0]) ** 2 + (p[1] - lamp[1]) ** 2
+        return drop2 / (drop2 + r2) ** 2 if r2 < 64 and seen.covers(LineString([p, lamp])) else 0.0
+    return light
+
+
+def on_grid(p):
+    return any(abs(v / g - round(v / g)) < 1e-6 for v in (p[0] - gx, p[1] - gy))
+
+
+def sample_points(x0, y0, x1, y1):
+    step = LT["gap_fill"]["sample_m"]
+    return (gx + step * np.arange(math.ceil((x0 - gx) / step), math.floor((x1 - gx) / step) + 1),
+            gy + step * np.arange(math.ceil((y0 - gy) / step), math.floor((y1 - gy) / step) + 1))
+
+
+def gap_panels(poly, inner, lamps):
+    """Panels for floor the grid leaves in the dark: a pocket can fall between two grid rows and stay joined to the corridor,
+    so the space still has grid points and its fallback never runs. Looks at this space's own floor, one point at a time.
+
+    Dark means less than min_light_share of the grid's own dimmest floor. Each patch of dark floor of at least min_area_m2
+    gets the spot in it that lights the most of it, on a grid row or column if one crosses it.
+    """
+    GF = LT["gap_fill"]; step = GF["sample_m"]
+    light = light_in(poly); inside = prep(inner)
+    dark_below = GF["min_light_share"] * open_cell
+    px, py = sample_points(*inner.bounds)
+    lit = np.full((len(py), len(px)), np.inf)  # points outside inner are never dark
+    for j, y in enumerate(py):
+        for i, x in enumerate(px):
+            if inside.contains(Point(x, y)):
+                lit[j, i] = sum(light((x, y), l) for l in lamps)
+    edge = poly.boundary
+    added = []
+    while True:
+        patches, n = ndimage.label(lit < dark_below)
+        cells = np.bincount(patches.ravel())[1:]
+        if not n or cells.max() * step * step < GF["min_area_m2"]:
+            return added
+        here = np.argwhere(patches == cells.argmax() + 1)
+        pts = [(px[i], py[j]) for j, i in here]
+        lights_up = {c: sum(lit[j, i] + light(p, c) >= dark_below for (j, i), p in zip(here, pts)) for c in ([p for p in pts if on_grid(p)] or pts)}
+        # spots within 5% of the best are as good as each other: take the one furthest from the walls, not a doorway's edge
+        spot = max((c for c, m in lights_up.items() if m >= 0.95 * max(lights_up.values())), key=lambda c: round(edge.distance(Point(c)), 6))
+        added.append(spot)
+        for j, i in np.argwhere(np.isfinite(lit)):
+            lit[j, i] += light((px[i], py[j]), spot)
+
+
+def desk_panels(poly, inner, lamps, chairs):
+    """Panels for chairs the rest of the layout leaves dim. gap_panels looks at floor, and a nook's dim floor is too small a patch
+    to count, but someone works at that desk all shift. A chair is dim below min_light_share of the grid's own dimmest floor.
+
+    Its panel goes over the chair, within reach_m of its centre: on a grid row or column if one crosses there, otherwise straight
+    above it, and always inside the wall clearance. Stops the build if a dim chair has nowhere for one.
+    """
+    DF = LT["desk_fill"]
+    light = light_in(poly); inside = prep(inner)
+    added = []
+    for chair in chairs:
+        if sum(light(chair, l) for l in [*lamps, *added]) >= DF["min_light_share"] * open_cell:
+            continue
+        r = DF["reach_m"]
+        px, py = sample_points(chair[0] - r, chair[1] - r, chair[0] + r, chair[1] + r)
+        spots = [(x, y) for x in px for y in py if math.dist((x, y), chair) <= r and inside.contains(Point(x, y)) and light(chair, (x, y)) > 0]
+        if not spots:
+            raise SystemExit(f"nowhere inside the wall clearance for a panel over the dim chair at {np.round(chair, 2).tolist()}")
+        added.append(max([p for p in spots if on_grid(p)] or spots, key=lambda p: light(chair, p)))
+    return added
+
+
+grid = []
 for s in spaces:
     inner = s["poly"].buffer(-LT["wall_clearance"])
     if inner.is_empty or s["poly"].area < 2.0:
@@ -684,11 +781,21 @@ for s in spaces:
     if not cand:
         rp = inner.representative_point(); cand = [(rp.x, rp.y)]
     for (x, y) in cand:
-        panel.box((x, y, H - 0.006), (L_, L_, 0.012), "led_panel")
-        ld = bpy.data.lights.new(f"panel_{n_l}", "AREA"); ld.shape = "SQUARE"; ld.size = L_
-        ld.energy = LT["panel_watts"]; ld.color = LT["panel_kelvin_rgb"]
-        lo = bpy.data.objects.new(f"panel_{n_l}", ld); lo.location = (x, y, H - 0.02)
-        C["Lights"].objects.link(lo); n_l += 1
+        add_panel(x, y)
+    grid.append((s, inner, cand))
+# after the whole grid, so its panels keep their numbers. Patient rooms have daylight and an exam light of their own
+filled, over_desks, served = [], [], []
+for s, inner, cand in grid:
+    if not is_patient(s):
+        gaps = gap_panels(s["poly"], inner, cand)
+        for (x, y) in gaps:
+            add_panel(x, y)
+            filled.append([round(float(x), 2), round(float(y), 2)])
+        served.append((s, inner, [*cand, *gaps]))
+for s, inner, lamps in served:  # last, for the same reason, and because a gap panel may already light a desk
+    for (x, y) in desk_panels(s["poly"], inner, lamps, [c for c in chairs if s["poly"].contains(Point(c))]):
+        add_panel(x, y)
+        over_desks.append([round(float(x), 2), round(float(y), 2)])
 pobj = panel.obj("ceiling_panels", C["Ceiling"], bevel=0.0)
 pobj.visible_diffuse = False; pobj.visible_shadow = False
 for r in rooms_index:
@@ -791,8 +898,10 @@ planlib.label_rooms(rooms_index, spec)
 # the 2D plan as built, for steps that work on one room (07)
 geometry = {"walls": walls_u.wkt, "inside_glass": inside_glass.wkt,
             "spaces": [{"names": s["names"], "labels": s["labels"], "poly": s["poly"].wkt} for s in spaces]}
-json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "spaces": len(spaces), "geometry": geometry},
+json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "gap_panels": filled, "desk_panels": over_desks, "spaces": len(spaces), "geometry": geometry},
           open(os.path.join(ROOT, "build", "scene_index.json"), "w"), indent=1)
 tri = sum(len(o.data.polygons) for o in scene.objects if o.type == "MESH" and o.users_collection[0] != KITC)
+print(f"gap panels added to the grid: {filled}")
+print(f"panels added over dim desks: {over_desks}")
 print(f"scene: {len(rooms_index)} patient rooms furnished, {n_l} ceiling lights, {len(spaces)} spaces, "
       f"{len([o for o in scene.objects if o.type == 'MESH'])} mesh objects, ~{tri} faces -> {bpy.data.filepath}")
