@@ -6,6 +6,7 @@ headers    door openings (thin gaps in walls next to a door symbol), with width 
 leaves     door leaves (thin A-DOOR rectangles) as drawn: centre, axis, length
 glazing    internal windows (A-GLAZ) as segments
 counters   joinery outlines from A-EQPM (sinks, nurse station, observation desks)
+basins     circular basins from A-EQPM, then sink blocks: bowl on P-SANR-FIXT, tap on A-EQPM
 floor      floor outline (building footprint inside the cut lines)
 rooms      room names from the text layer with their label position and floor polygon
 """
@@ -17,7 +18,7 @@ import cv2
 import numpy as np
 import pymupdf
 from scipy import ndimage as ndi
-from shapely.geometry import LineString, Point, Polygon, MultiPolygon
+from shapely.geometry import LineString, MultiPoint, Point, Polygon, MultiPolygon, box
 from shapely.ops import unary_union
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -136,7 +137,6 @@ leaves = uniq
 # Each drawn leaf finds its opening: rays along the wall line from the leaf (drawn closed, in
 # the wall) or from its hinge (drawn open, square to the wall) run to the two jamb faces.
 # Sampling across the wall thickness gives the header strip that spans the doorway.
-from shapely.geometry import MultiPoint  # noqa: E402
 from shapely.prepared import prep  # noqa: E402
 
 walls_p = prep(walls_u)
@@ -235,8 +235,103 @@ wins = [w for w in wins if w["length"] >= P["min_window_m"] and walls_u.distance
 screens = [LineString([q["a"], q["b"]]) for q in P.get("screens", [])]
 wins = [w for w in wins if all(sc.distance(LineString([w["a"], w["b"]])) > 0.1 for sc in screens)]
 
+# ---------------------------------------------------------------- sink blocks
+# Some sinks are CAD blocks rather than the circular basins below: a drain circle inside a bowl outline on P-SANR-FIXT,
+# with the tap on A-EQPM. The bowl is a rounded rectangle, or an oval ring with a drawn rim around it.
+SINK = P["sink"]
+
+
+def fit_circle(w):
+    """Least-squares circle through world points: centre x, centre y, radius."""
+    A = np.c_[2 * w[:, 0], 2 * w[:, 1], np.ones(len(w))]
+    (cx, cy, k), *_ = np.linalg.lstsq(A, (w ** 2).sum(1), rcond=None)
+    return cx, cy, float(np.sqrt(k + cx * cx + cy * cy))
+
+
+def bezier_arcs(layer):
+    """Bezier arcs on a layer, which were sampled at 9 points, as (world points, centre x, centre y, radius)."""
+    return [(w, *fit_circle(w)) for d in drs if d["layer"] == layer for _, pts in d["items"] if len(pts) == 9
+            for w in [planlib.page_to_world(spec, pts)]]
+
+
+def within(r, limits):
+    return limits[0] < r < limits[1]
+
+
+def drain_circles(arcs):
+    """Full circles of drain size, as (x, y, r). A block draws one circle as several arcs, some in separate paths."""
+    small = [a for a in arcs if within(a[3], SINK["drain_r_m"])]
+    out = []
+    for _, cx, cy, _r in small:
+        if any(np.hypot(cx - q[0], cy - q[1]) < 0.005 for q in out):
+            continue
+        same = [a for a in small if np.hypot(a[1] - cx, a[2] - cy) < 0.005]
+        pts = np.concatenate([a[0] for a in same])
+        ang = np.sort(np.arctan2(pts[:, 1] - cy, pts[:, 0] - cx))
+        if np.diff(np.r_[ang, ang[0] + 2 * np.pi]).max() < np.radians(60):  # no missing side
+            out.append((cx, cy, min(a[3] for a in same)))
+    return out
+
+
+def polylines(layer, min_segments):
+    """Paths on a layer drawn as a run of straight segments, as world point arrays."""
+    return [np.concatenate(w) for d in drs if d["layer"] == layer and len(d["items"]) >= min_segments and all(len(p) == 2 for _, p in d["items"])
+            for w in [[planlib.page_to_world(spec, p) for _, p in d["items"]]]]
+
+
+def bowl_outline(x, y, corners, rings):
+    """The convex outline drawn around a drain: four corner arcs of a rounded rectangle, or a ring of straight segments."""
+    near = [a[0] for a in corners if np.hypot(a[1] - x, a[2] - y) < SINK["size_m"][1]]
+    for pts in ([np.concatenate(near)] if len(near) == 4 else []) + rings:
+        hull = MultiPoint(pts).convex_hull
+        if not hull.contains(Point(x, y)):  # also rules out straight runs, whose hull is a line
+            continue
+        corner = np.array(hull.minimum_rotated_rectangle.exterior.coords)[:3]
+        if all(within(side, SINK["size_m"]) for side in np.hypot(*np.diff(corner, axis=0).T)):
+            return hull
+    return None
+
+
+def sink_blocks():
+    """Every drawn sink block on the sheet: a drain inside a bowl outline, with a tap just outside it."""
+    fixt = bezier_arcs("P-SANR-FIXT")
+    eq_arcs = bezier_arcs("A-EQPM")
+    corners = [a for a in fixt if within(a[3], SINK["corner_r_m"])]
+    tap_arcs = [a for a in eq_arcs if within(a[3], SINK["tap_r_m"])]
+    rings = polylines("P-SANR-FIXT", SINK["ring_min_segments"])
+    eq_lines = polylines("A-EQPM", SINK["rim_min_segments"])
+    out = []
+    for x, y, drain_r in drain_circles(fixt):
+        bowl = bowl_outline(x, y, corners, rings)
+        if bowl is None or y < y_cut:
+            continue
+        taps = [a for a in tap_arcs if 0 < bowl.distance(Point(a[1], a[2])) < SINK["tap_reach_m"]]
+        if not taps:
+            continue
+        # a rim drawn around the bowl, if there is one. With one outline, it's the fitting's edge and the rim width is assumed
+        grown = box(*bowl.bounds).buffer(SINK["block_margin_m"], join_style="mitre")
+        around = [p for p in eq_lines if grown.contains(MultiPoint(p))]
+        hull = MultiPoint(np.concatenate(around)).convex_hull if around else bowl
+        rim, bowl = (hull, bowl) if hull.contains(bowl.buffer(-0.005)) and hull.area > bowl.area else (bowl, bowl.buffer(-SINK["rim_m"]))
+        out.append({"rim": rim, "bowl": bowl, "drain": (x, y), "drain_r": drain_r,
+                    "tap": (float(np.mean([a[1] for a in taps])), float(np.mean([a[2] for a in taps]))), "tap_r": float(np.mean([a[3] for a in taps]))})
+    return out
+
+
+def block_linework(block):
+    """Indices of the A-EQPM paths that belong to a sink block: all of their points lie in a box around its rim and tap."""
+    extent = block["rim"].union(Point(block["tap"]).buffer(block["tap_r"]))
+    zone = box(*extent.bounds).buffer(SINK["block_margin_m"], join_style="mitre")
+    return {i for i, d in enumerate(drs) if d["layer"] == "A-EQPM" and d["items"]
+            and zone.contains(MultiPoint(np.concatenate([planlib.page_to_world(spec, p) for _, p in d["items"]])))}
+
+
+blocks = sink_blocks()
+
 # ---------------------------------------------------------------- joinery (A-EQPM)
-eq = R.draw(spec, drs, {"A-EQPM"}, stroke_px=2, fill=False)
+# A sink block's linework isn't the counter's outline. Left in, its tap cuts a slot in the counter and an oval rim can split one counter into three.
+linework = set().union(*(block_linework(b) for b in blocks)) if blocks else set()
+eq = R.draw(spec, [d for i, d in enumerate(drs) if i not in linework], {"A-EQPM"}, stroke_px=2, fill=False)
 both = (walls | eq).astype(np.uint8)
 lab, n = ndi.label(both == 0)
 area = ndi.sum(np.ones_like(lab), lab, np.arange(1, n + 1)) * R.res ** 2
@@ -260,19 +355,22 @@ for poly in polygons(cv2.dilate((ok[lab]).astype(np.uint8), disk(1)) > 0, 0.08, 
     counters.append(cnt)
 
 basins = []
-for d in drs:
-    if d["layer"] != "A-EQPM":
+for w, cx, cy, r in bezier_arcs("A-EQPM"):
+    if 0.12 < r < 0.3 and np.abs(np.hypot(w[:, 0] - cx, w[:, 1] - cy) - r).max() < 0.01 and cy > y_cut:
+        if all(np.hypot(cx - q["c"][0], cy - q["c"][1]) > 0.08 for q in basins):
+            basins.append({"c": [round(cx, 3), round(cy, 3)], "r": round(r, 3)})
+n_circular = len(basins)
+
+# sink blocks go after the circular basins, whose list positions name their objects. A block only counts on a counter.
+counter_polys = [Polygon(c["poly"]) for c in counters]
+ring = lambda g: [[round(v, 3) for v in p] for p in g.exterior.coords]  # noqa: E731
+for b in blocks:
+    if not any(q.buffer(SINK["on_counter_tolerance_m"]).contains(b["rim"]) for q in counter_polys):
+        print(f"  sink block at ({b['drain'][0]:.2f}, {b['drain'][1]:.2f}) isn't on a counter: no basin")
         continue
-    for _, pts in d["items"]:
-        if len(pts) != 9:  # Bezier arcs were sampled at 9 points
-            continue
-        w = planlib.page_to_world(spec, pts)
-        A = np.c_[2 * w[:, 0], 2 * w[:, 1], np.ones(len(w))]
-        (cx, cy, k), *_ = np.linalg.lstsq(A, (w ** 2).sum(1), rcond=None)
-        r = float(np.sqrt(k + cx * cx + cy * cy))
-        if 0.12 < r < 0.3 and np.abs(np.hypot(w[:, 0] - cx, w[:, 1] - cy) - r).max() < 0.01 and cy > y_cut:
-            if all(np.hypot(cx - q["c"][0], cy - q["c"][1]) > 0.08 for q in basins):
-                basins.append({"c": [round(cx, 3), round(cy, 3)], "r": round(r, 3)})
+    c = b["rim"].envelope.centroid
+    basins.append({"c": [round(c.x, 3), round(c.y, 3)], "rim": ring(b["rim"]), "bowl": ring(b["bowl"]),
+                   "drain": [round(v, 3) for v in b["drain"]], "drain_r": round(b["drain_r"], 3), "tap": [round(v, 3) for v in b["tap"]]})
 
 # ---------------------------------------------------------------- floor and rooms
 floor = Polygon(P["outline"]["points"])
@@ -306,4 +404,4 @@ os.makedirs(os.path.join(planlib.ROOT, "build"), exist_ok=True)
 with open(os.path.join(planlib.ROOT, "build", "plan.json"), "w") as fh:
     json.dump(plan, fh)
 print(f"walls {len(wall_polys)} ({walls_u.area:.1f} m2), headers {len(headers)}, leaves {len(leaves)}, windows {len(wins)}, "
-      f"counters {len(counters)}, basins {len(basins)}, rooms {len(rooms)}, floor {floor.area:.0f} m2")
+      f"counters {len(counters)}, basins {len(basins)} ({n_circular} circular, {len(basins) - n_circular} sink blocks), rooms {len(rooms)}, floor {floor.area:.0f} m2")

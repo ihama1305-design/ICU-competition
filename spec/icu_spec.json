@@ -90,6 +90,30 @@
   "counter_max_area_m2": 9.0,
   "counter_max_half_depth_m": 0.5,
   "counter_raised_min_area_m2": 1.0,
+  "sink": {
+   "drain_r_m": [
+    0.02,
+    0.035
+   ],
+   "corner_r_m": [
+    0.03,
+    0.08
+   ],
+   "tap_r_m": [
+    0.028,
+    0.036
+   ],
+   "size_m": [
+    0.25,
+    0.5
+   ],
+   "ring_min_segments": 20,
+   "rim_min_segments": 5,
+   "tap_reach_m": 0.15,
+   "block_margin_m": 0.05,
+   "rim_m": 0.03,
+   "on_counter_tolerance_m": 0.02
+  },
   "room_keywords": [
    "ROOM",
    "NURSE",
@@ -543,6 +567,17 @@
    0.84
   ],
   "wall_clearance": 0.5,
+  "gap_fill": {
+   "_note": "extra panels where the grid leaves floor in the dark (see gap_panels in 02). Assumed, like the rest of the ceiling layout: the sheets don't show it. Dark = under min_light_share of the direct light at the middle of an open grid cell. Patches smaller than min_area_m2 are left alone",
+   "min_light_share": 0.1,
+   "min_area_m2": 0.5,
+   "sample_m": 0.1
+  },
+  "desk_fill": {
+   "_note": "extra panels over desk chairs the rest of the layout leaves dim (see desk_panels in 02). Assumed too. Dim = under min_light_share of the direct light at the middle of an open grid cell. The panel goes over the chair, within reach_m of its centre",
+   "min_light_share": 0.25,
+   "reach_m": 0.3
+  },
   "sun": {
    "elevation_deg": 32,
    "azimuth_deg": 250,

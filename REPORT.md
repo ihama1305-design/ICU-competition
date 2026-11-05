@@ -15,6 +15,7 @@ The PDFs are AutoCAD exports that still carry their layers, so no tracing was ne
 | `A-DOOR` | Door leaves at their drawn positions. Each opening is found by casting rays from the leaf to both jambs |
 | `A-GLAZ` | 16 observation window panes, plus the lobby's glazed screen (`WN35 0 - 2800`), which is modelled from its tag |
 | `A-EQPM` | Joinery outlines: sink counters with basins, observation desks, the U-shaped nurse station |
+| `P-SANR-FIXT` | The seven sinks on counters that are CAD blocks: bowl outline and drain here, tap on `A-EQPM`. Five are rounded rectangles and two are ovals with a rim on `A-EQPM` |
 | Text | Room names, which decide floor finish, ceiling type and which rooms get the patient kit |
 
 **Scale** comes from the drawing itself. The structural grid (32–37, A-3 to E-3) is 9.000 m both ways
@@ -31,6 +32,7 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
 | Observation windows: sill 1.0 m, head 1.4 m | Medium | `WA31 1000-1400` tag read with the sheet legend (X = sill, Y = underside of lintel). `WN35 0 - 2800` on the same sheet uses the same format. Check against the window schedule (A5102/A5105) |
 | Facade: 700 mm upstand, curtain wall, external fins | Medium | `TOW +700 AFFL` and the facade lines. Mullion and fin spacing are approximate |
 | Ceiling height 2.85 m | **Low** | Not on these sheets. One number in the spec |
+| Ceiling panel layout | **Low** | Not on these sheets. A regular 2.4 m grid, plus nine panels where that grid leaves floor in the dark (`lighting.gap_fill` in the spec) and four over desk chairs it leaves dim (`lighting.desk_fill`). None of their positions come from the drawing |
 | Finishes and colours (LIN36/LIN37 vinyl, wall paint) | Low | Finish codes are on the plan. The colours are assumed |
 | Furniture and equipment | Low | A typical ICU kit placed the same way in every standard room and fitted to the shape of the two isolation rooms (`kit.room_overrides` in the spec). It is **not** an inventory of SSMC's equipment |
 | Bed orientation: head toward the window, foot toward the glazed front | Low | The plan's bed-zone circle sits in the middle of the room. Bed facing the door is a common ICU layout, but it's an assumption. In the isolation rooms W1 and E1 the door is well to one side, so the bed sits side-on with its foot toward a party wall and the window beside it. Its centre is inside the drawn bed circle (W1: circle centre 11.50, 29.99, 2.69 m across; bed centre 11.20, 29.16) rather than on it, which leaves room behind the bed head and centres the TV on the flat foot wall |
@@ -52,7 +54,7 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
   - Corridor handrails, coved skirting, lay-in 600 mm ceiling grid in corridors and plain ceilings in patient rooms
   - Crash cart and stretcher alcoves
 - **Lighting:**
-  - 166 LED ceiling panels, each a real area light in the renders
+  - 179 LED ceiling panels, each a real area light in the renders
   - Afternoon sun from the west-south-west, physical sky
 
 ## Observations relevant to the competition
@@ -147,8 +149,8 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 - Wall ends are slightly rounded where the raster closed small gaps (2–3 cm).
 - The stair core in the north block is shown as an empty enclosure.
-- Lift doors and toilet fittings are not modelled.
-- Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only sinks and counters from `A-EQPM` appear there.
+- Lift doors and toilet fittings are not modelled. That includes the four oval basins drawn on vanity tops near two `TOILET` and two `ANTE` labels: those tops are on `P-SANR-FIXT`, not `A-EQPM`, so no counter is built under them.
+- Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only `A-EQPM` counters and the sinks drawn on them appear there.
 - The `A-EQPM` outline for a service riser is built as a plain 0.90 m counter, because these sheets don't give its height.
 - The nurse station's knee spaces aren't drawn. The sheets give only the station's outline, so each workstation gets an assumed opening 0.90 m wide and 0.55 m deep, 0.72 m high up to the underside of the top. The cabinet stays between the openings and behind them, under the transaction ledge.
 - Glass, sky and procedural textures only look right in the Cycles renders. The GLB and viewer use flat colours.
