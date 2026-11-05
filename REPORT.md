@@ -15,7 +15,7 @@ The PDFs are AutoCAD exports that still carry their layers, so no tracing was ne
 | `A-DOOR` | Door leaves at their drawn positions. Each opening is found by casting rays from the leaf to both jambs |
 | `A-GLAZ` | 16 observation window panes, plus the lobby's glazed screen (`WN35 0 - 2800`), which is modelled from its tag |
 | `A-EQPM` | Joinery outlines: sink counters with basins, observation desks, the U-shaped nurse station |
-| `P-SANR-FIXT` | The seven sinks on counters that are CAD blocks: bowl outline and drain here, tap on `A-EQPM`. Five are rounded rectangles and two are ovals with a rim on `A-EQPM` |
+| `P-SANR-FIXT` | The seven sinks on counters that are CAD blocks: bowl outline and drain here, tap on `A-EQPM`. Five are rounded rectangles and two are ovals with a rim on `A-EQPM`. Also the four oval sinks with nothing on `A-EQPM`: bowl, tap and the front edge of the vanity top are all here |
 | Text | Room names, which decide floor finish, ceiling type and which rooms get the patient kit |
 
 **Scale** comes from the drawing itself. The structural grid (32–37, A-3 to E-3) is 9.000 m both ways
@@ -149,8 +149,9 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 - Wall ends are slightly rounded where the raster closed small gaps (2–3 cm).
 - The stair core in the north block is shown as an empty enclosure.
-- Lift doors and toilet fittings are not modelled. That includes the four oval basins drawn on vanity tops near two `TOILET` and two `ANTE` labels: those tops are on `P-SANR-FIXT`, not `A-EQPM`, so no counter is built under them.
-- Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only `A-EQPM` counters and the sinks drawn on them appear there.
+- Lift doors and toilet fittings other than basins are not modelled.
+- The four vanity tops near two `TOILET` and two `ANTE` labels are only partly drawn. Each runs from its drawn front edge back to the extracted walls, so its back corners follow those walls' chamfers. They're built as 0.90 m counters with a cabinet, because these sheets don't give their height or what's under them. The basins have the same tap as the other sink blocks, without the separate handles and side controls drawn beside them. The east toilet's block draws no drain, so its drain is assumed to be 95 mm from the bowl's centre, as on the west toilet's matching block.
+- Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only counters, vanity tops and the sinks drawn on them appear there.
 - The `A-EQPM` outline for a service riser is built as a plain 0.90 m counter, because these sheets don't give its height.
 - The nurse station's knee spaces aren't drawn. The sheets give only the station's outline, so each workstation gets an assumed opening 0.90 m wide and 0.55 m deep, 0.72 m high up to the underside of the top. The cabinet stays between the openings and behind them, under the transaction ledge.
 - Glass, sky and procedural textures only look right in the Cycles renders. The GLB and viewer use flat colours.
