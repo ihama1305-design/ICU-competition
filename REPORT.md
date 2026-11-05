@@ -155,3 +155,36 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 - The nurse station's knee spaces aren't drawn. The sheets give only the station's outline, so each workstation gets an assumed opening 0.90 m wide and 0.55 m deep, 0.72 m high up to the underside of the top. The cabinet stays between the openings and behind them, under the transaction ledge.
 - Glass, sky and procedural textures only look right in the Cycles renders. The GLB and viewer use flat colours.
 - Heights other than the door head and windows are assumptions (see the table above).
+
+## Configurator redesign summary (November 2026)
+
+This records the requested redesign work together in one place. These changes apply to the W1 and W3 room configurator proposal, not the as-built floor model.
+
+### Patient fit and room controls
+
+- Added a patient-fit questionnaire covering patient type, stay length, sex, children, behaviour, mobility, medication frequency, sensory preferences and related needs. Answers choose a visual starting design; the user can continue to edit the room manually. The result is a design suggestion and does not assign a real room or replace clinical decisions.
+- Added per-object identification popups and more furniture choices, including a sliding wardrobe with shelves and clothing, visitor seating and a movable over-bed table.
+- Added item finish choices with colour, surface texture and design variations. Category panels collapse and animate so the remaining options stay readable.
+- Added a W1 bathroom interior in its existing bathroom shell, with a toilet, basin, mirror, grab rails, soap and assistance-call concept.
+
+### Clinical layout and circulation
+
+- Repositioned the ICU bed as the main reference point, with its head aligned to a dedicated service wall. Monitor, gas and power points, pump supports, ventilator support and cable routing are grouped into a headwall and overhead boom.
+- Moved visitor seating to the perimeter family zone. A separate play zone sits at the far end of the room, away from the entrance. Both the recliner-and-chair layout and the optional sofa layout were checked against the transfer path.
+- Added shallow integrated storage, a wall-mounted documentation desk, sanitizer and a handwash sink near the entrance. The sink is an accessibility concept and needs dimensional review.
+- Added separate floor markings for each bed-side strip and the bed-foot strip, each 1.2 m wide, plus a visual 1.8 m transfer route from the doorway to the bed foot. In the exported room geometry, the bed measures about 2.213 by 1.071 m. The modeled foot clearance to the nearest floor edge is about 1.445 m in W1 and 1.245 m in W3. The W3 margin is tight and needs site verification.
+- Modeled front-opening widths are 1.85 m for W1 and 2.225 m for W3. These are proposal geometry measurements, not approved clear-opening dimensions after hardware and finishes.
+- The over-bed table is hidden by default so it cannot sit in the W3 transfer lane. It can be shown as movable furniture, with a reminder to clear it before transfer.
+
+### Comfort, appearance and safety
+
+- Added low-profile supply grilles and wall comfort controls, varied material texture scale, blinds, daylight and night lighting modes, and clearer ceiling and cable details. The room remains stylized rather than photorealistic.
+- Added visible smoke detection, a sprinkler head, manual alarm point, exit sign, bedside call control, and a corridor fire-hose/standpipe cabinet with extinguisher and riser symbols. External fire hydrants belong on the building site fire-service plan.
+- Added a sound-level sensor and an HVAC comfort-control concept. Neither connects to a microphone, patient vitals, pain assessment or staff alert system; they do not record speech or identify a patient.
+- Kept rendering on demand and limited animation to elements in view to avoid unnecessary redraws.
+
+### Backup and review limits
+
+- The original model snapshot is preserved in [`backups/initial-model/`](backups/initial-model/README.md), including the editable Blender file, exported GLB files and original specification.
+- Safety fixtures, patient-fit suggestions, sink reach, service connections and clearances are visual proposals. They are not code approval, clinical engineering, infection-control, accessibility or fire-engineering sign-off. Confirm final dimensions and equipment locations with the project team and authorities before construction.
+- The 1.2 m strips and transfer route were checked against the exported W1/W3 floor polygons and furniture bounds. Chairs and the sofa option clear the route in the current layout; the optional over-bed table needs to be moved away when transfers take place.
