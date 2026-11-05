@@ -539,6 +539,11 @@
    "min_area_m2": 0.5,
    "sample_m": 0.1
   },
+  "desk_fill": {
+   "_note": "extra panels over desk chairs the rest of the layout leaves dim (see desk_panels in 02). Assumed too. Dim = under min_light_share of the direct light at the middle of an open grid cell. The panel goes over the chair, within reach_m of its centre",
+   "min_light_share": 0.25,
+   "reach_m": 0.3
+  },
   "sun": {
    "elevation_deg": 32,
    "azimuth_deg": 250,
