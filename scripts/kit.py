@@ -655,6 +655,21 @@ def basin_tap(spec, coll):
     return b.obj("kit_basin", coll, bevel=0.0)
 
 
+def basin_drawn(spec, coll, name, rim, bowl, drain, drain_r, tap):
+    """basin_tap's fitting in the drawing's own shape: rim and bowl outlines, drain and tap base are local (x, y), z=0 = counter top.
+
+    The gooseneck runs toward +y and reaches 0.13 m, as drawn on the sink blocks.
+    """
+    b = Builder()
+    b.prism(rim, -0.004, 0.004, "plastic_white")
+    b.prism(bowl, -0.003, 0.005, "steel")
+    b.cyl((drain[0], drain[1], 0.005), (drain[0], drain[1], 0.006), drain_r, "dark_plastic", 16)
+    x, y = tap
+    b.tube([(x, y, 0.0), (x, y, 0.28), (x, y + 0.054, 0.33), (x, y + 0.115, 0.3), (x, y + 0.13, 0.22)], 0.012, "steel", 12)
+    b.boxz(x + 0.05, y, 0.12, 0.14, 0.12, 0.02, "steel")
+    return b.obj(name, coll, bevel=0.0)
+
+
 def crash_cart(spec, coll):
     b = Builder()
     b.boxz(0, 0, 0.12, 1.0, 0.75, 0.5, "cart_red")
