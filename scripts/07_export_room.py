@@ -340,7 +340,7 @@ def export_room(label, cfg):
         if ob.type != "MESH" or ob.name in kit_src:
             continue
         nm = ob.name
-        # the nook's desk and chair too: the nook isn't part of the room, and its monitor pokes through the wall the aquarium hangs on
+        # the nook's desk and chair too: the nook isn't part of the room
         if re.match(r"room\d\d_|obs_(ws|chair)_", nm) or nm in ("room_feature_walls", "floor_rooms", "facade_blinds"):
             remove(ob)
         elif CUT_WIDE.match(nm):

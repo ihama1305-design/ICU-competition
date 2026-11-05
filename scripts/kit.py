@@ -633,7 +633,7 @@ def workstation(spec, coll):
     """Monitor + keyboard on a desk top at z=0 (placed at desk height)."""
     b = Builder()
     b.boxz(0, 0.08, 0.0, 0.015, 0.22, 0.18, "dark_plastic")
-    b.boxz(0, 0.1, 0.015, 0.2, 0.05, 0.03, "dark_plastic")
+    b.boxz(0, 0.1, 0.015, 0.15, 0.05, 0.03, "dark_plastic")  # stops inside the tilted panel, short of the screen
     Mm = tr(0, 0.1, 0.12) @ rx(-6)
     b.boxz(0, 0, 0.0, 0.33, 0.56, 0.035, "dark_plastic", Mm)
     b.boxz(0, -0.019, 0.015, 0.315, 0.53, 0.003, "screen_ui", Mm)

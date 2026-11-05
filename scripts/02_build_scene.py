@@ -13,7 +13,7 @@ import bpy
 import numpy as np
 import trimesh
 from mathutils import Matrix, Vector
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+from shapely.geometry import LineString, MultiPoint, MultiPolygon, Point, Polygon
 from shapely.ops import unary_union
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -512,7 +512,40 @@ if curtain.v:
     sol = cobj.modifiers.new("solidify", "SOLIDIFY"); sol.thickness = 0.004
     kit.apply_mods(cobj)
 
+
+def desk_seat(p):
+    """Where someone sits at a drawn desk: the middle of its front edge, and the way they face, square to that edge.
+
+    Worked out from the desk alone. The corridor and the nooks are one space in the plan, so the space's centre
+    is near the middle of the floor and says nothing about which way a desk faces.
+    """
+    c = np.array(p.centroid.coords[0])
+    well = p.convex_hull.difference(p)
+    if well.area > 0.25 * p.area:  # a desk wrapped around a well, like a nook's chevron, is sat at from the well
+        well = max(getattr(well, "geoms", [well]), key=lambda g: g.area)
+        start = np.array(well.centroid.coords[0])
+        d = c - start
+    else:  # a straight counter is sat at from the side away from the wall behind it
+        d = np.array(walls_u.boundary.interpolate(walls_u.boundary.project(Point(c))).coords[0]) - c
+        start = c - d / np.linalg.norm(d) * 2
+    d = d / np.linalg.norm(d)
+    hit = p.exterior.intersection(LineString([start, start + d * 6]))
+    near = min((np.array(g.coords[0]) for g in getattr(hit, "geoms", [hit])), key=lambda q: np.linalg.norm(q - start))
+    xy = np.array(p.exterior.coords)
+    i = min(range(len(xy) - 1), key=lambda k: LineString(xy[k:k + 2]).distance(Point(near)))
+    e = xy[i + 1] - xy[i]
+    n = np.array([e[1], -e[0]]) / np.linalg.norm(e)
+    return (xy[i] + xy[i + 1]) / 2, n if n @ d > 0 else -n
+
+
+def plan_footprint(ob, M):
+    """Outline on the plan of a kit object placed with matrix M."""
+    xy = np.array([v.co[:2] for v in ob.data.vertices])
+    return MultiPoint(xy @ M[:2, :2].T + M[:2, 3]).convex_hull
+
+
 # nurse station, observation desks, alcoves
+joinery = unary_union([c[0] for c in counters])
 for ci, (p, kind, sp) in enumerate(counters):
     if kind == "nurse":
         well = p.convex_hull.difference(p)
@@ -530,12 +563,17 @@ for ci, (p, kind, sp) in enumerate(counters):
             mon = pt + v * 0.25
             place(wst, f"nurse_ws_{ci}_{k_:+.1f}", frame_matrix(mon, v, B["desk_height"]), C["Equipment"])
             place(ochair, f"nurse_chair_{ci}_{k_:+.1f}", frame_matrix(pt - v * 0.55, v), C["Equipment"])
-    elif kind == "desk" and sp is not None:
-        sc = np.array(sp["poly"].centroid.coords[0])
-        q = np.array(p.exterior.interpolate(p.exterior.project(Point(sc))).coords[0])
-        d = q - sc; d /= np.linalg.norm(d)
-        place(wst, f"obs_ws_{ci}", frame_matrix(q + d * 0.25, d, B["desk_height"]), C["Equipment"])
-        place(ochair, f"obs_chair_{ci}", frame_matrix(q - d * 0.45, d), C["Equipment"])
+    elif kind == "desk":
+        front, d = desk_seat(p)
+        M_ws = frame_matrix(front + d * 0.32, d, B["desk_height"])  # keyboard just inside the front edge
+        M_chair = frame_matrix(front - d * 0.45, d)
+        foot_ws, foot_chair = plan_footprint(wst, M_ws), plan_footprint(ochair, M_chair)
+        if foot_ws.intersection(p).area < 0.9 * foot_ws.area:
+            continue  # a sliver of a counter: a workstation doesn't fit on it
+        if foot_ws.intersects(walls_u) or foot_chair.intersects(walls_u) or foot_chair.intersects(joinery):
+            raise SystemExit(f"desk items at {front.round(2).tolist()} cross a wall or counter")
+        place(wst, f"obs_ws_{ci}", M_ws, C["Equipment"])
+        place(ochair, f"obs_chair_{ci}", M_chair, C["Equipment"])
 for r in plan["rooms"]:
     sp = space_at(r["label_at"])
     if sp is None:
