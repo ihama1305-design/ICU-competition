@@ -23,6 +23,7 @@
     <a class="back" href="../">Walk the ICU</a>
     <h1>Room configurator</h1>
     <p class="tag">Design proposal</p>
+    <button type="button" id="openProfile" class="profile-launch">Tune it in <span aria-hidden="true">↗</span></button>
   </header>
   <div id="panelBody">
     <section aria-labelledby="hTheme">
@@ -50,9 +51,10 @@
         <button type="button" data-value="bed_window" aria-pressed="false">Head turned</button>
         <button type="button" data-value="window" aria-pressed="false">Window</button>
         <button type="button" data-value="dollhouse" aria-pressed="false">Dollhouse</button>
+        <button type="button" data-value="bathroom" aria-pressed="false" hidden>Bathroom</button>
         <button type="button" id="tour" aria-pressed="false">Cinematic tour</button>
       </div>
-      <p class="note">Drag to look around, scroll or pinch to move closer.</p>
+      <p class="note">Drag to look around, scroll or pinch to move closer. Click a visible object for its name and details.</p>
     </section>
 
     <section aria-labelledby="hTime">
@@ -75,6 +77,19 @@
 
     <div id="options"></div>
 
+    <details class="section" name="options" id="systemsSection">
+      <summary><span class="section-mark">✳</span><span class="section-title">Comfort systems</span></summary>
+      <div class="system-demo">
+        <p class="note">Illustrative controls for the room concept. These do not read patient vitals or control building equipment.</p>
+        <label class="demo-control" for="demoTemp"><span>Room temperature</span><output id="demoTempValue" for="demoTemp">23 °C</output></label>
+        <input id="demoTemp" type="range" min="18" max="28" value="23" step="1">
+        <label class="demo-control" for="demoHumidity"><span>Room humidity</span><output id="demoHumidityValue" for="demoHumidity">45%</output></label>
+        <input id="demoHumidity" type="range" min="30" max="70" value="45" step="1">
+        <button type="button" id="previewSoundAlert" class="outline-action">Preview sound alert</button>
+        <p id="systemStatus" class="note" role="status">Sound sensor is a visual concept only. No microphone is used and no alert reaches staff.</p>
+      </div>
+    </details>
+
     <footer>
       <p>This is a proposal, not the room as built. The room shape comes from the drawing; the furnishings, finishes and layout are assumed.</p>
       <p>Independent student work for the SSMC ICU Interior Design Student Competition. It isn't made or endorsed by Sheikh Shakhbout Medical City, and it isn't for clinical or construction use.</p>
@@ -85,6 +100,64 @@
     <button type="button" id="saveImage">Save image</button>
   </div>
 </aside>
+
+<aside id="objectCard" class="object-card" role="dialog" aria-labelledby="objectTitle" aria-describedby="objectDescription" hidden>
+  <button type="button" id="closeObjectCard" class="object-close" aria-label="Close object details">×</button>
+  <p class="object-kicker">Selected object</p>
+  <h2 id="objectTitle"></h2>
+  <p id="objectDescription"></p>
+  <button type="button" id="objectAction" class="outline-action" hidden></button>
+</aside>
+
+<dialog id="profile" aria-labelledby="profileTitle">
+  <div class="sheet profile-sheet">
+    <header>
+      <h2 id="profileTitle">Tune it in</h2>
+      <p class="tag">Room idea</p>
+      <button type="button" id="closeProfile" class="sheet-close">Close</button>
+    </header>
+    <form id="profileForm">
+      <p class="note profile-intro">Answer what you want. This creates an editable comfort and furnishing draft. It does not choose a clinical room or recommend care. Answers stay in this page session and are not included in shared links.</p>
+      <div class="survey-grid">
+        <label>Patient group
+          <select name="patientType">
+            <option value="adult">Adult</option><option value="child">Child or teen</option><option value="recovery">Short recovery</option><option value="longstay">Longer stay</option><option value="other">Other</option>
+          </select>
+        </label>
+        <label>Patient group, if other
+          <input name="patientOther" type="text" maxlength="60" placeholder="Optional description">
+        </label>
+        <label>Expected stay
+          <select name="stay"><option value="short">1–3 days</option><option value="week">4–14 days</option><option value="long">More than 2 weeks</option><option value="other">Other / unsure</option></select>
+        </label>
+        <label>Sex (optional)
+          <select name="sex"><option value="skip">Prefer not to say</option><option value="female">Female</option><option value="male">Male</option><option value="other">Another answer</option></select>
+        </label>
+        <label>Will children visit?
+          <select name="children"><option value="no">No</option><option value="sometimes">Sometimes</option><option value="yes">Yes</option><option value="unsure">Unsure</option></select>
+        </label>
+        <label>Mobility support
+          <select name="mobility"><option value="independent">Moves independently</option><option value="aid">Walking aid</option><option value="wheelchair">Wheelchair</option><option value="assistance">Needs assistance</option><option value="unsure">Unsure</option></select>
+        </label>
+        <label>Care visits / medication support
+          <select name="care"><option value="routine">Routine visits</option><option value="frequent">Frequent check-ins</option><option value="other">Other / unsure</option></select>
+        </label>
+        <label>Communication or sensory preference
+          <select name="sensory"><option value="none">No preference</option><option value="quiet">Quieter, lower-stimulation room</option><option value="routine">Consistent routine and clear cues</option><option value="company">Familiar visitor nearby</option><option value="other">Other</option></select>
+        </label>
+        <label>Length of stay, if different
+          <input name="stayOther" type="text" maxlength="40" placeholder="For example, 10 nights">
+        </label>
+        <label class="survey-wide">Other room preferences
+          <textarea name="notes" rows="3" maxlength="240" placeholder="Optional. Do not enter a name, diagnosis, or other private medical details."></textarea>
+        </label>
+      </div>
+      <p class="note">Sex and care-frequency answers are not used to select a room or alter the layout. Clinical room placement and care decisions stay with the care team.</p>
+      <div id="profileResult" class="profile-result" role="status" hidden></div>
+      <div class="profile-actions"><button type="submit" class="primary-action">Create room idea</button></div>
+    </form>
+  </div>
+</dialog>
 
 <dialog id="summary" aria-labelledby="summaryTitle">
   <div class="sheet">
