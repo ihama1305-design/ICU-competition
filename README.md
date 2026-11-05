@@ -2,9 +2,9 @@
 
 A realistic, walkable 3D model of the existing ICU at Sheikh Shakhbout Medical City (Tower D, 4th floor, Part a), built for the SSMC ICU Interior Design Student Competition. The walls, doors, glazing and joinery are read straight from the vector CAD layers of the as-built record drawing. The 16 patient rooms are furnished with a typical ICU kit, and the scene is rendered with Blender Cycles.
 
-**[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Walk through the model](https://ihama1305-design.github.io/ICU-competition/viewer/)** · **[Read the report](REPORT.md)**
+**[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Walk through the model](https://ihama1305-design.github.io/ICU-competition/viewer/)** · **[Configure a room](https://ihama1305-design.github.io/ICU-competition/configurator/)** · **[Read the report](REPORT.md)**
 
-This shows the floor as built, as a starting point for a redesign. It's independent student work, not made or endorsed by SSMC. Furnishings and finishes are assumed; [REPORT.md](REPORT.md) separates what is measured from what is assumed.
+The model and walkthrough show the floor as built, as a starting point for a redesign. The configurator is a design proposal built on top of it. All of it is independent student work, not made or endorsed by SSMC. Furnishings and finishes are assumed; [REPORT.md](REPORT.md) separates what is measured from what is assumed.
 
 ![Patient room](renders/room_entry.png)
 
@@ -18,6 +18,19 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 - The plan in the corner shows where you are. Click it to jump.
 - Click anything to name it and see how sure the model is about it.
 
+## Configure a room
+
+The [configurator](https://ihama1305-design.github.io/ICU-competition/configurator/) lets you spec one room the way you'd spec a car. Everything on it is a proposal, not the room as built.
+
+- **Rooms:** isolation room W1 with its ante room, or standard room W3.
+- **Views:** Overview, Family zone, Entrance, From the bed, Head turned, Window and Dollhouse. Drag to look around, or press <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>+</kbd> <kbd>-</kbd>. There's also a cinematic tour.
+- **Themes:** Calm Clinical, Desert Sanctuary, Paediatric Play and Family Suite. Anything can still be changed afterwards.
+- **Options:** paint, feature walls, floors, a sky ceiling, four lighting schemes, smart glass, blinds, TV, console, toys, seating, an aquarium, a patio and palms.
+- **Day and night:** the sun follows a real path at Abu Dhabi's latitude.
+- **Share:** the link holds the exact room. The summary lists every choice with its clinical notes, and you can save an image.
+
+To add an option, edit [`scripts/site/configurator/options.json`](scripts/site/configurator/options.json). A new kind of effect also needs a handler in `main.js`. Never renumber a `code` there: share links depend on them.
+
 ## Renders
 
 | | |
@@ -28,6 +41,8 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 | At the bedside (screens show made-up waveforms) | The central nurse station from the corridor |
 | ![Observation window](renders/observation.png) | ![Top view](renders/plan.png) |
 | Into a patient room through an observation window | Top view |
+| ![Isolation room](renders/iso_room.png) | ![Bed and window](renders/iso_window.png) |
+| Isolation room W1 along its length | W1's bed, with the window beside the patient |
 
 ## Files
 
@@ -39,15 +54,18 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 | [`REPORT.md`](REPORT.md) | How it was built, what is accurate and what is assumed |
 | [`spec/icu_spec.json`](spec/icu_spec.json) | Every height, material, equipment position, light and camera ([field guide](spec/icu_spec.README.md)) |
 | [`scripts/`](scripts/) | The pipeline, from drawing to website |
-| `index.html`, `viewer/`, `assets/` | The published website, served from the repo root. It is generated, so edit `scripts/site/` and rebuild instead |
+| `index.html`, `viewer/`, `configurator/`, `assets/` | The published website, served from the repo root. It is generated, so edit `scripts/site/` and rebuild instead |
+| [`docs/`](docs/) | The configurator's brief and build plan |
 
 ## Rebuild
 
 ```bash
 python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m playwright install chromium
-scripts/run_all.sh            # about 5 minutes on an M-series Mac; --preview for quick renders
+scripts/run_all.sh            # about 20 minutes on an M-series Mac, most of it testing; --preview for quick renders
 ```
+
+The pipeline runs 01 extract plan, 02 Blender scene, 03 renders, 04 GLB and viewer, 05 viewer test, 07 configurator rooms, 06 website, then 08 configurator test. 07 has to come before 06, which publishes what it writes. 05 and 08 need a network connection, because Three.js comes from a CDN.
 
 Change a number in `spec/icu_spec.json` and run `scripts/run_all.sh` again. A rebuild replaces `output/icu.blend`, so save your own Blender edits under another name.
 

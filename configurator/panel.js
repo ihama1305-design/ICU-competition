@@ -24,7 +24,7 @@ export class Panel {
   constructor(root, data, onSet) {
     this.groups = new Map();
     for (const section of data.sections) {
-      const details = el("details", { className: "section" }, el("summary", { textContent: section.label }));
+      const details = el("details", { className: "section", name: "options" }, el("summary", { textContent: section.label }));
       for (const group of section.groups) details.append(this.buildGroup(group, onSet));
       root.append(details);
     }

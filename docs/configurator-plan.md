@@ -1,6 +1,6 @@
 # Room configurator: plan
 
-**Status: awaiting approval. No code has been written.** Read with `docs/room-configurator-brief.md`.
+**Status: built, in five phases.** This is the plan as approved, with notes where the build differed. Read with `docs/room-configurator-brief.md`. `REPORT.md` describes what was finally built.
 
 ## 1. Decisions
 
@@ -139,7 +139,7 @@ scripts/site/configurator/
 
 - **Data-driven:** each option lists effects from a small fixed vocabulary (`color`, `material`, `visible`, `addon`, `lightScheme`, `glass`), plus `requires`, `removes` and `note`. Adding an option means editing data unless it needs a new kind of effect.
 - **Spec code:** versioned, with explicit option ids, and new ones only ever appended, so old links keep working. An unknown code falls back to the default with a visible message.
-- **No shader hitches:** all lights exist from the start and schemes only change intensity, because changing the light count recompiles shaders. `transmission` stays just above 0 for the same reason.
+- **Lights:** planned as a fixed set that only changes intensity, to avoid shader recompiles. Measurement in phase 5 reversed this: at 2x that cost 43 ms a frame on an M5, because every light costs on every pixel even at zero brightness. Each scheme now turns on only its own lights and pays a short recompile the first time it's chosen. `transmission` stays just above 0, since it fades continuously.
 - **Glass:** transmission only on the front glass. Facade glass is alpha-blended, since transmission costs an extra scene pass. Phones and low-tier GPUs use opacity for the front too.
 - **Bloom:** emissive strips go above 1.0 in an HDR buffer with `UnrealBloomPass` thresholded at about 1. This gives the selective look without the costly double render. Bloom scales down in daylight so the bright sky doesn't glow.
 - **Rendering on demand:** frames draw only while the camera moves, something is animating, or the TV or fish are in view.
@@ -233,15 +233,15 @@ Each phase is its own branch off an up-to-date `main`, with a PR. If the previou
 - **The patio is a concept.** It shows no structure, and it doesn't address fall risk for delirious patients, wind or dust. I'd add a one-line note on fall risk to the patio warning, unless you'd rather not.
 - **`docs/` is public.** GitHub Pages serves the repo root, so the brief and this plan will be reachable once committed. Neither contains drawings.
 
-## 6a. Open issue: the page sometimes didn't start in the check
+## 6a. Why the page sometimes didn't start in the check
 
-Three times in about a dozen runs of `08`, always on its first page, the page stayed on "Loading the room…". The third time, the load-stage marker showed `main.js` had never started, with nothing still downloading. A stalled download, system sleep, display sleep and plain repetition (22 clean loads) are ruled out. A failed module request fits but isn't proven. `08` now logs failed URLs, its test server accepts more connections at once, and it retries once and says so. The page itself now shows an error if a script can't load, instead of loading for ever. If `RETRY` appears in an `08` log, read the failed URL it prints.
+Three times in about a dozen runs of `08`, on its first page, the page stayed on "Loading the room…" and `main.js` never started. In phase 5, visual QA on Python's plain test server logged `ERR_CONNECTION_RESET` during load. That server's backlog is 5 connections and the page asks for a dozen modules at once, so a reset module stops `main.js` from running. This is the local test server, not the product, and `08` and `06` now use a backlog of 128. The page also shows an error if a script can't load, instead of loading for ever. If `RETRY` appears in an `08` log, read the failed URL it prints.
 
 ## 7. What the clinical notes can claim
 
 Checked in phase 3 against the published abstracts, the door makers' own pages and CDC guidance.
 
-- **Smart glass:** the brief's "easier to clean between patients" isn't used. The one article that might support it (Healthcare Design, on Memorial Sloan Kettering) refuses automated access, and nothing else read says so. The note says what the sources do: door makers sell switchable glass for ICU sliding doors, and CDC counts curtain edges as high-touch surfaces. If you can open that article and it supports the claim, it can go back.
+- **Smart glass:** the Healthcare Design article on Memorial Sloan Kettering's ICU supports the brief: it says removing fabric curtains improved infection control and made cleaning between patients easier. It refused automated access in phase 3, so the note left this out until the article was read in a real browser in phase 5. The note attributes it, because it's a project report, not a trial. Door makers' pages and CDC's high-touch surfaces back up the rest.
 - **Isolation seals:** confirmed by Stanley Access: a seal along the bottom, tested against positive and negative pressure.
 - **Delirium:** both papers confirmed from their abstracts. Spies et al. (PMID 38112493): prospective observational pilot, 74 patients, 46% against 76%, p = 0.017. Simons et al. (PMID 26895652): randomised, 734 patients, 38% against 33%, p = 0.16, stopped early for futility.
 - **Plants:** CDC says not to allow fresh or dried flowers or potted plants in patient-care areas for immunosuppressed patients. It doesn't restrict them for immunocompetent patients, so the note is limited to the immunosuppressed.
