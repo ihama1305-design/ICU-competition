@@ -393,11 +393,25 @@ def nurse_seats(p):
 def knee_hole(front, d):
     """Plan outline of the clear space under a seat: centred on it, from the front edge back to the knee depth.
 
-    Starts past the edge so that it takes the cabinet's face off as well.
+    Starts past the edge so that it takes the cabinet's face off as well. On a chevron the seat is on the flat
+    between two arms that sweep back toward the sitter, so it starts far enough out to take their faces off too.
     """
     side = np.array([d[1], -d[0]]) * B["knee_space"]["width"] / 2
-    near, back = front - d * 0.1, front + d * B["knee_space"]["depth"]
+    near, back = front - d * 0.2, front + d * B["knee_space"]["depth"]
     return Polygon([near - side, near + side, back + side, back - side])
+
+
+def desk_panels(p, hole):
+    """A desk's 4 cm panels, set 2 cm in under its top: a closed ring on each side of its knee hole.
+
+    Nothing stays behind the hole, because these desks stand against a wall. The buffers drop any sliver of the
+    outline left there, and the area test drops the tip of a chevron, which is too small to stand as a pedestal.
+    """
+    body = p.buffer(-0.02).difference(hole).buffer(-0.01, join_style="mitre").buffer(0.01, join_style="mitre")
+    sides = [g for g in getattr(body, "geoms", [body]) if g.area > 0.1]
+    if len(sides) != 2:
+        raise SystemExit(f"the knee hole at the desk at {np.round(p.centroid.coords[0], 2).tolist()} leaves {len(sides)} pedestals, not 2")
+    return unary_union([g.difference(g.buffer(-0.04, join_style="mitre")) for g in sides])
 
 
 # A counter's kind comes from the drawing label nearest it, not from the names of its space: the corridor, the nooks
@@ -418,7 +432,8 @@ for cnt, (p, kind) in zip(plan["counters"], counters):
     top_z = B["desk_height"] if kind in DESK_KINDS + ("nurse",) else B["counter_height"]
     if kind in DESK_KINDS:
         tops.append((p, top_z - 0.03, top_z))
-        cab.append((p.buffer(-0.02).difference(p.buffer(-0.06)), 0.1, top_z - 0.03))  # modesty panels/legs
+        front, d, _ = desk_seat(p)
+        cab.append((desk_panels(p, knee_hole(front, d)), 0.1, top_z - 0.03))
     else:
         tops.append((p.buffer(0.015, join_style="mitre"), top_z - 0.03, top_z))
         body, toe = p.buffer(-0.01), p.buffer(-0.06)
