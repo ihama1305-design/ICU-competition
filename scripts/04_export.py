@@ -90,7 +90,7 @@ S = [  # (id, group, label, confidence, regex on object names, notes)
     ("floor_rooms", "Building", "Patient room floor", "med", "^floor_rooms", "Sheet vinyl LIN36 per the drawing's finish tags. Colour assumed."),
     ("floor", "Building", "Corridor floor", "med", "^floor_vinyl", "Sheet vinyl LIN37/LIN02 per the finish tags. Colour assumed."),
     ("rails", "Building", "Handrails and wall protection", "med", "^handrails|^bumper|^skirting", "Corridor handrail at 0.9 m, bumper rail and coved skirting."),
-    ("ceiling", "Building", "Ceilings and lights", "low", "^ceiling|exam_light", f"Ceiling at {H:.2f} m, which is not on these sheets (assumed). Lay-in grid in corridors, plain in patient rooms."),
+    ("ceiling", "Building", "Ceilings and lights", "low", "^ceiling|exam_light", f"Ceiling at {H:.2f} m, which is not on these sheets (assumed). Lay-in grid in corridors, plain in patient rooms. The panel layout is assumed too."),
     ("slab", "Building", "Floor slab", "low", "^slab", "Slab edge and overhang beyond the facade."),
 ]
 for sid, grp, lab, conf, rx, notes in S:
