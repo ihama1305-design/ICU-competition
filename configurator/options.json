@@ -1103,11 +1103,6 @@
          "do": "visible",
          "part": "cfg_kit_visitor_chair",
          "on": true
-        },
-        {
-         "do": "visible",
-         "part": "cfg_kit_recliner",
-         "on": true
         }
        ],
        "code": 0
@@ -1124,11 +1119,6 @@
         {
          "do": "visible",
          "part": "cfg_kit_visitor_chair",
-         "on": false
-        },
-        {
-         "do": "visible",
-         "part": "cfg_kit_recliner",
          "on": false
         }
        ],
@@ -1641,73 +1631,6 @@
      ],
      "note": {"text":"Visual mockup only. It does not use a microphone, identify a patient, assess pain, store speech, or send an alert to staff."},
      "code": 31
-    }
-   ]
-  },
-  {
-   "id": "clinicalLayout",
-   "label": "Clinical layout and safety",
-   "groups": [
-    {
-     "id": "clinicalServices",
-     "label": "Headwall and service boom",
-     "control": "choice",
-     "default": "on",
-     "options": [
-      {"id":"on","label":"Show coordinated services","effects":[{"do":"addon","id":"clinicalServices","on":true},{"do":"visible","part":"cfg_kit_monitor","on":false},{"do":"visible","part":"cfg_kit_pumps","on":false},{"do":"visible","part":"cfg_kit_pendant","on":false},{"do":"visible","part":"cfg_kit_iv_pole","on":false},{"do":"visible","part":"cfg_kit_ventilator","on":false}],"code":0},
-      {"id":"off","label":"Hide service wall","effects":[{"do":"addon","id":"clinicalServices","on":false},{"do":"visible","part":"cfg_kit_monitor","on":false},{"do":"visible","part":"cfg_kit_pumps","on":false},{"do":"visible","part":"cfg_kit_pendant","on":false},{"do":"visible","part":"cfg_kit_iv_pole","on":false},{"do":"visible","part":"cfg_kit_ventilator","on":false}],"code":1}
-     ],
-     "note": {"text":"A single headwall groups monitor, gas, power and pump supports. The overhead service bridge keeps equipment off the floor; final engineering coordination is required."},
-     "code": 32
-    },
-    {
-     "id": "staffWorkzone",
-     "label": "Staff sink and documentation desk",
-     "control": "choice",
-     "default": "on",
-     "options": [
-      {"id":"on","label":"Show staff work zone","effects":[{"do":"addon","id":"staffWorkzone","on":true}],"code":0},
-      {"id":"off","label":"Hide","effects":[{"do":"addon","id":"staffWorkzone","on":false}],"code":1}
-     ],
-     "note": {"text":"Wall-mounted fixtures near the entry leave floor space available. Sink dimensions, reach and handwash requirements need accessibility and clinical review."},
-     "code": 33
-    },
-    {
-     "id": "safety",
-     "label": "Fire and emergency fixtures",
-     "control": "choice",
-     "default": "on",
-     "options": [
-      {"id":"on","label":"Show safety concept","effects":[{"do":"addon","id":"safety","on":true}],"code":0},
-      {"id":"off","label":"Hide","effects":[{"do":"addon","id":"safety","on":false}],"code":1}
-     ],
-     "note": {"text":"Shows a detector, sprinkler, alarm point, exit sign, bedside call and corridor fire hose/standpipe cabinet. It is a visual concept, not a fire-code design. Site hydrants must be located on the approved fire-service plan."},
-     "code": 34
-    },
-    {
-     "id": "careZones",
-     "label": "Three care zones and bed clearances",
-     "control": "choice",
-     "default": "on",
-     "options": [
-      {"id":"on","label":"Show zones and 1.2 m envelope","effects":[{"do":"addon","id":"careZones","on":true}],"code":0},
-      {"id":"off","label":"Hide floor markings","effects":[{"do":"addon","id":"careZones","on":false}],"code":1}
-     ],
-     "note": {"text":"Patient care, visitor seating and play are shown as separate floor zones. The play zone is kept away from the entrance; the bed envelope marks 1.2 m at both sides and the foot."},
-     "code": 35
-    },
-    {
-     "id": "bedsideTable",
-     "label": "Movable over-bed table",
-     "control": "choice",
-     "default": "off",
-     "check": {"view":"overview","time":"afternoon"},
-     "options": [
-      {"id":"off","label":"Keep clear for transfer","effects":[{"do":"visible","part":"cfg_kit_overbed_table","on":false}],"code":0},
-      {"id":"on","label":"Place at bedside","effects":[{"do":"visible","part":"cfg_kit_overbed_table","on":true}],"code":1}
-     ],
-     "note": {"text":"The table is hidden by default so the transfer route remains clear. It is mobile furniture; move it away from the bed foot before any patient transfer."},
-     "code": 36
     }
    ]
   }
