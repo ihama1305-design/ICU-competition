@@ -48,6 +48,7 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
 - **Rest of the floor:**
   - 8 observation nooks with desks and workstations
   - U-shaped nurse station with a raised transaction ledge, 4 workstations and chairs
+  - Dictation desk with a workstation and chair
   - Corridor handrails, coved skirting, lay-in 600 mm ceiling grid in corridors and plain ceilings in patient rooms
   - Crash cart and stretcher alcoves
 - **Lighting:**
@@ -148,5 +149,6 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 - The stair core in the north block is shown as an empty enclosure.
 - Lift doors and toilet fittings are not modelled.
 - Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only sinks and counters from `A-EQPM` appear there.
+- The `A-EQPM` outline for a service riser is built as a plain 0.90 m counter, because these sheets don't give its height.
 - Glass, sky and procedural textures only look right in the Cycles renders. The GLB and viewer use flat colours.
 - Heights other than the door head and windows are assumptions (see the table above).

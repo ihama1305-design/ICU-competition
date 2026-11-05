@@ -356,17 +356,23 @@ if scr.v:
 
 # ------------------------------------------------------------------ joinery
 basin_src = kit.basin_tap(spec, KITC)
-counters = []
-for cnt in plan["counters"]:
-    p = Polygon(cnt["poly"]).buffer(0)
-    sp = space_at(p.representative_point())
-    name = " ".join(sp["names"]) if sp else ""
-    kind = "desk" if "OBSERV" in name else ("nurse" if p.area > 3.0 else "counter")
-    counters.append((p, kind, sp))
+# A counter's kind comes from the drawing label nearest it, not from the names of its space: the corridor, the nooks
+# and many small rooms are one space carrying 30 names, so those say nothing about any one counter there.
+LABEL_KIND = {"OBSERVATION": "obs", "DICTATION": "dictation", "NURSE ST.": "nurse"}
+DESK_KINDS = ("obs", "dictation")
+polys = [Polygon(cnt["poly"]).buffer(0) for cnt in plan["counters"]]
+kinds = {}
+for r in plan["rooms"]:
+    if r["name"] in LABEL_KIND:
+        ci = min(range(len(polys)), key=lambda k: polys[k].distance(Point(r["label_at"])))
+        if ci in kinds:
+            raise SystemExit(f"counter {ci} is nearest two labels, {kinds[ci]} and {r['name']} at {r['label_at']}")
+        kinds[ci] = LABEL_KIND[r["name"]]
+counters = [(p, kinds.get(ci, "counter")) for ci, p in enumerate(polys)]
 cab, tops, plinth, ledge = [], [], [], []
-for p, kind, sp in counters:
-    top_z = B["desk_height"] if kind in ("desk", "nurse") else B["counter_height"]
-    if kind == "desk":
+for cnt, (p, kind) in zip(plan["counters"], counters):
+    top_z = B["desk_height"] if kind in DESK_KINDS + ("nurse",) else B["counter_height"]
+    if kind in DESK_KINDS:
         tops.append((p, top_z - 0.03, top_z))
         cab.append((p.buffer(-0.02).difference(p.buffer(-0.06)), 0.1, top_z - 0.03))  # modesty panels/legs
     else:
@@ -374,8 +380,7 @@ for p, kind, sp in counters:
         cab.append((p.buffer(-0.01), 0.1, top_z - 0.03))
         plinth.append((p.buffer(-0.06), 0.0, 0.1))
     if kind == "nurse":
-        well = p.convex_hull.difference(p).buffer(-0.05)
-        rim = p.difference(p.buffer(-0.24)).difference(well.buffer(0.3))
+        rim = Polygon(cnt["raised"]).buffer(0)  # the raised top as drawn, not a strip worked out from the outline
         ledge.append((rim, top_z, B["transaction_height"] - 0.03))
         tops.append((rim.buffer(0.015, join_style="mitre"), B["transaction_height"] - 0.03, B["transaction_height"]))
 for name, items, mat in (("joinery_cabinets", cab, "cabinet"), ("joinery_tops", tops, "counter_top"),
@@ -385,7 +390,7 @@ for name, items, mat in (("joinery_cabinets", cab, "cabinet"), ("joinery_tops", 
     if ms:
         tm_obj(name, trimesh.util.concatenate(ms), mat, C["Joinery"])
 for i, bs in enumerate(plan["basins"]):
-    cnt = next((p for p, kind, _ in counters if p.buffer(0.05).contains(Point(bs["c"]))), None)
+    cnt = next((p for p, _ in counters if p.buffer(0.05).contains(Point(bs["c"]))), None)
     if cnt is None:
         continue
     # tap at the back edge: the counter edge nearest a wall
@@ -514,7 +519,7 @@ if curtain.v:
 
 
 def desk_seat(p):
-    """Where someone sits at a drawn desk: the middle of its front edge, and the way they face, square to that edge.
+    """Where someone sits at a drawn desk: the middle of its front edge, the way they face, square to that edge, and the edge's length.
 
     Worked out from the desk alone. The corridor and the nooks are one space in the plan, so the space's centre
     is near the middle of the floor and says nothing about which way a desk faces.
@@ -535,7 +540,7 @@ def desk_seat(p):
     i = min(range(len(xy) - 1), key=lambda k: LineString(xy[k:k + 2]).distance(Point(near)))
     e = xy[i + 1] - xy[i]
     n = np.array([e[1], -e[0]]) / np.linalg.norm(e)
-    return (xy[i] + xy[i + 1]) / 2, n if n @ d > 0 else -n
+    return (xy[i] + xy[i + 1]) / 2, n if n @ d > 0 else -n, np.linalg.norm(e)
 
 
 def plan_footprint(ob, M):
@@ -544,36 +549,31 @@ def plan_footprint(ob, M):
     return MultiPoint(xy @ M[:2, :2].T + M[:2, 3]).convex_hull
 
 
-# nurse station, observation desks, alcoves
+def place_seat(kind, tag, p, front, d):
+    """A workstation and chair at a desk's front edge, square to it. Stops the build if they don't fit there."""
+    M_ws = frame_matrix(front + d * 0.32, d, B["desk_height"])  # keyboard just inside the front edge
+    M_chair = frame_matrix(front - d * 0.45, d)
+    foot_ws, foot_chair = plan_footprint(wst, M_ws), plan_footprint(ochair, M_chair)
+    if foot_ws.intersection(p).area < 0.9 * foot_ws.area:
+        raise SystemExit(f"{kind} workstation at {front.round(2).tolist()} doesn't fit on its desk")
+    if foot_ws.intersects(walls_u) or foot_ws.intersects(raised) or foot_chair.intersects(walls_u) or foot_chair.intersects(joinery):
+        raise SystemExit(f"{kind} items at {front.round(2).tolist()} cross a wall, counter or the ledge")
+    place(wst, f"{kind}_ws_{tag}", M_ws, C["Equipment"])
+    place(ochair, f"{kind}_chair_{tag}", M_chair, C["Equipment"])
+
+
+# nurse station, observation desks, dictation desk, alcoves
 joinery = unary_union([c[0] for c in counters])
-for ci, (p, kind, sp) in enumerate(counters):
+raised = unary_union([q[0] for q in ledge])
+for ci, (p, kind) in enumerate(counters):
     if kind == "nurse":
-        well = p.convex_hull.difference(p)
-        wc = np.array(well.centroid.coords[0]); v = np.array(p.centroid.coords[0]) - wc; v /= np.linalg.norm(v)
-        ux = np.array([v[1], -v[0]])
-        ext = well.intersection(LineString([wc - ux * 10, wc + ux * 10]))
-        span = ext.length if not ext.is_empty else 2.0
-        for k_ in np.linspace(-0.35, 0.35, 4) * span:
-            seat = wc + ux * k_
-            pt = seat.copy()
-            for _ in range(80):
-                if p.contains(Point(pt)):
-                    break
-                pt = pt + v * 0.03
-            mon = pt + v * 0.25
-            place(wst, f"nurse_ws_{ci}_{k_:+.1f}", frame_matrix(mon, v, B["desk_height"]), C["Equipment"])
-            place(ochair, f"nurse_chair_{ci}_{k_:+.1f}", frame_matrix(pt - v * 0.55, v), C["Equipment"])
-    elif kind == "desk":
-        front, d = desk_seat(p)
-        M_ws = frame_matrix(front + d * 0.32, d, B["desk_height"])  # keyboard just inside the front edge
-        M_chair = frame_matrix(front - d * 0.45, d)
-        foot_ws, foot_chair = plan_footprint(wst, M_ws), plan_footprint(ochair, M_chair)
-        if foot_ws.intersection(p).area < 0.9 * foot_ws.area:
-            continue  # a sliver of a counter: a workstation doesn't fit on it
-        if foot_ws.intersects(walls_u) or foot_chair.intersects(walls_u) or foot_chair.intersects(joinery):
-            raise SystemExit(f"desk items at {front.round(2).tolist()} cross a wall or counter")
-        place(wst, f"obs_ws_{ci}", M_ws, C["Equipment"])
-        place(ochair, f"obs_chair_{ci}", M_chair, C["Equipment"])
+        front, d, width = desk_seat(p)
+        along = np.array([d[1], -d[0]])
+        for i, k_ in enumerate(np.linspace(-0.35, 0.35, 4)):
+            place_seat(kind, f"{ci}_{i}", p, front + along * k_ * width, d)
+    elif kind in DESK_KINDS:
+        front, d, _ = desk_seat(p)
+        place_seat(kind, ci, p, front, d)
 for r in plan["rooms"]:
     sp = space_at(r["label_at"])
     if sp is None:

@@ -245,12 +245,19 @@ mx = ndi.maximum(dt, lab, np.arange(1, n + 1))
 touch = ndi.maximum(cv2.dilate(eq.astype(np.uint8), disk(2)), lab, np.arange(1, n + 1))
 ok = np.zeros(n + 1, bool)
 ok[1:] = (area < P["counter_max_area_m2"]) & (mx < P["counter_max_half_depth_m"]) & (touch > 0) & (area > 0.08)
+# a second shape drawn inside an outline, too big to be its sink, is a raised top: the nurse station's transaction ledge
+big_shapes = [q for i in np.flatnonzero(ok) if area[i - 1] > P["counter_raised_min_area_m2"]
+              for q in polygons(cv2.dilate((lab == i).astype(np.uint8), disk(1)) > 0, 0.08, 0.02)]
 counters = []
 for poly in polygons(cv2.dilate((ok[lab]).astype(np.uint8), disk(1)) > 0, 0.08, 0.02):
     if poly.centroid.y < y_cut:
         continue
     # circles drawn inside sink counters = basins
-    counters.append({"poly": [list(map(lambda v: round(v, 3), p)) for p in poly.exterior.coords]})
+    cnt = {"poly": [list(map(lambda v: round(v, 3), p)) for p in poly.exterior.coords]}
+    inside = [q for q in big_shapes if poly.contains(q.representative_point())]
+    if len(inside) > 1:
+        cnt["raised"] = [list(map(lambda v: round(v, 3), p)) for p in min(inside, key=lambda q: q.area).exterior.coords]
+    counters.append(cnt)
 
 basins = []
 for d in drs:

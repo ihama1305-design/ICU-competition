@@ -89,6 +89,7 @@
   "min_window_m": 0.5,
   "counter_max_area_m2": 9.0,
   "counter_max_half_depth_m": 0.5,
+  "counter_raised_min_area_m2": 1.0,
   "room_keywords": [
    "ROOM",
    "NURSE",
