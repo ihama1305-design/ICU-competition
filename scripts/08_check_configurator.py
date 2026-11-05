@@ -8,7 +8,9 @@ every view works in both rooms; the camera can't leave the room by orbiting or d
 removes the ceiling and leaving it brings the ceiling back; the sun matches the spec at Afternoon, and the time
 controls and the Day/Night toggle work; a phone gets a bottom sheet with no sideways scroll.
 Every option in options.json changes the picture, in both rooms. Themes apply and stay editable; a spec code restores the
-exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work.
+exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work. The panel and
+home page have no serious accessibility faults under axe, every control can be reached by keyboard with visible focus, nothing
+draws while the page is idle, and slow frames lower the quality.
 Lighting schemes, smart glass, palms and themes get screenshots to look at. Screenshots -> build/shots/config_*.png. Checks the published site in spec site.dir.
 """
 import functools
@@ -32,6 +34,7 @@ spec = json.load(open(os.path.join(ROOT, "spec", "icu_spec.json")))
 SITE = os.path.normpath(os.path.join(ROOT, spec["site"]["dir"]))
 SHOTS = os.path.join(ROOT, "build", "shots")
 BUDGET_MB = 15
+AXE = "https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js"
 ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
 ROOMS = list(spec["configurator"]["rooms"])
 os.makedirs(SHOTS, exist_ok=True)
@@ -50,7 +53,7 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 
 
 class Server(http.server.ThreadingHTTPServer):
-    request_queue_size = 128  # the page asks for a dozen modules at once, each on its own connection
+    request_queue_size = 128  # the page asks for a dozen modules at once; the default backlog of 5 resets some of them
 
 
 # the site inside a folder named like the repo, as on github.io/<repo>/
@@ -141,6 +144,15 @@ def set_defaults(pg):
       for (const s of c.options().sections) for (const g of s.groups) c.set(g.id, g.default); }""")
 
 
+def axe_faults(pg, selector):
+    """Serious and critical accessibility faults inside selector, as short strings."""
+    found = pg.evaluate("""async sel => {
+      const r = await axe.run(sel, { resultTypes: ['violations'] });
+      return r.violations.filter(v => ['serious', 'critical'].includes(v.impact)).map(v => `${v.id}: ${v.nodes.slice(0, 2).map(n => n.target.join(' ')).join(', ')}`);
+    }""", selector)
+    return found
+
+
 def shot(pg, name):
     drawn(pg)
     pg.screenshot(path=os.path.join(SHOTS, f"config_{name}.png"))
@@ -152,6 +164,9 @@ with sync_playwright() as p:
     # ---------------------------------------------------------------- desktop
     ctx, pg, errs, missing, sizes = open_page(b, 1366, 820)
     check(not errs, f"page loads with no errors {errs[:3]}")
+    # the very first picture, with nothing having asked for a redraw: the page only draws when something changes
+    first = np.asarray(Image.open(io.BytesIO(pg.screenshot(clip={"x": 0, "y": 0, "width": 900, "height": 800}))).convert("L"), dtype=float)
+    check(first[:200].mean() > 110, f"the first picture is properly lit, not waiting on a texture (ceiling brightness {first[:200].mean():.0f})")
     check(not missing, f"nothing 404s under /<repo>/ {missing[:3]}")
     total = sum(sizes.values()) / 1e6
     check(total < BUDGET_MB, f"initial download {total:.1f} MB is under {BUDGET_MB} MB")
@@ -461,6 +476,82 @@ with sync_playwright() as p:
     check(pg.evaluate("window.__config.state().moving") is False and pg.evaluate("window.__config.state().view") == "entrance", "reduced motion: moving between views is a cut")
     ctx.close()
 
+    # ---------------------------------------------------------------- accessibility
+    ctx, pg, errs, _, _ = open_page(b, 1366, 900, query="?tier=low")
+    pg.add_script_tag(url=AXE)
+    faults = axe_faults(pg, "#panel")
+    for i in range(pg.locator("details").count()):
+        pg.locator("summary").nth(i).click()
+        faults += axe_faults(pg, "#panel")
+    pg.evaluate("window.__config.set('front', 'smart')")
+    faults += axe_faults(pg, "#panel")
+    check(not sorted(set(faults)), f"axe finds no serious faults in the panel, with each section open {sorted(set(faults))[:4]}")
+    pg.click("#openSummary")
+    pg.wait_for_selector("#summary[open]")
+    faults = axe_faults(pg, "#summary")
+    check(not faults, f"axe finds no serious faults in the summary {faults[:4]}")
+    check(pg.evaluate("document.activeElement.closest('#summary') !== null"), "opening the summary moves focus into it")
+    pg.keyboard.press("Escape")
+    check(pg.evaluate("document.activeElement.id") == "openSummary", "Escape closes the summary and returns focus to its button")
+
+    # every control can be reached by keyboard, with focus that shows
+    pg.evaluate("document.querySelectorAll('details').forEach(d => { d.removeAttribute('name'); d.open = true; })")
+    want = pg.evaluate("""[...document.querySelectorAll('#panel button, #panel a, #panel input, #panel summary')]
+      .filter(n => n.offsetParent && !n.closest('[hidden]') && getComputedStyle(n).visibility !== 'hidden')
+      .map((n, i) => { n.dataset.tabCheck = i; return i; })""")
+    pg.focus("#c")
+    reached, unmarked = set(), []
+    for _ in range(len(want) * 2 + 10):
+        pg.keyboard.press("Tab")
+        got = pg.evaluate("""(() => { const a = document.activeElement, s = getComputedStyle(a);
+          return { mark: a.dataset.tabCheck, outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1, name: a.id || a.textContent.slice(0, 20) }; })()""")
+        if got["mark"] is not None:
+            reached.add(int(got["mark"]))
+            if not got["outline"]:
+                unmarked.append(got["name"])
+    # a radio-like range of swatches and buttons all tab in order, so everything should turn up
+    check(len(reached) == len(want), f"every control is reachable by keyboard ({len(reached)} of {len(want)})")
+    check(not unmarked, f"every control shows where keyboard focus is {sorted(set(unmarked))[:5]}")
+    # the 3D view by keyboard, and what's said about it
+    pg.evaluate("window.__config.camera('overview', { instant: true })")
+    pg.focus("#c")
+    before = pg.evaluate("window.__config.eye()")
+    pg.keyboard.press("+")
+    check(pg.evaluate("window.__config.eye()") != before, "plus and minus move the view closer and further")
+    pg.click("#views button[data-value='entrance']")
+    check("Entrance" in pg.inner_text("#announce"), "changing the view is announced")
+    check("Entrance view" in pg.get_attribute("#c", "aria-label"), "the 3D view's label says what it shows")
+    # drawing stops when nothing is changing
+    pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+    drawn(pg)
+    start = pg.evaluate("window.__config.frames()")
+    pg.wait_for_timeout(2500)
+    check(pg.evaluate("window.__config.frames()") == start, "nothing is drawn while the page is idle")
+    check(not errs, f"accessibility checks: no errors {errs[:3]}")
+    ctx.close()
+
+    # slow frames lower the resolution, then drop the bloom
+    ctx, pg, errs, _, _ = open_page(b, 900, 650, query="?tier=high", device_scale_factor=2)
+    before = pg.evaluate("window.__config.quality()")
+    pg.evaluate("for (let i = 0; i < 30; i++) window.__config.noteFrame(60)")
+    after = pg.evaluate("window.__config.quality()")
+    check(after["ratio"] < before["ratio"], f"slow frames lower the resolution ({before['ratio']:.2f} -> {after['ratio']:.2f})")
+    pg.evaluate("for (let i = 0; i < 300; i++) window.__config.noteFrame(60)")
+    check(pg.evaluate("window.__config.quality().bloomDropped") is True, "if it's still slow, the bloom goes too")
+    ctx.close()
+
+    # the home page, with its carousel and configurator section
+    ctx = b.new_context(viewport={"width": 1280, "height": 800})
+    pg = ctx.new_page()
+    pg.goto(URL.replace("configurator/", "index.html"))
+    pg.wait_for_function("document.getAnimations().every(a => a.playState !== 'running')", timeout=60000)
+    pg.add_script_tag(url=AXE)
+    faults = axe_faults(pg, "body")
+    check(not faults, f"axe finds no serious faults on the home page {faults[:4]}")
+    href = pg.locator("#configurator a").first.get_attribute("href")
+    check("#c=" in href, "the home page's pictures link to their exact rooms")
+    ctx.close()
+
     # ---------------------------------------------------------------- a script that can't load says so
     ctx = b.new_context(viewport={"width": 1100, "height": 600})
     pg = ctx.new_page()
@@ -489,6 +580,18 @@ with sync_playwright() as p:
     shot(pg, "phone_open")
     tall = pg.evaluate("[...document.querySelectorAll('#panel button')].filter(b => b.offsetParent && b.getBoundingClientRect().height < 36).map(b => b.textContent)")
     check(not tall, f"phone: buttons are large enough to tap {tall[:3]}")
+    # a swipe down on the title closes the sheet, a swipe up opens it
+    box = pg.locator("#panel header").bounding_box()
+    x, y = box["x"] + 60, box["y"] + 20
+    pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x, y + 90, steps=4); pg.mouse.up()
+    check(pg.evaluate("document.getElementById('panel').classList.contains('open')") is False, "phone: swiping down closes the sheet")
+    check(pg.evaluate("document.getElementById('panelBody').inert") is True, "phone: a closed sheet's controls can't be reached")
+    drawn(pg)
+    box = pg.locator("#panel header").bounding_box()
+    x, y = box["x"] + 60, box["y"] + 20
+    pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x, y - 90, steps=4); pg.mouse.up()
+    check(pg.evaluate("document.getElementById('panel').classList.contains('open')") is True, "phone: swiping up opens it")
+    drawn(pg)
     pg.tap("#views button[data-value='bed_window']")
     pg.wait_for_function("window.__config.state().view === 'bed_window' && !window.__config.state().moving", timeout=120000)
     shot(pg, "phone_bed_window")
@@ -503,4 +606,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, accessibility, adaptive quality, phone)")

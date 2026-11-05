@@ -17,7 +17,7 @@ export function sunAt(hour, site) {
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 export class Daylight {
-  constructor(scene, site, W2T) {
+  constructor(scene, site, W2T, shadowSize = 2048) {
     this.scene = scene; this.site = site; this.W2T = W2T;
     this.centre = new THREE.Vector3();
     this.sky = new Sky();
@@ -45,7 +45,7 @@ export class Daylight {
 
     this.sun = new THREE.DirectionalLight(0xffffff, 1);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.set(shadowSize, shadowSize);
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.02;
     const c = this.sun.shadow.camera;

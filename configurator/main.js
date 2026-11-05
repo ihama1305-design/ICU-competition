@@ -31,7 +31,8 @@ const state = { room: "W1", view: "overview", hour: STOPS.afternoon };
 let dirty = true, lastDayHour = STOPS.afternoon;
 const invalidate = () => { dirty = true; };
 const rig = new Rig(stage.camera, controls, W2T, invalidate);
-const daylight = new Daylight(stage.scene, SITE, W2T);
+const daylight = new Daylight(stage.scene, SITE, W2T, tier === "low" ? 1024 : 2048);
+stage.onQualityDrop = () => { resize(); };
 const lighting = new Lighting(stage, daylight, tier);
 const glass = new FrontGlass(tier);
 controls.addEventListener("change", invalidate);
@@ -41,6 +42,8 @@ rig.onView = (name, isDoll) => {
   state.view = name;
   syncViews();
   remember();
+  describe();
+  say(`${viewLabel(name)} view.`);
 };
 rig.onArrive = name => {
   if (name !== "dollhouse") stage.setCeiling(true);
@@ -77,6 +80,15 @@ function pressed(group, value) {
 }
 function syncViews() { pressed($("views"), state.view); }
 
+// what the 3D view shows, for anyone who can't see it
+const viewLabel = name => $("views").querySelector(`[data-value="${name}"]`).textContent;
+const say = text => { $("announce").textContent = text; };
+function describe() {
+  if (!rig.meta) return;
+  const room = rig.meta.isolation ? `isolation room ${state.room}` : `standard room ${state.room}`;
+  canvas.setAttribute("aria-label", `3D view of ${room}, ${viewLabel(state.view)} view, ${clock(state.hour)} solar time. Drag or use the arrow keys to look around, and plus and minus to move closer.`);
+}
+
 const clock = h => {
   const m = Math.round(h * 60), hh = Math.floor(m / 60) % 24, mm = m % 60;
   return `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, "0")} ${hh < 12 ? "am" : "pm"}`;
@@ -100,6 +112,7 @@ function setTime(h) {
   slider.setAttribute("aria-valuetext", `${text} solar time`);
   $("timeNow").textContent = text;
   remember();
+  describe();
   pressed($("dayNight"), isNight(h) ? "night" : "day");
   const stop = Object.entries(STOPS).find(([, v]) => Math.abs(v - h) < 0.2)?.[0];
   $("stops").querySelectorAll("button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.value === stop)); });
@@ -125,6 +138,8 @@ async function setRoom(label, { keepView = true } = {}) {
   rig.go(keepView ? state.view : "overview", { instant: true });
   stage.setCeiling(state.view !== "dollhouse");
   syncUi();
+  describe();
+  say(room.meta.isolation ? `Isolation room ${label}.` : `Standard room ${label}.`);
   status.textContent = room.meta.isolation ? "With its ante room and toilet." : "Opens straight onto the corridor.";
   invalidate();
 }
@@ -151,24 +166,49 @@ $("views").addEventListener("click", e => {
 });
 $("dayNight").addEventListener("click", e => {
   const b = e.target.closest("button");
-  if (b) setTime(b.dataset.value === "night" ? STOPS.night : lastDayHour);
+  if (!b) return;
+  setTime(b.dataset.value === "night" ? STOPS.night : lastDayHour);
+  say(`${b.textContent}, ${clock(state.hour)}.`);
 });
-$("stops").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTime(STOPS[b.dataset.value]); });
+$("stops").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  setTime(STOPS[b.dataset.value]);
+  say(`${b.textContent}, ${clock(state.hour)}.`);
+});
 $("time").addEventListener("input", e => setTime(Number(e.target.value)));
 
 const sheet = $("sheet");
-sheet.addEventListener("click", () => {
-  const open = panel.classList.toggle("open");
+function setSheet(open) {
+  panel.classList.toggle("open", open);
   sheet.setAttribute("aria-expanded", String(open));
   sheet.setAttribute("aria-label", open ? "Hide the options" : "Show the options");
   resize();
+}
+// tap the handle, or swipe the handle or title up and down
+let swipeFrom = null, swiped = false;
+sheet.addEventListener("click", () => {
+  if (!swiped) setSheet(!panel.classList.contains("open"));
+  swiped = false;
 });
+for (const area of [sheet, panel.querySelector("header")]) {
+  area.addEventListener("pointerdown", e => { if (!e.target.closest("a")) swipeFrom = e.clientY; });
+}
+addEventListener("pointerup", e => {
+  if (swipeFrom === null || !matchMedia("(max-width: 820px)").matches) { swipeFrom = null; return; }
+  const dy = e.clientY - swipeFrom;
+  swipeFrom = null;
+  if (Math.abs(dy) > 24) { swiped = true; setSheet(dy < 0); setTimeout(() => { swiped = false; }); }
+});
+addEventListener("pointercancel", () => { swipeFrom = null; });
 
 canvas.addEventListener("keydown", e => {
   const s = 0.09, map = { ArrowLeft: [s, 0], ArrowRight: [-s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] }[e.key];
-  if (!map) return;
+  const zoom = { "+": 0.88, "=": 0.88, "-": 1.14, _: 1.14 }[e.key];
+  if (!map && !zoom) return;
   e.preventDefault();
-  rig.orbitBy(...map);
+  if (map) rig.orbitBy(...map);
+  else rig.dolly(zoom);
 });
 
 // ---------------------------------------------------------------- options, from options.json
@@ -243,6 +283,8 @@ function setOption(groupId, optionId, custom) {
   settle();
   relight();
   syncUi();
+  const chosen = optionId === "custom" ? "custom colour" : optionOf(groupId, optionId).label;
+  say(`${group.label}: ${chosen}.`);
 }
 
 /** A theme is a starting point: every option goes to its default, then the theme's choices. Anything can be changed afterwards. */
@@ -259,6 +301,7 @@ function applyTheme(id) {
   applyAll();
   relight();
   syncUi();
+  say(`${theme.label} applied.`);
 }
 
 const currentTheme = () => optionData.themes.find(t => {
@@ -378,10 +421,19 @@ canvas.addEventListener("pointerup", e => {
 });
 
 // ---------------------------------------------------------------- drawing: only when something has changed
+let lastMovingDraw = 0;
+const adaptive = !navigator.webdriver; // a software renderer in a test shouldn't talk itself down from what it's testing
 function frame(now) {
   requestAnimationFrame(frame);
   if (!rig.meta) return;
-  if (rig.update(now)) dirty = true;
+  const moving = rig.update(now);
+  if (moving) {
+    dirty = true;
+    if (adaptive && lastMovingDraw) stage.noteFrame(now - lastMovingDraw);
+    lastMovingDraw = now;
+  } else {
+    lastMovingDraw = 0;
+  }
   if (glass.update(now)) dirty = true;
   if (tickAddons(stage.current, now, stage.camera)) dirty = true;
   if (dirty) {
@@ -406,7 +458,26 @@ window.__config = {
   time: setTime,
   stops: STOPS,
   orbit: (yaw, pitch) => rig.orbitBy(yaw, pitch),
-  zoomOut: k => { const p = stage.camera.position, t = controls.target; p.sub(t).multiplyScalar(k).add(t); rig.clamp(); invalidate(); },
+  zoomOut: k => rig.dolly(k),
+  frames: () => window.__configFrames,
+  quality: () => ({ ratio: stage.renderer.getPixelRatio(), bloomDropped: stage.bloomDropped }),
+  noteFrame: ms => stage.noteFrame(ms),
+  /** Real cost of drawing while orbiting: the draw is followed by a pixel read, so it times the GPU finishing, not the display's refresh. */
+  perf: async (seconds = 4) => {
+    const gl = stage.renderer.getContext(), px = new Uint8Array(4), times = [];
+    const end = performance.now() + seconds * 1000;
+    while (performance.now() < end) {
+      rig.orbitBy(0.02, 0);
+      const t0 = performance.now();
+      stage.draw();
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      times.push(performance.now() - t0);
+      await new Promise(requestAnimationFrame);
+    }
+    times.sort((a, b) => a - b);
+    const info = stage.renderer.info;
+    return { tier, size: [innerWidth, innerHeight], ratio: stage.renderer.getPixelRatio(), frames: times.length, medianMs: +times[times.length >> 1].toFixed(1), p95Ms: +times[Math.floor(times.length * 0.95)].toFixed(1), drawCalls: info.render.calls, triangles: info.render.triangles, programs: info.programs.length, textures: info.memory.textures };
+  },
   eye: () => rig.worldEye(),
   inRoom: () => { const e = rig.worldEye(); return inside(e.x, e.y, rig.meta.walkable); },
   renderNow: () => { rig.update(performance.now()); },

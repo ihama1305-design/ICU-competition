@@ -137,6 +137,9 @@ kbd { font: 0.8em var(--mono); padding: 1px 6px; border: 1px solid var(--border-
   .plate.half { grid-column: span 3; }
 }
 
+.section-foot { display: grid; gap: 12px; margin-top: clamp(20px, 3vw, 32px); }
+.section-foot .note { color: var(--muted); max-width: 62ch; }
+
 /* findings */
 .findings { display: grid; gap: clamp(24px, 4vw, 48px); }
 .findings figure { margin: 0; min-width: 0; }

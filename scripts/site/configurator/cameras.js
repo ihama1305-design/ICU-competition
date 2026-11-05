@@ -160,6 +160,14 @@ export class Rig {
     this.camera.lookAt(tg);
   }
 
+  /** Move toward or away from what the view is centred on. */
+  dolly(k) {
+    const p = this.camera.position, t = this.controls.target;
+    p.sub(t).multiplyScalar(k).add(t);
+    this.clamp();
+    this.onChange();
+  }
+
   /** Keyboard orbit, in radians. */
   orbitBy(yaw, pitch) {
     const off = this.camera.position.clone().sub(this.controls.target);

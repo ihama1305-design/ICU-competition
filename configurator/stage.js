@@ -35,7 +35,6 @@ export class Stage {
     this.tier = tier;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: tier === "low" });
     const r = this.renderer;
-    r.setPixelRatio(Math.min(devicePixelRatio, tier === "low" ? 1.5 : 2));
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.NeutralToneMapping;
     r.toneMappingExposure = 1.0;
@@ -49,6 +48,7 @@ export class Stage {
     pmrem.dispose();
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.04, 8000);
     this.rooms = new Map(); this.current = null; this.ceilingOn = true;
+    this.frameSamples = []; this.bloomDropped = false; this.ratioLimit = Infinity; this.onQualityDrop = () => {};
     this.textures = new THREE.TextureLoader();
     // cheap glass for everything but the room's own front
     this.pane = new THREE.MeshStandardMaterial({ color: "#d9e8ea", roughness: 0.05, metalness: 0, transparent: true, opacity: 0.14, depthWrite: false });
@@ -63,7 +63,14 @@ export class Stage {
     }
   }
 
+  /** Sharp on any screen, without paying for more pixels than a person can use. Falls further if noteFrame finds it too slow. */
+  fitResolution(w, h) {
+    const budget = this.tier === "low" ? 1.5 : 2;
+    return Math.min(devicePixelRatio, budget, Math.sqrt(3.6e6 / (w * h)), this.ratioLimit);
+  }
+
   resize(w, h) {
+    this.renderer.setPixelRatio(Math.max(1, this.fitResolution(w, h)));
     this.renderer.setSize(w, h, false);
     this.composer?.setPixelRatio(this.renderer.getPixelRatio());
     this.composer?.setSize(w, h);
@@ -72,7 +79,24 @@ export class Stage {
   setBloom(strength) {
     if (!this.bloom) return;
     this.bloom.strength = strength;
-    this.bloom.enabled = strength > 0.01;
+    this.bloom.enabled = strength > 0.01 && !this.bloomDropped;
+  }
+
+  /** Called with the time between frames while the view is moving. If it stays slow, lower the resolution, then drop the bloom. */
+  noteFrame(ms) {
+    this.frameSamples.push(ms);
+    if (this.frameSamples.length < 30) return;
+    const median = this.frameSamples.sort((a, b) => a - b)[15];
+    this.frameSamples = [];
+    if (median < 34) return; // 30 frames a second or better
+    const ratio = this.renderer.getPixelRatio();
+    if (ratio > 1) {
+      this.ratioLimit = Math.max(1, ratio - 0.25);
+      this.onQualityDrop();
+    } else if (this.bloom && !this.bloomDropped) {
+      this.bloomDropped = true;
+      this.bloom.enabled = false;
+    }
   }
 
   draw() {
@@ -80,8 +104,8 @@ export class Stage {
     else this.renderer.render(this.scene, this.camera);
   }
 
-  aoTexture(file) {
-    const t = this.textures.load(MODEL + file);
+  async aoTexture(file) {
+    const t = await this.textures.loadAsync(MODEL + file);
     t.flipY = false;
     t.colorSpace = THREE.NoColorSpace;
     return t;
@@ -100,7 +124,9 @@ export class Stage {
     const gltf = await new GLTFLoader().parseAsync(buf, "");
     window.__configStage = "preparing materials";
     const root = gltf.scene;
-    const ao = { cfg_paint_walls: meta.ao.walls, cfg_floor: meta.ao.floor, cfg_ceiling: meta.ao.ceiling };
+    // wait for the shadow maps: the page only draws when something changes, so a late one would leave the room dark
+    const [walls, floor, ceiling] = await Promise.all([meta.ao.walls, meta.ao.floor, meta.ao.ceiling].map(f => this.aoTexture(f)));
+    const ao = { cfg_paint_walls: walls, cfg_floor: floor, cfg_ceiling: ceiling };
     const room = { label, meta, root, ceiling: [], ceilingExtras: [], ceilingFixtures: [], parts: {}, anchors: {} };
     root.traverse(n => {
       if (n.name.startsWith("anchor_")) room.anchors[n.name.slice(7)] = n;
@@ -119,7 +145,7 @@ export class Stage {
         n.receiveShadow = true;
         n.material.side = THREE.FrontSide;
         if (/frost/.test(n.material.name)) { n.material.transparent = true; n.material.opacity = 0.72; n.material.depthWrite = false; n.castShadow = false; n.material.side = THREE.DoubleSide; if (this.tier === "low") n.material.transmission = 0; n.renderOrder = 2; }
-        if (ao[top]) { n.material.aoMap = this.aoTexture(ao[top]); n.material.aoMapIntensity = 1; n.material.needsUpdate = true; }
+        if (ao[top]) { n.material.aoMap = ao[top]; n.material.aoMapIntensity = 1; n.material.needsUpdate = true; }
         if (n.material.name === "facade_metal") { n.material.metalness = 0.2; n.material.roughness = 0.6; } // no reflections to give metal its colour here
         if (n.material.name === "led_panel") { n.material.emissive = new THREE.Color("#fff3e2"); n.material.emissiveIntensity = 2.2; if (top === "cfg_panels" || top === "cfg_kit_exam_light") n.material = n.material.clone(); if (top === "cfg_kit_exam_light") n.material.emissiveIntensity = 0.55; }
         if (n.material.metalness > 0.5) n.material.roughness = Math.max(n.material.roughness, 0.42); // polished metal glints past the bloom threshold
