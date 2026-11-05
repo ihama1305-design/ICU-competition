@@ -462,6 +462,14 @@ for name, items, mat in (("joinery_cabinets", cab, "cabinet"), ("joinery_tops", 
 for i, bs in enumerate(plan["basins"]):
     cnt = next((p for p, _ in counters if p.buffer(0.05).contains(Point(bs["c"]))), None)
     if cnt is None:
+        raise SystemExit(f"basin {i} at {bs['c']} isn't on a counter")
+    if "rim" in bs:
+        # a sink block keeps the drawing's outline, and its tap points at its drain as drawn
+        c = np.array(bs["c"])
+        M = frame_matrix(c, np.array(bs["drain"]) - bs["tap"], B["counter_height"] + 0.001)
+        local = lambda q: (np.array(q) - c) @ M[:2, :2]  # noqa: E731
+        src = kit.basin_drawn(spec, KITC, f"kit_basin_{i:02d}", local(bs["rim"]), local(bs["bowl"]), local(bs["drain"]), bs["drain_r"], local(bs["tap"]))
+        place(src, f"basin_{i:02d}", M, C["Joinery"])
         continue
     # tap at the back edge: the counter edge nearest a wall
     pnear = np.array(walls_u.boundary.interpolate(walls_u.boundary.project(Point(bs["c"]))).coords[0])
