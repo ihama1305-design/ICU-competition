@@ -73,7 +73,7 @@ S = [  # (id, group, label, confidence, regex on object names, notes)
     ("nurse_ws", "Staff areas", "Nurse station workstations", "low", "^nurse_", "Monitors and chairs inside the U-shaped nurse station."),
     ("obs_ws", "Staff areas", "Observation desks", "low", "^obs_", "One workstation per observation nook, facing the two observation windows."),
     ("dictation_ws", "Staff areas", "Dictation desk", "low", "^dictation_", "One workstation at the drawn counter labelled Dictation."),
-    ("joinery", "Staff areas", "Counters, desks, nurse station", "med", "^joinery", "Outlines from the drawing's A-EQPM layer. Counter 0.90 m, desks 0.75 m, transaction ledge 1.10 m (assumed heights)."),
+    ("joinery", "Staff areas", "Counters, desks, nurse station", "med", "^joinery", "Outlines from the drawing's A-EQPM layer. Counter 0.90 m, desks 0.75 m, transaction ledge 1.10 m (assumed heights). The knee spaces under the nurse station's workstations are also assumed."),
     ("basins", "Staff areas", "Hand-wash basins", "med", "^basin", "Basin positions from the drawing. Fitting design assumed."),
     ("carts", "Staff areas", "Crash cart and stretchers", "low", "^crash_cart|^stretcher", "Placed in the alcoves named on the drawing."),
     ("doors", "Openings", "Doors", "high", "^door_leaves", "Door leaves at the positions and swings drawn on the record drawing. Head height 2.41 m (H=2410 tags)."),
@@ -105,6 +105,8 @@ fx, fy = hero["front"]; nx, ny = hero["front_normal_in"]; hx, hy = hero["head"]
 view = {
     "status": f"{len(idx['rooms'])} furnished patient rooms · ceiling {H:.2f} m (assumed) · walls, doors and glazing from record drawing A1104-a",
     "eye": EYE, "ceiling": H, "radius": 0.28,
+    # rays that stop a walker. The middle one meets a desk top's edge: where knee space is open below it, the other two pass under and over the top
+    "walk_heights": [0.3, spec["building"]["desk_height"] - 0.015, 1.0],
     "collide": "^(walls|joinery_|facade_upstand|facade_sill)",
     "first": {"eye": [fx + nx * 0.6, fy + ny * 0.6, EYE], "look": [hx, hy, 1.0]},
     "orbit": {"eye": cams.get("aerial_eye", [44.0, -16.0, 34.0]), "look": cams.get("aerial_look", [22.5, 15.5, 0.0])},
