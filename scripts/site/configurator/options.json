@@ -668,8 +668,12 @@
         }
        ],
        "note": {
-        "text": "Switchable glass replaces the curtain: a wall switch takes it from clear to opaque, so staff can still see in when they need to. Door makers sell it for ICU sliding doors. CDC guidance counts curtain edges as high-touch surfaces.",
+        "text": "Switchable glass replaces the curtain: a wall switch takes it from clear to opaque, so staff can still see in when they need to. Memorial Sloan Kettering's ICU did this on its sliding doors, and the project report says removing fabric curtains improved infection control and made cleaning between patients easier. That's a design report, not a trial. CDC guidance counts curtain edges as high-touch surfaces.",
         "sources": [
+         {
+          "label": "Healthcare Design, Memorial Sloan Kettering ICU",
+          "url": "https://healthcaredesignmagazine.com/news/memorial-sloan-kettering-cancer-center-intensive-care-unit-new-york-ny/1683/"
+         },
          {
           "label": "Stanley Access, ICU doors",
           "url": "https://stanleyaccess.com/node/2536"

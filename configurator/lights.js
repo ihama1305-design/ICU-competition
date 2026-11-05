@@ -1,5 +1,6 @@
 // Electric lighting. The numbers for each scheme live in options.json; this turns them into lights and glowing fixtures.
-// Lights are a fixed set, moved and dimmed but never added or removed: changing how many there are recompiles every material.
+// Each scheme turns on only the lights it uses, because every light costs on every pixel: measured on an M5 at 2x, all of them
+// on at zero brightness took 43 ms a frame. The price is a short recompile the first time a scheme is chosen.
 // Real-time lights don't bounce, so a cove's soft glow is drawn: a gradient on the ceiling and wall, and a bright strip for the bloom pass.
 import * as THREE from "three";
 import { W2T } from "./stage.js";
@@ -148,7 +149,7 @@ export class Lighting {
     this.rectWeight = places.length ? Math.max(1, Math.min(places.length, 4) / this.rects.length) : 1;
     this.rects.forEach((l, i) => {
       const p = places[i];
-      l.userData.on = !!p;
+      l.visible = !!p;
       if (!p) return;
       l.position.copy(W2T(p.x, p.y, p.z));
       l.width = p.w; l.height = p.h;
@@ -158,7 +159,7 @@ export class Lighting {
     this.spotWeight = downs.length ? Math.max(1, downs.length / this.spots.length) : 1;
     this.spots.forEach((l, i) => {
       const p = downs[i];
-      l.userData.on = !!p;
+      l.visible = !!p;
       if (!p) return;
       l.position.copy(W2T(p[0], p[1], H - 0.03));
       l.target.position.copy(W2T(p[0], p[1], 0));
@@ -182,8 +183,8 @@ export class Lighting {
     let level = s.circadian ? circadianLevel(hour) : 1;
     if (p.nightLight === "rounds" && dark) level = 0;
 
-    this.rects.forEach(l => { l.color.copy(col); l.intensity = l.userData.on ? (s.rect || 0) * level * this.rectWeight : 0; });
-    this.spots.forEach(l => { l.color.copy(col); l.intensity = l.userData.on ? (s.spot || 0) * level * this.spotWeight : 0; });
+    this.rects.forEach(l => { l.color.copy(col); l.intensity = (s.rect || 0) * level * this.rectWeight; });
+    this.spots.forEach(l => { l.color.copy(col); l.intensity = (s.spot || 0) * level * this.spotWeight; });
     f.strip.color.copy(col).multiplyScalar((s.strip || s.disc || 1) * Math.max(level, 0.02));
     f.glow.color.copy(col).multiplyScalar((s.glow || 0) * level * (0.45 + 0.55 * night));
     for (const n of this.room.parts.cfg_panels || []) {
@@ -191,7 +192,8 @@ export class Lighting {
       n.material.emissiveIntensity = (s.panel || 0) * level;
     }
 
-    this.reading.intensity = p.reading ? 9 : 0;
+    this.reading.visible = p.reading;
+    this.reading.intensity = 9;
     this.reading.color.copy(kelvinColour(Math.min(k, 3000)));
     f.readingLamp.material.emissiveIntensity = p.reading ? 3 : 0;
 

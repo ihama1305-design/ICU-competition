@@ -3,12 +3,15 @@
 Run after 04_export.py, which writes viewer/ and assets/model/, and 07_export_room.py, which adds the configurator's rooms. Every number on the page
 comes from the build, so it can't drift from the model. Uses ICU_BLEND if set, like the other steps.
 """
+import functools
+import http.server
 import json
 import os
 import re
 import shutil
 import statistics
 import sys
+import threading
 
 from PIL import Image
 from playwright.sync_api import sync_playwright
@@ -65,6 +68,56 @@ def settle(pg):
     pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
 
 
+# the configurator page: a template and its modules, which load the rooms 07 wrote to assets/model/
+cfg_dir = os.path.join(SITE_DIR, "configurator")
+shutil.rmtree(cfg_dir, ignore_errors=True)
+shutil.copytree(os.path.join(SRC, "configurator"), cfg_dir)
+cfg_page = open(os.path.join(SRC, "configurator.template.html")).read()
+main_js = os.path.join(cfg_dir, "main.js")
+main_src = open(main_js).read()
+open(main_js, "w").write(re.sub(r"/\*SITE_JSON\*/\{.*?\}", json.dumps({k: v for k, v in spec["lighting"]["site"].items() if not k.startswith("_")}), main_src, count=1))
+left = re.findall(r"\{\{\w+\}\}", cfg_page)
+if left:
+    raise SystemExit(f"unfilled placeholders in the configurator: {left}")
+open(os.path.join(cfg_dir, "index.html"), "w").write(cfg_page)
+open(os.path.join(SITE_DIR, ".nojekyll"), "w").close()
+
+
+def capture_configurator_shots(tmp):
+    """Real screenshots of the configurator for the home page. Returns each one's spec code, so its picture can link to that room."""
+    class Quiet(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+    class Server(http.server.ThreadingHTTPServer):
+        request_queue_size = 128  # the page asks for a dozen modules at once; the default backlog of 5 resets some of them
+
+    server = Server(("127.0.0.1", 0), functools.partial(Quiet, directory=SITE_DIR))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    views = {  # name: room, theme, view, time, whether the panel shows
+        "config-desert": ("W1", "desert", "overview", "night", True),
+        "config-play": ("W1", "paediatric", "family", "afternoon", False),
+        "config-patio": ("W3", "family", "bed_window", "afternoon", False),
+    }
+    codes = {}
+    with sync_playwright() as pw:
+        b = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
+        pg = b.new_page(viewport={"width": 1440, "height": 860})
+        pg.goto(f"http://127.0.0.1:{server.server_address[1]}/configurator/")
+        pg.wait_for_function("window.__configReady === true", timeout=180000)
+        for name, (room, theme, view, when, panel) in views.items():
+            pg.evaluate(f"window.__config.room('{room}')")
+            pg.wait_for_function(f"window.__config.state().room === '{room}'")
+            pg.evaluate(f"window.__config.theme('{theme}'); window.__config.time(window.__config.stops.{when}); window.__config.camera('{view}', {{ instant: true }})")
+            pg.evaluate(f"document.getElementById('panel').style.display = '{'' if panel else 'none'}'; dispatchEvent(new Event('resize'))")
+            settle(pg)
+            pg.screenshot(path=os.path.join(tmp, f"{name}.png"))
+            codes[name] = pg.evaluate("window.__config.code()")
+        b.close()
+    server.shutdown()
+    return codes
+
+
 def capture_viewer_shots():
     """Real screenshots of the walkthrough, for the page's walkthrough section."""
     tmp = os.path.join(ROOT, "build", "shots")
@@ -92,6 +145,7 @@ def capture_viewer_shots():
 
 
 shots = capture_viewer_shots()
+config_codes = capture_configurator_shots(shots)
 
 areas = [r["area_m2"] for r in idx["rooms"]]
 values = {
@@ -102,6 +156,7 @@ values = {
     "NOOKS": str(sum(1 for r in plan["rooms"] if r["name"] == "OBSERVATION")),
     "LIGHTS": str(idx["lights"]),
     "CEILING": f"{spec['building']['ceiling_height']:.2f}",
+    **{f"CODE_{k.split('-')[1].upper()}": v for k, v in config_codes.items()},
 }
 os.makedirs(os.path.join(SITE_DIR, "downloads"), exist_ok=True)
 shutil.copyfile(BLEND, os.path.join(SITE_DIR, "downloads", "icu.blend"))
@@ -135,20 +190,6 @@ if left:
 open(os.path.join(SITE_DIR, "index.html"), "w").write(page)
 shutil.copyfile(os.path.join(SRC, "styles.css"), os.path.join(SITE_DIR, "styles.css"))
 shutil.copyfile(os.path.join(SRC, "favicon.svg"), os.path.join(SITE_DIR, "favicon.svg"))
-
-# the configurator page: a template and its modules, which load the rooms 07 wrote to assets/model/
-cfg_dir = os.path.join(SITE_DIR, "configurator")
-shutil.rmtree(cfg_dir, ignore_errors=True)
-shutil.copytree(os.path.join(SRC, "configurator"), cfg_dir)
-cfg_page = open(os.path.join(SRC, "configurator.template.html")).read()
-main_js = os.path.join(cfg_dir, "main.js")
-main_src = open(main_js).read()
-open(main_js, "w").write(re.sub(r"/\*SITE_JSON\*/\{.*?\}", json.dumps({k: v for k, v in spec["lighting"]["site"].items() if not k.startswith("_")}), main_src, count=1))
-left = re.findall(r"\{\{\w+\}\}", cfg_page)
-if left:
-    raise SystemExit(f"unfilled placeholders in the configurator: {left}")
-open(os.path.join(cfg_dir, "index.html"), "w").write(cfg_page)
-open(os.path.join(SITE_DIR, ".nojekyll"), "w").close()
 
 # link preview image, 1200 x 630
 im = Image.open(os.path.join(ROOT, "renders", "room_entry.png")).convert("RGB")
