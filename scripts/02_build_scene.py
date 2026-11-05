@@ -226,7 +226,7 @@ def rooms_off_corridor(sp):
 rail_spaces = [s["poly"] for s in spaces if any(is_rail_name(n) for n in s["names"])]
 rails = []
 for sp in rail_spaces:
-    outer = Polygon(sp.exterior)  # a free-standing wall in the space, such as the tube station's, is not a corridor wall
+    outer = Polygon(sp.exterior)  # no rail on a free-standing wall in the space, such as the tube station's: a short island between openings
     r = outer.buffer(-0.04).difference(outer.buffer(-0.04 - B["handrail_depth"]))
     r = r.intersection(walls_u.buffer(0.05 + B["handrail_depth"]))  # a rail needs a wall behind it, which the cut lines lack
     r = r.difference(rooms_off_corridor(sp))
