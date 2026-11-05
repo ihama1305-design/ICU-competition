@@ -408,6 +408,50 @@ if scr.v:
 
 # ------------------------------------------------------------------ joinery
 basin_src = kit.basin_tap(spec, KITC)
+
+
+def desk_seat(p):
+    """Where someone sits at a drawn desk: the middle of its front edge, the way they face, square to that edge, and the edge's length.
+
+    Worked out from the desk alone. The corridor and the nooks are one space in the plan, so the space's centre
+    is near the middle of the floor and says nothing about which way a desk faces.
+    """
+    c = np.array(p.centroid.coords[0])
+    well = p.convex_hull.difference(p)
+    if well.area > 0.25 * p.area:  # a desk wrapped around a well, like a nook's chevron, is sat at from the well
+        well = max(getattr(well, "geoms", [well]), key=lambda g: g.area)
+        start = np.array(well.centroid.coords[0])
+        d = c - start
+    else:  # a straight counter is sat at from the side away from the wall behind it
+        d = np.array(walls_u.boundary.interpolate(walls_u.boundary.project(Point(c))).coords[0]) - c
+        start = c - d / np.linalg.norm(d) * 2
+    d = d / np.linalg.norm(d)
+    hit = p.exterior.intersection(LineString([start, start + d * 6]))
+    near = min((np.array(g.coords[0]) for g in getattr(hit, "geoms", [hit])), key=lambda q: np.linalg.norm(q - start))
+    xy = np.array(p.exterior.coords)
+    i = min(range(len(xy) - 1), key=lambda k: LineString(xy[k:k + 2]).distance(Point(near)))
+    e = xy[i + 1] - xy[i]
+    n = np.array([e[1], -e[0]]) / np.linalg.norm(e)
+    return (xy[i] + xy[i + 1]) / 2, n if n @ d > 0 else -n, np.linalg.norm(e)
+
+
+def nurse_seats(p):
+    """The four nurse workstations along the station's inner edge: the point on that edge in front of each, and the way they face."""
+    front, d, width = desk_seat(p)
+    along = np.array([d[1], -d[0]])
+    return [(front + along * k_ * width, d) for k_ in np.linspace(-0.35, 0.35, 4)]
+
+
+def knee_hole(front, d):
+    """Plan outline of the clear space under a seat: centred on it, from the front edge back to the knee depth.
+
+    Starts past the edge so that it takes the cabinet's face off as well.
+    """
+    side = np.array([d[1], -d[0]]) * B["knee_space"]["width"] / 2
+    near, back = front - d * 0.1, front + d * B["knee_space"]["depth"]
+    return Polygon([near - side, near + side, back + side, back - side])
+
+
 # A counter's kind comes from the drawing label nearest it, not from the names of its space: the corridor, the nooks
 # and many small rooms are one space carrying 30 names, so those say nothing about any one counter there.
 LABEL_KIND = {"OBSERVATION": "obs", "DICTATION": "dictation", "NURSE ST.": "nurse"}
@@ -429,10 +473,21 @@ for cnt, (p, kind) in zip(plan["counters"], counters):
         cab.append((p.buffer(-0.02).difference(p.buffer(-0.06)), 0.1, top_z - 0.03))  # modesty panels/legs
     else:
         tops.append((p.buffer(0.015, join_style="mitre"), top_z - 0.03, top_z))
-        cab.append((p.buffer(-0.01), 0.1, top_z - 0.03))
-        plinth.append((p.buffer(-0.06), 0.0, 0.1))
+        body, toe = p.buffer(-0.01), p.buffer(-0.06)
+        if kind == "nurse":  # a knee hole at each workstation; the cabinet stays between them as pedestals and behind them under the ledge
+            seats = nurse_seats(p)
+            knees = unary_union([knee_hole(f_, d_) for f_, d_ in seats])
+            body, toe = body.difference(knees), toe.difference(knees.buffer(0.05, join_style="mitre"))  # same 5 cm toe recess around each pedestal
+        cab.append((body, 0.1, top_z - 0.03))
+        plinth.append((toe, 0.0, 0.1))
     if kind == "nurse":
         rim = Polygon(cnt["raised"]).buffer(0)  # the raised top as drawn, not a strip worked out from the outline
+        if knees.intersects(rim):
+            raise SystemExit("a nurse station knee hole would run under the transaction ledge")
+        if len(getattr(knees, "geoms", [knees])) != len(seats):
+            raise SystemExit("nurse station knee holes run into each other, leaving no pedestal between them")
+        if body.geom_type != "Polygon":
+            raise SystemExit("a nurse station knee hole cuts right through the cabinet behind it")
         ledge.append((rim, top_z, B["transaction_height"] - 0.03))
         tops.append((rim.buffer(0.015, join_style="mitre"), B["transaction_height"] - 0.03, B["transaction_height"]))
 for name, items, mat in (("joinery_cabinets", cab, "cabinet"), ("joinery_tops", tops, "counter_top"),
@@ -570,31 +625,6 @@ if curtain.v:
     kit.apply_mods(cobj)
 
 
-def desk_seat(p):
-    """Where someone sits at a drawn desk: the middle of its front edge, the way they face, square to that edge, and the edge's length.
-
-    Worked out from the desk alone. The corridor and the nooks are one space in the plan, so the space's centre
-    is near the middle of the floor and says nothing about which way a desk faces.
-    """
-    c = np.array(p.centroid.coords[0])
-    well = p.convex_hull.difference(p)
-    if well.area > 0.25 * p.area:  # a desk wrapped around a well, like a nook's chevron, is sat at from the well
-        well = max(getattr(well, "geoms", [well]), key=lambda g: g.area)
-        start = np.array(well.centroid.coords[0])
-        d = c - start
-    else:  # a straight counter is sat at from the side away from the wall behind it
-        d = np.array(walls_u.boundary.interpolate(walls_u.boundary.project(Point(c))).coords[0]) - c
-        start = c - d / np.linalg.norm(d) * 2
-    d = d / np.linalg.norm(d)
-    hit = p.exterior.intersection(LineString([start, start + d * 6]))
-    near = min((np.array(g.coords[0]) for g in getattr(hit, "geoms", [hit])), key=lambda q: np.linalg.norm(q - start))
-    xy = np.array(p.exterior.coords)
-    i = min(range(len(xy) - 1), key=lambda k: LineString(xy[k:k + 2]).distance(Point(near)))
-    e = xy[i + 1] - xy[i]
-    n = np.array([e[1], -e[0]]) / np.linalg.norm(e)
-    return (xy[i] + xy[i + 1]) / 2, n if n @ d > 0 else -n, np.linalg.norm(e)
-
-
 def plan_footprint(ob, M):
     """Outline on the plan of a kit object placed with matrix M."""
     xy = np.array([v.co[:2] for v in ob.data.vertices])
@@ -619,10 +649,8 @@ joinery = unary_union([c[0] for c in counters])
 raised = unary_union([q[0] for q in ledge])
 for ci, (p, kind) in enumerate(counters):
     if kind == "nurse":
-        front, d, width = desk_seat(p)
-        along = np.array([d[1], -d[0]])
-        for i, k_ in enumerate(np.linspace(-0.35, 0.35, 4)):
-            place_seat(kind, f"{ci}_{i}", p, front + along * k_ * width, d)
+        for i, (front, d) in enumerate(nurse_seats(p)):
+            place_seat(kind, f"{ci}_{i}", p, front, d)
     elif kind in DESK_KINDS:
         front, d, _ = desk_seat(p)
         place_seat(kind, ci, p, front, d)
