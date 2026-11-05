@@ -574,19 +574,50 @@ for ci, (p, kind) in enumerate(counters):
     elif kind in DESK_KINDS:
         front, d, _ = desk_seat(p)
         place_seat(kind, ci, p, front, d)
+
+
+obstacles = blocked.union(joinery)
+
+
+def clear_reach(o, d, far=8.0):
+    """How far from o along d before a wall, door header or counter, up to far."""
+    hit = obstacles.intersection(LineString([o, o + d * far]))
+    return far if hit.is_empty else Point(o).distance(hit)
+
+
+def place_in_alcove(src, name, label, back_gap=0.15):
+    """A kit object parked in the alcove around its label: near the back wall, centred between the side walls, +Y out of the mouth.
+
+    Worked out from the walls around the label. The alcoves are part of the merged corridor space, so that space's
+    centre and shape say nothing about them, and a label only says which alcove: the crash cart's sits at the mouth,
+    on the tip of a side wall. back_gap clears the handrail, which stands 0.11 m off the wall.
+    Stops the build if the object crosses a wall or counter, leaves the alcove or reuses a name.
+    """
+    o = np.array(label)
+    out = max((np.array(a, float) for a in ((1, 0), (0, 1), (-1, 0), (0, -1))), key=lambda d: clear_reach(o, d))  # the open side has the most room
+    across = np.array([out[1], -out[0]])  # frame_matrix's local +X when +Y is out
+    xy = np.array([v.co[:2] for v in src.data.vertices])
+    lo, hi = xy.min(axis=0), xy.max(axis=0)
+    mid = o + out * (back_gap - lo[1] - clear_reach(o, -out))
+    left, right = clear_reach(mid, across), clear_reach(mid, -across)
+    origin = mid + across * ((left - right - lo[0] - hi[0]) / 2)
+    M = frame_matrix(origin, out)
+    foot = plan_footprint(src, M)
+    if foot.intersects(obstacles):
+        raise SystemExit(f"{name} at {origin.round(2).tolist()} crosses a wall or counter")
+    front = origin + out * hi[1]
+    if clear_reach(front, across) + clear_reach(front, -across) > left + right + 0.1 or foot.distance(Point(o)) > 1.0:
+        raise SystemExit(f"{name} at {origin.round(2).tolist()} isn't inside the alcove labelled at {label}")
+    if name in bpy.data.objects:
+        raise SystemExit(f"two alcove items would be called {name}")
+    place(src, name, M, C["Equipment"])
+
+
 for r in plan["rooms"]:
-    sp = space_at(r["label_at"])
-    if sp is None:
-        continue
-    rect = sp["poly"].minimum_rotated_rectangle
-    xy = np.array(rect.exterior.coords)[:4]
-    e = [xy[(i + 1) % 4] - xy[i] for i in range(4)]
-    long = max(e, key=np.linalg.norm); long = long / np.linalg.norm(long)
-    c = np.array(sp["poly"].centroid.coords[0])
     if "CRASH CART" in r["name"]:
-        place(cart, "crash_cart", frame_matrix(c, long), C["Equipment"])
+        place_in_alcove(cart, "crash_cart", r["label_at"])
     elif "STRETCHER" in r["name"]:
-        place(stretch, f"stretcher_{int(c[0])}", frame_matrix(c, long), C["Equipment"])
+        place_in_alcove(stretch, f"stretcher_{int(r['label_at'][0])}", r["label_at"])
 
 # ------------------------------------------------------------------ lights
 L_ = LT["panel_size"]; g = LT["panel_grid"]
