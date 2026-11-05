@@ -147,6 +147,15 @@ def is_patient(s):
     return any(n in K["rooms"] for n in s["names"])
 
 
+def floor_within(poly, d, step=0.02):
+    """Floor within d of poly, measured round walls and not through them; with no wall in the way, exactly poly.buffer(d)."""
+    near_walls = walls_u.intersection(poly.buffer(d + step))
+    reach = poly
+    for _ in range(round(d / step)):  # the step is thinner than any wall, so it can't jump one
+        reach = reach.buffer(step).difference(near_walls)
+    return poly.buffer(d).intersection(reach.simplify(0.001).buffer(0.002))
+
+
 # ------------------------------------------------------------------ shell: slab, floors, walls
 tm = extrude([slab], -spec["building"]["slab_thickness"], -0.004)
 tm_obj("slab", tm, "slab_edge", C["Shell"])
@@ -173,13 +182,20 @@ ring = walls_u.buffer(B["skirting_thickness"], join_style="mitre").difference(wa
 ring = ring.difference(unary_union([h.buffer(0.03) for h in headers])).intersection(outline.buffer(-0.05))
 tm_obj("skirting", extrude([ring], 0.0, B["skirting_height"]), "skirting", C["Shell"])
 
+
+def rail_clearance(cnt):
+    """Where a counter stops a handrail: within 0.3 m of it. A corridor rail runs along the far side of a vanity top's walls, so its 0.3 m goes round them."""
+    p = Polygon(cnt["poly"]).buffer(0)
+    return floor_within(p, 0.3) if cnt.get("vanity") else p.buffer(0.3)
+
+
 # corridor handrails
 rail_spaces = [s["poly"] for s in spaces if any(any(k in n for k in B["handrail_rooms"]) for n in s["names"])]
 rails = []
 for sp in rail_spaces:
     r = sp.buffer(-0.04).difference(sp.buffer(-0.04 - B["handrail_depth"]))
     r = r.difference(unary_union([h.buffer(0.35) for h in headers]))
-    r = r.difference(unary_union([Polygon(c["poly"]).buffer(0.3) for c in plan["counters"]]))
+    r = r.difference(unary_union([rail_clearance(c) for c in plan["counters"]]))
     for g in getattr(r, "geoms", [r]):
         if g.area > 0.03:
             rails.append(g)

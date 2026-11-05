@@ -112,7 +112,16 @@
    "tap_reach_m": 0.15,
    "block_margin_m": 0.05,
    "rim_m": 0.03,
-   "on_counter_tolerance_m": 0.02
+   "on_counter_tolerance_m": 0.02,
+   "vanity": {
+    "ring_piece_min_segments": 5,
+    "ring_piece_min_m": 0.1,
+    "front_out_of_square_m": 0.01,
+    "max_depth_m": 1.0,
+    "tap_circle_max_gap_deg": 90,
+    "assumed_drain_from_centre_m": 0.095,
+    "assumed_drain_r_m": 0.026
+   }
   },
   "room_keywords": [
    "ROOM",
