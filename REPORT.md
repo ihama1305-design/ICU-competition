@@ -15,6 +15,7 @@ The PDFs are AutoCAD exports that still carry their layers, so no tracing was ne
 | `A-DOOR` | Door leaves at their drawn positions. Each opening is found by casting rays from the leaf to both jambs |
 | `A-GLAZ` | 16 observation window panes, plus the lobby's glazed screen (`WN35 0 - 2800`), which is modelled from its tag |
 | `A-EQPM` | Joinery outlines: sink counters with basins, observation desks, the U-shaped nurse station |
+| `P-SANR-FIXT` | The seven sinks on counters that are CAD blocks: bowl outline and drain here, tap on `A-EQPM`. Five are rounded rectangles and two are ovals with a rim on `A-EQPM` |
 | Text | Room names, which decide floor finish, ceiling type and which rooms get the patient kit |
 
 **Scale** comes from the drawing itself. The structural grid (32–37, A-3 to E-3) is 9.000 m both ways
@@ -147,8 +148,8 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 - Wall ends are slightly rounded where the raster closed small gaps (2–3 cm).
 - The stair core in the north block is shown as an empty enclosure.
-- Lift doors and toilet fittings are not modelled.
-- Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only sinks and counters from `A-EQPM` appear there.
+- Lift doors and toilet fittings are not modelled. That includes the four oval basins drawn on vanity tops near two `TOILET` and two `ANTE` labels: those tops are on `P-SANR-FIXT`, not `A-EQPM`, so no counter is built under them.
+- Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only `A-EQPM` counters and the sinks drawn on them appear there.
 - The `A-EQPM` outline for a service riser is built as a plain 0.90 m counter, because these sheets don't give its height.
 - Glass, sky and procedural textures only look right in the Cycles renders. The GLB and viewer use flat colours.
 - Heights other than the door head and windows are assumptions (see the table above).
