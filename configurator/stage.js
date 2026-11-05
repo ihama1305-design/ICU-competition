@@ -152,6 +152,16 @@ export class Stage {
         if (top === "cfg_blinds") { n.material.side = THREE.DoubleSide; n.material.color.set("#e9e4d8"); }
       }
     });
+    // Keep family, play and toy-display anchors in their reserved zones after the bed layout update.
+    const anchorLayout = label === "W1" ? {
+      seating: [15.6, 30.48, 0], playmat: [14.0, 31.1, 0.01], toys: [14.0, 31.25, 1.0],
+    } : {
+      seating: [7.7, 19.95, 0], playmat: [7.65, 21.6, 0.01], toys: [7.65, 22.04, 1.0],
+    };
+    for (const [name, at] of Object.entries(anchorLayout)) {
+      if (room.anchors[name]) room.anchors[name].position.copy(W2T(...at));
+    }
+    for (const name of ["toys"]) if (room.anchors[name]) room.anchors[name].rotation.y = Math.PI;
     this.rooms.set(label, room);
     return room;
   }
