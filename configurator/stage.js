@@ -57,7 +57,7 @@ export class Stage {
       const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
       this.composer = new EffectComposer(r, target);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0, 0.55, 1.0);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0, 0.55, 1.25);
       this.composer.addPass(this.bloom);
       this.composer.addPass(new OutputPass());
     }
@@ -90,11 +90,15 @@ export class Stage {
   async load(label, onProgress) {
     if (this.rooms.has(label)) return this.rooms.get(label);
     const stem = `room_${label.toLowerCase()}`;
+    window.__configStage = "fetching room data";
     const metaRes = await fetch(`${MODEL}${stem}.json`);
     if (!metaRes.ok) throw new Error(`${stem}.json: HTTP ${metaRes.status}`);
     const meta = await metaRes.json();
+    window.__configStage = "downloading model";
     const buf = await fetchGz(MODEL + meta.glb, onProgress);
+    window.__configStage = "parsing model";
     const gltf = await new GLTFLoader().parseAsync(buf, "");
+    window.__configStage = "preparing materials";
     const root = gltf.scene;
     const ao = { cfg_paint_walls: meta.ao.walls, cfg_floor: meta.ao.floor, cfg_ceiling: meta.ao.ceiling };
     const room = { label, meta, root, ceiling: [], ceilingExtras: [], ceilingFixtures: [], parts: {}, anchors: {} };

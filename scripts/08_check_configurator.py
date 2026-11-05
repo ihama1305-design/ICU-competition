@@ -7,13 +7,15 @@ Loads without console errors or missing files, under the download budget, with t
 every view works in both rooms; the camera can't leave the room by orbiting or during a move; the dollhouse
 removes the ceiling and leaving it brings the ceiling back; the sun matches the spec at Afternoon, and the time
 controls and the Day/Night toggle work; a phone gets a bottom sheet with no sideways scroll.
-Every option in options.json changes the picture, in both rooms. Each lighting scheme, the smart glass and the palms
-get screenshots to look at. Screenshots -> build/shots/config_*.png. Checks the published site in spec site.dir.
+Every option in options.json changes the picture, in both rooms. Themes apply and stay editable; a spec code restores the
+exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work.
+Lighting schemes, smart glass, palms and themes get screenshots to look at. Screenshots -> build/shots/config_*.png. Checks the published site in spec site.dir.
 """
 import functools
 import http.server
 import io
 import json
+import random
 import os
 import shutil
 import sys
@@ -47,20 +49,24 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+class Server(http.server.ThreadingHTTPServer):
+    request_queue_size = 128  # the page asks for a dozen modules at once, each on its own connection
+
+
 # the site inside a folder named like the repo, as on github.io/<repo>/
 tmp = tempfile.mkdtemp()
 os.symlink(SITE, os.path.join(tmp, "ICU-competition"))
-server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=tmp))
+server = Server(("127.0.0.1", 0), functools.partial(Quiet, directory=tmp))
 threading.Thread(target=server.serve_forever, daemon=True).start()
 URL = f"http://127.0.0.1:{server.server_address[1]}/ICU-competition/configurator/"
 
 
 def open_page(browser, width, height, scheme="light", query="", **kw):
-    """Open the page and wait for it. Three.js comes from a CDN: a stalled download gets one more try, and names itself if it fails again."""
+    """Open the page and wait for it. A page that doesn't become ready gets one more try, and reports how far it got."""
     for attempt in (1, 2):
         ctx = browser.new_context(viewport={"width": width, "height": height}, color_scheme=scheme, **kw)
         pg = ctx.new_page()
-        errs, missing, sizes, waiting = [], [], {}, set()
+        errs, missing, sizes, waiting, failed = [], [], {}, set(), []
 
         def on_response(r, missing=missing, sizes=sizes):
             if r.status >= 400 and "fonts.g" not in r.url:
@@ -74,20 +80,32 @@ def open_page(browser, width, height, scheme="light", query="", **kw):
         pg.on("pageerror", lambda e, errs=errs: errs.append(str(e)))
         pg.on("request", lambda r, w=waiting: w.add(r.url))
         pg.on("requestfinished", lambda r, w=waiting: w.discard(r.url))
-        pg.on("requestfailed", lambda r, w=waiting: w.discard(r.url))
+        pg.on("requestfailed", lambda r, w=waiting, f=failed: (w.discard(r.url), f.append(f"{r.failure} {r.url}")))
         pg.on("response", on_response)
         pg.goto(URL + query)
         try:
             pg.wait_for_function("window.__configReady === true || (window.__configErrors || []).length > 0", timeout=120000)
         except PlaywrightTimeout:
             stalled = sorted(waiting)
-            third_party = [u for u in stalled if "127.0.0.1" not in u]
-            print(f"  page not ready after 2 minutes (attempt {attempt}); still downloading: {stalled[:5]}")
+            pg.set_default_timeout(20000)
+            try:
+                stage = pg.evaluate("({ stage: window.__configStage, frames: window.__configFrames, visible: document.visibilityState, message: document.getElementById('load').textContent })")
+            except Exception as err:
+                stage = f"the page isn't answering: {str(err)[:80]}"
+            print(f"  page not ready after 2 minutes (attempt {attempt}); still downloading: {stalled[:5]}; failed: {failed[:5]}; page: {stage}")
             ctx.close()
-            if attempt == 1 and third_party:
+            if attempt == 1:
+                print("  RETRY: trying the page once more")
                 continue
             raise SystemExit("configurator check FAILED: the page never became ready") from None
-        errs += pg.evaluate("window.__configErrors")
+        early = pg.evaluate("window.__configErrors")
+        if early and attempt == 1 and failed:  # a request failed outright: the page says so, and it's worth one more try
+            print(f"  RETRY: the page reported {early} after these failed: {failed[:5]}")
+            ctx.close()
+            continue
+        errs += early
+        if failed:
+            print(f"  note: requests that failed without stopping the page: {failed[:5]}")
         return ctx, pg, errs, missing, sizes
 
 
@@ -160,7 +178,7 @@ with sync_playwright() as p:
         pg.wait_for_function(f"window.__config.state().room === '{room}' && window.__config.eye().x !== undefined")
         pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
         views = pg.evaluate("window.__config.views()")
-        check(set(views) == {"entrance", "bed", "bed_window", "family", "window", "dollhouse"}, f"{room} has all the views")
+        check(set(views) == {"overview", "family", "entrance", "bed", "bed_window", "window", "dollhouse"}, f"{room} has all the views")
         for v in views:
             pg.evaluate(f"window.__config.camera('{v}', {{ instant: true }})")
             shot(pg, f"{room.lower()}_{v}")
@@ -171,8 +189,8 @@ with sync_playwright() as p:
         for stop in ("morning", "midday", "afternoon", "sunset", "night"):
             pg.evaluate(f"window.__config.camera('window', {{ instant: true }}); window.__config.time(window.__config.stops.{stop})")
             shot(pg, f"{room.lower()}_time_{stop}")
-        pg.evaluate("window.__config.camera('family', { instant: true }); window.__config.time(window.__config.stops.night)")
-        shot(pg, f"{room.lower()}_night_family")
+        pg.evaluate("window.__config.camera('overview', { instant: true }); window.__config.time(window.__config.stops.night)")
+        shot(pg, f"{room.lower()}_night_overview")
 
         # orbiting and zooming out as far as it will go, from each view, must stay in the room and above the floor
         pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
@@ -203,10 +221,10 @@ with sync_playwright() as p:
     # the options
     go(pg, "W1")
     set_defaults(pg)
-    pg.evaluate("window.__config.camera('family', { instant: true }); window.__config.time(window.__config.stops.night)")
+    pg.evaluate("window.__config.camera('overview', { instant: true }); window.__config.time(window.__config.stops.night)")
     for room in ROOMS:
         go(pg, room)
-        pg.evaluate("window.__config.camera('family', { instant: true }); window.__config.time(window.__config.stops.night)")
+        pg.evaluate("window.__config.camera('overview', { instant: true }); window.__config.time(window.__config.stops.night)")
         for scheme in ("panels", "cove", "downlights", "slot", "circadian"):
             pg.evaluate(f"window.__config.set('scheme', '{scheme}')")
             shot(pg, f"{room.lower()}_scheme_{scheme}")
@@ -231,7 +249,7 @@ with sync_playwright() as p:
         check(behind_opaque < behind_clear / 50, f"{room}: and doesn't show through opaque glass ({behind_opaque} pixels)")
         pg.evaluate("window.__config.set('paint', 'cloud'); window.__config.set('switch', 'opaque')")
         # the switch on the wall does the same as the panel
-        at = pg.evaluate("window.__config.frameSwitch()")
+        at = pg.evaluate("window.__config.frameAnchor('switch')")
         drawn(pg)
         pg.mouse.click(at["x"], at["y"])
         check(pg.evaluate("window.__config.selected().switch") == "clear", f"{room}: clicking the switch on the wall clears the glass")
@@ -267,7 +285,7 @@ with sync_playwright() as p:
     ctx.close()
 
     # ---------------------------------------------------------------- every option does something
-    ctx, pg, errs, _, _ = open_page(b, 640, 400, query="?tier=low")
+    ctx, pg, errs, _, _ = open_page(b, 480, 300, query="?tier=low")
     pg.add_style_tag(content="#panel { display: none; }")
     pg.evaluate("window.dispatchEvent(new Event('resize'))")
     for room in ROOMS:
@@ -279,7 +297,12 @@ with sync_playwright() as p:
             set_defaults(pg)
             for k, v in ch.get("first", {}).items():
                 pg.evaluate(f"window.__config.set('{k}', '{v}')")
-            pg.evaluate(f"window.__config.time(window.__config.stops.{ch['time']}); window.__config.camera('{ch['view']}', {{ instant: true }})")
+            pg.evaluate(f"window.__config.time(window.__config.stops.{ch['time']})")
+            if "aim" in ch:
+                up = 1.2 if ch["aim"] == "playmat" else 0.5
+                pg.evaluate(f"window.__config.frameAnchor('{ch['aim']}', 1.8, {up})")
+            else:
+                pg.evaluate(f"window.__config.camera('{ch['view']}', {{ instant: true }})")
             base = frame(pg)
             for o in g["options"]:
                 if o["id"] == g["default"]:
@@ -297,6 +320,154 @@ with sync_playwright() as p:
             pg.evaluate(f"window.__config.set('{g['id']}', 'custom', '#7a3b8f')")
             check((np.abs(frame(pg) - base).max(axis=2) > 6).sum() > 40, f"{room}: a custom {g['id']} colour changes the room")
     check(not errs, f"options: no errors {errs[:3]}")
+    ctx.close()
+
+    # ---------------------------------------------------------------- themes
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    data = pg.evaluate("window.__config.options()")
+    check(pg.evaluate("window.__config.currentTheme()") == "calm", "the page starts on Calm Clinical")
+    for room in ROOMS:
+        go(pg, room)
+        for t in data["themes"]:
+            pg.click(f"#themes button[data-value='{t['id']}']")
+            check(pg.evaluate("window.__config.currentTheme()") == t["id"], f"{room}: {t['label']} applies")
+            sel = pg.evaluate("window.__config.selected()")
+            check(all(sel[k] == v for k, v in t["sets"].items()), f"{room}: {t['label']} sets all its options")
+            pg.evaluate("window.__config.camera('overview', { instant: true }); window.__config.time(window.__config.stops.afternoon)")
+            shot(pg, f"{room.lower()}_theme_{t['id']}_day")
+            pg.evaluate("window.__config.camera('family', { instant: true })")
+            shot(pg, f"{room.lower()}_theme_{t['id']}_family")
+            pg.evaluate("window.__config.camera('overview', { instant: true }); window.__config.time(window.__config.stops.night)")
+            shot(pg, f"{room.lower()}_theme_{t['id']}_night")
+        # a theme is a starting point
+        pg.evaluate("window.__config.set('floor', 'slate')")
+        check(pg.evaluate("window.__config.selected().floor") == "slate" and pg.evaluate("window.__config.currentTheme()") is None,
+              f"{room}: an option can still be changed after a theme, and the room then belongs to no theme")
+        pg.evaluate("window.__config.theme('calm')")
+    # what's said about the patio, and the patient's view from a Family Suite
+    pg.evaluate("window.__config.theme('family')")
+    go(pg, "W1")
+    pg.evaluate("window.__config.time(window.__config.stops.afternoon); window.__config.camera('window', { instant: true })")
+    shot(pg, "w1_patio")
+    pg.evaluate("window.__config.set('shade', 'sail')")
+    shot(pg, "w1_patio_sail")
+    check("pressure regime" in pg.text_content("#options"), "W1: the patio carries the pressure warning")
+    go(pg, "W3")
+    check("pressure regime" not in pg.text_content("#options"), "W3: the patio has no isolation warning")
+    go(pg, "W1")
+    pg.evaluate("window.__config.set('patio', 'off')")
+    check("pressure regime" not in pg.text_content("#options"), "W1: no patio warning without a patio")
+    pg.evaluate("window.__config.set('patio', 'on')")
+    go(pg, "W3")
+    pg.evaluate("window.__config.camera('bed_window', { instant: true })")
+    shot(pg, "w3_patio_from_bed")
+    pg.evaluate("window.__config.theme('paediatric')")
+    check(pg.evaluate("window.__config.selected().aquarium") == "digital", "Paediatric Play uses the digital aquarium, not a tank")
+    pg.evaluate("window.__config.set('aquarium', 'sealed')")
+    check("avoid fish tanks" in pg.text_content("#options"), "the sealed tank carries the CDC note")
+    pg.evaluate("window.__config.frameAnchor('aquarium', 1.6, 0.1)")
+    shot(pg, "w3_sealed_tank")
+    pg.evaluate("window.__config.set('aquarium', 'digital')")
+    shot(pg, "w3_digital_aquarium")
+    pg.evaluate("window.__config.camera('bed', { instant: true }); window.__config.set('tvsize', 's65')")
+    shot(pg, "w3_tv_on")
+
+    # the summary: every choice, the notes, the proposal label
+    pg.click("#openSummary")
+    pg.wait_for_selector("#summary[open]")
+    text = pg.inner_text("#summary")
+    check(all(t in text for t in ("Vinyl floor", "Terrazzo", "Sea mural", "Digital screen", "65 inch", "proposal", "endorsed")), "the summary lists the choices and the proposal note")
+    check(pg.evaluate("window.__config.code()") in text, "the summary shows the spec code")
+    check("isn't made or endorsed" in text, "the summary carries the not-endorsed note")
+    groups = sum(len(sec["groups"]) for sec in data["sections"])
+    rows = pg.locator("#summaryBody dt").count()
+    check(rows >= groups - 3, f"the summary lists every option that applies ({rows} rows)")
+    pg.locator("#summaryBody img").evaluate("i => i.decode()")
+    pg.screenshot(path=os.path.join(SHOTS, "config_summary.png"))
+    with pg.expect_download(timeout=120000) as dl:
+        pg.click("#saveImage2")
+    file = dl.value.path()
+    im = np.asarray(Image.open(file).convert("RGB"))
+    check(dl.value.suggested_filename.endswith(".png") and im.std() > 5, f"Save image downloads a real picture ({dl.value.suggested_filename[:30]}, {im.shape[1]} x {im.shape[0]})")
+    pg.click("#closeSummary")
+    pg.evaluate("window.__config.theme('family')")
+    go(pg, "W1")
+    pg.click("#openSummary")
+    pg.wait_for_selector("#summary[open]")
+    text = pg.inner_text("#summary")
+    check("pressure regime" in text and "fall-safety" in text, "a Family Suite summary in W1 carries the patio's warning and concept notes")
+    pg.click("#closeSummary")
+    go(pg, "W3")
+
+    # the tour visits every view and ends by itself
+    pg.evaluate("window.__config.startTour()")
+    pg.wait_for_function("!window.__config.tour().running", timeout=180000)
+    log = pg.evaluate("window.__config.tour().log")
+    check(set(log) == set(pg.evaluate("window.__config.views()")), f"the tour visits every view ({len(log)} stops)")
+    pg.evaluate("window.__config.startTour()")
+    pg.mouse.click(300, 300)
+    check(pg.evaluate("window.__config.tour().running") is False, "touching the view ends the tour")
+    check(not errs, f"themes, summary, tour: no errors {errs[:3]}")
+    ctx.close()
+
+    # ---------------------------------------------------------------- a spec code restores the exact room
+    ctx, pg, errs, _, _ = open_page(b, 480, 320, query="?tier=low")
+    data = pg.evaluate("window.__config.options()")
+    groups = [g for sec in data["sections"] for g in sec["groups"]]
+    rnd = random.Random(20261104)
+    rooms_to_try = [("theme", t["id"]) for t in data["themes"]] + [("random", i) for i in range(20)]
+    bad = []
+    for kind, which in rooms_to_try:
+        if kind == "theme":
+            pg.evaluate(f"window.__config.theme('{which}')")
+        else:
+            go(pg, rnd.choice(ROOMS))
+            for g in groups:
+                o = rnd.choice(g["options"])["id"]
+                pg.evaluate(f"window.__config.set('{g['id']}', '{o}')")
+            if rnd.random() < 0.4:
+                pg.evaluate(f"window.__config.set('paint', 'custom', '#{rnd.randrange(16 ** 6):06x}')")
+            pg.evaluate(f"window.__config.time({rnd.randrange(72, 264) / 12})")
+            pg.evaluate(f"window.__config.camera('{rnd.choice(data['views'])}', {{ instant: true }})")
+        before = pg.evaluate("({ selected: window.__config.selected(), state: window.__config.state(), code: window.__config.code() })")
+        pg.wait_for_function(f"location.hash === '#c={before['code']}'")
+        pg.reload()
+        pg.wait_for_function("window.__configReady === true", timeout=120000)
+        after = pg.evaluate("({ selected: window.__config.selected(), state: window.__config.state(), code: window.__config.code() })")
+        keys = ("room", "view")
+        same = all(before["state"][k] == after["state"][k] for k in keys) and abs(before["state"]["hour"] - after["state"]["hour"]) < 0.05
+        # options a group's requirement hides, and a custom colour left over after choosing a swatch, don't matter only if they round-trip too
+        wanted = {k: v for k, v in before["selected"].items() if ":custom" not in k or before["selected"][k.split(":")[0]] == "custom"}
+        if not same or any(after["selected"].get(k) != v for k, v in wanted.items()) or before["code"] != after["code"]:
+            bad.append(f"{kind} {which}: {before['code']} -> {after['code']}")
+    check(not bad, f"a spec code reloads the same room, {len(rooms_to_try)} rooms {bad[:2]}")
+    check(not errs, f"round trip: no errors {errs[:3]}")
+    # an older, shorter code still opens, with defaults for what it doesn't mention; a bad one says so
+    pg.evaluate("window.__config.theme('desert')")
+    short = pg.evaluate("window.__config.code()")[:12]
+    pg.goto(URL + "?tier=low#c=" + short)
+    pg.reload()
+    pg.wait_for_function("window.__configReady === true", timeout=120000)
+    check(pg.evaluate("window.__config.selected().patio") == "off" and pg.evaluate("window.__config.selected().paint") == "sand", "an older, shorter code opens with defaults for the rest")
+    pg.goto(URL + "?tier=low#c=!!nonsense")
+    pg.reload()
+    pg.wait_for_function("window.__configReady === true", timeout=120000)
+    check("couldn't be read" in pg.inner_text("#roomStatus"), "a bad code says so and opens the default room")
+    ctx.close()
+
+    # ---------------------------------------------------------------- reduced motion
+    ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
+    pg.click("#views button[data-value='entrance']")
+    check(pg.evaluate("window.__config.state().moving") is False and pg.evaluate("window.__config.state().view") == "entrance", "reduced motion: moving between views is a cut")
+    ctx.close()
+
+    # ---------------------------------------------------------------- a script that can't load says so
+    ctx = b.new_context(viewport={"width": 1100, "height": 600})
+    pg = ctx.new_page()
+    pg.route("**/three.module.js", lambda r: r.abort())
+    pg.goto(URL)
+    pg.wait_for_function("window.__configErrors.length > 0", timeout=60000)
+    check("could not be loaded" in pg.inner_text("#load"), "if Three.js can't be fetched, the page says so instead of loading for ever")
     ctx.close()
 
     # ---------------------------------------------------------------- dark theme
@@ -332,4 +503,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, phone)")

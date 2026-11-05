@@ -1,12 +1,12 @@
 // The option groups, built from options.json. Nothing here knows what any option does.
 
-const el = (tag, props = {}, ...kids) => {
+export const el = (tag, props = {}, ...kids) => {
   const n = Object.assign(document.createElement(tag), props);
   kids.forEach(k => n.append(k));
   return n;
 };
 
-function noteElement(note) {
+export function noteElement(note) {
   const p = el("p", { className: "clinical" }, note.text);
   if (note.sources?.length) {
     const s = el("span", { className: "sources" }, "Sources: ");
@@ -75,7 +75,7 @@ export class Panel {
       const option = g.group.options.find(o => o.id === value);
       g.current.textContent = g.group.control === "swatches" ? (option ? option.label : "Custom") : "";
       if (g.picker && !option) g.picker.value = selected[`${id}:custom`] || g.picker.value;
-      const notes = [g.group.note, option?.note].filter(note => note && (!note.rooms || note.rooms.includes(room)));
+      const notes = [g.group.note, option?.note].flat().filter(note => note && (!note.rooms || note.rooms.includes(room)));
       if (notes.some((n, i) => n !== g.shown?.[i]) || notes.length !== (g.shown?.length || 0)) { // left alone if unchanged, so a focused link keeps its focus
         g.notes.replaceChildren(...notes.map(noteElement));
         g.shown = notes;

@@ -1,192 +1,1605 @@
 {
-  "_": "Everything a person can choose, and what each choice does. Effects use a fixed vocabulary, handled in main.js: color, material, visible, addon, light, glass, blinds. `check` is where 08_check_configurator.py looks to see that an option changes the room.",
-  "version": 1,
-  "sections": [
+ "_": "Everything a person can choose, and what each choice does. Effects use a fixed vocabulary, handled in main.js: color, material, visible, addon, light, glass, blinds, tv, shade. `check` is where 08_check_configurator.py looks to see that an option changes the room. `code` values go into share links: never reuse or renumber them, only add new ones.",
+ "version": 1,
+ "sections": [
+  {
+   "id": "walls",
+   "label": "Walls",
+   "groups": [
     {
-      "id": "walls", "label": "Walls", "groups": [
+     "id": "paint",
+     "label": "Paint",
+     "control": "swatches",
+     "default": "cloud",
+     "custom": {
+      "effect": {
+       "do": "color",
+       "material": "cfg_paint"
+      }
+     },
+     "check": {
+      "view": "overview",
+      "time": "afternoon"
+     },
+     "note": {
+      "text": "All shown as wipeable, scrubbable finishes."
+     },
+     "options": [
+      {
+       "id": "cloud",
+       "label": "Cloud white",
+       "swatch": "#ECE9E2",
+       "effects": [
         {
-          "id": "paint", "label": "Paint", "control": "swatches", "default": "cloud", "custom": { "effect": { "do": "color", "material": "cfg_paint" } },
-          "check": { "view": "family", "time": "afternoon" },
-          "note": { "text": "All shown as wipeable, scrubbable finishes." },
-          "options": [
-            { "id": "cloud", "label": "Cloud white", "swatch": "#ECE9E2", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#ECE9E2" }] },
-            { "id": "sand", "label": "Warm sand", "swatch": "#E4D6BF", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#E4D6BF" }] },
-            { "id": "clay", "label": "Soft clay", "swatch": "#D9BFA6", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#D9BFA6" }] },
-            { "id": "butter", "label": "Butter", "swatch": "#F1E4B8", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#F1E4B8" }] },
-            { "id": "blush", "label": "Blush", "swatch": "#EBD5CC", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#EBD5CC" }] },
-            { "id": "sage", "label": "Sage", "swatch": "#C9D4C2", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#C9D4C2" }] },
-            { "id": "mist", "label": "Sea mist", "swatch": "#CFE0DF", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#CFE0DF" }] },
-            { "id": "teal", "label": "Pale teal", "swatch": "#B7D6D4", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#B7D6D4" }] },
-            { "id": "sky", "label": "Powder blue", "swatch": "#C8D9E6", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#C8D9E6" }] },
-            { "id": "dove", "label": "Dove grey", "swatch": "#D5D6D3", "effects": [{ "do": "color", "material": "cfg_paint", "value": "#D5D6D3" }] }
-          ]
-        },
-        {
-          "id": "feature", "label": "Feature wall", "control": "choice", "default": "wood",
-          "check": { "view": "family", "time": "afternoon" },
-          "options": [
-            { "id": "none", "label": "None", "effects": [{ "do": "material", "target": "feature", "look": "none" }] },
-            { "id": "wood", "label": "Wood-look", "effects": [{ "do": "material", "target": "feature", "look": "wood" }] },
-            { "id": "fabric", "label": "Acoustic fabric", "effects": [{ "do": "material", "target": "feature", "look": "fabric" }] },
-            { "id": "dunes", "label": "Dunes mural", "effects": [{ "do": "material", "target": "feature", "look": "dunes" }] },
-            { "id": "sea", "label": "Sea mural", "effects": [{ "do": "material", "target": "feature", "look": "sea" }] },
-            { "id": "mashrabiya", "label": "Mashrabiya", "effects": [{ "do": "material", "target": "feature", "look": "mashrabiya" }] }
-          ]
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#ECE9E2"
         }
-      ]
+       ],
+       "code": 0
+      },
+      {
+       "id": "sand",
+       "label": "Warm sand",
+       "swatch": "#E4D6BF",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#E4D6BF"
+        }
+       ],
+       "code": 1
+      },
+      {
+       "id": "clay",
+       "label": "Soft clay",
+       "swatch": "#D9BFA6",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#D9BFA6"
+        }
+       ],
+       "code": 2
+      },
+      {
+       "id": "butter",
+       "label": "Butter",
+       "swatch": "#F1E4B8",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#F1E4B8"
+        }
+       ],
+       "code": 3
+      },
+      {
+       "id": "blush",
+       "label": "Blush",
+       "swatch": "#EBD5CC",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#EBD5CC"
+        }
+       ],
+       "code": 4
+      },
+      {
+       "id": "sage",
+       "label": "Sage",
+       "swatch": "#C9D4C2",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#C9D4C2"
+        }
+       ],
+       "code": 5
+      },
+      {
+       "id": "mist",
+       "label": "Sea mist",
+       "swatch": "#CFE0DF",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#CFE0DF"
+        }
+       ],
+       "code": 6
+      },
+      {
+       "id": "teal",
+       "label": "Pale teal",
+       "swatch": "#B7D6D4",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#B7D6D4"
+        }
+       ],
+       "code": 7
+      },
+      {
+       "id": "sky",
+       "label": "Powder blue",
+       "swatch": "#C8D9E6",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#C8D9E6"
+        }
+       ],
+       "code": 8
+      },
+      {
+       "id": "dove",
+       "label": "Dove grey",
+       "swatch": "#D5D6D3",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#D5D6D3"
+        }
+       ],
+       "code": 9
+      }
+     ],
+     "code": 0
     },
     {
-      "id": "surfaces", "label": "Floor and ceiling", "groups": [
+     "id": "feature",
+     "label": "Feature wall",
+     "control": "choice",
+     "default": "wood",
+     "check": {
+      "view": "overview",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "none",
+       "label": "None",
+       "effects": [
         {
-          "id": "floor", "label": "Vinyl floor", "control": "choice", "default": "sand",
-          "check": { "view": "family", "time": "afternoon" },
-          "options": [
-            { "id": "sand", "label": "Warm sand", "effects": [{ "do": "material", "target": "floor", "look": "sand" }] },
-            { "id": "oak", "label": "Pale oak", "effects": [{ "do": "material", "target": "floor", "look": "oak" }] },
-            { "id": "terrazzo", "label": "Terrazzo", "effects": [{ "do": "material", "target": "floor", "look": "terrazzo" }] },
-            { "id": "slate", "label": "Cool slate", "effects": [{ "do": "material", "target": "floor", "look": "slate" }] }
-          ]
-        },
-        {
-          "id": "ceiling", "label": "Ceiling above the bed", "control": "choice", "default": "plain",
-          "check": { "view": "family", "time": "afternoon" },
-          "options": [
-            { "id": "plain", "label": "Plain", "effects": [{ "do": "addon", "id": "sky", "on": false }] },
-            { "id": "sky", "label": "Printed sky", "effects": [{ "do": "addon", "id": "sky", "on": true }] }
-          ]
+         "do": "material",
+         "target": "feature",
+         "look": "none"
         }
-      ]
-    },
-    {
-      "id": "lighting", "label": "Lighting", "groups": [
+       ],
+       "code": 0
+      },
+      {
+       "id": "wood",
+       "label": "Wood-look",
+       "effects": [
         {
-          "id": "scheme", "label": "Scheme", "control": "choice", "default": "panels",
-          "check": { "view": "family", "time": "night" },
-          "options": [
-            { "id": "panels", "label": "Ceiling panels", "effects": [{ "do": "light", "scheme": { "kind": "panels", "rect": 30, "fill": 0.4, "panel": 2.2 } }] },
-            { "id": "cove", "label": "Cove", "effects": [{ "do": "light", "scheme": { "kind": "cove", "rect": 3.2, "fill": 0.34, "strip": 5, "glow": 0.42 } }] },
-            { "id": "downlights", "label": "Downlights", "effects": [{ "do": "light", "scheme": { "kind": "downlights", "spot": 26, "fill": 0.12, "disc": 7 } }] },
-            { "id": "slot", "label": "Linear slot", "effects": [{ "do": "light", "scheme": { "kind": "slot", "rect": 44, "fill": 0.26, "strip": 8 } }] },
-            {
-              "id": "circadian", "label": "Circadian", "effects": [{ "do": "light", "scheme": { "kind": "cove", "circadian": true, "rect": 3.4, "fill": 0.36, "strip": 5, "glow": 0.44 }, "kelvin": "auto" }],
-              "sets": { "temperature": "auto" },
-              "note": {
-                "text": "Tunable white that follows the day and dims at night. The evidence is mixed: a pilot of 74 patients in redesigned rooms with dynamic lighting saw less delirium (46% against 76%), but it wasn't randomised and changed more than the lights. A randomised trial of 734 patients found bright dynamic light alone didn't reduce delirium.",
-                "sources": [
-                  { "label": "Spies et al., Crit Care Med 2024", "url": "https://pubmed.ncbi.nlm.nih.gov/38112493/" },
-                  { "label": "Simons et al., Lancet Respir Med 2016", "url": "https://pubmed.ncbi.nlm.nih.gov/26895652/" }
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "id": "temperature", "label": "Colour temperature", "control": "choice", "default": "k4000",
-          "check": { "view": "family", "time": "night" },
-          "options": [
-            { "id": "k2700", "label": "2700 K", "effects": [{ "do": "light", "kelvin": 2700 }] },
-            { "id": "k3000", "label": "3000 K", "effects": [{ "do": "light", "kelvin": 3000 }] },
-            { "id": "k4000", "label": "4000 K", "effects": [{ "do": "light", "kelvin": 4000 }] },
-            { "id": "auto", "label": "Circadian (auto)", "effects": [{ "do": "light", "kelvin": "auto" }] }
-          ]
-        },
-        {
-          "id": "reading", "label": "Bed reading light", "control": "choice", "default": "off",
-          "check": { "view": "family", "time": "night" },
-          "options": [
-            { "id": "off", "label": "Off", "effects": [{ "do": "light", "reading": false }] },
-            { "id": "on", "label": "On", "effects": [{ "do": "light", "reading": true }] }
-          ]
-        },
-        {
-          "id": "nightlight", "label": "Amber night light", "control": "choice", "default": "off",
-          "check": { "view": "family", "time": "night" },
-          "options": [
-            { "id": "off", "label": "Off", "effects": [{ "do": "light", "nightLight": "off" }] },
-            { "id": "on", "label": "On", "effects": [{ "do": "light", "nightLight": "on" }] },
-            { "id": "rounds", "label": "Rounds mode", "effects": [{ "do": "light", "nightLight": "rounds" }], "note": { "text": "After dark the main lights go off and only the low amber light stays on, for staff to do rounds with less light in the room." } }
-          ]
+         "do": "material",
+         "target": "feature",
+         "look": "wood"
         }
-      ]
-    },
-    {
-      "id": "privacy", "label": "Privacy", "groups": [
+       ],
+       "code": 1
+      },
+      {
+       "id": "fabric",
+       "label": "Acoustic fabric",
+       "effects": [
         {
-          "id": "front", "label": "Glazed front", "control": "choice", "default": "clear",
-          "check": { "view": "entrance", "time": "afternoon" },
-          "note": {
-            "rooms": ["W1"],
-            "text": "This is an isolation room. Whichever option you choose, its door needs a seal along the bottom and testing against positive and negative pressure, so the room holds its pressure.",
-            "sources": [{ "label": "Stanley Access, ICU doors", "url": "https://stanleyaccess.com/node/2536" }]
-          },
-          "options": [
-            { "id": "clear", "label": "Clear with curtain", "effects": [{ "do": "glass", "mode": "clear" }, { "do": "visible", "part": "cfg_curtain", "on": true }] },
-            {
-              "id": "smart", "label": "Smart glass", "effects": [{ "do": "glass", "mode": "smart" }, { "do": "visible", "part": "cfg_curtain", "on": false }],
-              "note": {
-                "text": "Switchable glass replaces the curtain: a wall switch takes it from clear to opaque, so staff can still see in when they need to. Door makers sell it for ICU sliding doors. CDC guidance counts curtain edges as high-touch surfaces.",
-                "sources": [
-                  { "label": "Stanley Access, ICU doors", "url": "https://stanleyaccess.com/node/2536" },
-                  { "label": "ASSA ABLOY SL Hygienic ICU", "url": "https://assaabloyentrance.com/nz/en/documents/health/NZ-SL-Hygienic-ICU-BROCHURE.pdf" },
-                  { "label": "CDC environmental services", "url": "https://www.cdc.gov/infection-control/hcp/environmental-control/environmental-services.html" }
-                ]
-              }
-            },
-            { "id": "blinds", "label": "Integral blinds", "effects": [{ "do": "glass", "mode": "blinds" }, { "do": "visible", "part": "cfg_curtain", "on": false }], "note": { "text": "Blinds sealed between the panes of glass replace the curtain." } }
-          ]
-        },
-        {
-          "id": "switch", "label": "Wall switch", "control": "choice", "default": "clear", "requires": { "front": "smart" },
-          "check": { "view": "entrance", "time": "afternoon", "first": { "front": "smart" } },
-          "note": { "text": "Or select the switch on the wall beside the door." },
-          "options": [
-            { "id": "clear", "label": "Clear", "effects": [{ "do": "glass", "opaque": false }] },
-            { "id": "opaque", "label": "Opaque", "effects": [{ "do": "glass", "opaque": true }] }
-          ]
-        },
-        {
-          "id": "frost", "label": "Frosted band", "control": "choice", "default": "on",
-          "check": { "view": "entrance", "time": "afternoon" },
-          "options": [
-            { "id": "on", "label": "On", "effects": [{ "do": "visible", "part": "cfg_front_frost", "on": true }] },
-            { "id": "off", "label": "Off", "effects": [{ "do": "visible", "part": "cfg_front_frost", "on": false }] }
-          ]
+         "do": "material",
+         "target": "feature",
+         "look": "fabric"
         }
-      ]
-    },
-    {
-      "id": "outside", "label": "Window and outside", "groups": [
+       ],
+       "code": 2
+      },
+      {
+       "id": "dunes",
+       "label": "Dunes mural",
+       "effects": [
         {
-          "id": "blinds", "label": "Window blinds", "control": "choice", "default": "up",
-          "check": { "view": "bed_window", "time": "afternoon" },
-          "options": [
-            { "id": "up", "label": "Up", "effects": [{ "do": "blinds", "level": 0 }] },
-            { "id": "half", "label": "Half down", "effects": [{ "do": "blinds", "level": 0.5, "blackout": false }] },
-            { "id": "down", "label": "Roller, down", "effects": [{ "do": "blinds", "level": 1, "blackout": false }] },
-            { "id": "blackout", "label": "Blackout", "effects": [{ "do": "blinds", "level": 1, "blackout": true }] }
-          ]
-        },
-        {
-          "id": "palms", "label": "Date palms", "control": "choice", "default": "on",
-          "check": { "view": "bed_window", "time": "afternoon" },
-          "note": {
-            "text": "Planting stays outside the glass. CDC guidance says not to allow fresh flowers or potted plants in patient-care areas for immunosuppressed patients.",
-            "sources": [{ "label": "CDC environmental guidelines", "url": "https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm" }]
-          },
-          "options": [
-            { "id": "on", "label": "On", "effects": [{ "do": "addon", "id": "palms", "on": true }] },
-            { "id": "off", "label": "Off", "effects": [{ "do": "addon", "id": "palms", "on": false }] }
-          ]
-        },
-        {
-          "id": "planting", "label": "Low desert planting", "control": "choice", "default": "off",
-          "check": { "view": "window", "time": "afternoon" },
-          "options": [
-            { "id": "off", "label": "Off", "effects": [{ "do": "addon", "id": "planting", "on": false }] },
-            { "id": "on", "label": "On", "effects": [{ "do": "addon", "id": "planting", "on": true }] }
-          ]
+         "do": "material",
+         "target": "feature",
+         "look": "dunes"
         }
-      ]
+       ],
+       "code": 3
+      },
+      {
+       "id": "sea",
+       "label": "Sea mural",
+       "effects": [
+        {
+         "do": "material",
+         "target": "feature",
+         "look": "sea"
+        }
+       ],
+       "code": 4
+      },
+      {
+       "id": "mashrabiya",
+       "label": "Mashrabiya",
+       "effects": [
+        {
+         "do": "material",
+         "target": "feature",
+         "look": "mashrabiya"
+        }
+       ],
+       "code": 5
+      }
+     ],
+     "code": 1
     }
-  ]
+   ]
+  },
+  {
+   "id": "surfaces",
+   "label": "Floor and ceiling",
+   "groups": [
+    {
+     "id": "floor",
+     "label": "Vinyl floor",
+     "control": "choice",
+     "default": "sand",
+     "check": {
+      "view": "overview",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "sand",
+       "label": "Warm sand",
+       "effects": [
+        {
+         "do": "material",
+         "target": "floor",
+         "look": "sand"
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "oak",
+       "label": "Pale oak",
+       "effects": [
+        {
+         "do": "material",
+         "target": "floor",
+         "look": "oak"
+        }
+       ],
+       "code": 1
+      },
+      {
+       "id": "terrazzo",
+       "label": "Terrazzo",
+       "effects": [
+        {
+         "do": "material",
+         "target": "floor",
+         "look": "terrazzo"
+        }
+       ],
+       "code": 2
+      },
+      {
+       "id": "slate",
+       "label": "Cool slate",
+       "effects": [
+        {
+         "do": "material",
+         "target": "floor",
+         "look": "slate"
+        }
+       ],
+       "code": 3
+      }
+     ],
+     "code": 2
+    },
+    {
+     "id": "ceiling",
+     "label": "Ceiling above the bed",
+     "control": "choice",
+     "default": "plain",
+     "check": {
+      "view": "overview",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "plain",
+       "label": "Plain",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "sky",
+         "on": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "sky",
+       "label": "Printed sky",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "sky",
+         "on": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 3
+    }
+   ]
+  },
+  {
+   "id": "lighting",
+   "label": "Lighting",
+   "groups": [
+    {
+     "id": "scheme",
+     "label": "Scheme",
+     "control": "choice",
+     "default": "panels",
+     "check": {
+      "view": "overview",
+      "time": "night"
+     },
+     "options": [
+      {
+       "id": "panels",
+       "label": "Ceiling panels",
+       "effects": [
+        {
+         "do": "light",
+         "scheme": {
+          "kind": "panels",
+          "rect": 30,
+          "fill": 0.4,
+          "panel": 2.2
+         }
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "cove",
+       "label": "Cove",
+       "effects": [
+        {
+         "do": "light",
+         "scheme": {
+          "kind": "cove",
+          "rect": 3.2,
+          "fill": 0.34,
+          "strip": 5,
+          "glow": 0.42
+         }
+        }
+       ],
+       "code": 1
+      },
+      {
+       "id": "downlights",
+       "label": "Downlights",
+       "effects": [
+        {
+         "do": "light",
+         "scheme": {
+          "kind": "downlights",
+          "spot": 26,
+          "fill": 0.12,
+          "disc": 7
+         }
+        }
+       ],
+       "code": 2
+      },
+      {
+       "id": "slot",
+       "label": "Linear slot",
+       "effects": [
+        {
+         "do": "light",
+         "scheme": {
+          "kind": "slot",
+          "rect": 44,
+          "fill": 0.26,
+          "strip": 8
+         }
+        }
+       ],
+       "code": 3
+      },
+      {
+       "id": "circadian",
+       "label": "Circadian",
+       "effects": [
+        {
+         "do": "light",
+         "scheme": {
+          "kind": "cove",
+          "circadian": true,
+          "rect": 3.4,
+          "fill": 0.36,
+          "strip": 5,
+          "glow": 0.44
+         },
+         "kelvin": "auto"
+        }
+       ],
+       "sets": {
+        "temperature": "auto"
+       },
+       "note": {
+        "text": "Tunable white that follows the day and dims at night. The evidence is mixed: a pilot of 74 patients in redesigned rooms with dynamic lighting saw less delirium (46% against 76%), but it wasn't randomised and changed more than the lights. A randomised trial of 734 patients found bright dynamic light alone didn't reduce delirium.",
+        "sources": [
+         {
+          "label": "Spies et al., Crit Care Med 2024",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/38112493/"
+         },
+         {
+          "label": "Simons et al., Lancet Respir Med 2016",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/26895652/"
+         }
+        ],
+        "clinical": true
+       },
+       "code": 4
+      }
+     ],
+     "code": 4
+    },
+    {
+     "id": "temperature",
+     "label": "Colour temperature",
+     "control": "choice",
+     "default": "k4000",
+     "check": {
+      "view": "overview",
+      "time": "night"
+     },
+     "options": [
+      {
+       "id": "k2700",
+       "label": "2700 K",
+       "effects": [
+        {
+         "do": "light",
+         "kelvin": 2700
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "k3000",
+       "label": "3000 K",
+       "effects": [
+        {
+         "do": "light",
+         "kelvin": 3000
+        }
+       ],
+       "code": 1
+      },
+      {
+       "id": "k4000",
+       "label": "4000 K",
+       "effects": [
+        {
+         "do": "light",
+         "kelvin": 4000
+        }
+       ],
+       "code": 2
+      },
+      {
+       "id": "auto",
+       "label": "Circadian (auto)",
+       "effects": [
+        {
+         "do": "light",
+         "kelvin": "auto"
+        }
+       ],
+       "code": 3
+      }
+     ],
+     "code": 5
+    },
+    {
+     "id": "reading",
+     "label": "Bed reading light",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "view": "overview",
+      "time": "night"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "Off",
+       "effects": [
+        {
+         "do": "light",
+         "reading": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "light",
+         "reading": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 6
+    },
+    {
+     "id": "nightlight",
+     "label": "Amber night light",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "view": "overview",
+      "time": "night"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "Off",
+       "effects": [
+        {
+         "do": "light",
+         "nightLight": "off"
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "light",
+         "nightLight": "on"
+        }
+       ],
+       "code": 1
+      },
+      {
+       "id": "rounds",
+       "label": "Rounds mode",
+       "effects": [
+        {
+         "do": "light",
+         "nightLight": "rounds"
+        }
+       ],
+       "note": {
+        "text": "After dark the main lights go off and only the low amber light stays on, for staff to do rounds with less light in the room."
+       },
+       "code": 2
+      }
+     ],
+     "code": 7
+    }
+   ]
+  },
+  {
+   "id": "privacy",
+   "label": "Privacy",
+   "groups": [
+    {
+     "id": "front",
+     "label": "Glazed front",
+     "control": "choice",
+     "default": "clear",
+     "check": {
+      "view": "entrance",
+      "time": "afternoon"
+     },
+     "note": {
+      "rooms": [
+       "W1"
+      ],
+      "text": "This is an isolation room. Whichever option you choose, its door needs a seal along the bottom and testing against positive and negative pressure, so the room holds its pressure.",
+      "sources": [
+       {
+        "label": "Stanley Access, ICU doors",
+        "url": "https://stanleyaccess.com/node/2536"
+       }
+      ],
+      "clinical": true
+     },
+     "options": [
+      {
+       "id": "clear",
+       "label": "Clear with curtain",
+       "effects": [
+        {
+         "do": "glass",
+         "mode": "clear"
+        },
+        {
+         "do": "visible",
+         "part": "cfg_curtain",
+         "on": true
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "smart",
+       "label": "Smart glass",
+       "effects": [
+        {
+         "do": "glass",
+         "mode": "smart"
+        },
+        {
+         "do": "visible",
+         "part": "cfg_curtain",
+         "on": false
+        }
+       ],
+       "note": {
+        "text": "Switchable glass replaces the curtain: a wall switch takes it from clear to opaque, so staff can still see in when they need to. Door makers sell it for ICU sliding doors. CDC guidance counts curtain edges as high-touch surfaces.",
+        "sources": [
+         {
+          "label": "Stanley Access, ICU doors",
+          "url": "https://stanleyaccess.com/node/2536"
+         },
+         {
+          "label": "ASSA ABLOY SL Hygienic ICU",
+          "url": "https://assaabloyentrance.com/nz/en/documents/health/NZ-SL-Hygienic-ICU-BROCHURE.pdf"
+         },
+         {
+          "label": "CDC environmental services",
+          "url": "https://www.cdc.gov/infection-control/hcp/environmental-control/environmental-services.html"
+         }
+        ],
+        "clinical": true
+       },
+       "code": 1
+      },
+      {
+       "id": "blinds",
+       "label": "Integral blinds",
+       "effects": [
+        {
+         "do": "glass",
+         "mode": "blinds"
+        },
+        {
+         "do": "visible",
+         "part": "cfg_curtain",
+         "on": false
+        }
+       ],
+       "note": {
+        "text": "Blinds sealed between the panes of glass replace the curtain."
+       },
+       "code": 2
+      }
+     ],
+     "code": 8
+    },
+    {
+     "id": "switch",
+     "label": "Wall switch",
+     "control": "choice",
+     "default": "clear",
+     "requires": {
+      "front": "smart"
+     },
+     "check": {
+      "view": "entrance",
+      "time": "afternoon",
+      "first": {
+       "front": "smart"
+      }
+     },
+     "note": {
+      "text": "Or select the switch on the wall beside the door."
+     },
+     "options": [
+      {
+       "id": "clear",
+       "label": "Clear",
+       "effects": [
+        {
+         "do": "glass",
+         "opaque": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "opaque",
+       "label": "Opaque",
+       "effects": [
+        {
+         "do": "glass",
+         "opaque": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 9
+    },
+    {
+     "id": "frost",
+     "label": "Frosted band",
+     "control": "choice",
+     "default": "on",
+     "check": {
+      "view": "entrance",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "visible",
+         "part": "cfg_front_frost",
+         "on": true
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "off",
+       "label": "Off",
+       "effects": [
+        {
+         "do": "visible",
+         "part": "cfg_front_frost",
+         "on": false
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 10
+    }
+   ]
+  },
+  {
+   "id": "outside",
+   "label": "Window and outside",
+   "groups": [
+    {
+     "id": "blinds",
+     "label": "Window blinds",
+     "control": "choice",
+     "default": "up",
+     "check": {
+      "view": "bed_window",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "up",
+       "label": "Up",
+       "effects": [
+        {
+         "do": "blinds",
+         "level": 0
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "half",
+       "label": "Half down",
+       "effects": [
+        {
+         "do": "blinds",
+         "level": 0.5,
+         "blackout": false
+        }
+       ],
+       "code": 1
+      },
+      {
+       "id": "down",
+       "label": "Roller, down",
+       "effects": [
+        {
+         "do": "blinds",
+         "level": 1,
+         "blackout": false
+        }
+       ],
+       "code": 2
+      },
+      {
+       "id": "blackout",
+       "label": "Blackout",
+       "effects": [
+        {
+         "do": "blinds",
+         "level": 1,
+         "blackout": true
+        }
+       ],
+       "code": 3
+      }
+     ],
+     "code": 11
+    },
+    {
+     "id": "palms",
+     "label": "Date palms",
+     "control": "choice",
+     "default": "on",
+     "check": {
+      "view": "bed_window",
+      "time": "afternoon"
+     },
+     "note": {
+      "text": "Planting stays outside the glass. CDC guidance says not to allow fresh flowers or potted plants in patient-care areas for immunosuppressed patients.",
+      "sources": [
+       {
+        "label": "CDC environmental guidelines",
+        "url": "https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm"
+       }
+      ],
+      "clinical": true
+     },
+     "options": [
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "palms",
+         "on": true
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "off",
+       "label": "Off",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "palms",
+         "on": false
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 12
+    },
+    {
+     "id": "planting",
+     "label": "Low desert planting",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "view": "window",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "Off",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "planting",
+         "on": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "planting",
+         "on": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 13
+    }
+   ]
+  },
+  {
+   "id": "entertainment",
+   "label": "Entertainment",
+   "groups": [
+    {
+     "id": "tvsize",
+     "label": "TV size",
+     "control": "choice",
+     "default": "s43",
+     "check": {
+      "view": "bed",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "s43",
+       "label": "43 inch",
+       "effects": [
+        {
+         "do": "tv",
+         "width": 0.98
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "s55",
+       "label": "55 inch",
+       "effects": [
+        {
+         "do": "tv",
+         "width": 1.23
+        }
+       ],
+       "code": 1
+      },
+      {
+       "id": "s65",
+       "label": "65 inch",
+       "effects": [
+        {
+         "do": "tv",
+         "width": 1.45
+        }
+       ],
+       "code": 2
+      }
+     ],
+     "note": {
+      "text": "On the patient's eye line from the bed."
+     },
+     "code": 14
+    },
+    {
+     "id": "tvplay",
+     "label": "TV",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "view": "bed",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "Off",
+       "effects": [
+        {
+         "do": "tv",
+         "playing": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "tv",
+         "playing": true
+        }
+       ],
+       "note": {
+        "text": "The picture is an original placeholder animation, not real footage."
+       },
+       "code": 1
+      }
+     ],
+     "code": 15
+    },
+    {
+     "id": "console",
+     "label": "Gaming console",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "view": "bed",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "None",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "console",
+         "on": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "With controller",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "console",
+         "on": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 16
+    }
+   ]
+  },
+  {
+   "id": "family",
+   "label": "Family and children",
+   "groups": [
+    {
+     "id": "seating",
+     "label": "Family seating",
+     "control": "choice",
+     "default": "chairs",
+     "check": {
+      "aim": "seating",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "chairs",
+       "label": "Recliner and chair",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "sofa",
+         "on": false
+        },
+        {
+         "do": "visible",
+         "part": "cfg_kit_visitor_chair",
+         "on": true
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "sofa",
+       "label": "Sofa-bed",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "sofa",
+         "on": true
+        },
+        {
+         "do": "visible",
+         "part": "cfg_kit_visitor_chair",
+         "on": false
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 17
+    },
+    {
+     "id": "accent",
+     "label": "Upholstery and curtain",
+     "control": "choice",
+     "default": "teal",
+     "check": {
+      "view": "overview",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "teal",
+       "label": "Teal",
+       "effects": [
+        {
+         "do": "color",
+         "material": "upholstery",
+         "value": "#3E7F8C"
+        },
+        {
+         "do": "color",
+         "material": "curtain",
+         "value": "#9FC9C4"
+        },
+        {
+         "do": "color",
+         "material": "blanket",
+         "value": "#9CC3D5"
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "coral",
+       "label": "Coral",
+       "effects": [
+        {
+         "do": "color",
+         "material": "upholstery",
+         "value": "#E0705C"
+        },
+        {
+         "do": "color",
+         "material": "curtain",
+         "value": "#F0B4A6"
+        },
+        {
+         "do": "color",
+         "material": "blanket",
+         "value": "#9CC3D5"
+        }
+       ],
+       "code": 1
+      },
+      {
+       "id": "sun",
+       "label": "Sunshine",
+       "effects": [
+        {
+         "do": "color",
+         "material": "upholstery",
+         "value": "#E8B23A"
+        },
+        {
+         "do": "color",
+         "material": "curtain",
+         "value": "#F4DD9A"
+        },
+        {
+         "do": "color",
+         "material": "blanket",
+         "value": "#9CC3D5"
+        }
+       ],
+       "code": 2
+      },
+      {
+       "id": "clay",
+       "label": "Clay",
+       "effects": [
+        {
+         "do": "color",
+         "material": "upholstery",
+         "value": "#A9785A"
+        },
+        {
+         "do": "color",
+         "material": "curtain",
+         "value": "#D8C2AE"
+        },
+        {
+         "do": "color",
+         "material": "blanket",
+         "value": "#9CC3D5"
+        }
+       ],
+       "code": 3
+      }
+     ],
+     "code": 18
+    },
+    {
+     "id": "toyshelf",
+     "label": "Toy shelf",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "aim": "toys",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "None",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "toyshelf",
+         "on": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "toyshelf",
+         "on": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 19
+    },
+    {
+     "id": "softtoys",
+     "label": "Soft toys",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "aim": "playmat",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "None",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "softtoys",
+         "on": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "softtoys",
+         "on": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 20
+    },
+    {
+     "id": "playmat",
+     "label": "Play mat",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "aim": "playmat",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "None",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "playmat",
+         "on": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "playmat",
+         "on": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 21
+    }
+   ]
+  },
+  {
+   "id": "aquarium",
+   "label": "Aquarium",
+   "groups": [
+    {
+     "id": "aquarium",
+     "label": "Aquarium",
+     "control": "choice",
+     "default": "none",
+     "check": {
+      "aim": "aquarium",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "none",
+       "label": "None",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "digital",
+         "on": false
+        },
+        {
+         "do": "addon",
+         "id": "sealed",
+         "on": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "digital",
+       "label": "Digital screen",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "digital",
+         "on": true
+        },
+        {
+         "do": "addon",
+         "id": "sealed",
+         "on": false
+        }
+       ],
+       "note": {
+        "text": "Animated fish on a wall screen: no water, fish or servicing in the room.",
+        "clinical": true
+       },
+       "code": 1
+      },
+      {
+       "id": "sealed",
+       "label": "Sealed tank",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "digital",
+         "on": false
+        },
+        {
+         "do": "addon",
+         "id": "sealed",
+         "on": true
+        }
+       ],
+       "note": {
+        "text": "CDC guidance says to avoid fish tanks in patient-care areas and to restrict fish from isolation areas, so the digital screen is the default. If a team still wants a tank, this one is sealed, recessed in the wall and serviced from outside the room. Infection control should decide.",
+        "sources": [
+         {
+          "label": "CDC environmental guidelines",
+          "url": "https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm"
+         }
+        ],
+        "clinical": true
+       },
+       "code": 2
+      }
+     ],
+     "code": 22
+    }
+   ]
+  },
+  {
+   "id": "patio",
+   "label": "Patio",
+   "groups": [
+    {
+     "id": "patio",
+     "label": "Patio",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "view": "window",
+      "time": "afternoon"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "None",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "patio",
+         "on": false
+        },
+        {
+         "do": "visible",
+         "prefix": "cfg_bay_",
+         "on": true
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "Shaded balcony",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "patio",
+         "on": true
+        },
+        {
+         "do": "visible",
+         "prefix": "cfg_bay_",
+         "on": false
+        }
+       ],
+       "note": [
+        {
+         "rooms": [
+          "W1"
+         ],
+         "text": "Warning: an outside door works against an isolation room's pressure regime. A patio suits standard rooms best.",
+         "clinical": true
+        },
+        {
+         "text": "A sliding door across three facade bays leaves about 1.6 m clear, enough for a bed or wheelchair. This is a concept: no structural or fall-safety design has been done, and a confused patient would need someone with them on a fourth-floor balcony.",
+         "clinical": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "code": 23
+    },
+    {
+     "id": "shade",
+     "label": "Shade",
+     "control": "choice",
+     "default": "pergola",
+     "check": {
+      "view": "window",
+      "time": "afternoon",
+      "first": {
+       "patio": "on"
+      }
+     },
+     "options": [
+      {
+       "id": "pergola",
+       "label": "Pergola",
+       "effects": [
+        {
+         "do": "shade",
+         "kind": "pergola"
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "sail",
+       "label": "Shade sail",
+       "effects": [
+        {
+         "do": "shade",
+         "kind": "sail"
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "requires": {
+      "patio": "on"
+     },
+     "code": 24
+    }
+   ]
+  }
+ ],
+ "rooms": [
+  "W1",
+  "W3"
+ ],
+ "views": [
+  "overview",
+  "family",
+  "entrance",
+  "bed",
+  "bed_window",
+  "window",
+  "dollhouse"
+ ],
+ "themes": [
+  {
+   "id": "calm",
+   "label": "Calm Clinical",
+   "blurb": "Today's room, tidied up.",
+   "sets": {}
+  },
+  {
+   "id": "desert",
+   "label": "Desert Sanctuary",
+   "blurb": "Sand and warm white, light timber, a mashrabiya wall.",
+   "sets": {
+    "paint": "sand",
+    "feature": "mashrabiya",
+    "floor": "oak",
+    "scheme": "cove",
+    "temperature": "k3000",
+    "accent": "clay",
+    "planting": "on",
+    "reading": "on"
+   }
+  },
+  {
+   "id": "paediatric",
+   "label": "Paediatric Play",
+   "blurb": "Bright accents, toys, a play mat, fish and a sky ceiling.",
+   "sets": {
+    "paint": "butter",
+    "feature": "sea",
+    "floor": "terrazzo",
+    "ceiling": "sky",
+    "scheme": "circadian",
+    "temperature": "auto",
+    "accent": "coral",
+    "toyshelf": "on",
+    "softtoys": "on",
+    "playmat": "on",
+    "aquarium": "digital",
+    "tvplay": "on"
+   }
+  },
+  {
+   "id": "family",
+   "label": "Family Suite",
+   "blurb": "A sofa-bed, a larger TV, warm cove lighting and a patio.",
+   "sets": {
+    "paint": "clay",
+    "feature": "fabric",
+    "floor": "oak",
+    "scheme": "cove",
+    "temperature": "k2700",
+    "seating": "sofa",
+    "tvsize": "s65",
+    "tvplay": "on",
+    "reading": "on",
+    "patio": "on",
+    "accent": "clay"
+   }
+  }
+ ]
 }
