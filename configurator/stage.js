@@ -28,7 +28,7 @@ async function fetchGz(url, onProgress) {
 }
 
 const SEE_THROUGH = /^(cfg_facade_glass|ante_glazing|observation_windows|lobby_screen)/;
-const CEILING = /^(cfg_ceiling($|_\d)|ceiling_rooms|ceiling_grid|ceiling_panels|cfg_panels)/; // hidden in the dollhouse; the toilet's stays, it's an empty room
+const CEILING = /^(cfg_ceiling($|_\d)|ceiling_rooms|ceiling_grid|ceiling_panels|cfg_panels)/; // hidden in the dollhouse; the bathroom ceiling stays with its fixtures
 
 export class Stage {
   constructor(canvas, tier) {

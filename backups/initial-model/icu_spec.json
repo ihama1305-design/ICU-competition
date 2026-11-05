@@ -1,0 +1,1185 @@
+{
+ "meta": {
+  "name": "SSMC Tower D, 4th floor ICU (Part a)",
+  "spec_version": 2,
+  "status": "from the as-built record drawing A1104-a rev G; heights and furnishings are assumptions",
+  "units": "metres, degrees; Blender Z up, GLB Y up"
+ },
+ "source": {
+  "sheet": "input/drawings/01 - AMH-HLMR-PRD-A-06ToD-04th-A1104-a_G.pdf",
+  "calibration": {
+   "grid_spacing_m": 9.0,
+   "grid_spacing_pt": 359.25,
+   "col_origin_pt": 636.45,
+   "row_origin_pt": 398.2
+  },
+  "plan_bounds_m": [
+   -1.0,
+   -7.0,
+   48.5,
+   43.5
+  ]
+ },
+ "plan": {
+  "raster_m": 0.02,
+  "wall_layers": [
+   "A-WALL",
+   "A-WALL-PATT",
+   "S-COLS",
+   "A-WALL-MBNI",
+   "A-PART"
+  ],
+  "wall_fill_radius_m": 0.16,
+  "min_wall_area_m2": 0.02,
+  "simplify_m": 0.015,
+  "cut_south_y": -4.7,
+  "facade": {
+   "west": {
+    "inner_face": [
+     [
+      3.69,
+      -6.0
+     ],
+     [
+      3.69,
+      9.1
+     ],
+     [
+      8.39,
+      30.85
+     ]
+    ],
+    "outward": [
+     -1,
+     0
+    ]
+   },
+   "east": {
+    "inner_face": [
+     [
+      41.31,
+      -6.0
+     ],
+     [
+      41.31,
+      9.1
+     ],
+     [
+      36.6,
+      30.85
+     ]
+    ],
+    "outward": [
+     1,
+     0
+    ]
+   }
+  },
+  "facade_band_m": 0.04,
+  "leaf_thickness_m": [
+   0.025,
+   0.07
+  ],
+  "leaf_length_m": [
+   0.6,
+   1.35
+  ],
+  "max_door_gap_m": 2.6,
+  "min_door_gap_m": 0.7,
+  "min_window_m": 0.5,
+  "counter_max_area_m2": 9.0,
+  "counter_max_half_depth_m": 0.5,
+  "counter_raised_min_area_m2": 1.0,
+  "sink": {
+   "drain_r_m": [
+    0.02,
+    0.035
+   ],
+   "corner_r_m": [
+    0.03,
+    0.08
+   ],
+   "tap_r_m": [
+    0.028,
+    0.036
+   ],
+   "size_m": [
+    0.25,
+    0.5
+   ],
+   "ring_min_segments": 20,
+   "rim_min_segments": 5,
+   "tap_reach_m": 0.15,
+   "block_margin_m": 0.05,
+   "rim_m": 0.03,
+   "on_counter_tolerance_m": 0.02
+  },
+  "room_keywords": [
+   "ROOM",
+   "NURSE",
+   "CORRIDOR",
+   "OBSERV",
+   "LOBBY",
+   "UTILITY",
+   "STATION",
+   "LOUNGE",
+   "STORAGE",
+   "TOILET",
+   "ANTE",
+   "MEDS",
+   "ELEC",
+   "DICTATION",
+   "NOURISH",
+   "ALCOVE",
+   "OFFICE",
+   "STAIR",
+   "LINEN",
+   "HSKP",
+   "RISER",
+   "STRETCH",
+   "WHEEL"
+  ],
+  "outline": {
+   "_note": "inner-face building outline used for floor and ceiling; facade sides are offset outward by facade.slab_overhang_m",
+   "points": [
+    [
+     3.69,
+     -4.7
+    ],
+    [
+     3.69,
+     9.1
+    ],
+    [
+     8.632,
+     31.97
+    ],
+    [
+     14.75,
+     31.97
+    ],
+    [
+     14.75,
+     42.67
+    ],
+    [
+     30.25,
+     42.67
+    ],
+    [
+     30.25,
+     31.97
+    ],
+    [
+     36.358,
+     31.97
+    ],
+    [
+     41.31,
+     9.1
+    ],
+    [
+     41.31,
+     -4.7
+    ]
+   ]
+  },
+  "screens": [
+   {
+    "tag": "WN35 0 - 2800",
+    "_note": "glazed screen between the lobby and multipurpose room; 5.8 m with a 1.04 m door drawn open",
+    "a": [
+     18.448,
+     37.245
+    ],
+    "b": [
+     24.148,
+     37.245
+    ],
+    "z0": 0.0,
+    "z1": 2.8,
+    "panes_x": [
+     [
+      18.448,
+      22.36
+     ],
+     [
+      23.4,
+      24.148
+     ]
+    ],
+    "door": {
+     "hinge": [
+      23.4,
+      37.245
+     ],
+     "length": 1.04,
+     "angle_deg": 90
+    },
+    "mullion_spacing": 1.2
+   }
+  ]
+ },
+ "building": {
+  "ceiling_height": 2.85,
+  "door_head": 2.41,
+  "slab_thickness": 0.3,
+  "slab_above": 4.5,
+  "window_sill": 1.0,
+  "window_head": 1.4,
+  "skirting_height": 0.1,
+  "skirting_thickness": 0.012,
+  "handrail_height": 0.9,
+  "handrail_depth": 0.07,
+  "handrail_rooms": [
+   "CORRIDOR",
+   "LOBBY"
+  ],
+  "counter_height": 0.9,
+  "desk_height": 0.75,
+  "transaction_height": 1.1,
+  "knee_space": {
+   "width": 0.9,
+   "depth": 0.55
+  },
+  "facade": {
+   "upstand_height": 0.7,
+   "upstand_depth": 0.25,
+   "glass_offset": 0.42,
+   "mullion_spacing": 1.125,
+   "mullion_size": [
+    0.06,
+    0.16
+   ],
+   "fin_offset": 0.62,
+   "fin_depth": 0.45,
+   "fin_spacing": 0.6,
+   "fin_thickness": 0.03,
+   "slab_overhang": 1.15
+  },
+  "_confidence": {
+   "plan": "high (vector CAD, 9 m grid)",
+   "door_head": "high (H=2410 tags)",
+   "window_sill_head": "med (WA31 tag 1000-1400 read per legend)",
+   "ceiling_height": "low (not on these sheets)",
+   "furnishing": "low (typical ICU kit placed per room)"
+  }
+ },
+ "materials": {
+  "floor_room": {
+   "color": "#BBA88C",
+   "roughness": 0.38,
+   "speckle": 0.07,
+   "_note": "LIN36 sheet vinyl (colour assumed)"
+  },
+  "floor_corridor": {
+   "color": "#A7ACAD",
+   "roughness": 0.32,
+   "speckle": 0.05,
+   "_note": "LIN37/LIN02 sheet vinyl"
+  },
+  "wall": {
+   "color": "#ECE9E2",
+   "roughness": 0.85
+  },
+  "wall_feature": {
+   "color": "#D7E3E4",
+   "roughness": 0.8,
+   "_note": "bed-head wall accent"
+  },
+  "ceiling": {
+   "color": "#F4F4F1",
+   "roughness": 0.95,
+   "tile": 0.6
+  },
+  "skirting": {
+   "color": "#8E8A83",
+   "roughness": 0.5
+  },
+  "handrail": {
+   "color": "#B88A5C",
+   "roughness": 0.45
+  },
+  "door_wood": {
+   "color": "#C49A6C",
+   "roughness": 0.5
+  },
+  "frame_metal": {
+   "color": "#C7CACC",
+   "roughness": 0.3,
+   "metallic": 1.0
+  },
+  "glass": {
+   "color": "#E8F2F2",
+   "roughness": 0.02,
+   "ior": 1.5
+  },
+  "glass_frost": {
+   "color": "#F2F4F4",
+   "roughness": 0.35
+  },
+  "counter_top": {
+   "color": "#F1EFEA",
+   "roughness": 0.25
+  },
+  "cabinet": {
+   "color": "#DCD6CC",
+   "roughness": 0.45
+  },
+  "plastic_white": {
+   "color": "#EEF0F0",
+   "roughness": 0.35
+  },
+  "plastic_grey": {
+   "color": "#8C9399",
+   "roughness": 0.4
+  },
+  "dark_plastic": {
+   "color": "#2B2F33",
+   "roughness": 0.4
+  },
+  "steel": {
+   "color": "#B8BCC0",
+   "roughness": 0.25,
+   "metallic": 1.0
+  },
+  "mattress": {
+   "color": "#3F6E86",
+   "roughness": 0.5
+  },
+  "sheet": {
+   "color": "#F7F7F4",
+   "roughness": 0.9
+  },
+  "blanket": {
+   "color": "#9CC3D5",
+   "roughness": 0.95
+  },
+  "upholstery": {
+   "color": "#3E7F8C",
+   "roughness": 0.7
+  },
+  "curtain": {
+   "color": "#9FC9C4",
+   "roughness": 0.9
+  },
+  "blind": {
+   "color": "#E9E4D8",
+   "roughness": 0.9
+  },
+  "facade_metal": {
+   "color": "#9EA3A6",
+   "roughness": 0.4,
+   "metallic": 1.0
+  },
+  "upstand": {
+   "color": "#E3DED5",
+   "roughness": 0.6
+  },
+  "slab_edge": {
+   "color": "#BDB8AF",
+   "roughness": 0.9
+  },
+  "screen_dark": {
+   "color": "#0B0E10",
+   "roughness": 0.15
+  },
+  "section_cap": {
+   "color": "#3B3E42",
+   "roughness": 0.9
+  },
+  "panel_wood": {
+   "color": "#B9875A",
+   "roughness": 0.45,
+   "_note": "HPL wood-look feature panel (assumed)"
+  },
+  "bumper": {
+   "color": "#CFC8BC",
+   "roughness": 0.4
+  }
+ },
+ "kit": {
+  "_frame": "patient room local frame: origin at the bed-head centre on the floor, +Y toward the bed foot (corridor), +X to the patient's right",
+  "rooms": [
+   "ICU PATIENT ROOM",
+   "ICU ISOLATION PATIENT ROOM"
+  ],
+  "head_clearance": 1.35,
+  "front_door_min_width": 1.8,
+  "bed": {
+   "length": 2.2,
+   "width": 1.0,
+   "mattress_top": 0.68,
+   "backrest_deg": 30
+  },
+  "pendant": {
+   "column_offsets": [
+    [
+     -0.85,
+     -0.2
+    ],
+    [
+     0.85,
+     -0.2
+    ]
+   ],
+   "column_size": [
+    0.32,
+    0.26,
+    1.15
+   ],
+   "column_bottom": 0.75
+  },
+  "ventilator": [
+   1.3,
+   0.5
+  ],
+  "iv_pole": [
+   -1.25,
+   0.55
+  ],
+  "recliner": [
+   -1.35,
+   2.05,
+   75
+  ],
+  "visitor_chair": [
+   1.75,
+   2.4,
+   -110
+  ],
+  "overbed_table": [
+   0.05,
+   1.75
+  ],
+  "curtain": {
+   "offset_from_front": 0.35,
+   "open_fraction": 0.4,
+   "bottom": 0.3,
+   "top": 2.6
+  },
+  "feature_wall": {
+   "length": 3.0,
+   "height": 2.4,
+   "bumper_z": [
+    0.78,
+    0.92
+   ],
+   "tv": {
+    "size": [
+     0.98,
+     0.06,
+     0.57
+    ],
+    "bottom": 1.75
+   }
+  },
+  "room_overrides": [
+   {
+    "_room": "W1, isolation. Generic layout puts the bed foot on the slanted nook wall, the recliner in the nook and the TV inside a wall. The bed moves near the drawn bed circle, with the TV straight ahead on the flat 2.8 m of foot wall",
+    "label_at": [
+     11.548,
+     30.461
+    ],
+    "head": [
+     11.2,
+     30.26
+    ],
+    "iv_pole": [
+     -1.15,
+     -0.55
+    ],
+    "recliner": [
+     -1.75,
+     1.2,
+     75
+    ],
+    "visitor_chair": [
+     1.75,
+     2.1,
+     -110
+    ],
+    "feature_wall": {
+     "on": "foot",
+     "length": 2.8,
+     "bumper_length": 2.8,
+     "tv": {
+      "bottom": 1.35
+     }
+    }
+   },
+   {
+    "_room": "E1, isolation, the mirror image of W1",
+    "label_at": [
+     33.548,
+     30.509
+    ],
+    "head": [
+     33.8,
+     30.26
+    ],
+    "ventilator": [
+     -1.3,
+     0.5
+    ],
+    "iv_pole": [
+     1.15,
+     -0.55
+    ],
+    "recliner": [
+     1.75,
+     1.2,
+     -75
+    ],
+    "visitor_chair": [
+     -1.75,
+     2.1,
+     110
+    ],
+    "feature_wall": {
+     "on": "foot",
+     "length": 2.8,
+     "bumper_length": 2.8,
+     "tv": {
+      "bottom": 1.35
+     }
+    }
+   }
+  ]
+ },
+ "lighting": {
+  "panel_size": 0.6,
+  "panel_grid": 2.4,
+  "panel_watts": 38,
+  "panel_kelvin_rgb": [
+   1.0,
+   0.93,
+   0.84
+  ],
+  "wall_clearance": 0.5,
+  "gap_fill": {
+   "_note": "extra panels where the grid leaves floor in the dark (see gap_panels in 02). Assumed, like the rest of the ceiling layout: the sheets don't show it. Dark = under min_light_share of the direct light at the middle of an open grid cell. Patches smaller than min_area_m2 are left alone",
+   "min_light_share": 0.1,
+   "min_area_m2": 0.5,
+   "sample_m": 0.1
+  },
+  "desk_fill": {
+   "_note": "extra panels over desk chairs the rest of the layout leaves dim (see desk_panels in 02). Assumed too. Dim = under min_light_share of the direct light at the middle of an open grid cell. The panel goes over the chair, within reach_m of its centre",
+   "min_light_share": 0.25,
+   "reach_m": 0.3
+  },
+  "sun": {
+   "elevation_deg": 32,
+   "azimuth_deg": 250,
+   "strength": 3.5
+  },
+  "sky_strength": 0.9,
+  "site": {
+   "_note": "for the configurator's sun path. This declination puts the spec's sun (azimuth 250, elevation 32) on the real path at about 15:32 solar time. +y is the model's north, as in the renders; true north isn't on these sheets, so north_offset_deg can correct it later",
+   "latitude_deg": 24.45,
+   "declination_deg": -2.5,
+   "north_offset_deg": 0
+  }
+ },
+ "render": {
+  "engine": "CYCLES",
+  "samples": 96,
+  "resolution": [
+   1920,
+   1080
+  ],
+  "denoise": true,
+  "view_transform": "AgX",
+  "look": "AgX - Medium High Contrast"
+ },
+ "cameras": {
+  "hero_room_label": [
+   10.63,
+   21.01
+  ],
+  "eye_height": 1.55,
+  "exposure": {
+   "cam_aerial": -0.9,
+   "cam_plan": -0.6,
+   "cam_room_entry": -0.6,
+   "cam_bedside": -0.6,
+   "cam_corridor": -0.5,
+   "cam_aerial_close": -0.8,
+   "cam_observation": -0.4,
+   "cam_iso_entry": -0.6,
+   "cam_iso_room": -0.6,
+   "cam_iso_window": -0.6
+  },
+  "_frame": "room_entry and bedside use the hero room's local frame: x across the bed (+ = patient's right, the feature wall is on the -x side), y from the bed head toward the foot. iso_* are world coordinates in isolation room W1",
+  "iso_entry": {
+   "eye": [
+    17.35,
+    27.0,
+    1.6
+   ],
+   "look": [
+    16.0,
+    30.6,
+    1.25
+   ],
+   "lens": 18
+  },
+  "iso_room": {
+   "eye": [
+    14.4,
+    30.75,
+    1.55
+   ],
+   "look": [
+    9.0,
+    28.6,
+    1.0
+   ],
+   "lens": 18
+  },
+  "iso_window": {
+   "eye": [
+    13.0,
+    28.2,
+    1.55
+   ],
+   "look": [
+    8.5,
+    30.6,
+    1.05
+   ],
+   "lens": 18
+  },
+  "room_entry": {
+   "eye": [
+    0.9,
+    4.3,
+    1.55
+   ],
+   "look": [
+    -0.2,
+    0.2,
+    1.05
+   ],
+   "lens": 18
+  },
+  "bedside": {
+   "eye": [
+    1.55,
+    2.9,
+    1.45
+   ],
+   "look": [
+    -0.15,
+    0.6,
+    0.85
+   ],
+   "lens": 22
+  },
+  "aerial_close": {
+   "eye": [
+    23.0,
+    13.5,
+    10.5
+   ],
+   "look": [
+    10.5,
+    21.5,
+    0.3
+   ],
+   "lens": 24
+  },
+  "observation": {
+   "back_from_glass": 1.1,
+   "eye": 1.3,
+   "lens": 20,
+   "look_z": 0.85
+  }
+ },
+ "site": {
+  "url": "https://ihama1305-design.github.io/ICU-competition/",
+  "repo": "https://github.com/ihama1305-design/ICU-competition",
+  "dir": ".",
+  "_note": "dir is where Pages publishes from; the repo serves main from its root"
+ },
+ "configurator": {
+  "_note": "proposal only: this doesn't change the as-built scene. Coordinates are world metres. W1's layout comes from kit.room_overrides; W3's bed is turned here so the window is beside the patient, as in W1. `kit` moves the ventilator behind the patient's head so it doesn't stand between them and the window. W3's drawn bed circle is centred at (10.31, 20.7)",
+  "rooms": {
+   "W1": {
+    "label_at": [
+     11.548,
+     30.461
+    ],
+    "via": [
+     [
+      16.56,
+      28.66,
+      1.5
+     ],
+     [
+      15.2,
+      29.9,
+      1.5
+     ]
+    ],
+    "cameras": {
+     "entrance": {
+      "eye": [
+       17.0,
+       27.2,
+       1.6
+      ],
+      "look": [
+       16.0,
+       30.6,
+       1.25
+      ],
+      "hfov": 90
+     },
+     "bed": {
+      "eye": [
+       11.2,
+       29.52,
+       1.3
+      ],
+      "look": [
+       11.2,
+       27.13,
+       1.63
+      ],
+      "hfov": 80
+     },
+     "bed_window": {
+      "eye": [
+       11.2,
+       29.52,
+       1.3
+      ],
+      "look": [
+       7.7,
+       29.9,
+       1.7
+      ],
+      "hfov": 80
+     },
+     "window": {
+      "eye": [
+       9.2,
+       29.6,
+       1.55
+      ],
+      "look": [
+       5.0,
+       30.51,
+       1.45
+      ],
+      "hfov": 72
+     },
+     "dollhouse": {
+      "eye": [
+       15.5,
+       17.0,
+       15.0
+      ],
+      "look": [
+       13.2,
+       29.2,
+       0.0
+      ],
+      "hfov": 50
+     },
+     "overview": {
+      "eye": [
+       14.5,
+       30.72,
+       1.45
+      ],
+      "look": [
+       9.2,
+       28.6,
+       0.95
+      ],
+      "hfov": 88
+     },
+     "family": {
+      "eye": [
+       13.0,
+       30.45,
+       1.5
+      ],
+      "look": [
+       18.0,
+       29.5,
+       0.8
+      ],
+      "hfov": 85
+     }
+    },
+    "anchors": {
+     "console": {
+      "at": [
+       11.2,
+       27.4,
+       0.0
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "toys": {
+      "at": [
+       18.03,
+       29.3,
+       1.0
+      ],
+      "face": [
+       -1,
+       0
+      ]
+     },
+     "playmat": {
+      "at": [
+       15.8,
+       29.9,
+       0.01
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "seating": {
+      "at": [
+       16.9,
+       30.55,
+       0.0
+      ],
+      "face": [
+       0,
+       -1
+      ]
+     },
+     "aquarium": {
+      "at": [
+       14.7,
+       28.8,
+       1.3
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "reading_light": {
+      "at": [
+       11.2,
+       30.5,
+       2.1
+      ],
+      "face": [
+       0,
+       -1
+      ]
+     }
+    },
+    "fixtures": {
+     "downlights": [
+      [
+       9.3,
+       30.7
+      ],
+      [
+       9.3,
+       28.3
+      ],
+      [
+       12.9,
+       30.8
+      ],
+      [
+       12.9,
+       28.7
+      ],
+      [
+       15.3,
+       30.0
+      ],
+      [
+       17.1,
+       30.0
+      ]
+     ],
+     "slots": [
+      [
+       12.4,
+       27.7,
+       12.4,
+       31.2
+      ],
+      [
+       13.2,
+       30.0,
+       17.6,
+       30.0
+      ]
+     ]
+    },
+    "kit": {
+     "ventilator": [
+      1.5,
+      -0.2
+     ]
+    }
+   },
+   "W3": {
+    "label_at": [
+     10.633,
+     21.009
+    ],
+    "via": [],
+    "layout": {
+     "head": [
+      10.31,
+      21.05
+     ],
+     "foot_dir": [
+      0,
+      -1
+     ],
+     "iv_pole": [
+      -1.15,
+      -0.55
+     ],
+     "recliner": [
+      -1.75,
+      1.2,
+      75
+     ],
+     "visitor_chair": [
+      1.75,
+      2.1,
+      -110
+     ],
+     "feature_wall": {
+      "on": "foot",
+      "length": 1.75,
+      "bumper_length": 1.75,
+      "tv": {
+       "bottom": 1.35
+      }
+     }
+    },
+    "cameras": {
+     "entrance": {
+      "eye": [
+       16.2,
+       20.75,
+       1.6
+      ],
+      "look": [
+       9.5,
+       20.2,
+       1.1
+      ],
+      "hfov": 80
+     },
+     "bed": {
+      "eye": [
+       10.31,
+       20.31,
+       1.3
+      ],
+      "look": [
+       10.31,
+       18.13,
+       1.63
+      ],
+      "hfov": 80
+     },
+     "bed_window": {
+      "eye": [
+       10.31,
+       20.31,
+       1.3
+      ],
+      "look": [
+       5.9,
+       20.7,
+       1.7
+      ],
+      "hfov": 80
+     },
+     "window": {
+      "eye": [
+       7.5,
+       20.4,
+       1.55
+      ],
+      "look": [
+       3.3,
+       21.31,
+       1.45
+      ],
+      "hfov": 72
+     },
+     "dollhouse": {
+      "eye": [
+       12.0,
+       8.0,
+       15.0
+      ],
+      "look": [
+       10.0,
+       20.2,
+       0.0
+      ],
+      "hfov": 50
+     },
+     "overview": {
+      "eye": [
+       13.5,
+       21.7,
+       1.45
+      ],
+      "look": [
+       8.5,
+       19.7,
+       0.95
+      ],
+      "hfov": 88
+     },
+     "family": {
+      "eye": [
+       12.1,
+       21.95,
+       1.5
+      ],
+      "look": [
+       14.6,
+       19.7,
+       0.8
+      ],
+      "hfov": 88
+     }
+    },
+    "anchors": {
+     "console": {
+      "at": [
+       10.31,
+       18.4,
+       0.0
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "toys": {
+      "at": [
+       11.8,
+       22.37,
+       1.0
+      ],
+      "face": [
+       0,
+       -1
+      ]
+     },
+     "playmat": {
+      "at": [
+       12.9,
+       20.7,
+       0.01
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "seating": {
+      "at": [
+       13.4,
+       19.95,
+       0.0
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "aquarium": {
+      "at": [
+       13.5,
+       19.54,
+       1.3
+      ],
+      "face": [
+       0,
+       1
+      ]
+     },
+     "reading_light": {
+      "at": [
+       10.31,
+       21.3,
+       2.1
+      ],
+      "face": [
+       0,
+       -1
+      ]
+     }
+    },
+    "fixtures": {
+     "downlights": [
+      [
+       7.9,
+       21.5
+      ],
+      [
+       7.9,
+       19.1
+      ],
+      [
+       12.0,
+       21.6
+      ],
+      [
+       12.4,
+       20.2
+      ],
+      [
+       13.9,
+       20.7
+      ],
+      [
+       6.6,
+       20.2
+      ]
+     ],
+     "slots": [
+      [
+       11.7,
+       19.4,
+       11.7,
+       22.0
+      ],
+      [
+       12.2,
+       20.7,
+       14.4,
+       20.7
+      ]
+     ]
+    },
+    "kit": {
+     "ventilator": [
+      1.5,
+      -0.2
+     ]
+    }
+   }
+  }
+ }
+}

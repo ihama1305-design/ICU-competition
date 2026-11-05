@@ -23,11 +23,22 @@ export class Panel {
   /** onSet(groupId, optionId, customValue) is called when someone chooses something. */
   constructor(root, data, onSet) {
     this.groups = new Map();
-    for (const section of data.sections) {
-      const details = el("details", { className: "section", name: "options" }, el("summary", { textContent: section.label }));
+    data.sections.forEach((section, index) => {
+      const summary = el("summary", {},
+        el("span", { className: "section-mark", textContent: String(index + 1).padStart(2, "0"), ariaHidden: "true" }),
+        el("span", { className: "section-title", textContent: section.label }));
+      const details = el("details", { className: "section", name: "options" }, summary);
       for (const group of section.groups) details.append(this.buildGroup(group, onSet));
       root.append(details);
-    }
+    });
+    // `name` makes these exclusive in current browsers; this click handler keeps the same behavior elsewhere.
+    root.addEventListener("click", e => {
+      const current = e.target.closest("details.section > summary")?.parentElement;
+      if (!current) return;
+      requestAnimationFrame(() => {
+        if (current.open) root.querySelectorAll("details.section[open]").forEach(other => { if (other !== current) other.open = false; });
+      });
+    });
   }
 
   buildGroup(group, onSet) {
@@ -67,9 +78,10 @@ export class Panel {
 
   /** Show what's selected, which groups apply, and the notes that go with them. */
   sync(selected, room) {
+    const context = { ...selected, room };
     for (const [id, g] of this.groups) {
       const needs = g.group.requires;
-      g.body.hidden = !!needs && !Object.entries(needs).every(([k, v]) => selected[k] === v);
+      g.body.hidden = !!needs && !Object.entries(needs).every(([k, v]) => context[k] === v);
       const value = selected[id];
       g.buttons.forEach((b, oid) => b.setAttribute("aria-pressed", String(oid === value)));
       const option = g.group.options.find(o => o.id === value);
