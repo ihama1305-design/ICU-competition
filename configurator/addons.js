@@ -145,8 +145,6 @@ export function setAddon(room, id, on) {
     room.addons[id].name ||= `addon_${id}`;
     room.root.add(room.addons[id]);
     if (id === "ventilation" && !room.ceilingFixtures.includes(room.addons[id])) room.ceilingFixtures.push(room.addons[id]);
-    const fixedOverhead = room.addons[id].userData.ceilingGroup;
-    if (fixedOverhead && !room.ceilingFixtures.includes(fixedOverhead)) room.ceilingFixtures.push(fixedOverhead);
   }
   if (room.addons[id]) {
     room.addons[id].userData.schemeOn = on;
@@ -245,7 +243,7 @@ Object.assign(BUILD, {
   wardrobe(room) {
     const g = new THREE.Group(), w1 = room.label === "W1";
     g.name = "addon_wardrobe";
-    const at = w1 ? [17.0, 31.1] : [12.4, 22.04];
+    const at = w1 ? [15.35, 31.18] : [7.15, 22.04];
     g.position.copy(W2T(at[0], at[1], 0));
     const shell = std("#e9e5dc", 0.65), trim = std("#4aaeb2", 0.5), metal = std("#777f82", 0.38, { metalness: 0.35 });
     const doorMat = std("#d2bb96", 0.58); doorMat.name = "wardrobe_surface";
@@ -319,7 +317,7 @@ Object.assign(BUILD, {
   ventilation(room) {
     const g = new THREE.Group(), H = room.meta.ceiling;
     g.name = "addon_ventilation";
-    const points = room.label === "W1" ? [[12.9, 30.8], [15.3, 30.0]] : [[9.0, 20.8], [12.8, 19.3]];
+    const points = room.label === "W1" ? [[12.9, 30.8], [15.3, 30.0]] : [[9.0, 21.8], [12.8, 19.3]];
     const panel = std("#e4e8e7", 0.62), slat = std("#a3abad", 0.5), light = std("#4aaeb2", 0.35, { emissive: "#4aaeb2", emissiveIntensity: 0.45 });
     light.name = "vent_status";
     for (const [x, y] of points) {
@@ -350,174 +348,6 @@ Object.assign(BUILD, {
     const led = tagItem(ball(0.018, std("#55b985", 0.35, { emissive: "#55b985", emissiveIntensity: 0.55 }), 0, 0, 0.052), "Sound indicator", "A status light used for the sound-alert demonstration.", "soundAlert");
     led.material.name = "sound_indicator"; g.add(led);
     g.userData.itemInfo = { title: "Sound-level sensor", description: "A visual, non-recording sensor concept. Use the preview button to show a simulated alert; it does not listen, assess pain, identify a patient, or contact staff.", action: "soundAlert" };
-    return g;
-  },
-
-  /** Three subtle floor zones with separate 1.2 m bed-side strips and a 1.2 m foot band. */
-  careZones(room) {
-    const g = new THREE.Group(); g.name = "addon_careZones";
-    const w1 = room.label === "W1", bed = room.meta.bed;
-    const head = bed.head, foot = bed.foot, L = room.meta.bed.length || 2.213, bedWidth = bed.width || 1.071;
-    const footPoint = [head[0] + foot[0] * L, head[1] + foot[1] * L];
-    const side = [-foot[1], foot[0]], yaw = Math.atan2(foot[0], -foot[1]);
-    const door = room.meta.front.at;
-    const pathX = footPoint[0] - door[0], pathY = footPoint[1] - door[1];
-    const pathLength = Math.hypot(pathX, pathY);
-    const transfer = tagItem(new THREE.Mesh(new THREE.BoxGeometry(pathLength, 0.009, 1.8), new THREE.MeshStandardMaterial({ color: "#d6eeec", roughness: 0.9, transparent: true, opacity: 0.18, depthWrite: false })), "Clear bed transfer route", "A 1.8 m visual route connects the patient-room opening to the bed foot. Keep this path clear for stretcher transfer and emergency access.");
-    transfer.position.copy(W2T((door[0] + footPoint[0]) / 2, (door[1] + footPoint[1]) / 2, 0.022));
-    transfer.rotation.y = Math.atan2(pathY, pathX);
-    transfer.renderOrder = 1; g.add(transfer);
-    const patientNote = "A 1.2 m clear strip is marked along each bed side, with a separate 1.2 m band beyond the bed foot. Keep these working clearances open.";
-    const zones = [
-      ...[-1, 1].map((direction, index) => ({
-        id: `Bed-side access ${index ? "east" : "west"}`,
-        x: head[0] + foot[0] * L / 2 + side[0] * direction * (bedWidth / 2 + 0.6),
-        y: head[1] + foot[1] * L / 2 + side[1] * direction * (bedWidth / 2 + 0.6),
-        w: 1.2, d: L, angle: yaw, c: "#4aaeb2", a: 0.14, note: patientNote,
-      })),
-      { id: "Bed-foot access", x: footPoint[0] + foot[0] * 0.6, y: footPoint[1] + foot[1] * 0.6, w: bedWidth, d: 1.2, angle: yaw, c: "#4aaeb2", a: 0.14, note: patientNote },
-      ...(w1 ? [
-        { id: "Family zone", x: 15.0, y: 30.2, w: 3.2, d: 1.12, c: "#c8ab82", a: 0.22, note: "Visitor seating is grouped at the perimeter, outside the bed-side clearances and transfer route." },
-        { id: "Family zone", x: 15.6, y: 31.0, w: 0.9, d: 0.66, c: "#c8ab82", a: 0.22, note: "The family seating zone continues along the perimeter beside the window." },
-        { id: "Play zone", x: 14.0, y: 31.1, w: 1.32, d: 0.58, c: "#e5c56c", a: 0.24, note: "A compact play corner sits at the far end of the room, away from the entrance and clinical route." },
-      ] : [
-        { id: "Family zone", x: 7.5, y: 20.0, w: 2.0, d: 1.85, c: "#c8ab82", a: 0.22, note: "Visitor seating is grouped along the daylit perimeter, outside the bed-side clearances and transfer route." },
-        { id: "Play zone", x: 7.65, y: 21.6, w: 1.28, d: 0.86, c: "#e5c56c", a: 0.24, note: "A compact play corner sits at the far end of the room, well away from the entrance and clinical route." },
-      ]),
-    ];
-    for (const z of zones) {
-      const p = tagItem(box(z.w, 0.009, z.d, new THREE.MeshStandardMaterial({ color: z.c, roughness: 0.9, transparent: true, opacity: z.a, depthWrite: false }), 0, 0.008, 0), z.id, z.note);
-      p.position.copy(W2T(z.x, z.y, 0.012));
-      p.rotation.y = z.angle || 0;
-      p.renderOrder = 1;
-      g.add(p);
-    }
-    const labels = w1 ? [
-      ["PATIENT CARE", head[0], footPoint[1] - 0.72, 1.15], ["FAMILY", 15.0, 30.2, 0.72], ["PLAY", 14.0, 31.1, 0.58],
-    ] : [
-      ["PATIENT CARE", head[0], footPoint[1] - 0.72, 1.15], ["FAMILY", 8.2, 19.35, 0.72], ["PLAY", 7.65, 21.6, 0.58],
-    ];
-    for (const [text, x, y, width] of labels) {
-      const pic = canvasTexture(384, 80);
-      pic.g.fillStyle = "#435457"; pic.g.font = "600 40px sans-serif"; pic.g.textAlign = "center"; pic.g.textBaseline = "middle"; pic.g.fillText(text, 192, 42);
-      const marker = tagItem(new THREE.Mesh(new THREE.PlaneGeometry(width, 0.12), new THREE.MeshBasicMaterial({ map: pic.t, transparent: true, depthWrite: false, side: THREE.DoubleSide })), text, "A labeled part of the room's clinical, family or play zone.");
-      marker.rotation.x = -Math.PI / 2; marker.position.copy(W2T(x, y, 0.028)); marker.renderOrder = 2; g.add(marker);
-    }
-    g.userData.itemInfo = { title: "Three care zones", description: "Patient care, family seating, and a separate play corner are shown with subtle floor finishes. Separate 1.2 m strips mark both bed sides and the bed foot. This is a layout study, not a building approval." };
-    return g;
-  },
-
-  /** Coordinated headwall and overhead service bridge for monitors, gases, outlets and equipment supports. */
-  clinicalServices(room) {
-    const g = new THREE.Group(); g.name = "addon_clinicalServices";
-    const bed = room.meta.bed, head = bed.head;
-    const wallY = room.label === "W1" ? 31.34 : 22.12;
-    g.position.copy(W2T(head[0], wallY, 0));
-    const panel = std("#e7e6df", 0.7), trim = std("#a6b1b1", 0.48), teal = std("#4aaeb2", 0.42), dark = std("#1b272a", 0.24), metal = std("#8a9698", 0.38, { metalness: 0.32 });
-    g.add(tagItem(box(2.8, 1.04, 0.075, panel, 0, 1.62, 0), "Integrated medical headwall", "A wall-mounted service panel groups clinical connections at the head of the bed."));
-    g.add(box(2.65, 0.055, 0.09, teal, 0, 1.12, 0.05));
-    g.add(box(2.65, 0.045, 0.07, trim, 0, 2.15, 0.025));
-    const screen = tagItem(box(0.55, 0.36, 0.035, dark, -0.68, 1.86, 0.061), "Bedside monitor", "The bedside monitor is mounted on the coordinated headwall, clear of the floor and transfer route.");
-    screen.add(box(0.48, 0.29, 0.008, std("#31525a", 0.28, { emissive: "#16404a", emissiveIntensity: 0.22 }), 0, 0, 0.023)); g.add(screen);
-    const outletColors = ["#d85a4d", "#e2e4df", "#e2e4df", "#4d839a", "#4d839a"];
-    outletColors.forEach((color, i) => {
-      const socket = tagItem(ball(0.048, std(color, 0.48), -0.9 + i * 0.29, 1.38, 0.06, 1.2, 1.2, 0.35), i === 0 ? "Emergency power outlet" : i < 3 ? "Medical gas connection" : "Clinical power outlet", "Grouped, clearly differentiated service points on the headwall. Final colors and services must match the approved clinical engineering schedule.");
-      g.add(socket);
-    });
-    const rail = tagItem(box(2.28, 0.055, 0.06, metal, 0.27, 1.72, 0.075), "Equipment support rail", "A continuous rail provides a planned mounting point for bedside equipment and pump supports.");
-    g.add(rail);
-    for (const x of [-0.38, 0.0, 0.38]) {
-      const pump = tagItem(box(0.19, 0.28, 0.16, std("#f4f3ee", 0.55), 0.47 + x, 1.94, 0.12), "Infusion pump support", "A compact pump module shown on the headwall support rail; exact equipment and clinical configuration need review.");
-      pump.add(box(0.11, 0.12, 0.012, std("#93bec1", 0.4), 0, 0.04, 0.09)); g.add(pump);
-    }
-    const ventilator = tagItem(box(0.25, 0.42, 0.22, std("#f4f3ee", 0.5), 1.18, 1.78, 0.12), "Ventilator support", "A ventilator module is shown on the coordinated equipment support so its base stays out of the transfer route.");
-    ventilator.add(box(0.15, 0.11, 0.012, std("#7faeb1", 0.35), 0, 0.04, 0.12)); g.add(ventilator);
-    const cableCover = tagItem(box(0.12, 0.58, 0.055, trim, 1.24, 1.66, 0.052), "Cable-management raceway", "Cables are routed inside a flush raceway instead of hanging into the care area.");
-    g.add(cableCover);
-    const ceilingGroup = new THREE.Group();
-    ceilingGroup.userData.schemeOn = true;
-    const postMat = std("#c4ccca", 0.4, { metalness: 0.25 });
-    for (const x of [-0.88, 0.88]) {
-      ceilingGroup.add(tagItem(box(0.055, 0.78, 0.055, postMat, x, room.meta.ceiling - 0.42, 0.25), "Ceiling service boom", "The service boom keeps monitor and pump support overhead, with no floor base in the transfer path."));
-      ceilingGroup.add(box(0.22, 0.045, 0.045, metal, x, 2.24, 0.26));
-    }
-    ceilingGroup.add(box(1.95, 0.045, 0.07, metal, 0, room.meta.ceiling - 0.06, 0.25));
-    g.add(ceilingGroup);
-    g.userData.ceilingGroup = ceilingGroup;
-    g.userData.itemInfo = { title: "Headwall and service boom", description: "The bed-head service concept groups monitor, gas and power points, pump supports and concealed cable routing. It is a visual layout proposal, not a clinical engineering specification." };
-    return g;
-  },
-
-  /** Wall-mounted staff handwash sink and documentation station beside the room entry. */
-  staffWorkzone(room) {
-    const g = new THREE.Group(); g.name = "addon_staffWorkzone";
-    const stationAt = room.label === "W1" ? [17.6, 30.18] : [14.14, 22.1];
-    const sinkAt = room.label === "W1" ? [17.6, 29.5] : [13.4, 22.1];
-    const wallAxis = room.label === "W1" ? "east" : "north";
-    const station = new THREE.Group(); station.position.copy(W2T(stationAt[0], stationAt[1], 0));
-    station.rotation.y = wallAxis === "east" ? -Math.PI / 2 : 0;
-    const white = std("#ecebe5", 0.68), trim = std("#8b9697", 0.5), screen = std("#25383d", 0.24), teal = std("#4aaeb2", 0.4);
-    station.add(tagItem(box(0.82, 0.055, 0.36, white, 0, 0.91, 0), "Wall-mounted documentation desk", "A compact wall-fixed work surface with open floor below, placed beside the entrance and outside the visitor zone."));
-    station.add(box(0.78, 0.04, 0.08, trim, 0, 0.965, -0.13));
-    station.add(box(0.44, 0.29, 0.025, screen, -0.15, 1.15, -0.11));
-    station.add(box(0.3, 0.19, 0.008, std("#c8dcda", 0.32), -0.15, 1.16, -0.092));
-    station.add(box(0.23, 0.015, 0.16, std("#f8f7f2", 0.82), 0.29, 0.955, 0.02));
-    station.add(tagItem(box(0.1, 0.19, 0.06, teal, 0.43, 1.23, -0.12), "Hand sanitizer dispenser", "A wall-mounted dispenser at the staff work zone."));
-    g.add(station);
-    const sink = new THREE.Group(); sink.position.copy(W2T(sinkAt[0], sinkAt[1], 0));
-    sink.rotation.y = wallAxis === "east" ? -Math.PI / 2 : 0;
-    const ceramic = std("#f6f4ee", 0.26), chrome = std("#9aa5a6", 0.3, { metalness: 0.5 });
-    sink.add(tagItem(box(0.5, 0.075, 0.39, ceramic, 0, 0.83, 0), "Accessible staff handwash sink", "A wall-mounted clinical sink concept with open space below and a clear floor approach."));
-    sink.add(box(0.32, 0.035, 0.22, std("#d8dfdc", 0.28), 0, 0.88, 0.02));
-    sink.add(box(0.03, 0.18, 0.025, chrome, 0, 0.98, -0.11));
-    sink.add(box(0.13, 0.025, 0.025, chrome, 0, 1.05, -0.07));
-    sink.add(tagItem(box(0.13, 0.21, 0.07, white, -0.15, 1.1, -0.09), "Soap dispenser", "A wall-mounted soap dispenser beside the handwash basin."));
-    g.add(sink);
-    g.userData.itemInfo = { title: "Staff handwash and documentation zone", description: "A compact wall-mounted sink, soap and sanitizer dispensers, and a documentation surface sit near the entry without adding floor-standing furniture." };
-    return g;
-  },
-
-  /** Static visual safety equipment: detector, sprinkler, alarm pull, extinguisher and hose/standpipe cabinet. */
-  safety(room) {
-    const g = new THREE.Group(); g.name = "addon_safety";
-    const w1 = room.label === "W1", bed = room.meta.bed, ceilingGroup = new THREE.Group();
-    ceilingGroup.userData.schemeOn = true;
-    const white = std("#f1f0e9", 0.62), metal = std("#a4adae", 0.42), red = std("#c94940", 0.42, { emissive: "#50110e", emissiveIntensity: 0.12 }), green = std("#49a879", 0.34, { emissive: "#23663f", emissiveIntensity: 0.45 });
-    const detector = new THREE.Group(); detector.position.copy(W2T(bed.head[0] + 1.35, bed.head[1] - 0.5, room.meta.ceiling - 0.025));
-    detector.add(tagItem(ball(0.095, white, 0, 0, 0), "Smoke detector", "A ceiling-mounted fire detection point. Device type, spacing and system connection require fire-engineering review."));
-    detector.add(ball(0.018, red, 0.05, -0.03, 0.015)); ceilingGroup.add(detector);
-    const sprinklerAt = W2T(bed.head[0] - 0.55, bed.head[1] - 1.25, room.meta.ceiling - 0.06);
-    const sprinkler = new THREE.Group(); sprinkler.position.copy(sprinklerAt);
-    sprinkler.add(tagItem(new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.018, 0.14, 10), metal), "Sprinkler head", "A ceiling sprinkler concept shown above the clinical zone. Final coverage and head selection must follow the approved fire strategy."));
-    sprinkler.add(box(0.14, 0.018, 0.14, metal, 0, -0.075, 0)); ceilingGroup.add(sprinkler);
-    g.userData.ceilingGroup = ceilingGroup; g.add(ceilingGroup);
-    const alarmAt = w1 ? [15.5, 28.656, 1.18] : [15.35, 20.5, 1.18];
-    const alarm = new THREE.Group(); alarm.position.copy(W2T(...alarmAt));
-    alarm.rotation.y = w1 ? 0 : Math.PI / 2;
-    alarm.add(tagItem(box(0.18, 0.22, 0.055, red), "Manual fire alarm point", "A corridor-side manual fire-alarm call point concept near the room entrance."));
-    alarm.add(box(0.08, 0.045, 0.012, white, 0, -0.05, 0.035)); g.add(alarm);
-    const cabinetAt = w1 ? [17.95, 28.656, 1.18] : [15.35, 21.75, 1.18];
-    const cabinet = new THREE.Group(); cabinet.position.copy(W2T(...cabinetAt));
-    cabinet.rotation.y = w1 ? 0 : Math.PI / 2;
-    cabinet.add(tagItem(box(0.62, 1.02, 0.14, red, 0, 0, 0), "Fire hose reel and standpipe cabinet", "A corridor fire hose reel and standpipe cabinet concept is positioned outside the patient-care floor area. External fire hydrants belong on the site fire-service plan."));
-    cabinet.add(box(0.44, 0.72, 0.018, white, 0, 0, 0.08));
-    cabinet.add(tagItem(new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.022, 8, 22), red), "Fire hose reel", "A visible reel symbol inside the corridor-side fire cabinet."));
-    cabinet.children[cabinet.children.length - 1].position.set(0, 0.02, 0.1);
-    const extinguisher = tagItem(new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.052, 0.28, 12), red), "Portable extinguisher", "A portable extinguisher is represented in the accessible fire cabinet; type and location need the facility fire plan.");
-    extinguisher.position.set(-0.18, -0.3, 0.11); cabinet.add(extinguisher);
-    const hydrant = tagItem(new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.11, 12), std("#c9a96e", 0.34, { metalness: 0.45 })), "Fire hydrant riser connection", "A standpipe/hydrant riser connection is represented in the corridor cabinet. External site hydrants must be located on the approved fire-service plan.");
-    hydrant.position.set(0.19, -0.31, 0.11); cabinet.add(hydrant);
-    g.add(cabinet);
-    const exitAt = w1 ? [16.56, 28.64, 2.15] : [14.9, 20.75, 2.15];
-    const exit = new THREE.Group(); exit.position.copy(W2T(...exitAt));
-    exit.rotation.y = w1 ? 0 : Math.PI / 2;
-    exit.add(tagItem(box(0.54, 0.17, 0.035, green), "Exit direction sign", "An illuminated exit-direction sign concept above the entrance; final sign and emergency-lighting layout need authority review."));
-    g.add(exit);
-    const callAt = W2T(bed.head[0] + 0.55, bed.head[1] + 0.25, 1.2);
-    const call = new THREE.Group(); call.position.copy(callAt);
-    call.add(tagItem(box(0.14, 0.16, 0.035, red), "Bedside emergency call", "A reachable patient and staff call control is shown at the headwall. It is a visual concept and is not connected to a nurse-call system."));
-    g.add(call);
-    g.userData.itemInfo = { title: "Fire and emergency safety concept", description: "Visible elements include a detector, sprinkler head, manual alarm point, corridor fire hose/standpipe cabinet, exit sign and bedside call control. These are visual placeholders; a licensed fire engineer and local authority must set actual equipment, locations and connections." };
     return g;
   },
 
@@ -601,8 +431,7 @@ Object.assign(BUILD, {
       else { g.moveTo(x, y - s * 1.1); g.lineTo(x + s * 1.1, y + s * 0.9); g.lineTo(x - s * 1.1, y + s * 0.9); g.closePath(); }
       g.fill();
     }
-    const size = room.label === "W1" ? [1.25, 0.58] : [1.0, 0.74];
-    const mat = new THREE.Mesh(new THREE.BoxGeometry(size[0], 0.012, size[1]), [std("#d9d2c0"), std("#d9d2c0"), std("#ffffff", 0.9, { map: pic.t }), std("#d9d2c0"), std("#d9d2c0"), std("#d9d2c0")]);
+    const mat = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.012, 1.2), [std("#d9d2c0"), std("#d9d2c0"), std("#ffffff", 0.9, { map: pic.t }), std("#d9d2c0"), std("#d9d2c0"), std("#d9d2c0")]);
     mat.receiveShadow = true;
     const a = placeAt(new THREE.Group(), room.anchors.playmat);
     mat.position.y = 0.006;
@@ -612,22 +441,13 @@ Object.assign(BUILD, {
 
   /** A sofa-bed against the family-zone wall. Its colour follows the upholstery choice. */
   sofa(room) {
-    const g = placeAt(new THREE.Group(), room.anchors.seating), cloth = std("#5f8f8a", 0.95), w1 = room.label === "W1";
-    g.position.copy(W2T(...(w1 ? [15.6, 30.48, 0] : [7.7, 19.95, 0])));
-    g.rotation.y = w1 ? -Math.PI / 2 : Math.PI / 2;
+    const g = placeAt(new THREE.Group(), room.anchors.seating), cloth = std("#5f8f8a", 0.95);
+    g.position.copy(W2T(...(room.label === "W1" ? [13.5, 31.1, 0] : [12.2, 22.0, 0])));
     cloth.name = "upholstery";
     const feet = std("#7a7f82", 0.5);
     g.add(box(1.7, 0.3, 0.8, cloth, 0, 0.27, 0), box(0.8, 0.14, 0.68, cloth, -0.41, 0.48, 0.06), box(0.8, 0.14, 0.68, cloth, 0.41, 0.48, 0.06));
     g.add(box(1.7, 0.52, 0.16, cloth, 0, 0.62, -0.32), box(0.16, 0.42, 0.8, cloth, -0.85, 0.42, 0), box(0.16, 0.42, 0.8, cloth, 0.85, 0.42, 0));
     for (const x of [-0.78, 0.78]) for (const z of [-0.33, 0.33]) g.add(box(0.05, 0.12, 0.05, feet, x, 0.06, z));
-    const chair = new THREE.Group();
-    const chairZ = w1 ? 1.28 : -0.75;
-    chair.add(box(0.54, 0.15, 0.5, cloth, 0, 0.44, chairZ), box(0.54, 0.6, 0.12, cloth, 0, 0.78, chairZ - 0.2));
-    chair.add(box(0.07, 0.28, 0.5, cloth, -0.305, 0.54, chairZ), box(0.07, 0.28, 0.5, cloth, 0.305, 0.54, chairZ));
-    for (const x of [-0.22, 0.22]) for (const z of [chairZ - 0.18, chairZ + 0.18]) chair.add(box(0.035, 0.34, 0.035, feet, x, 0.18, z));
-    chair.add(box(0.38, 0.21, 0.018, std("#273338", 0.35), 0, 0.78, chairZ + 0.068));
-    g.add(tagItem(chair, "Family lounge chair", "An additional visitor chair sits beside the sofa as one grouped family zone."));
-    g.userData.itemInfo = { title: "Family sofa", description: "Family seating sits together at the perimeter, outside the patient bed and transfer clearances." };
     return g;
   },
 
