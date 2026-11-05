@@ -435,7 +435,7 @@ for cnt, (p, kind) in zip(plan["counters"], counters):
     if kind in DESK_KINDS:
         tops.append((p, top_z - 0.03, top_z))
         front, d, _ = desk_seat(p)
-        cab.append((desk_panels(p, knee_hole(front, d)), 0.1, top_z - 0.03))
+        cab.append((desk_panels(p, knee_hole(front, d)), 0.0, top_z - 0.03))  # no plinth under these panels, so they run to the floor
     else:
         tops.append((p.buffer(0.015, join_style="mitre"), top_z - 0.03, top_z))
         body, toe = p.buffer(-0.01), p.buffer(-0.06)

@@ -154,7 +154,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 - The `A-EQPM` outline for a service riser is built as a plain 0.90 m counter, because these sheets don't give its height.
 - Knee spaces aren't drawn. The sheets give only the outlines of the nurse station and the desks, so each workstation gets an assumed opening 0.90 m wide and 0.55 m deep, 0.72 m high up to the underside of the top.
   - At the nurse station, the cabinet stays between the openings and behind them, under the transaction ledge.
-  - At the dictation and observation desks, a panelled pedestal stands on each side of the opening, and the wall closes it at the back.
+  - At the dictation and observation desks, a panelled pedestal stands on each side of the opening, and the wall closes it at the back. The panels run to the floor, with no plinth or toe recess.
   - At the observation desks that wall is a V, so the opening is smaller than assumed. It is 0.42–0.44 m deep across the full 0.90 m, and reaches 0.55 m only across the middle 0.44–0.51 m.
 - Glass, sky and procedural textures only look right in the Cycles renders. The GLB and viewer use flat colours.
 - Heights other than the door head and windows are assumptions (see the table above).
