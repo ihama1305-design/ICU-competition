@@ -407,7 +407,7 @@ document.querySelectorAll("#pad button").forEach(b => {
 });
 const ray = new THREE.Raycaster();
 function blocked(from, dir, dist) {
-  for (const h of [0.3, 1.0]) {
+  for (const h of VIEW.walk_heights) {
     ray.set(new THREE.Vector3(from.x, h, from.z), dir);
     ray.far = dist + VIEW.radius;
     if (ray.intersectObjects(colliders, false).length) return true;
