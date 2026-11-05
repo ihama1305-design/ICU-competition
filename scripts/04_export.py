@@ -72,6 +72,7 @@ S = [  # (id, group, label, confidence, regex on object names, notes)
     ("feature", "Patient rooms", "Feature walls, TVs, bed rails", "low", "^room_feature_walls", "Wood-look wall panel with a TV and bed-protection rails. Assumed finish."),
     ("nurse_ws", "Staff areas", "Nurse station workstations", "low", "^nurse_", "Monitors and chairs inside the U-shaped nurse station."),
     ("obs_ws", "Staff areas", "Observation desks", "low", "^obs_", "One workstation per observation nook, facing the two observation windows."),
+    ("dictation_ws", "Staff areas", "Dictation desk", "low", "^dictation_", "One workstation at the drawn counter labelled Dictation."),
     ("joinery", "Staff areas", "Counters, desks, nurse station", "med", "^joinery", "Outlines from the drawing's A-EQPM layer. Counter 0.90 m, desks 0.75 m, transaction ledge 1.10 m (assumed heights)."),
     ("basins", "Staff areas", "Hand-wash basins", "med", "^basin", "Basin positions from the drawing. Fitting design assumed."),
     ("carts", "Staff areas", "Crash cart and stretchers", "low", "^crash_cart|^stretcher", "Placed in the alcoves named on the drawing."),
