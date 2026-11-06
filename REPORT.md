@@ -48,9 +48,9 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
   - Examination light, privacy curtain on a track behind the glass front
   - Wood-look feature wall with a TV, bed-protection rails, and roller blinds on the facade
 - **Rest of the floor:**
-  - 8 observation nooks with desks and workstations
+  - 8 observation nooks with desks, workstations and knee spaces
   - U-shaped nurse station with a raised transaction ledge, 4 workstations and chairs, and a knee space under each workstation
-  - Dictation desk with a workstation and chair
+  - Dictation desk with a workstation, chair and knee space
   - Corridor handrails, coved skirting, lay-in 600 mm ceiling grid in corridors and plain ceilings in patient rooms
   - Crash cart and stretcher alcoves
 - **Lighting:**
@@ -152,7 +152,10 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 - Lift doors and toilet fittings are not modelled. That includes the four oval basins drawn on vanity tops near two `TOILET` and two `ANTE` labels: those tops are on `P-SANR-FIXT`, not `A-EQPM`, so no counter is built under them.
 - Staff toilets, utility rooms and the core are walled and doored but unfurnished. Only `A-EQPM` counters and the sinks drawn on them appear there.
 - The `A-EQPM` outline for a service riser is built as a plain 0.90 m counter, because these sheets don't give its height.
-- The nurse station's knee spaces aren't drawn. The sheets give only the station's outline, so each workstation gets an assumed opening 0.90 m wide and 0.55 m deep, 0.72 m high up to the underside of the top. The cabinet stays between the openings and behind them, under the transaction ledge.
+- Knee spaces aren't drawn. The sheets give only the outlines of the nurse station and the desks, so each workstation gets an assumed opening 0.90 m wide and 0.55 m deep, 0.72 m high up to the underside of the top.
+  - At the nurse station, the cabinet stays between the openings and behind them, under the transaction ledge.
+  - At the dictation and observation desks, a panelled pedestal stands on each side of the opening, and the wall closes it at the back. The panels run to the floor, with no plinth or toe recess.
+  - At the observation desks that wall is a V, so the opening is smaller than assumed. It is 0.42–0.44 m deep across the full 0.90 m, and reaches 0.55 m only across the middle 0.44–0.51 m.
 - Glass, sky and procedural textures only look right in the Cycles renders. The GLB and viewer use flat colours.
 - Heights other than the door head and windows are assumptions (see the table above).
 
