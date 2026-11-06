@@ -1086,7 +1086,7 @@
      "control": "choice",
      "default": "chairs",
      "check": {
-      "aim": "seating",
+      "view": "overview",
       "time": "afternoon"
      },
      "options": [
@@ -1102,11 +1102,6 @@
         {
          "do": "visible",
          "part": "cfg_kit_visitor_chair",
-         "on": true
-        },
-        {
-         "do": "visible",
-         "part": "cfg_kit_recliner",
          "on": true
         }
        ],
@@ -1124,11 +1119,6 @@
         {
          "do": "visible",
          "part": "cfg_kit_visitor_chair",
-         "on": false
-        },
-        {
-         "do": "visible",
-         "part": "cfg_kit_recliner",
          "on": false
         }
        ],
@@ -1281,7 +1271,7 @@
      "control": "choice",
      "default": "off",
      "check": {
-      "aim": "playmat",
+      "view": "family",
       "time": "afternoon"
      },
      "options": [
@@ -1318,7 +1308,7 @@
      "control": "choice",
      "default": "off",
      "check": {
-      "aim": "playmat",
+      "view": "family",
       "time": "afternoon"
      },
      "options": [
@@ -1551,6 +1541,7 @@
      "label": "Sliding wardrobe",
      "control": "choice",
      "default": "on",
+     "check": {"view":"dollhouse","time":"afternoon"},
      "options": [
       {"id":"on","label":"Add storage","effects":[{"do":"addon","id":"wardrobe","on":true}],"code":0},
       {"id":"off","label":"Remove","effects":[{"do":"addon","id":"wardrobe","on":false}],"code":1}
@@ -1563,6 +1554,7 @@
      "label": "Wardrobe finish",
      "control": "choice",
      "default": "light",
+     "check": {"view":"dollhouse","time":"afternoon"},
      "options": [
       {"id":"light","label":"Light oak grain","effects":[{"do":"addonLook","id":"wardrobe","look":"oak"}],"code":0},
       {"id":"warm","label":"Warm walnut grain","effects":[{"do":"addonLook","id":"wardrobe","look":"walnut"}],"code":1},
@@ -1577,6 +1569,7 @@
      "control": "swatches",
      "default": "teal",
      "custom": {"effect":{"do":"color","material":"wardrobe_accent"}},
+     "check": {"time":"afternoon","rooms":{"W1":{"view":"family"},"W3":{"view":"overview"}}},
      "options": [
       {"id":"teal","label":"Teal","swatch":"#4aaeb2","effects":[{"do":"color","material":"wardrobe_accent","value":"#4aaeb2"}],"code":0},
       {"id":"sand","label":"Sand","swatch":"#c6a77a","effects":[{"do":"color","material":"wardrobe_accent","value":"#c6a77a"}],"code":1},
@@ -1591,6 +1584,7 @@
      "label": "W1 bathroom fixtures",
      "control": "choice",
      "default": "on",
+     "check": {"view":"bathroom","time":"afternoon"},
      "options": [
       {"id":"on","label":"Show fixtures","effects":[{"do":"addon","id":"bathroom","on":true}],"code":0},
       {"id":"off","label":"Hide fixtures","effects":[{"do":"addon","id":"bathroom","on":false}],"code":1}
@@ -1604,6 +1598,7 @@
      "label": "Bathroom surface design",
      "control": "choice",
      "default": "stone",
+     "check": {"view":"bathroom","time":"afternoon"},
      "options": [
       {"id":"stone","label":"Quiet stone","effects":[{"do":"addonLook","id":"bathroom","look":"stone"}],"code":0},
       {"id":"terrazzo","label":"Fine terrazzo","effects":[{"do":"addonLook","id":"bathroom","look":"terrazzo"}],"code":1},
@@ -1623,6 +1618,7 @@
      "label": "Visible ventilation grilles",
      "control": "choice",
      "default": "on",
+     "check": {"view":"family","time":"afternoon"},
      "options": [
       {"id":"on","label":"Show supply and return","effects":[{"do":"addon","id":"ventilation","on":true}],"code":0},
       {"id":"off","label":"Hide grilles","effects":[{"do":"addon","id":"ventilation","on":false}],"code":1}
@@ -1635,79 +1631,13 @@
      "label": "Sound-level indicator",
      "control": "choice",
      "default": "on",
+     "check": {"view":"family","time":"afternoon"},
      "options": [
       {"id":"on","label":"Show sensor","effects":[{"do":"addon","id":"soundSensor","on":true}],"code":0},
       {"id":"off","label":"Hide sensor","effects":[{"do":"addon","id":"soundSensor","on":false}],"code":1}
      ],
      "note": {"text":"Visual mockup only. It does not use a microphone, identify a patient, assess pain, store speech, or send an alert to staff."},
      "code": 31
-    }
-   ]
-  },
-  {
-   "id": "clinicalLayout",
-   "label": "Clinical layout and safety",
-   "groups": [
-    {
-     "id": "clinicalServices",
-     "label": "Headwall and service boom",
-     "control": "choice",
-     "default": "on",
-     "options": [
-      {"id":"on","label":"Show coordinated services","effects":[{"do":"addon","id":"clinicalServices","on":true},{"do":"visible","part":"cfg_kit_monitor","on":false},{"do":"visible","part":"cfg_kit_pumps","on":false},{"do":"visible","part":"cfg_kit_pendant","on":false},{"do":"visible","part":"cfg_kit_iv_pole","on":false},{"do":"visible","part":"cfg_kit_ventilator","on":false}],"code":0},
-      {"id":"off","label":"Hide service wall","effects":[{"do":"addon","id":"clinicalServices","on":false},{"do":"visible","part":"cfg_kit_monitor","on":false},{"do":"visible","part":"cfg_kit_pumps","on":false},{"do":"visible","part":"cfg_kit_pendant","on":false},{"do":"visible","part":"cfg_kit_iv_pole","on":false},{"do":"visible","part":"cfg_kit_ventilator","on":false}],"code":1}
-     ],
-     "note": {"text":"A single headwall groups monitor, gas, power and pump supports. The overhead service bridge keeps equipment off the floor; final engineering coordination is required."},
-     "code": 32
-    },
-    {
-     "id": "staffWorkzone",
-     "label": "Staff sink and documentation desk",
-     "control": "choice",
-     "default": "on",
-     "options": [
-      {"id":"on","label":"Show staff work zone","effects":[{"do":"addon","id":"staffWorkzone","on":true}],"code":0},
-      {"id":"off","label":"Hide","effects":[{"do":"addon","id":"staffWorkzone","on":false}],"code":1}
-     ],
-     "note": {"text":"Wall-mounted fixtures near the entry leave floor space available. Sink dimensions, reach and handwash requirements need accessibility and clinical review."},
-     "code": 33
-    },
-    {
-     "id": "safety",
-     "label": "Fire and emergency fixtures",
-     "control": "choice",
-     "default": "on",
-     "options": [
-      {"id":"on","label":"Show safety concept","effects":[{"do":"addon","id":"safety","on":true}],"code":0},
-      {"id":"off","label":"Hide","effects":[{"do":"addon","id":"safety","on":false}],"code":1}
-     ],
-     "note": {"text":"Shows a detector, sprinkler, alarm point, exit sign, bedside call and corridor fire hose/standpipe cabinet. It is a visual concept, not a fire-code design. Site hydrants must be located on the approved fire-service plan."},
-     "code": 34
-    },
-    {
-     "id": "careZones",
-     "label": "Three care zones and bed clearances",
-     "control": "choice",
-     "default": "on",
-     "options": [
-      {"id":"on","label":"Show zones and 1.2 m envelope","effects":[{"do":"addon","id":"careZones","on":true}],"code":0},
-      {"id":"off","label":"Hide floor markings","effects":[{"do":"addon","id":"careZones","on":false}],"code":1}
-     ],
-     "note": {"text":"Patient care, visitor seating and play are shown as separate floor zones. The play zone is kept away from the entrance; the bed envelope marks 1.2 m at both sides and the foot."},
-     "code": 35
-    },
-    {
-     "id": "bedsideTable",
-     "label": "Movable over-bed table",
-     "control": "choice",
-     "default": "off",
-     "check": {"view":"overview","time":"afternoon"},
-     "options": [
-      {"id":"off","label":"Keep clear for transfer","effects":[{"do":"visible","part":"cfg_kit_overbed_table","on":false}],"code":0},
-      {"id":"on","label":"Place at bedside","effects":[{"do":"visible","part":"cfg_kit_overbed_table","on":true}],"code":1}
-     ],
-     "note": {"text":"The table is hidden by default so the transfer route remains clear. It is mobile furniture; move it away from the bed foot before any patient transfer."},
-     "code": 36
     }
    ]
   }

@@ -1,4 +1,4 @@
-﻿// Room configurator: a design proposal, built on the as-built model of one room.
+// Room configurator: a design proposal, built on the as-built model of one room.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Stage, W2T } from "./stage.js";
@@ -16,7 +16,7 @@ addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
 document.addEventListener("touchstart", () => {}, { passive: true }); // iOS Safari only applies :active once the page listens for touches
 
-const SITE = {"latitude_deg":24.45,"declination_deg":-2.5,"north_offset_deg":0};
+const SITE = {"latitude_deg": 24.45, "declination_deg": -2.5, "north_offset_deg": 0};
 const STOPS = { morning: 8.5, midday: 12, afternoon: 15.53, sunset: 17.75, night: 21 };
 const NIGHT_FROM = 18.4;
 const $ = id => document.getElementById(id);
@@ -128,8 +128,8 @@ async function setRoom(label, { keepView = true } = {}) {
   pressed($("rooms"), label);
   const status = $("roomStatus");
   const known = stage.rooms.has(label);
-  if (!known) status.textContent = "Loading the roomâ€¦";
-  const room = await stage.load(label, f => { status.textContent = `Loading the roomâ€¦ ${Math.round(f * 100)}%`; });
+  if (!known) status.textContent = "Loading the room…";
+  const room = await stage.load(label, f => { status.textContent = `Loading the room… ${Math.round(f * 100)}%`; });
   if (state.room !== label) return; // another room was chosen while this one loaded
   stage.show(room);
   rig.setRoom(room.meta);
@@ -359,7 +359,7 @@ function createProfileIdea(form) {
   const result = $("profileResult");
   result.replaceChildren(
     Object.assign(document.createElement("strong"), { textContent: "Editable room idea created" }),
-    document.createTextNode(`${extras.join(" Â· ")}. Your selected room stays ${state.room}. Sex and care-frequency answers did not change the draft. Other notes stay in this page and are not interpreted.`),
+    document.createTextNode(`${extras.join(" · ")}. Your selected room stays ${state.room}. Sex and care-frequency answers did not change the draft. Other notes stay in this page and are not interpreted.`),
   );
   result.hidden = false;
   syncUi();
@@ -374,7 +374,7 @@ $("profileForm").addEventListener("submit", e => {
 
 function setDemoReadout() {
   const temp = Number($("demoTemp").value), humidity = Number($("demoHumidity").value);
-  $("demoTempValue").textContent = `${temp} Â°C`;
+  $("demoTempValue").textContent = `${temp} °C`;
   $("demoHumidityValue").textContent = `${humidity}%`;
   const tint = temp < 22 ? "#63aecd" : temp > 25 ? "#df9762" : "#4aaeb2";
   for (const mesh of stage.current?.parts.addon_ventilation || []) {
@@ -712,4 +712,3 @@ async function boot() {
   }));
 }
 boot().catch(fail);
-
