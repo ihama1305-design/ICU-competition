@@ -566,6 +566,43 @@
    }
   ]
  },
+ "fire": {
+  "_note": "Extinguisher cabinets. Where they are comes from sheet A1104-a: the dark red A-GENM blocks that the FIRE EXTINGUISHER CABINET labels point to, which 09 checks these against. face_at is the middle of the outer edge of the drawn face strip, and normal points out of the wall. Heights, door and sign aren't on the sheets, so they're assumed",
+  "cabinets": [
+   { "id": "nw", "face_at": [15.847, 22.77], "normal": [0.9681, -0.2507] },
+   { "id": "sw", "face_at": [13.808, 13.232], "normal": [0.987, -0.161] },
+   { "id": "ne", "face_at": [29.135, 22.812], "normal": [-0.9681, -0.2507] },
+   { "id": "se", "face_at": [31.18, 13.232], "normal": [-0.9858, -0.1678] }
+  ],
+  "cabinet": {
+   "_confidence": "face_width, body_width and body_depth measured from the sheet; the rest assumed",
+   "face_width": 0.43,
+   "body_width": 0.35,
+   "body_depth": 0.26,
+   "bottom": 0.75,
+   "top": 1.5,
+   "wall_proud": 0.025,
+   "frame_proud": 0.04,
+   "frame_bar": 0.03,
+   "infill_depth": 0.12,
+   "sign": { "bottom": 1.56, "top": 1.76, "width": 0.3 }
+  },
+  "extinguisher": {
+   "_note": "a typical 6 kg unit, assumed. Not on the sheets",
+   "radius": 0.075,
+   "bottom": 0.8,
+   "top": 1.4
+  },
+  "limits": {
+   "_note": "what 09 tests against: the stricter of NFPA 10 and the UAE code as reported in the sources in REPORT.md. Reading these isn't a compliance finding",
+   "extinguisher_top_max": 1.5,
+   "extinguisher_bottom_min": 0.3,
+   "travel_max": 22.9
+  },
+  "rail_clearance": 0.15,
+  "stand_clear": 0.75,
+  "void_max_m2": 3.0
+ },
  "lighting": {
   "panel_size": 0.6,
   "panel_grid": 2.4,
