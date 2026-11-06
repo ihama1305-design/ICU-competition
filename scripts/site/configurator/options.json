@@ -1661,6 +1661,36 @@
   "dollhouse",
   "bathroom"
  ],
+ "profile": {
+   "_": "Tune it in: answers pick a theme, then rules adjust it. Rules use `sets`, the group-to-option map themes use, because `effects` only change the scene and never reach the share code, comparison or undo. A rule with no `when` always applies. `when` is one set of conditions, or a list where any one will do. A higher tier locks what it sets against lower tiers. `because` is shown to the person, so it talks about the room and never about the patient. Every answer has to be used by a `when` or listed in `noEffect`: 08_check_configurator.py fails otherwise. This never changes the room and doesn't recommend care.",
+   "tiers": ["access", "comfort"],
+   "themes": [
+     { "when": { "patientType": ["child"] }, "theme": "paediatric", "because": "Paediatric Play is the starting look for a younger patient." },
+     { "when": [{ "children": ["yes", "sometimes"] }, { "sensory": ["company"] }], "theme": "family", "because": "Family Suite is the starting look when family stay close." },
+     { "when": [{ "stay": ["long"] }, { "patientType": ["longstay"] }], "theme": "desert", "because": "Desert Sanctuary is the starting look for a longer stay." },
+     { "theme": "calm", "because": "Calm Clinical is the plain starting look." }
+   ],
+   "rules": [
+     { "id": "patio-by-choice", "tier": "access", "sets": { "patio": "off" }, "because": "A patio stays your own choice. Its notes cover the pressure, structure and fall-safety questions." },
+     { "id": "less-on-the-floor", "tier": "access", "when": { "mobility": ["aid", "wheelchair", "assistance"] }, "sets": { "playmat": "off", "softtoys": "off", "seating": "chairs" }, "because": "Floor-level play items and the larger sofa-bed are left out, so less stands on the floor. The route through the room hasn't been measured." },
+     { "id": "seat-for-visitors", "tier": "comfort", "when": [{ "children": ["yes", "sometimes"] }, { "sensory": ["company"] }], "sets": { "seating": "sofa" }, "because": "A sofa-bed gives visitors somewhere to stay." },
+     { "id": "lower-stimulation", "tier": "comfort", "when": { "sensory": ["quiet"] }, "sets": { "scheme": "cove", "temperature": "k3000", "tvplay": "off", "aquarium": "none" }, "because": "Softer, warmer light and nothing moving on a screen, for a quieter room." },
+     { "id": "clear-cues", "tier": "comfort", "when": { "sensory": ["routine"] }, "sets": { "nightlight": "on" }, "because": "A low night light keeps the room easy to read after dark." },
+     { "id": "longer-stay", "tier": "comfort", "when": [{ "stay": ["long"] }, { "patientType": ["longstay"] }], "sets": { "wardrobeFinish": "warm" }, "because": "A warmer wardrobe finish for a longer stay." }
+   ],
+   "noEffect": {
+     "patientType": ["adult", "recovery", "other"],
+     "stay": ["short", "week", "other"],
+     "children": ["no", "unsure"],
+     "mobility": ["independent", "unsure"],
+     "sensory": ["none", "other"],
+     "sex": "*",
+     "care": "*",
+     "patientOther": "*",
+     "stayOther": "*",
+     "notes": "*"
+   }
+ },
  "themes": [
   {
    "id": "calm",

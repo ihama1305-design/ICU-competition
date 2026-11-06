@@ -26,6 +26,17 @@
     <button type="button" id="openProfile" class="profile-launch">Tune it in <span aria-hidden="true">↗</span></button>
   </header>
   <div id="panelBody">
+    <section id="profileBar" aria-labelledby="hProfile" hidden>
+      <h2 id="hProfile">Your room idea</h2>
+      <p id="profileSummary" class="note" role="status"></p>
+      <ul id="profileChanges" class="profile-changes"></ul>
+      <div class="profile-buttons">
+        <button type="button" id="profileCompare" class="outline-action" aria-pressed="false">Show the room before</button>
+        <button type="button" id="profileUndo" class="outline-action">Undo</button>
+      </div>
+      <p class="note">A comfort and furnishing draft, not a care recommendation. Undo stays here until you change something else.</p>
+    </section>
+
     <section aria-labelledby="hTheme">
       <h2 id="hTheme">Theme</h2>
       <div id="themes" class="grid" role="group" aria-labelledby="hTheme"></div>
@@ -152,8 +163,7 @@
           <textarea name="notes" rows="3" maxlength="240" placeholder="Optional. Do not enter a name, diagnosis, or other private medical details."></textarea>
         </label>
       </div>
-      <p class="note">Sex and care-frequency answers are not used to select a room or alter the layout. Clinical room placement and care decisions stay with the care team.</p>
-      <div id="profileResult" class="profile-result" role="status" hidden></div>
+      <p class="note">Sex and care-frequency answers are not used to select a room or alter the layout, and written notes aren't interpreted. Clinical room placement and care decisions stay with the care team.</p>
       <div class="profile-actions"><button type="submit" class="primary-action">Create room idea</button></div>
     </form>
   </div>
