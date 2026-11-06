@@ -698,6 +698,57 @@ def stretcher(spec, coll):
     return b.obj("kit_stretcher", coll, bevel=0.015)
 
 
+def fire_cabinet(spec, coll, ceiling):
+    """An extinguisher cabinet let into its wall, with the panel that closes the gap the drawing leaves for it.
+
+    Origin on the floor at the middle of the drawn face, +y out of the wall, x along it. The sheet's walls stop either
+    side of the cabinet with a void behind, so the panel runs from floor to ceiling around the cabinet's opening.
+    """
+    F = spec["fire"]; c = F["cabinet"]; e = F["extinguisher"]
+    w, bw, d = c["face_width"], c["body_width"], c["body_depth"]
+    z0, z1 = c["bottom"], c["top"]
+    back, front = -c["infill_depth"], c["wall_proud"]
+    y, t = (back + front) / 2, front - back
+    side = (w - bw) / 2
+    b = Builder()
+    # the wall panel: below, above and either side of the opening, its skirting, and the cut face on top
+    b.boxz(0, y, 0.0, z0, w, t, "wall")
+    b.boxz(0, y, z1, ceiling, w, t, "wall")
+    for s in (-1, 1):
+        b.boxz(s * (bw + side) / 2, y, z0, z1, side, t, "wall")
+    skirt = spec["building"]["skirting_thickness"]
+    b.boxz(0, front + skirt / 2, 0.0, spec["building"]["skirting_height"], w, skirt, "skirting")
+    b.boxz(0, y, ceiling, ceiling + 0.004, w, t, "section_cap")
+    # the recess
+    b.boxz(0, -d + 0.005, z0, z1, bw, 0.01, "plastic_white")
+    for s in (-1, 1):
+        b.boxz(s * (bw - 0.01) / 2, (front - d) / 2, z0, z1, 0.01, front + d, "plastic_white")
+    for z in (z0 + 0.005, z1 - 0.005):
+        b.boxz(0, (front - d) / 2, z - 0.005, z + 0.005, bw, front + d, "plastic_white")
+    # frame and glazed door
+    bar, proud = c["frame_bar"], c["frame_proud"]
+    fy, ft = (front + proud) / 2, proud - front
+    for s in (-1, 1):
+        b.boxz(s * (bw + bar) / 2, fy, z0 - bar, z1 + bar, bar, ft, "cart_red")
+    for z in (z0 - bar / 2, z1 + bar / 2):
+        b.boxz(0, fy, z - bar / 2, z + bar / 2, bw, ft, "cart_red")
+    b.boxz(0, front + 0.006, z0, z1, bw, 0.004, "glass")
+    # the extinguisher behind it
+    r, ez0, ez1 = e["radius"], e["bottom"], e["top"]
+    ey = -d / 2 + 0.02
+    b.cyl((0, ey, ez0), (0, ey, ez1 - 0.1), r, "cart_red", 12)
+    b.cyl((0, ey, ez1 - 0.1), (0, ey, ez1 - 0.05), r * 0.35, "steel", 8)
+    b.boxz(0, ey, ez1 - 0.05, ez1, 0.12, 0.03, "dark_plastic")
+    for p0, p1 in (((0.02, ey, ez1 - 0.07), (r + 0.015, ey, ez1 - 0.2)), ((r + 0.015, ey, ez1 - 0.2), (r + 0.015, ey, ez0 + 0.12))):
+        b.cyl(p0, p1, 0.008, "dark_plastic", 6, caps=False)
+    # the sign above it
+    sg = c["sign"]
+    b.boxz(0, front + 0.004, sg["bottom"], sg["top"], sg["width"], 0.008, "cart_red")
+    b.boxz(0, front + 0.009, sg["bottom"] + 0.03, sg["top"] - 0.05, 0.05, 0.002, "plastic_white")
+    b.boxz(0, front + 0.009, sg["top"] - 0.05, sg["top"] - 0.03, 0.02, 0.002, "plastic_white")
+    return b.obj("kit_fire_cabinet", coll, bevel=0.0)
+
+
 def bins(spec, coll):
     b = Builder()
     for x, m in ((0, "bin_yellow"), (0.42, "bin_black")):

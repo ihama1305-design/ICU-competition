@@ -14,6 +14,7 @@ only() { grep -E "$1" || true; }
 echo "== 01 extract plan from the drawing";   "$PY" -I scripts/01_extract_plan.py
 echo "== 02 build Blender scene";              "$PY" -I scripts/02_build_scene.py 2>&1 | quiet
 [ -s output/icu.blend ] || { echo "scene build failed"; exit 1; }
+echo "== 09 fixtures against what's around them"; "$PY" -I scripts/09_check_fixtures.py 2>&1 | quiet
 echo "== 03 Cycles renders";                   "$PY" -I scripts/03_render.py ${1:-} 2>&1 | only '^  renders/|Error|Traceback'
 echo "== 04 GLB + viewer";                     "$PY" -I scripts/04_export.py 2>&1 | only '^  output/|Error|Traceback'
 [ -s output/icu.glb ] || { echo "export failed"; exit 1; }
