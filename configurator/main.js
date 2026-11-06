@@ -651,6 +651,11 @@ window.__config = {
     for (let i = 0; i <= 200; i++) { at(i / 200, p); if (!inside(p.x, -p.z, rig.meta.walkable)) out.push(i / 200); }
     return out;
   },
+  /** How many waypoints the move from one view to another goes through. */
+  waypoints: (from, to) => {
+    rig.go(from, { instant: true });
+    return rig.pathFor(stage.camera.position, W2T(...rig.meta.cameras[to].eye), to === "dollhouse").length - 2;
+  },
   ceiling: () => rig.meta.ceiling,
   anchors: () => Object.fromEntries(Object.entries(stage.current.anchors).map(([k, a]) => { const v = new THREE.Vector3(); a.getWorldPosition(v); return [k, [v.x, -v.z, v.y]]; })),
   tier,
@@ -658,6 +663,7 @@ window.__config = {
   selected: () => ({ ...selected }),
   options: () => optionData,
   fading: () => glass.fading,
+  glassLevel: () => glass.k,
   /** Stand in front of an anchor, looking at it, and return where it is on screen. */
   frameAnchor: (name, back = 1.2, up = 0.1) => {
     const a = stage.current.anchors[name], p = new THREE.Vector3(), q = new THREE.Vector3(0, 0, -1);
