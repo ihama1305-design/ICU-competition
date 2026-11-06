@@ -146,7 +146,13 @@
    "HSKP",
    "RISER",
    "STRETCH",
-   "WHEEL"
+   "WHEEL",
+   "FHC",
+   "L45",
+   "L46",
+   "L47",
+   "L48",
+   "L49"
   ],
   "outline": {
    "_note": "inner-face building outline used for floor and ceiling; facade sides are offset outward by facade.slab_overhang_m",
@@ -242,8 +248,12 @@
   "handrail_depth": 0.07,
   "handrail_rooms": [
    "CORRIDOR",
-   "LOBBY"
+   "LOBBY",
+   "ALCOVE",
+   "OBSERVATION"
   ],
+  "handrail_throat_max": 1.7,
+  "handrail_door_clearance": 0.3,
   "counter_height": 0.9,
   "desk_height": 0.75,
   "transaction_height": 1.1,
@@ -712,12 +722,32 @@
   "_note": "dir is where Pages publishes from; the repo serves main from its root"
  },
  "configurator": {
-  "_note": "proposal only: this doesn't change the as-built scene. Coordinates are world metres. W1's layout comes from kit.room_overrides; W3's bed is turned here so the window is beside the patient, as in W1. `kit` moves the ventilator behind the patient's head so it doesn't stand between them and the window. W3's drawn bed circle is centred at (10.31, 20.7)",
+  "_note": "proposal only: this doesn't change the as-built scene. Coordinates are world metres. W1's layout comes from kit.room_overrides; W3's bed is turned here so the window is beside the patient, as in W1. `kit` moves the ventilator behind the patient's head so it doesn't stand between them and the window. W3's drawn bed circle is centred at (10.31, 20.7). walkable_add adds polygons to the area the camera may stand in: W1's is for its bathroom view, whose eye is in the wall block in the corner of the ante room, which the walkable area otherwise goes around",
   "rooms": {
    "W1": {
     "label_at": [
      11.548,
      30.461
+    ],
+    "walkable_add": [
+     [
+      [
+       18.73,
+       26.93
+      ],
+      [
+       18.73,
+       27.9
+      ],
+      [
+       15.87,
+       27.9
+      ],
+      [
+       15.87,
+       27.141
+      ]
+     ]
     ],
     "via": [
      [
@@ -784,6 +814,19 @@
       ],
       "hfov": 72
      },
+      "bathroom": {
+        "eye": [
+          17.96,
+          27.46,
+          1.25
+        ],
+        "look": [
+          18.22,
+          27.46,
+          1.05
+        ],
+        "hfov": 78
+      },
      "dollhouse": {
       "eye": [
        15.5,
@@ -850,7 +893,7 @@
      "playmat": {
       "at": [
        15.8,
-       29.9,
+       30.26,
        0.01
       ],
       "face": [
@@ -860,13 +903,13 @@
      },
      "seating": {
       "at": [
-       16.9,
-       30.55,
+       14.58,
+       29.17,
        0.0
       ],
       "face": [
        0,
-       -1
+       1
       ]
      },
      "aquarium": {
