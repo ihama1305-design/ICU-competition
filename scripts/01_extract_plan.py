@@ -70,6 +70,23 @@ def segments(layers, min_len=0.0):
                     yield d, a, b
 
 
+def fit_circle(w):
+    """Least-squares circle through world points: centre x, centre y, radius."""
+    A = np.c_[2 * w[:, 0], 2 * w[:, 1], np.ones(len(w))]
+    (cx, cy, k), *_ = np.linalg.lstsq(A, (w ** 2).sum(1), rcond=None)
+    return cx, cy, float(np.sqrt(k + cx * cx + cy * cy))
+
+
+def bezier_arcs(layer):
+    """Bezier arcs on a layer, which were sampled at 9 points, as (world points, centre x, centre y, radius)."""
+    return [(w, *fit_circle(w)) for d in drs if d["layer"] == layer for _, pts in d["items"] if len(pts) == 9
+            for w in [planlib.page_to_world(spec, pts)]]
+
+
+def within(r, limits):
+    return limits[0] < r < limits[1]
+
+
 # ---------------------------------------------------------------- facade lines
 def facade_lines():
     """Inner faces of the curtain walls as polylines (from the spec, fitted to the drawing)."""
@@ -151,14 +168,14 @@ def ray_hit(q, t):
     return min(Point(q).distance(g) for g in getattr(hit, "geoms", [hit]))
 
 
-def opening_from(base, t, n, s_values, min_span):
+def opening_from(base, t, n, s_values, min_span, max_span=MAXSPAN):
     rows = []
     for s in s_values:
         q = base + n * s
         if walls_p.contains(Point(q)):
             continue
         dp, dm = ray_hit(q, t), ray_hit(q, -t)
-        if dp is None or dm is None or not (min_span <= dp + dm <= MAXSPAN):
+        if dp is None or dm is None or not (min_span <= dp + dm <= max_span):
             rows.append(None)
             continue
         rows.append((s, q + t * dp, q - t * dm, dp + dm))
@@ -187,6 +204,8 @@ for lf in leaves:
     found = None
     # drawn closed: the leaf lies on the wall line
     res = opening_from(c, u, nrm, np.arange(-0.3, 0.3001, 0.01), lf["length"] - 0.05)
+    if res and res[2] < P["min_door_depth_m"]:
+        continue  # the slot between a leaf stood open and the wall beside it, not a doorway: its swing finds the door
     if res and res[2] <= 0.4:
         found = res
     else:
@@ -201,9 +220,81 @@ for lf in leaves:
         lf["opening_width"] = round(span, 3)
         headers.append(poly)
 
+
+# ---------------------------------------------------------------- door swings
+# A leaf can be drawn at any angle, hairline thin or clipped, but its arc always records the door:
+# the arc's centre is the hinge and one of its two ends is where the leaf shuts.
+def door_swings():
+    """Swing arcs on A-DOOR as hinge, radius and the arc's two ends. A swing past a quarter turn is two beziers."""
+    swings = []
+    for w, cx, cy, r in bezier_arcs("A-DOOR"):
+        hinge = np.array([cx, cy])
+        if hinge[1] < y_cut or not within(r, P["leaf_length_m"]):
+            continue
+        sw = next((s for s in swings if np.linalg.norm(s["hinge"] - hinge) < 0.03 and abs(s["r"] - r) < 0.03), None)
+        if sw is None:
+            sw = {"hinge": hinge, "r": r, "ends": []}
+            swings.append(sw)
+        sw["ends"] += [w[0], w[-1]]
+    for sw in swings:  # where two beziers meet is not an end of the swing
+        sw["ends"] = [p for p in sw["ends"] if sum(np.linalg.norm(p - q) < 0.02 for q in sw["ends"]) == 1]
+    return [sw for sw in swings if len(sw["ends"]) == 2]
+
+
+def opening_towards(sw, end, max_span):
+    """opening_from along the line from the hinge to this end of the arc, or None if that isn't a doorway a wall thick."""
+    t = (end - sw["hinge"]) / np.linalg.norm(end - sw["hinge"])
+    res = opening_from(sw["hinge"] + t * sw["r"] / 2, t, np.array([-t[1], t[0]]), np.arange(-0.4, 0.4001, 0.01), sw["r"] - 0.1, max_span)
+    return res if res and P["min_door_depth_m"] <= res[2] <= 0.4 else None
+
+
+def swing_opening(sw):
+    """The doorway this swing's leaf shuts across, as (the arc end it shuts at, opening_from's result), or None."""
+    # TODO(human)
+    return None
+
+
+def hung_on(lf, sw):
+    """Is this leaf the one on this swing: one end at the hinge, as long as the arc's radius?"""
+    a = np.radians(lf["angle_deg"]); half = np.array([np.cos(a), np.sin(a)]) * lf["length"] / 2
+    return abs(lf["length"] - sw["r"]) < 0.1 and min(np.linalg.norm(np.array(lf["c"]) + s * half - sw["hinge"]) for s in (-1, 1)) < 0.08
+
+
+def leaf_from_swing(sw, shut_at, thickness):
+    """A leaf for a swing whose linework didn't pass as one: drawn hairline thin, or clipped along with its arc."""
+    shut = (shut_at - sw["hinge"]) / np.linalg.norm(shut_at - sw["hinge"])
+    other = next(e for e in sw["ends"] if e is not shut_at)
+    v = (other - sw["hinge"]) / np.linalg.norm(other - sw["hinge"])
+    if v @ shut > 0.7:  # a clipped arc stops short of the leaf: stand it square to the door, on the arc's side
+        square = np.array([-shut[1], shut[0]])
+        v = square if square @ v > 0 else -square
+    c = sw["hinge"] + v * sw["r"] / 2
+    return {"c": [round(c[0], 3), round(c[1], 3)], "angle_deg": round(np.degrees(np.arctan2(v[1], v[0])) % 180, 2),
+            "length": round(sw["r"], 3), "thickness": thickness}
+
+
+drawn_thickness = round(float(np.median([lf["thickness"] for lf in leaves])), 3)
+swing_headers = []
+for sw in door_swings():
+    found = swing_opening(sw)
+    if found is None:
+        continue
+    shut_at, (poly, span, _) = found
+    mid = Point((sw["hinge"] + shut_at) / 2)
+    is_new = not any(mid.distance(h) < 0.15 for h in headers + swing_headers)  # a door the leaves above already found keeps its header
+    if is_new:
+        swing_headers.append(poly)
+    leaf = next((lf for lf in leaves if hung_on(lf, sw)), None)
+    if leaf is None and is_new:
+        leaf = leaf_from_swing(sw, shut_at, drawn_thickness)
+        leaves.append(leaf)
+    if leaf is not None:
+        leaf.setdefault("opening_width", round(span, 3))
+
 merged = unary_union([h.buffer(0.01) for h in headers]).buffer(-0.01)
 header_list = []
-for poly in getattr(merged, "geoms", [merged]):
+# a swing's header stays its own: a door at right angles to the next would otherwise merge into one rectangle across both
+for poly in [*getattr(merged, "geoms", [merged]), *swing_headers]:
     if poly.is_empty or poly.area < 0.02:
         continue
     rect = poly.minimum_rotated_rectangle
@@ -239,23 +330,6 @@ wins = [w for w in wins if all(sc.distance(LineString([w["a"], w["b"]])) > 0.1 f
 # Some sinks are CAD blocks rather than the circular basins below: a drain circle inside a bowl outline on P-SANR-FIXT,
 # with the tap on A-EQPM. The bowl is a rounded rectangle, or an oval ring with a drawn rim around it.
 SINK = P["sink"]
-
-
-def fit_circle(w):
-    """Least-squares circle through world points: centre x, centre y, radius."""
-    A = np.c_[2 * w[:, 0], 2 * w[:, 1], np.ones(len(w))]
-    (cx, cy, k), *_ = np.linalg.lstsq(A, (w ** 2).sum(1), rcond=None)
-    return cx, cy, float(np.sqrt(k + cx * cx + cy * cy))
-
-
-def bezier_arcs(layer):
-    """Bezier arcs on a layer, which were sampled at 9 points, as (world points, centre x, centre y, radius)."""
-    return [(w, *fit_circle(w)) for d in drs if d["layer"] == layer for _, pts in d["items"] if len(pts) == 9
-            for w in [planlib.page_to_world(spec, pts)]]
-
-
-def within(r, limits):
-    return limits[0] < r < limits[1]
 
 
 def drain_circles(arcs):

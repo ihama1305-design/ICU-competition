@@ -86,6 +86,8 @@
   ],
   "max_door_gap_m": 2.6,
   "min_door_gap_m": 0.7,
+  "min_door_depth_m": 0.1,
+  "door_span_slack_m": 0.25,
   "min_window_m": 0.5,
   "counter_max_area_m2": 9.0,
   "counter_max_half_depth_m": 0.5,
