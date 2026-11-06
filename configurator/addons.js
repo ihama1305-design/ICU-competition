@@ -142,7 +142,9 @@ export function setAddon(room, id, on) {
   room.addons ||= {};
   if (on && !room.addons[id]) {
     room.addons[id] = BUILD[id](room);
+    room.addons[id].name ||= `addon_${id}`;
     room.root.add(room.addons[id]);
+    if (id === "ventilation" && !room.ceilingFixtures.includes(room.addons[id])) room.ceilingFixtures.push(room.addons[id]);
   }
   if (room.addons[id]) {
     room.addons[id].userData.schemeOn = on;
@@ -155,6 +157,10 @@ export function setAddon(room, id, on) {
 
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const std = (color, roughness = 0.7, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
+const tagItem = (node, title, description, action) => {
+  node.userData.itemInfo = { title, description, ...(action ? { action } : {}) };
+  return node;
+};
 function box(w, h, d, mat, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
@@ -233,6 +239,119 @@ function outdoorChair() {
 }
 
 Object.assign(BUILD, {
+  /** Compact sliding-door storage at the far wall, clear of the entrance and bed route. */
+  wardrobe(room) {
+    const g = new THREE.Group(), w1 = room.label === "W1";
+    g.name = "addon_wardrobe";
+    const at = w1 ? [13.12, 31.295] : [7.15, 22.04];
+    g.position.copy(W2T(at[0], at[1], 0));
+    if (w1) g.scale.x = 1 / 1.355; // W1's niche between the IV pole and the wing wall is 1 m wide; the unit is 1.355 m
+    const shell = std("#e9e5dc", 0.65), trim = std("#4aaeb2", 0.5), metal = std("#777f82", 0.38, { metalness: 0.35 });
+    const doorMat = std("#d2bb96", 0.58); doorMat.name = "wardrobe_surface";
+    trim.name = "wardrobe_accent";
+    g.add(box(1.25, 1.93, 0.015, std("#756c60", 0.9), 0, 1.03, -0.26));
+    g.add(box(0.035, 1.96, 0.56, shell, -0.66, 1.03, 0), box(0.035, 1.96, 0.56, shell, 0.66, 1.03, 0));
+    g.add(box(1.30, 0.035, 0.56, shell, 0, 2.02, 0), box(1.30, 0.035, 0.56, shell, 0, 0.045, 0));
+    g.add(box(1.30, 0.025, 0.035, metal, 0, 2.07, 0.29), box(1.30, 0.025, 0.035, metal, 0, 0.055, 0.29));
+    const shelf = tagItem(box(0.58, 0.035, 0.43, shell, -0.28, 1.47, -0.02), "Wardrobe shelf", "An interior shelf for folded clothes and personal belongings.");
+    g.add(shelf);
+    const rail = tagItem(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.55, 12), metal), "Hanging rail", "A rail for hangers inside the wardrobe.");
+    rail.rotation.z = Math.PI / 2; rail.position.set(0.27, 1.76, -0.05); rail.castShadow = true; g.add(rail);
+    const fabric = std("#91b9b5", 0.95); fabric.name = "wardrobe_clothing";
+    for (const [i, x] of [-0.43, -0.24, -0.05, 0.14].entries()) {
+      const garment = tagItem(box(0.15, 0.47 + (i % 2) * 0.06, 0.025, fabric, x, 1.40, 0.02), "Stored clothing", "Simple clothing shapes show how the sliding wardrobe can hold personal items.");
+      garment.material = fabric.clone(); garment.material.color.set(["#91b9b5", "#d5a989", "#a4abc5", "#e0d3b8"][i]);
+      g.add(garment);
+    }
+    const left = tagItem(box(0.67, 1.94, 0.045, doorMat, -0.335, 1.03, 0.30), "Sliding wardrobe door", "This panel slides across the wardrobe opening. Use the button to open or close the doors.", "wardrobe");
+    const right = tagItem(box(0.67, 1.94, 0.045, doorMat, 0.335, 1.03, 0.335), "Sliding wardrobe door", "This panel slides across the wardrobe opening. Use the button to open or close the doors.", "wardrobe");
+    for (const d of [left, right]) {
+      d.add(box(0.025, 0.24, 0.014, trim, 0.24, 0, 0.03));
+      d.castShadow = true;
+    }
+    g.add(left, right);
+    const plinth = tagItem(box(1.28, 0.1, 0.52, trim, 0, 0.07, 0), "Wardrobe base", "A recessed, easy-clean kick plate at the foot of the wardrobe.");
+    g.add(plinth);
+    Object.assign(g.userData, { doors: [left, right], open: false, itemInfo: { title: "Sliding wardrobe", description: "A compact patient storage unit for clothes and personal belongings. It is placed against the back wall to keep the entry route clear.", action: "wardrobe" } });
+    return g;
+  },
+
+  /** Fixture concept fitted into the existing W1 toilet room beside its entry. */
+  bathroom(room) {
+    const g = new THREE.Group();
+    g.name = "addon_bathroom";
+    if (room.label !== "W1") return g;
+    g.position.copy(W2T(17.98, 27.46, 0));
+    const porcelain = std("#f4f3ef", 0.24), chrome = std("#9ba6a9", 0.28, { metalness: 0.55 }), accent = std("#4aaeb2", 0.45), mirrorMat = std("#c8dadd", 0.08, { metalness: 0.35 });
+    const tile = std("#8e9aa0", 0.48); tile.name = "bathroom_surface"; tile.map = drawn("slate", 2.2, 2.5);
+    g.add(tagItem(box(1.28, 0.014, 0.64, tile, 0, 0.012, 0), "Bathroom floor tile", "Textured, low-gloss floor finish shown as a design option.") );
+    const toilet = new THREE.Group(); toilet.position.set(0.30, 0, -0.07);
+    toilet.add(box(0.38, 0.58, 0.17, porcelain, 0, 0.31, -0.16));
+    toilet.add(tagItem(ball(0.21, porcelain, 0, 0.22, 0.03, 0.92, 0.54, 1.2), "Toilet", "A compact water closet in the existing W1 bathroom shell."));
+    toilet.add(tagItem(ball(0.185, std("#d5d4cf", 0.3), 0, 0.34, 0.035, 1, 0.12, 1.05), "Toilet seat", "Seat detail for the bathroom fixture concept."));
+    g.add(tagItem(toilet, "Toilet", "A compact water closet in the existing W1 bathroom shell."));
+    const sink = new THREE.Group(); sink.position.set(-0.34, 0, 0.15);
+    sink.add(box(0.42, 0.08, 0.24, porcelain, 0, 0.78, 0));
+    sink.add(tagItem(ball(0.15, std("#dfe4e2", 0.3), 0, 0.825, 0.015, 1.25, 0.22, 0.78), "Hand-wash basin", "A compact wall-mounted basin with a simple single-lever tap."));
+    const tap = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.16, 10), chrome); tap.position.set(0, 0.91, -0.08); sink.add(tap);
+    sink.add(box(0.035, 0.08, 0.12, chrome, 0, 0.96, -0.12));
+    g.add(tagItem(sink, "Hand-wash basin", "A compact basin and tap for hand washing."));
+    const mirror = tagItem(box(0.40, 0.48, 0.025, mirrorMat, -0.34, 1.42, 0.29), "Mirror", "A simple wall mirror above the hand-wash basin.");
+    g.add(mirror);
+    const railGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.62, 12);
+    const sideRail = tagItem(new THREE.Mesh(railGeo, chrome), "Grab rail", "A visual grab-rail concept beside the toilet. Final placement and fixing need local review.");
+    sideRail.rotation.x = Math.PI / 2; sideRail.position.set(0.56, 0.78, -0.07); sideRail.castShadow = true; g.add(sideRail);
+    const backRail = tagItem(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.46, 12), chrome), "Rear grab rail", "A visual grab-rail concept behind the toilet. Final placement and fixing need local review.");
+    backRail.rotation.z = Math.PI / 2; backRail.position.set(0.30, 0.78, -0.28); backRail.castShadow = true; g.add(backRail);
+    const paper = tagItem(box(0.16, 0.12, 0.08, std("#ecebe6", 0.75), 0.55, 0.46, 0.04), "Toilet paper holder", "A wall-mounted toilet paper holder."); g.add(paper);
+    const dispenser = tagItem(box(0.16, 0.25, 0.07, std("#e6e8e5", 0.6), -0.57, 1.15, 0.01), "Soap dispenser", "A compact wall-mounted soap dispenser beside the basin."); g.add(dispenser);
+    const pull = new THREE.Group(); pull.position.set(-0.56, 1.45, -0.24);
+    pull.add(tagItem(box(0.15, 0.17, 0.06, accent, 0, 0, 0), "Call-for-assistance control", "A bathroom assistance control concept. It is not connected to staff or an alarm system."));
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.74, 8), chrome); cord.position.set(0, -0.42, 0); pull.add(cord);
+    pull.add(tagItem(ball(0.045, std("#d45349", 0.5), 0, -0.81, 0), "Assistance pull", "A visible pull handle for an assistance-call concept; it does not send a real call."));
+    g.add(tagItem(pull, "Bathroom assistance control", "A visual assistance-call concept only; it is not connected to staff."));
+    g.userData.itemInfo = { title: "W1 bathroom", description: "The adjacent bathroom shell from the existing model, shown with a toilet, basin, mirror, grab rails, dispensers, and an assistance-call concept." };
+    return g;
+  },
+
+  /** Quiet, static supply and return grilles plus a wall control; no simulated airflow. */
+  ventilation(room) {
+    const g = new THREE.Group(), H = room.meta.ceiling;
+    g.name = "addon_ventilation";
+    const points = room.label === "W1" ? [[12.9, 30.8], [15.3, 30.0]] : [[9.0, 21.8], [12.8, 19.3]];
+    const panel = std("#e4e8e7", 0.62), slat = std("#a3abad", 0.5), light = std("#4aaeb2", 0.35, { emissive: "#4aaeb2", emissiveIntensity: 0.45 });
+    light.name = "vent_status";
+    for (const [x, y] of points) {
+      const p = W2T(x, y, H - 0.035), plate = tagItem(box(0.58, 0.028, 0.34, panel), "Ceiling supply grille", "A low-profile ceiling air grille shown as a visual design feature.");
+      plate.position.copy(p); g.add(plate);
+      for (let i = -2; i <= 2; i++) {
+        const fin = box(0.46, 0.009, 0.012, slat); fin.position.copy(W2T(x, y + i * 0.045, H - 0.017)); g.add(fin);
+      }
+    }
+    const wall = room.label === "W1" ? [17.78, 30.85] : [14.40, 21.4];
+    const control = tagItem(box(0.19, 0.24, 0.035, std("#e6e9e7", 0.48), 0, 0, 0), "Room comfort control", "A wall-mounted temperature and humidity control concept. It is not connected to room equipment or patient measurements.");
+    control.position.copy(W2T(wall[0], wall[1], 1.55)); control.rotation.y = Math.PI / 2; g.add(control);
+    const led = tagItem(ball(0.025, light, 0, 0, 0), "Ventilation status light", "An illustrative status light for the room comfort concept.");
+    led.position.copy(W2T(wall[0] - 0.045, wall[1], 1.61)); g.add(led);
+    return g;
+  },
+
+  /** Visible sound-level indicator concept. It never asks for microphone access. */
+  soundSensor(room) {
+    const g = new THREE.Group(); g.name = "addon_soundSensor";
+    const at = room.label === "W1" ? [17.67, 30.1] : [14.3, 20.8];
+    g.position.copy(W2T(at[0], at[1], 1.82));
+    g.rotation.y = -Math.PI / 2;
+    const shell = std("#e5e9e7", 0.5), ring = std("#7c8d91", 0.38, { metalness: 0.2 });
+    g.add(tagItem(box(0.22, 0.15, 0.055, shell, 0, 0, 0), "Sound-level sensor", "A visible, non-recording sound-level sensor concept. This model does not capture audio or identify a patient."));
+    const sensorRing = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.018, 20), ring);
+    sensorRing.position.set(0, 0, 0.035); g.add(sensorRing);
+    const led = tagItem(ball(0.018, std("#55b985", 0.35, { emissive: "#55b985", emissiveIntensity: 0.55 }), 0, 0, 0.052), "Sound indicator", "A status light used for the sound-alert demonstration.", "soundAlert");
+    led.material.name = "sound_indicator"; g.add(led);
+    g.userData.itemInfo = { title: "Sound-level sensor", description: "A visual, non-recording sensor concept. Use the preview button to show a simulated alert; it does not listen, assess pain, identify a patient, or contact staff.", action: "soundAlert" };
+    return g;
+  },
+
   /** A wall-hung TV on the patient's eye line. Width and picture are set by setTv. */
   tv(room) {
     const g = placeAt(new THREE.Group(), room.anchors.tv);
@@ -324,6 +443,7 @@ Object.assign(BUILD, {
   /** A sofa-bed against the family-zone wall. Its colour follows the upholstery choice. */
   sofa(room) {
     const g = placeAt(new THREE.Group(), room.anchors.seating), cloth = std("#5f8f8a", 0.95);
+    if (room.label === "W3") g.position.copy(W2T(12.2, 22.0, 0)); // W3's sofa stands here, not on its seating anchor
     cloth.name = "upholstery";
     const feet = std("#7a7f82", 0.5);
     g.add(box(1.7, 0.3, 0.8, cloth, 0, 0.27, 0), box(0.8, 0.14, 0.68, cloth, -0.41, 0.48, 0.06), box(0.8, 0.14, 0.68, cloth, 0.41, 0.48, 0.06));
@@ -452,6 +572,36 @@ export function ensureParts(room, id) {
     const mats = n.isMesh ? [n.material].flat() : [];
     if (mats.length) (room.parts[`addon_${id}`] ||= []).push(n);
   });
+}
+
+/** Apply scaled, reusable surface looks to the added furniture. */
+export function setAddonLook(room, id, look) {
+  const addon = room.addons?.[id];
+  if (!addon) return;
+  const swap = (mat, texture, repeats, tint = "#ffffff") => {
+    mat.map?.dispose();
+    mat.map = drawn(texture, repeats[0], repeats[1]);
+    mat.color.set(tint);
+    mat.needsUpdate = true;
+  };
+  if (id === "wardrobe") {
+    const map = { oak: ["oak", "#ffffff"], walnut: ["wood", "#ffffff"], linen: ["fabric", "#f1ece0"] }[look];
+    if (!map) return;
+    for (const door of addon.userData.doors || []) swap(door.material, map[0], [2.5, 2.2], map[1]);
+  } else if (id === "bathroom") {
+    const map = { stone: ["slate", "#ffffff"], terrazzo: ["terrazzo", "#ffffff"], sea: ["sand", "#a9cbd0"] }[look];
+    if (!map) return;
+    addon.traverse(n => { if (n.isMesh && n.material?.name === "bathroom_surface") swap(n.material, map[0], [2.2, 2.5], map[1]); });
+  }
+}
+
+export function toggleWardrobe(room) {
+  const wardrobe = room.addons?.wardrobe;
+  if (!wardrobe) return false;
+  wardrobe.userData.open = !wardrobe.userData.open;
+  const [left] = wardrobe.userData.doors;
+  left.position.x = wardrobe.userData.open ? 0.335 : -0.335;
+  return wardrobe.userData.open;
 }
 
 /** TV width in metres, and whether it's playing. Built on first use, and it replaces the exported TV. */

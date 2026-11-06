@@ -488,9 +488,13 @@ def export_room(label, cfg):
         fh.write(gzip.compress(open(glb, "rb").read(), 9, mtime=0))
 
     door = max((h for h in HEADERS if h.distance(room) < 0.25 and Point(f).distance(h) < 0.5), key=lambda h: h.area)
+    # The toilet stays out: it's a separate piece here, with a wall and no door polygon between it and the room
     walk = unary_union([room, door] + [p for p in near if p not in toilets] + ([stub] if not any(s["names"] == ["ANTE"] for s in SPACES if s["poly"] in near) else []))
     walk = walk.buffer(0.03).buffer(-0.25, join_style="mitre").intersection(OUTLINE.buffer(-0.25))
-    walk = max(getattr(walk, "geoms", [walk]), key=lambda g: g.area).simplify(0.03)
+    walk = max(getattr(walk, "geoms", [walk]), key=lambda g: g.area)
+    walk = unary_union([walk] + [Polygon(p) for p in cfg.get("walkable_add", [])]).simplify(0.03)
+    if walk.geom_type != "Polygon":
+        raise SystemExit(f"07: {label} walkable_add doesn't join the walkable area")
     outside = [k for k, c in cfg["cameras"].items() if k != "dollhouse" and not walk.contains(Point(c["eye"][:2]))]
     if outside:
         raise SystemExit(f"07: {label} camera eyes aren't inside the walkable area: {outside}")
