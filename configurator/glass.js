@@ -85,7 +85,8 @@ export class FrontGlass {
   /** Returns true while a fade is running. */
   update(now) {
     if (!this.fading) return false;
-    const t = Math.min(1, (now - this.start) / FADE_MS);
+    // now is when this frame began, which can be earlier than the click that set start
+    const t = Math.max(0, Math.min(1, (now - this.start) / FADE_MS));
     this.k = this.from + (this.to - this.from) * t;
     this.paint();
     if (t >= 1) this.fading = false;
