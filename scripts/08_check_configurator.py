@@ -158,6 +158,30 @@ def shot(pg, name):
     pg.screenshot(path=os.path.join(SHOTS, f"config_{name}.png"))
 
 
+def pressed_view(pg):
+    return pg.evaluate("[...document.querySelectorAll('#views button[aria-pressed=\"true\"]')].map(b => b.dataset.value)")
+
+
+def tour_finished(pg, what):
+    """A tour that ran to the end: on the dollhouse, with no ceiling, and the panel saying so."""
+    st = pg.evaluate("window.__config.state()")
+    check(st["view"] == "dollhouse" and not st["moving"], f"{what} ends at rest on the dollhouse ({st['view']})")
+    check(st["ceiling"] is False, f"{what} ends with the ceiling off")
+    check(pressed_view(pg) == ["dollhouse"], f"{what} leaves the Dollhouse button selected {pressed_view(pg)}")
+    check(pg.get_attribute("#tour", "aria-pressed") == "false", f"{what} leaves its button off")
+
+
+def tour_stopped(pg, what):
+    """A tour stopped partway: any move in flight finishes, no later stop happens, and the ceiling and panel match the view."""
+    pg.wait_for_function("!window.__config.state().moving", timeout=120000)
+    before = pg.evaluate("window.__config.tour().log")
+    pg.wait_for_timeout(3500)  # longer than a hold on a view, even with reduced motion
+    st = pg.evaluate("window.__config.state()")
+    check(pg.evaluate("window.__config.tour().log") == before, f"{what}: no more stops")
+    check(st["ceiling"] == (st["view"] != "dollhouse"), f"{what}: the ceiling matches the {st['view']} view")
+    check(pressed_view(pg) == [st["view"]], f"{what}: the selected button is that view {pressed_view(pg)}")
+
+
 def look_for(pg, ch, room):
     """Put the camera where an option group's check entry says its effect shows: a view, or at an anchor. `rooms` gives what differs by room."""
     ch = {**ch, **ch.get("rooms", {}).get(room, {})}
@@ -425,14 +449,32 @@ with sync_playwright() as p:
     pg.click("#closeSummary")
     go(pg, "W3")
 
-    # the tour visits every view and ends by itself
+    # the tour starts and ends at the dollhouse, visits every view and ends by itself
+    pg.evaluate("window.__config.camera('overview', { instant: true })")
     pg.evaluate("window.__config.startTour()")
     pg.wait_for_function("!window.__config.tour().running", timeout=180000)
-    log = pg.evaluate("window.__config.tour().log")
+    tour = pg.evaluate("window.__config.tour()")
+    log = tour["log"]
+    check(log[0] == "dollhouse" and log[-1] == "dollhouse", f"the tour starts and ends at the dollhouse {log[:1]} {log[-1:]}")
+    check(log == tour["order"], f"the tour stops at each of its views in order ({len(log)} stops)")
     check(set(log) == set(pg.evaluate("window.__config.views()")), f"the tour visits every view ({len(log)} stops)")
+    tour_finished(pg, "the tour")
+    # already on the first stop: its move goes nowhere, and has to arrive for the tour to go on
+    pg.evaluate("window.__config.camera('dollhouse', { instant: true })")
     pg.evaluate("window.__config.startTour()")
+    pg.wait_for_function("window.__config.tour().log.length >= 2", timeout=120000)
+    check(pg.evaluate("window.__config.tour().log")[:2] == ["dollhouse", "overview"], "a tour started on the dollhouse goes on to the next view")
+    # stopped on the way down from the dollhouse, with the ceiling still off: it comes back when the camera arrives
     pg.mouse.click(300, 300)
     check(pg.evaluate("window.__config.tour().running") is False, "touching the view ends the tour")
+    tour_stopped(pg, "stopped on the way down from the dollhouse")
+    # stopped with its own button, while holding on a view
+    pg.evaluate("window.__config.startTour()")
+    pg.wait_for_function("window.__config.tour().log.length >= 3 && !window.__config.state().moving", timeout=180000)
+    pg.click("#tour")
+    check(pg.evaluate("window.__config.tour().running") is False, "the tour's button stops it")
+    tour_stopped(pg, "stopped on a view")
+    check(pg.inner_text("#tour") == "Cinematic tour" and pg.get_attribute("#tour", "aria-pressed") == "false", "the tour's button goes back to starting one")
     check(not errs, f"themes, summary, tour: no errors {errs[:3]}")
     ctx.close()
 
@@ -524,6 +566,23 @@ with sync_playwright() as p:
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
     check(pg.evaluate("window.__config.state().moving") is False and pg.evaluate("window.__config.state().view") == "entrance", "reduced motion: moving between views is a cut")
+    # the tour cuts between its views, in both rooms, including one started on the dollhouse
+    for room in ROOMS:
+        go(pg, room)
+        pg.evaluate("window.__config.camera('dollhouse', { instant: true })")
+        pg.evaluate("window.__config.startTour()")
+        check(pg.evaluate("window.__config.tour().log") == ["dollhouse"], f"reduced motion, {room}: a tour started on the dollhouse holds there first")
+        pg.wait_for_function("!window.__config.tour().running", timeout=120000)
+        tour = pg.evaluate("window.__config.tour()")
+        check(tour["log"] == tour["order"], f"reduced motion, {room}: the tour stops at each of its views in order ({len(tour['log'])} stops)")
+        # W1's Bathroom view stands in a wall block, so the tour leaves it out on purpose
+        check(set(pg.evaluate("window.__config.views()")) - set(tour["log"]) <= {"bathroom"} and "bathroom" not in tour["log"], f"reduced motion, {room}: the tour visits every view but the bathroom")
+        tour_finished(pg, f"reduced motion, {room}: the tour")
+    pg.evaluate("window.__config.startTour()")
+    pg.wait_for_function("window.__config.tour().log.length >= 2", timeout=60000)
+    pg.click("#tour")
+    tour_stopped(pg, "reduced motion: stopped")
+    check(not errs, f"reduced motion: no errors {errs[:3]}")
     ctx.close()
 
     # ---------------------------------------------------------------- accessibility
