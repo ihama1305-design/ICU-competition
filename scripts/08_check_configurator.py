@@ -563,7 +563,7 @@ with sync_playwright() as p:
     ctx.close()
 
     # ---------------------------------------------------------------- Tune it in: answers to a room, from the data in options.json
-    ctx, pg, errs, _, _ = open_page(b, 1366, 900, query="?tier=low")
+    ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
     plain = {"patientType": "adult", "stay": "short", "sex": "skip", "children": "no", "mobility": "independent", "care": "routine", "sensory": "none"}
     PROFILE_CASES = [  # answers that differ from plain, theme, what has to be set, what a higher tier has to overrule
         ({}, "calm", {"patio": "off"}, []),
@@ -671,6 +671,8 @@ with sync_playwright() as p:
         bar = pg.inner_text("#profileBar")
         check(pg.is_visible("#profileBar") and "Sofa-bed" in bar and "hasn't been measured" in bar, f"{room}: the panel says what changed and why, including what was left out")
         check("wheelchair" not in bar.lower() and "private note" not in bar, f"{room}: the reasons don't repeat the answers")
+        why = pg.evaluate("[...document.querySelectorAll('#profileChanges li span')].map(s => s.textContent)")
+        check(len(why) == len(set(why)) >= 2, f"{room}: each reason is given once ({len(why)} reasons)")
         after = pg.evaluate("window.__config.code()")
         pg.wait_for_function(f"location.hash === '#c={after}'")
         check(not any(w in pg.url.lower() for w in ("wheelchair", "private", "mobility", "notes")), f"{room}: the link holds the room, not the answers")

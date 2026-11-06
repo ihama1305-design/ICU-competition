@@ -348,11 +348,12 @@ function createProfileIdea(form) {
   idea = { before, after: { ...selected } };
   // measured, so this can't claim a change that didn't happen
   const changes = differences(optionData, before, idea.after);
-  const items = changes.map(c => el("li", {}, el("strong", { textContent: `${c.label}: ${c.to}` }), el("span", { textContent: result.why[c.group] || "Back to its usual setting for this starting look." })));
-  for (const o of result.overruled) {
-    items.push(el("li", {}, el("strong", { textContent: `Left out: ${optionLabel(optionData, o.group, o.wanted)}` }), el("span", { textContent: result.why[o.group] })));
-  }
-  $("profileChanges").replaceChildren(...items);
+  // one row for each reason, so a theme's ten changes don't repeat it ten times
+  const byReason = new Map();
+  const add = (why, line) => byReason.set(why, [...(byReason.get(why) || []), line]);
+  for (const c of changes) add(result.why[c.group] || "Back to its usual setting for this starting look.", `${c.label}: ${c.to}`);
+  for (const o of result.overruled) add(result.why[o.group], `Left out: ${optionLabel(optionData, o.group, o.wanted)}`);
+  $("profileChanges").replaceChildren(...[...byReason].map(([why, lines]) => el("li", {}, el("strong", { textContent: lines.join(" · ") }), el("span", { textContent: why }))));
   $("profileSummary").textContent = changes.length ? `${changes.length} ${changes.length === 1 ? "change" : "changes"} from your room. It stays ${state.room}, and anything can still be changed.` : `The room already matches. It stays ${state.room}.`;
   const compare = $("profileCompare");
   compare.setAttribute("aria-pressed", "false");

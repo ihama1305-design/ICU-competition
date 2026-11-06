@@ -136,7 +136,7 @@ footer p { margin: 0; }
 .profile-actions { display: flex; justify-content: flex-end; padding-top: 4px; }
 .primary-action, .sheet-close { min-height: 40px; padding: 6px 13px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
 .primary-action { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.profile-changes { display: grid; gap: 7px; max-height: 240px; margin: 8px 0; padding: 0; overflow-y: auto; list-style: none; font-size: 12px; }
+.profile-changes { display: grid; gap: 7px; margin: 8px 0; padding: 0; list-style: none; font-size: 12px; }
 .profile-changes li { padding: 6px 8px; border-radius: 7px; background: var(--hover); color: var(--ink); }
 .profile-changes strong { font-weight: 600; }
 .profile-changes span { display: block; margin-top: 2px; color: var(--muted); }
