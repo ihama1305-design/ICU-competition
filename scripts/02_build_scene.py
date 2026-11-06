@@ -147,6 +147,15 @@ def is_patient(s):
     return any(n in K["rooms"] for n in s["names"])
 
 
+def floor_within(poly, d, step=0.02):
+    """Floor within d of poly, measured round walls and not through them; with no wall in the way, exactly poly.buffer(d)."""
+    near_walls = walls_u.intersection(poly.buffer(d + step))
+    reach = poly
+    for _ in range(round(d / step)):  # the step is thinner than any wall, so it can't jump one
+        reach = reach.buffer(step).difference(near_walls)
+    return poly.buffer(d).intersection(reach.simplify(0.001).buffer(0.002))
+
+
 # ------------------------------------------------------------------ shell: slab, floors, walls
 tm = extrude([slab], -spec["building"]["slab_thickness"], -0.004)
 tm_obj("slab", tm, "slab_edge", C["Shell"])
@@ -231,7 +240,7 @@ for sp in rail_spaces:
     r = r.intersection(walls_u.buffer(0.05 + B["handrail_depth"]))  # a rail needs a wall behind it, which the cut lines lack
     r = r.difference(rooms_off_corridor(sp))
     r = r.difference(unary_union([h.buffer(0.35) for h in headers]))
-    r = r.difference(unary_union([Polygon(c["poly"]).buffer(0.3) for c in plan["counters"]]))
+    r = r.difference(unary_union([floor_within(Polygon(c["poly"]).buffer(0), 0.3) for c in plan["counters"]]))
     for g in getattr(r, "geoms", [r]):
         if g.area > 0.03:
             rails.append(g)
