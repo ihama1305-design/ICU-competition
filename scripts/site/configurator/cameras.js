@@ -130,7 +130,8 @@ export class Rig {
   /** Returns true while something is moving. */
   update(now) {
     if (this.tween) {
-      const tw = this.tween, t = Math.min(1, (now - tw.start) / DURATION), k = ease(t);
+      // now is when this frame began, which can be earlier than the click that set start
+      const tw = this.tween, t = Math.max(0, Math.min(1, (now - tw.start) / DURATION)), k = ease(t);
       tw.at(k, this.camera.position);
       this.controls.target.lerpVectors(tw.fromT, tw.toT, k);
       this.hfov = tw.fromH + (tw.toH - tw.fromH) * k; this.fit();

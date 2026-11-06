@@ -130,7 +130,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 ### Checks
 
-`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
+`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
 
 ### Known limitations
 
