@@ -3,6 +3,7 @@ import { el, noteElement } from "./panel.js";
 
 export function summaryContent(data, selected, room, { roomLabel, picture, code, theme }) {
   const box = el("div", { className: "summary" });
+  const context = { ...selected, room };
   box.append(el("img", { src: picture, alt: "The current view of the room" }));
   const list = () => el("dl", { className: "spec" });
   const row = (dl, k, v) => dl.append(el("dt", { textContent: k }), el("dd", { textContent: v }));
@@ -15,7 +16,7 @@ export function summaryContent(data, selected, room, { roomLabel, picture, code,
     const spec = list();
     for (const g of section.groups) {
       const needs = g.requires;
-      if (needs && !Object.entries(needs).every(([k, v]) => selected[k] === v)) continue;
+      if (needs && !Object.entries(needs).every(([k, v]) => context[k] === v)) continue;
       const option = g.options.find(o => o.id === selected[g.id]);
       row(spec, g.label, option ? option.label : `Custom colour ${selected[`${g.id}:custom`]}`);
       for (const n of [g.note, option?.note].flat()) {
