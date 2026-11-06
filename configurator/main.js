@@ -485,7 +485,8 @@ addEventListener("hashchange", () => {
 
 // ---------------------------------------------------------------- the cinematic tour
 const tour = {
-  order: ["overview", "entrance", "family", "bed", "bed_window", "window", "dollhouse", "overview"], at: -1, timer: 0, log: [],
+  // starts and ends on the whole room. If the camera is already there, the first stop is a move to where it stands, which still arrives
+  order: ["dollhouse", "overview", "entrance", "family", "bed", "bed_window", "window", "dollhouse"], at: -1, timer: 0, log: [],
   get running() { return this.at >= 0; },
   toggle() { if (this.running) this.stop(); else this.start(); },
   start() { this.at = -1; this.log = []; this.mark(true); this.at = 0; this.step(); },
@@ -683,7 +684,7 @@ window.__config = {
   code: specCode,
   theme: applyTheme,
   currentTheme: () => currentTheme()?.id,
-  tour: () => ({ running: tour.running, log: tour.log.slice() }),
+  tour: () => ({ running: tour.running, log: tour.log.slice(), order: tour.order.slice() }),
   startTour: () => tour.start(),
 };
 
