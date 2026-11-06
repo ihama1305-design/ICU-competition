@@ -243,8 +243,9 @@ Object.assign(BUILD, {
   wardrobe(room) {
     const g = new THREE.Group(), w1 = room.label === "W1";
     g.name = "addon_wardrobe";
-    const at = w1 ? [15.35, 31.18] : [7.15, 22.04];
+    const at = w1 ? [13.12, 31.295] : [7.15, 22.04];
     g.position.copy(W2T(at[0], at[1], 0));
+    if (w1) g.scale.x = 1 / 1.355; // W1's niche between the IV pole and the wing wall is 1 m wide; the unit is 1.355 m
     const shell = std("#e9e5dc", 0.65), trim = std("#4aaeb2", 0.5), metal = std("#777f82", 0.38, { metalness: 0.35 });
     const doorMat = std("#d2bb96", 0.58); doorMat.name = "wardrobe_surface";
     trim.name = "wardrobe_accent";
@@ -442,7 +443,7 @@ Object.assign(BUILD, {
   /** A sofa-bed against the family-zone wall. Its colour follows the upholstery choice. */
   sofa(room) {
     const g = placeAt(new THREE.Group(), room.anchors.seating), cloth = std("#5f8f8a", 0.95);
-    g.position.copy(W2T(...(room.label === "W1" ? [13.5, 31.1, 0] : [12.2, 22.0, 0])));
+    if (room.label === "W3") g.position.copy(W2T(12.2, 22.0, 0)); // W3's sofa stands here, not on its seating anchor
     cloth.name = "upholstery";
     const feet = std("#7a7f82", 0.5);
     g.add(box(1.7, 0.3, 0.8, cloth, 0, 0.27, 0), box(0.8, 0.14, 0.68, cloth, -0.41, 0.48, 0.06), box(0.8, 0.14, 0.68, cloth, 0.41, 0.48, 0.06));
