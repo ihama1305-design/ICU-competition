@@ -163,6 +163,8 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 This records the requested redesign work together in one place. These changes apply to the W1 and W3 room configurator proposal, not the as-built floor model.
 
+**Current rendering status:** On 6 November 2026, the room rendering was restored to the configurator version from before the latest bed-layout and safety additions. The details below record that later proposal and its checks; those additions are not active in the restored scene. The original full-model snapshot in `backups/initial-model/` remains unchanged.
+
 ### Patient fit and room controls
 
 - Added a patient-fit questionnaire covering patient type, stay length, sex, children, behaviour, mobility, medication frequency, sensory preferences and related needs. Answers choose a visual starting design; the user can continue to edit the room manually. The result is a design suggestion and does not assign a real room or replace clinical decisions.
