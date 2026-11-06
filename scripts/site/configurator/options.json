@@ -1574,7 +1574,7 @@
      "control": "swatches",
      "default": "teal",
      "custom": {"effect":{"do":"color","material":"wardrobe_accent"}},
-     "check": {"time":"afternoon","rooms":{"W1":{"view":"family"},"W3":{"view":"overview"}}},
+     "check": {"view":"overview","time":"afternoon"},
      "options": [
       {"id":"teal","label":"Teal","swatch":"#4aaeb2","effects":[{"do":"color","material":"wardrobe_accent","value":"#4aaeb2"}],"code":0},
       {"id":"sand","label":"Sand","swatch":"#c6a77a","effects":[{"do":"color","material":"wardrobe_accent","value":"#c6a77a"}],"code":1},
