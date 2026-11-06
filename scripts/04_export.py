@@ -73,7 +73,7 @@ S = [  # (id, group, label, confidence, regex on object names, notes)
     ("nurse_ws", "Staff areas", "Nurse station workstations", "low", "^nurse_", "Monitors and chairs inside the U-shaped nurse station."),
     ("obs_ws", "Staff areas", "Observation desks", "low", "^obs_", "One workstation per observation nook, facing the two observation windows."),
     ("dictation_ws", "Staff areas", "Dictation desk", "low", "^dictation_", "One workstation at the drawn counter labelled Dictation."),
-    ("joinery", "Staff areas", "Counters, desks, nurse station", "med", "^joinery", "Outlines from the drawing's A-EQPM layer. Counter 0.90 m, desks 0.75 m, transaction ledge 1.10 m (assumed heights). The knee spaces under the nurse station's workstations are also assumed."),
+    ("joinery", "Staff areas", "Counters, desks, nurse station", "med", "^joinery", "Outlines from the drawing's A-EQPM layer. Counter 0.90 m, desks 0.75 m, transaction ledge 1.10 m (assumed heights). The knee spaces under the workstations are also assumed."),
     ("basins", "Staff areas", "Hand-wash basins", "med", "^basin", "Basin positions from the drawing. Fitting design assumed."),
     ("carts", "Staff areas", "Crash cart and stretchers", "low", "^crash_cart|^stretcher", "Placed in the alcoves named on the drawing."),
     ("doors", "Openings", "Doors", "high", "^door_leaves", "Door leaves at the positions and swings drawn on the record drawing. Head height 2.41 m (H=2410 tags)."),

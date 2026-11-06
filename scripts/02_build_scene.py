@@ -182,11 +182,63 @@ ring = walls_u.buffer(B["skirting_thickness"], join_style="mitre").difference(wa
 ring = ring.difference(unary_union([h.buffer(0.03) for h in headers])).intersection(outline.buffer(-0.05))
 tm_obj("skirting", extrude([ring], 0.0, B["skirting_height"]), "skirting", C["Shell"])
 
-# corridor handrails
-rail_spaces = [s["poly"] for s in spaces if any(any(k in n for k in B["handrail_rooms"]) for n in s["names"])]
+# corridor handrails, on the corridor's own walls. A rail space also holds the rooms whose doors have
+# no header, the lifts and the stair, so each of those is found from its own label and walls.
+def is_rail_name(name):
+    return any(k in name for k in B["handrail_rooms"])
+
+
+def geoms(g):
+    return list(getattr(g, "geoms", [g]))
+
+
+def rooms_off_corridor(sp):
+    """Parts of a rail space that belong to a labelled room, each with a margin that clears its doorway.
+
+    Shrinking the space closes its throats from the narrowest up. A room is the piece holding its label
+    once that piece has no corridor label left. A room no deeper than its door is wide, such as one the
+    section line cuts short, vanishes before it comes away: it is then what the space, shrunk by the widest
+    throat, can no longer reach. A label still with the corridor at handrail_throat_max has no doorway
+    and stays corridor.
+    """
+    screens = [LineString([q["a"], q["b"]]).buffer(0.01, cap_style="flat") for q in spec["plan"].get("screens", [])]
+    search = sp.difference(unary_union(screens)) if screens else sp
+    labels = [r for r in plan["rooms"] if sp.contains(Point(r["label_at"]))]
+    corridor = [Point(r["label_at"]) for r in labels if is_rail_name(r["name"])]
+    step = 0.025
+    shrunk = [(d, geoms(search.buffer(-d))) for d in np.arange(step, B["handrail_throat_max"] / 2 + step, step)]
+    # the small inset drops hairlines along the walls, which would otherwise join every pocket to every other
+    unreached = geoms(search.difference(unary_union(shrunk[-1][1]).buffer(shrunk[-1][0])).buffer(-0.02))
+    out = []
+    for r in labels:
+        if is_rail_name(r["name"]):
+            continue
+        p = Point(r["label_at"])
+        room = None
+        for d, parts in shrunk:
+            near = min(parts, key=p.distance)
+            if near.distance(p) > d:
+                room = next((g for g in unreached if g.contains(p)), None)
+                break
+            if not any(near.distance(q) <= d for q in corridor):
+                room = near.buffer(d)
+                break
+        if room is not None:
+            # grow in short steps that cannot jump a wall, so the far face of a thin one keeps its rail
+            grown = room
+            for _ in range(round(B["handrail_door_clearance"] / 0.05)):
+                grown = next(g for g in geoms(grown.buffer(0.05).intersection(search)) if g.intersects(room))
+            out.append(grown)
+    return unary_union(out) if out else Polygon()
+
+
+rail_spaces = [s["poly"] for s in spaces if any(is_rail_name(n) for n in s["names"])]
 rails = []
 for sp in rail_spaces:
-    r = sp.buffer(-0.04).difference(sp.buffer(-0.04 - B["handrail_depth"]))
+    outer = Polygon(sp.exterior)  # no rail on a free-standing wall in the space, such as the tube station's: a short island between openings
+    r = outer.buffer(-0.04).difference(outer.buffer(-0.04 - B["handrail_depth"]))
+    r = r.intersection(walls_u.buffer(0.05 + B["handrail_depth"]))  # a rail needs a wall behind it, which the cut lines lack
+    r = r.difference(rooms_off_corridor(sp))
     r = r.difference(unary_union([h.buffer(0.35) for h in headers]))
     r = r.difference(unary_union([floor_within(Polygon(c["poly"]).buffer(0), 0.3) for c in plan["counters"]]))
     for g in getattr(r, "geoms", [r]):
@@ -404,11 +456,25 @@ def nurse_seats(p):
 def knee_hole(front, d):
     """Plan outline of the clear space under a seat: centred on it, from the front edge back to the knee depth.
 
-    Starts past the edge so that it takes the cabinet's face off as well.
+    Starts past the edge so that it takes the cabinet's face off as well. On a chevron the seat is on the flat
+    between two arms that sweep back toward the sitter, so it starts far enough out to take their faces off too.
     """
     side = np.array([d[1], -d[0]]) * B["knee_space"]["width"] / 2
-    near, back = front - d * 0.1, front + d * B["knee_space"]["depth"]
+    near, back = front - d * 0.2, front + d * B["knee_space"]["depth"]
     return Polygon([near - side, near + side, back + side, back - side])
+
+
+def desk_panels(p, hole):
+    """A desk's 4 cm panels, set 2 cm in under its top: a closed ring on each side of its knee hole.
+
+    Nothing stays behind the hole, because these desks stand against a wall. The buffers drop any sliver of the
+    outline left there, and the area test drops the tip of a chevron, which is too small to stand as a pedestal.
+    """
+    body = p.buffer(-0.02).difference(hole).buffer(-0.01, join_style="mitre").buffer(0.01, join_style="mitre")
+    sides = [g for g in getattr(body, "geoms", [body]) if g.area > 0.1]
+    if len(sides) != 2:
+        raise SystemExit(f"the knee hole at the desk at {np.round(p.centroid.coords[0], 2).tolist()} leaves {len(sides)} pedestals, not 2")
+    return unary_union([g.difference(g.buffer(-0.04, join_style="mitre")) for g in sides])
 
 
 # A counter's kind comes from the drawing label nearest it, not from the names of its space: the corridor, the nooks
@@ -429,7 +495,8 @@ for cnt, (p, kind) in zip(plan["counters"], counters):
     top_z = B["desk_height"] if kind in DESK_KINDS + ("nurse",) else B["counter_height"]
     if kind in DESK_KINDS:
         tops.append((p, top_z - 0.03, top_z))
-        cab.append((p.buffer(-0.02).difference(p.buffer(-0.06)), 0.1, top_z - 0.03))  # modesty panels/legs
+        front, d, _ = desk_seat(p)
+        cab.append((desk_panels(p, knee_hole(front, d)), 0.0, top_z - 0.03))  # no plinth under these panels, so they run to the floor
     else:
         tops.append((p.buffer(0.015, join_style="mitre"), top_z - 0.03, top_z))
         body, toe = p.buffer(-0.01), p.buffer(-0.06)
