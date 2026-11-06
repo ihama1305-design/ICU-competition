@@ -136,6 +136,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 - **The furniture is low-poly.** It comes from the as-built kit, and it looks blocky next to a car configurator's scanned models.
 - **The toilet is empty.** In the dollhouse view its ceiling stays on for that reason.
+- **W1's bathroom fixtures aren't in W1's toilet.** The fixtures and the Bathroom view stand in a solid wall block in the corner of the ante room, around (17.98, 27.46), and the view works only because walls aren't drawn from behind. Moving them was left for later. The record drawing puts the toilet's WC in its north-east corner, the basin in the south-west alcove and a shower in the south-east alcove.
 - **Not tested on real phones or in Safari.** Touch was emulated in Chromium, and frame rates were only measured on one fast laptop.
 
 ## Rebuild and edit
