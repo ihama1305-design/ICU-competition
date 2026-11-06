@@ -4,7 +4,7 @@ Serves the published site under /<repo>/ like GitHub Pages does, so an absolute 
 Chromium with SwiftShader. That renderer manages about one frame a second, so nothing here waits a fixed time.
 
 Loads without console errors or missing files, under the download budget, with the second room left unloaded;
-every view works in both rooms; the camera can't leave the room by orbiting or during a move; the dollhouse
+every view works in both rooms; the camera can't leave the room by orbiting or during a move; a frame timed before the click that started a move does no harm; the dollhouse
 removes the ceiling and leaving it brings the ceiling back; the sun matches the spec at Afternoon, and the time
 controls and the Day/Night toggle work; a phone gets a bottom sheet with no sideways scroll.
 Every option in options.json changes the picture, in each room it applies to, seen from where its check entry says. Themes apply and stay editable; a spec code restores the
@@ -480,6 +480,44 @@ with sync_playwright() as p:
     pg.reload()
     pg.wait_for_function("window.__configReady === true", timeout=120000)
     check("couldn't be read" in pg.inner_text("#roomStatus"), "a bad code says so and opens the default room")
+    ctx.close()
+
+    # ---------------------------------------------------------------- a frame timed before the click
+    # a frame's timestamp is when it began, so a click during a slow frame starts a move later than the next frame says it is.
+    # Landing there is luck, so the page's clock runs an hour ahead for the click, and every frame after it comes before the move's start.
+    ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low")
+    moves, stuck = 0, []
+    for room in ROOMS:  # a room that opens straight onto the corridor has no waypoints, so not every room adds to these
+        go(pg, room)
+        views = pg.evaluate("window.__config.views()")
+        for f, t in [(f, t) for f in views for t in views if f != t and pg.evaluate(f"window.__config.waypoints('{f}', '{t}')")]:
+            moves += 1
+            pg.evaluate(f"window.__config.camera('{f}', {{ instant: true }})")
+            pg.evaluate("(() => { const real = performance.now.bind(performance); performance.now = () => real() + 3600000; })()")
+            pg.click(f"#views button[data-value='{t}']")
+            started = pg.evaluate("""async () => {
+              delete performance.now;
+              const moving = window.__config.state().moving;
+              await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
+              return moving;
+            }""")
+            if not started:
+                stuck.append(f"{room} {f} to {t}")
+    check(moves > 0, "some moves between views go through waypoints")
+    check(not stuck, f"each of those clicks starts its move {stuck[:3]}")
+    check(not errs, f"frames timed before the click don't break any of the {moves} moves through waypoints {errs[:2]}")
+    # the glass fade starts from the same kind of click. It can't throw, but its level would leave 0 to 1, and with it the glass's opacity and roughness
+    pg.evaluate("window.__config.set('front', 'smart')")
+    for to in ("opaque", "clear"):
+        pg.wait_for_function("!window.__config.fading()", timeout=60000)
+        pg.evaluate("(() => { const real = performance.now.bind(performance); performance.now = () => real() + 4000; })()")
+        pg.evaluate(f"window.__config.set('switch', '{to}')")
+        level = pg.evaluate("""async () => {
+          delete performance.now;
+          await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
+          return window.__config.glassLevel();
+        }""")
+        check(0 <= level <= 1, f"a frame timed before the click keeps the glass fade in range, going {to} (level {level:.2f})")
     ctx.close()
 
     # ---------------------------------------------------------------- reduced motion
