@@ -7,7 +7,7 @@ Loads without console errors or missing files, under the download budget, with t
 every view works in both rooms; the camera can't leave the room by orbiting or during a move; the dollhouse
 removes the ceiling and leaving it brings the ceiling back; the sun matches the spec at Afternoon, and the time
 controls and the Day/Night toggle work; a phone gets a bottom sheet with no sideways scroll.
-Every option in options.json changes the picture, in both rooms. Themes apply and stay editable; a spec code restores the
+Every option in options.json changes the picture, in each room it applies to, seen from where its check entry says. Themes apply and stay editable; a spec code restores the
 exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work. The panel and
 home page have no serious accessibility faults under axe, every control can be reached by keyboard with visible focus, nothing
 draws while the page is idle, and slow frames lower the quality.
@@ -158,6 +158,16 @@ def shot(pg, name):
     pg.screenshot(path=os.path.join(SHOTS, f"config_{name}.png"))
 
 
+def look_for(pg, ch, room):
+    """Put the camera where an option group's check entry says its effect shows: a view, or at an anchor. `rooms` gives what differs by room."""
+    ch = {**ch, **ch.get("rooms", {}).get(room, {})}
+    pg.evaluate(f"window.__config.time(window.__config.stops.{ch['time']})")
+    if "aim" in ch:
+        pg.evaluate(f"window.__config.frameAnchor('{ch['aim']}', 1.8, 0.5)")
+    else:
+        pg.evaluate(f"window.__config.camera('{ch['view']}', {{ instant: true }})")
+
+
 with sync_playwright() as p:
     b = p.chromium.launch(args=ARGS)
 
@@ -193,7 +203,9 @@ with sync_playwright() as p:
         pg.wait_for_function(f"window.__config.state().room === '{room}' && window.__config.eye().x !== undefined")
         pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
         views = pg.evaluate("window.__config.views()")
-        check(set(views) == {"overview", "family", "entrance", "bed", "bed_window", "window", "dollhouse"}, f"{room} has all the views")
+        # the seven every room has, and any of its own in the spec, such as W1's bathroom
+        want_views = {"overview", "family", "entrance", "bed", "bed_window", "window", "dollhouse"}
+        check(want_views <= set(views) and set(views) == set(spec["configurator"]["rooms"][room]["cameras"]), f"{room} has all the views")
         for v in views:
             pg.evaluate(f"window.__config.camera('{v}', {{ instant: true }})")
             shot(pg, f"{room.lower()}_{v}")
@@ -305,19 +317,18 @@ with sync_playwright() as p:
     pg.evaluate("window.dispatchEvent(new Event('resize'))")
     for room in ROOMS:
         go(pg, room)
-        groups = pg.evaluate("window.__config.options().sections.flatMap(s => s.groups)")
+        # a group that only applies in another room isn't offered here, so it has nothing to show
+        groups = [g for g in pg.evaluate("window.__config.options().sections.flatMap(s => s.groups)") if g.get("requires", {}).get("room", room) == room]
+        unchecked = [g["id"] for g in groups if "check" not in g]
+        check(not unchecked, f"{room}: every option group says where to look for its effect {unchecked[:6]}")
+        groups = [g for g in groups if "check" in g]
         dead = []
         for g in groups:
             ch = g["check"]
             set_defaults(pg)
             for k, v in ch.get("first", {}).items():
                 pg.evaluate(f"window.__config.set('{k}', '{v}')")
-            pg.evaluate(f"window.__config.time(window.__config.stops.{ch['time']})")
-            if "aim" in ch:
-                up = 1.2 if ch["aim"] == "playmat" else 0.5
-                pg.evaluate(f"window.__config.frameAnchor('{ch['aim']}', 1.8, {up})")
-            else:
-                pg.evaluate(f"window.__config.camera('{ch['view']}', {{ instant: true }})")
+            look_for(pg, ch, room)
             base = frame(pg)
             for o in g["options"]:
                 if o["id"] == g["default"]:
@@ -330,7 +341,7 @@ with sync_playwright() as p:
         check(not dead, f"{room}: each of the {n} non-default options changes the picture {dead[:6]}")
         for g in (x for x in groups if x.get("custom")):
             set_defaults(pg)
-            pg.evaluate(f"window.__config.time(window.__config.stops.{g['check']['time']}); window.__config.camera('{g['check']['view']}', {{ instant: true }})")
+            look_for(pg, g["check"], room)
             base = frame(pg)
             pg.evaluate(f"window.__config.set('{g['id']}', 'custom', '#7a3b8f')")
             check((np.abs(frame(pg) - base).max(axis=2) > 6).sum() > 40, f"{room}: a custom {g['id']} colour changes the room")
@@ -443,7 +454,8 @@ with sync_playwright() as p:
             if rnd.random() < 0.4:
                 pg.evaluate(f"window.__config.set('paint', 'custom', '#{rnd.randrange(16 ** 6):06x}')")
             pg.evaluate(f"window.__config.time({rnd.randrange(72, 264) / 12})")
-            pg.evaluate(f"window.__config.camera('{rnd.choice(data['views'])}', {{ instant: true }})")
+            # this room's views: options.json lists every room's, and W3 has no bathroom
+            pg.evaluate(f"window.__config.camera('{rnd.choice(pg.evaluate('window.__config.views()'))}', {{ instant: true }})")
         before = pg.evaluate("({ selected: window.__config.selected(), state: window.__config.state(), code: window.__config.code() })")
         pg.wait_for_function(f"location.hash === '#c={before['code']}'")
         pg.reload()

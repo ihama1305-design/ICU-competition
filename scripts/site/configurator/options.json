@@ -1086,7 +1086,7 @@
      "control": "choice",
      "default": "chairs",
      "check": {
-      "aim": "seating",
+      "view": "overview",
       "time": "afternoon"
      },
      "options": [
@@ -1271,7 +1271,7 @@
      "control": "choice",
      "default": "off",
      "check": {
-      "aim": "playmat",
+      "view": "family",
       "time": "afternoon"
      },
      "options": [
@@ -1308,7 +1308,7 @@
      "control": "choice",
      "default": "off",
      "check": {
-      "aim": "playmat",
+      "view": "family",
       "time": "afternoon"
      },
      "options": [
@@ -1541,6 +1541,7 @@
      "label": "Sliding wardrobe",
      "control": "choice",
      "default": "on",
+     "check": {"view":"dollhouse","time":"afternoon"},
      "options": [
       {"id":"on","label":"Add storage","effects":[{"do":"addon","id":"wardrobe","on":true}],"code":0},
       {"id":"off","label":"Remove","effects":[{"do":"addon","id":"wardrobe","on":false}],"code":1}
@@ -1553,6 +1554,7 @@
      "label": "Wardrobe finish",
      "control": "choice",
      "default": "light",
+     "check": {"view":"dollhouse","time":"afternoon"},
      "options": [
       {"id":"light","label":"Light oak grain","effects":[{"do":"addonLook","id":"wardrobe","look":"oak"}],"code":0},
       {"id":"warm","label":"Warm walnut grain","effects":[{"do":"addonLook","id":"wardrobe","look":"walnut"}],"code":1},
@@ -1567,6 +1569,7 @@
      "control": "swatches",
      "default": "teal",
      "custom": {"effect":{"do":"color","material":"wardrobe_accent"}},
+     "check": {"time":"afternoon","rooms":{"W1":{"view":"family"},"W3":{"view":"overview"}}},
      "options": [
       {"id":"teal","label":"Teal","swatch":"#4aaeb2","effects":[{"do":"color","material":"wardrobe_accent","value":"#4aaeb2"}],"code":0},
       {"id":"sand","label":"Sand","swatch":"#c6a77a","effects":[{"do":"color","material":"wardrobe_accent","value":"#c6a77a"}],"code":1},
@@ -1581,6 +1584,7 @@
      "label": "W1 bathroom fixtures",
      "control": "choice",
      "default": "on",
+     "check": {"view":"bathroom","time":"afternoon"},
      "options": [
       {"id":"on","label":"Show fixtures","effects":[{"do":"addon","id":"bathroom","on":true}],"code":0},
       {"id":"off","label":"Hide fixtures","effects":[{"do":"addon","id":"bathroom","on":false}],"code":1}
@@ -1594,6 +1598,7 @@
      "label": "Bathroom surface design",
      "control": "choice",
      "default": "stone",
+     "check": {"view":"bathroom","time":"afternoon"},
      "options": [
       {"id":"stone","label":"Quiet stone","effects":[{"do":"addonLook","id":"bathroom","look":"stone"}],"code":0},
       {"id":"terrazzo","label":"Fine terrazzo","effects":[{"do":"addonLook","id":"bathroom","look":"terrazzo"}],"code":1},
@@ -1613,6 +1618,7 @@
      "label": "Visible ventilation grilles",
      "control": "choice",
      "default": "on",
+     "check": {"view":"family","time":"afternoon"},
      "options": [
       {"id":"on","label":"Show supply and return","effects":[{"do":"addon","id":"ventilation","on":true}],"code":0},
       {"id":"off","label":"Hide grilles","effects":[{"do":"addon","id":"ventilation","on":false}],"code":1}
@@ -1625,6 +1631,7 @@
      "label": "Sound-level indicator",
      "control": "choice",
      "default": "on",
+     "check": {"view":"family","time":"afternoon"},
      "options": [
       {"id":"on","label":"Show sensor","effects":[{"do":"addon","id":"soundSensor","on":true}],"code":0},
       {"id":"off","label":"Hide sensor","effects":[{"do":"addon","id":"soundSensor","on":false}],"code":1}
