@@ -29,6 +29,8 @@ The [configurator](https://ihama1305-design.github.io/ICU-competition/configurat
 - **Day and night:** the sun follows a real path at Abu Dhabi's latitude.
 - **Share:** the link holds the exact room. The summary lists every choice with its clinical notes, and you can save an image.
 
+- **Tune it in:** answer a few questions for an editable comfort and furnishing draft. The panel shows what changed and why, with before-and-after and undo. It never changes the room or recommends care, and answers stay out of links.
+
 To add an option, edit [`scripts/site/configurator/options.json`](scripts/site/configurator/options.json). A new kind of effect also needs a handler in `main.js`. Never renumber a `code` there: share links depend on them.
 
 ## Ventilation concept

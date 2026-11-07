@@ -10,7 +10,7 @@ controls and the Day/Night toggle work; a phone gets a bottom sheet with no side
 Every option in options.json changes the picture, in each room it applies to, seen from where its check entry says. Themes apply and stay editable; a spec code restores the
 exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work. The panel and
 home page have no serious accessibility faults under axe, every control can be reached by keyboard with visible focus, nothing
-draws while the page is idle, and slow frames lower the quality.
+draws while the page is idle, and slow frames lower the quality. Tune it in: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage.
 Lighting schemes, smart glass, palms and themes get screenshots to look at. Screenshots -> build/shots/config_*.png. Checks the published site in spec site.dir.
 """
 import functools
@@ -608,6 +608,161 @@ with sync_playwright() as p:
     check(not page_errs, f"the plan page has no errors {page_errs[:3]}")
     pg.goto(URL.replace("configurator/", "index.html"))
     check(pg.locator("a[href='ventilation/']").count() > 0, "the home page links to the plan")
+    # ---------------------------------------------------------------- Tune it in: answers to a room, from the data in options.json
+    ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
+    plain = {"patientType": "adult", "stay": "short", "sex": "skip", "children": "no", "mobility": "independent", "care": "routine", "sensory": "none"}
+    PROFILE_CASES = [  # answers that differ from plain, theme, what has to be set, what a higher tier has to overrule
+        ({}, "calm", {"patio": "off"}, []),
+        ({"patientType": "child"}, "paediatric", {"toyshelf": "on", "playmat": "on", "aquarium": "digital"}, []),
+        ({"children": "yes"}, "family", {"seating": "sofa", "patio": "off", "tvplay": "on"}, []),
+        ({"children": "sometimes"}, "family", {"seating": "sofa"}, []),
+        ({"sensory": "company"}, "family", {"seating": "sofa"}, []),
+        ({"stay": "long"}, "desert", {"wardrobeFinish": "warm"}, []),
+        ({"patientType": "longstay"}, "desert", {"wardrobeFinish": "warm"}, []),
+        ({"patientType": "child", "children": "yes", "stay": "long"}, "paediatric", {"seating": "sofa", "wardrobeFinish": "warm"}, []),
+        ({"mobility": "wheelchair", "children": "yes"}, "family", {"seating": "chairs"}, ["seating"]),
+        ({"mobility": "aid", "sensory": "company"}, "family", {"seating": "chairs"}, ["seating"]),
+        ({"mobility": "assistance", "patientType": "child"}, "paediatric", {"playmat": "off", "softtoys": "off", "seating": "chairs"}, []),
+        ({"sensory": "quiet", "patientType": "child"}, "paediatric", {"tvplay": "off", "aquarium": "none", "scheme": "cove", "temperature": "k3000"}, []),
+        ({"sensory": "quiet", "children": "yes"}, "family", {"tvplay": "off", "scheme": "cove", "temperature": "k3000", "seating": "sofa"}, []),
+        ({"sensory": "routine"}, "calm", {"nightlight": "on"}, []),
+        ({"sex": "female", "care": "frequent", "notes": "anything"}, "calm", {}, []),
+    ]
+    wrong = []
+    for changed, theme, want, overruled in PROFILE_CASES:
+        got = pg.evaluate("a => window.__config.profile(a)", {**plain, **changed})
+        missed = {k: got["selections"].get(k) for k, v in want.items() if got["selections"].get(k) != v}
+        if got["theme"] != theme or missed or sorted(o["group"] for o in got["overruled"]) != sorted(overruled):
+            wrong.append(f"{changed}: theme {got['theme']}, wrong {missed}, overruled {got['overruled']}")
+    check(not wrong, f"each of the {len(PROFILE_CASES)} sets of answers gives its room {wrong[:2]}")
+    # every combination of the form's own answers, in the page: nothing here needs the 3D
+    found = pg.evaluate("""() => {
+      const data = window.__config.options(), P = data.profile, out = { problems: [], combos: 0 };
+      const groups = Object.fromEntries(data.sections.flatMap(s => s.groups).map(g => [g.id, g]));
+      const form = document.getElementById('profileForm');
+      const selects = [...form.querySelectorAll('select')].map(s => [s.name, [...s.options].map(o => o.value)]);
+      const texts = [...form.querySelectorAll('input, textarea')].map(i => i.name);
+      const used = {};
+      const note = when => [when].flat().filter(Boolean).forEach(a => Object.entries(a).forEach(([k, v]) => v.forEach(x => (used[k] ||= new Set()).add(x))));
+      [...P.themes, ...P.rules].forEach(x => note(x.when));
+      // every answer is either used by a rule or says it changes nothing, never both
+      for (const [name, values] of selects) for (const v of values) {
+        const none = P.noEffect[name] === '*' || (P.noEffect[name] || []).includes(v), rule = used[name]?.has(v);
+        if (!!none === !!rule) out.problems.push(`answer ${name}=${v}: ${rule ? 'used and also listed as no effect' : 'neither used nor listed as no effect'}`);
+      }
+      for (const name of texts) if (P.noEffect[name] !== '*') out.problems.push(`free text ${name} isn't listed as no effect`);
+      for (const k of Object.keys(used)) for (const v of used[k]) if (!selects.some(([n, vs]) => n === k && vs.includes(v))) out.problems.push(`a rule asks for ${k}=${v}, which the form doesn't offer`);
+      // what the rules and themes point at exists, and what they say is about the room
+      for (const x of [...P.rules, ...data.themes]) for (const [g, o] of Object.entries(x.sets)) if (!groups[g]?.options.some(q => q.id === o)) out.problems.push(`${x.id} sets ${g}=${o}, which doesn't exist`);
+      for (const x of [...P.rules, ...P.themes]) { if (!x.because) out.problems.push(`${x.id || x.theme} gives no reason`); if (/wheelchair|walking aid|diagnos|\\bsex\\b|female|\\bmale\\b|mobility/i.test(x.because)) out.problems.push(`${x.id || x.theme}'s reason talks about the person: ${x.because}`); }
+      for (const t of P.themes) if (!data.themes.some(q => q.id === t.theme)) out.problems.push(`no theme ${t.theme}`);
+      for (const r of P.rules) if (!P.tiers.includes(r.tier)) out.problems.push(`${r.id}: no tier ${r.tier}`);
+      // all answers together
+      const fixed = Object.fromEntries(texts.map(n => [n, '']));
+      const walk = (i, a) => {
+        if (i === selects.length) {
+          out.combos += 1;
+          const r = window.__config.profile({ ...fixed, ...a });
+          const s = r.selections;
+          for (const g of Object.keys(groups)) if (!groups[g].options.some(q => q.id === s[g])) out.problems.push(`${JSON.stringify(a)}: ${g}=${s[g]}`);
+          if (Object.keys(s).some(k => !groups[k])) out.problems.push(`${JSON.stringify(a)} sets something that isn't an option, like the room: ${Object.keys(s).filter(k => !groups[k])}`);
+          if (s.patio !== 'off') out.problems.push(`${JSON.stringify(a)}: the patio is on`);
+          for (const g of ['wardrobe', 'ventilation', 'soundSensor']) if (s[g] !== 'on') out.problems.push(`${JSON.stringify(a)}: ${g} is off`);
+          if (['aid', 'wheelchair', 'assistance'].includes(a.mobility) && (s.seating !== 'chairs' || s.playmat !== 'off' || s.softtoys !== 'off')) out.problems.push(`${JSON.stringify(a)}: still a lot on the floor`);
+          return;
+        }
+        const [name, values] = selects[i];
+        const skip = P.noEffect[name] === '*';  // these change nothing: tested below instead of multiplying the combinations
+        for (const v of skip ? values.slice(0, 1) : values) walk(i + 1, { ...a, [name]: v });
+      };
+      walk(0, {});
+      // an answer listed as having no effect changes nothing, and one that's used changes something
+      const base = Object.fromEntries(selects.map(([n, v]) => [n, v[0]]));
+      for (const [name, values] of selects) {
+        const noEffect = values.filter(v => P.noEffect[name] === '*' || (P.noEffect[name] || []).includes(v));
+        const key = a => JSON.stringify(window.__config.profile({ ...fixed, ...a }).selections);
+        for (const other of [{}, { patientType: 'child' }, { mobility: 'wheelchair' }, { sensory: 'quiet' }, { children: 'yes' }]) {
+          const start = { ...base, ...other };
+          if (name in other) continue;
+          const seen = new Set(noEffect.map(v => key({ ...start, [name]: v })));
+          if (seen.size > 1) out.problems.push(`${name}: answers listed as no effect change the room`);
+        }
+        // a rule can only take away what a theme brought, so an answer in use has to change something from some starting point
+        for (const v of values.filter(x => !noEffect.includes(x))) {
+          const moves = [{}, { patientType: 'child' }, { children: 'yes' }, { sensory: 'quiet' }, { stay: 'long' }].filter(o => !(name in o))
+            .some(o => key({ ...base, ...o, [name]: v }) !== key({ ...base, ...o, [name]: noEffect[0] ?? values[0] }));
+          if (!moves) out.problems.push(`${name}=${v} changes nothing, so it should be listed as no effect`);
+        }
+      }
+      return out;
+    }""")
+    check(not found["problems"], f"every answer across {found['combos']} combinations is accounted for and gives a sound room {found['problems'][:3]}")
+
+    # the real form: wheelchair access and visiting family, the case the rules used to get wrong
+    for room in ROOMS:
+        go(pg, room)
+        pg.evaluate("window.__config.theme('calm'); window.__config.set('paint', 'custom', '#336699')")
+        pg.wait_for_function(f"location.hash === '#c=' + window.__config.code()")
+        start = pg.evaluate("({ code: window.__config.code(), paint: window.__config.selected()['paint:custom'] })")
+        pg.click("#openProfile")
+        pg.wait_for_selector("#profile[open]")
+        pg.select_option("select[name=mobility]", "wheelchair")
+        pg.select_option("select[name=children]", "yes")
+        pg.fill("textarea[name=notes]", "private note")
+        pg.click("#profileForm button[type=submit]")
+        pg.wait_for_function("!document.getElementById('profile').open")
+        sel = pg.evaluate("window.__config.selected()")
+        check(sel["seating"] == "chairs" and sel["paint"] == "clay" and sel["playmat"] == "off", f"{room}: the form gives the room its rules say")
+        check(pg.evaluate("window.__config.state().room") == room, f"{room}: the form doesn't change the room")
+        bar = pg.inner_text("#profileBar")
+        check(pg.is_visible("#profileBar") and "Sofa-bed" in bar and "hasn't been measured" in bar, f"{room}: the panel says what changed and why, including what was left out")
+        check("wheelchair" not in bar.lower() and "private note" not in bar, f"{room}: the reasons don't repeat the answers")
+        why = pg.evaluate("[...document.querySelectorAll('#profileChanges li span')].map(s => s.textContent)")
+        check(len(why) == len(set(why)) >= 2, f"{room}: each reason is given once ({len(why)} reasons)")
+        after = pg.evaluate("window.__config.code()")
+        pg.wait_for_function(f"location.hash === '#c={after}'")
+        check(not any(w in pg.url.lower() for w in ("wheelchair", "private", "mobility", "notes")), f"{room}: the link holds the room, not the answers")
+        check(pg.evaluate("localStorage.length + sessionStorage.length") == 0, f"{room}: no answer is stored in the browser")
+        pg.click("#profileCompare")
+        check(pg.evaluate("window.__config.code()") == start["code"], f"{room}: comparing shows the exact room from before")
+        drawn(pg)
+        pg.click("#profileCompare")
+        check(pg.evaluate("window.__config.code()") == after, f"{room}: comparing again shows the idea")
+        if room == ROOMS[0]:
+            pg.add_script_tag(url=AXE)
+            faults = axe_faults(pg, "#profileBar")
+            check(not faults, f"axe finds no serious faults in the room idea's panel {faults[:4]}")
+            shot(pg, "tune_idea")
+        pg.click("#profileUndo")
+        check(pg.evaluate("window.__config.code()") == start["code"] and pg.evaluate("window.__config.selected()['paint:custom']") == start["paint"], f"{room}: undo restores the exact room, custom colour included")
+        check(not pg.is_visible("#profileBar"), f"{room}: undo closes the panel")
+        # a change by hand ends the comparison, rather than undoing past it
+        pg.click("#openProfile")
+        pg.wait_for_selector("#profile[open]")
+        pg.click("#profileForm button[type=submit]")
+        pg.wait_for_function("!document.getElementById('profile').open")
+        pg.evaluate("window.__config.set('floor', 'slate')")
+        check(not pg.is_visible("#profileBar"), f"{room}: changing something by hand ends the comparison")
+        pg.reload()
+        pg.wait_for_function("window.__configReady === true", timeout=120000)
+    pg.click("#openProfile")
+    pg.wait_for_selector("#profile[open]")
+    pg.add_script_tag(url=AXE)
+    faults = axe_faults(pg, "#profile")
+    check(not faults, f"axe finds no serious faults in the form {faults[:4]}")
+    pg.keyboard.press("Escape")
+    # a link to a room idea opens the same room
+    pg.click("#openProfile")
+    pg.select_option("select[name=sensory]", "quiet")
+    pg.select_option("select[name=patientType]", "child")
+    pg.click("#profileForm button[type=submit]")
+    pg.wait_for_function("!document.getElementById('profile').open")
+    code = pg.evaluate("window.__config.code()")
+    pg.wait_for_function(f"location.hash === '#c={code}'")
+    pg.reload()
+    pg.wait_for_function("window.__configReady === true", timeout=120000)
+    check(pg.evaluate("window.__config.code()") == code, "a room idea's link reloads the same room")
+    check(not errs, f"Tune it in: no errors {errs[:3]}")
     ctx.close()
 
     # ---------------------------------------------------------------- reduced motion
@@ -752,6 +907,19 @@ with sync_playwright() as p:
     pg.tap("#views button[data-value='bed_window']")
     pg.wait_for_function("window.__config.state().view === 'bed_window' && !window.__config.state().moving", timeout=120000)
     shot(pg, "phone_bed_window")
+    # Tune it in on a phone: the form fits, and the panel opens to show what changed
+    pg.tap("#openProfile")
+    pg.wait_for_selector("#profile[open]")
+    over = pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    check(over <= 0, f"phone: the form causes no sideways scroll ({over})")
+    pg.select_option("select[name=children]", "yes")
+    pg.tap("#profileForm button[type=submit]")
+    pg.wait_for_function("!document.getElementById('profile').open")
+    check(pg.evaluate("document.getElementById('panel').classList.contains('open')") and pg.is_visible("#profileBar"), "phone: the sheet opens on the room idea")
+    drawn(pg)
+    shot(pg, "phone_tune")
+    small = pg.evaluate("[...document.querySelectorAll('#profileBar button')].filter(b => b.getBoundingClientRect().height < 36).map(b => b.textContent)")
+    check(not small, f"phone: the room idea's buttons are large enough to tap {small[:3]}")
     check(not errs, f"phone: no errors {errs[:3]}")
     ctx.close()
     b.close()
