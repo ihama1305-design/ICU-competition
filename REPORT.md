@@ -174,6 +174,27 @@ Notes flag concerns and don't block any choice. Each was checked against its sou
 | Palms and planting | No fresh flowers or potted plants in patient-care areas for immunosuppressed patients. So planting stays outside the glass | [CDC 2003 guidelines](https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm) | Guidance, Category II |
 | Patio on W1 | An outside door works against the pressure regime. No structural or fall-safety design has been done | None: reasoned from how isolation rooms work | Should go to infection control and structural review |
 
+### Tune it in
+
+A short survey that turns answers into an editable comfort and furnishing draft. **It doesn't choose a clinical room or recommend care.** It never changes the room, and its rules are design assumptions, not clinical guidance.
+
+The rules are data, in the `profile` block of `options.json`, and `profile.js` resolves them with no 3D involved:
+
+1. Answers pick one of the four themes.
+2. Rules adjust it, highest tier first. An access rule beats a comfort rule: with wheelchair access and visiting family, the sofa-bed is left out, and the panel says so.
+3. Each rule uses `sets`, the same map as a theme, so the result reaches the share code and can be compared and undone.
+
+| Rule | When | Basis |
+|---|---|---|
+| The patio stays off | Always | Assumed. It's a choice with its own pressure, structure and fall-safety notes |
+| Play mat, soft toys and sofa-bed left out | Walking aid, wheelchair or assistance | Assumed. Less stands on the floor, but **the route through the room hasn't been measured** |
+| Sofa-bed | Children visit, or a familiar visitor nearby | Assumed |
+| Cove light, 3000 K, TV off, no aquarium | Quieter, lower-stimulation room | Assumed |
+| Night light | Consistent routine and clear cues | Assumed |
+| Warmer wardrobe finish | Stay over two weeks, or longer-stay patient | Assumed |
+
+Sex, care frequency and the three free-text boxes change nothing, and the form says so. Answers aren't stored or put in links. A link holds only the room, though a room can still hint at an answer: Paediatric Play suggests a child.
+
 ### Performance
 
 The initial download is about 2.3 MB. The page draws only when something changes, or while the TV or fish are in view. Measured on one fast laptop, an Apple M5 GPU, timing the draw and a pixel read so the figure is the GPU's work and not the display's refresh rate:
@@ -191,7 +212,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 ### Checks
 
-`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
+`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, Tune it in's rules for every combination of answers, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
 
 ### Known limitations
 

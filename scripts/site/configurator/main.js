@@ -9,8 +9,9 @@ import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
 import { setAddon, setAddonLook, setShade, setTv, syncPalms, tickAddons, toggleWardrobe } from "./addons.js";
 import { decodeSpec, encodeSpec } from "./state.js";
+import { differences, optionLabel, resolveProfile } from "./profile.js";
 import { summaryContent } from "./summary.js";
-import { Panel } from "./panel.js";
+import { el, Panel } from "./panel.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -284,6 +285,7 @@ function applyAll() {
 }
 
 function setOption(groupId, optionId, custom) {
+  endIdea();
   const group = groupById(groupId);
   if (custom !== undefined) selected[`${groupId}:custom`] = custom;
   selected[groupId] = optionId;
@@ -308,6 +310,7 @@ function themeSelections(theme) {
 }
 
 function applyTheme(id) {
+  endIdea();
   const theme = optionData.themes.find(t => t.id === id);
   for (const k of Object.keys(selected)) delete selected[k];
   Object.assign(selected, themeSelections(theme));
@@ -322,48 +325,59 @@ const currentTheme = () => optionData.themes.find(t => {
   return allGroups().every(g => selected[g.id] === want[g.id]);
 });
 
-function createProfileIdea(form) {
-  const data = Object.fromEntries(new FormData(form).entries());
-  const child = data.patientType === "child";
-  const family = data.children === "yes" || data.children === "sometimes" || data.sensory === "company";
-  const longStay = data.stay === "long" || data.patientType === "longstay";
-  const theme = child ? "paediatric" : family ? "family" : longStay ? "desert" : "calm";
-  applyTheme(theme);
-  // The draft only changes visual comfort and furnishing choices. It never changes the selected room.
-  if (selected.patio === "on") setOption("patio", "off");
-  setOption("wardrobe", "on");
-  setOption("ventilation", "on");
-  setOption("soundSensor", "on");
-  if (state.room === "W1") setOption("bathroom", "on");
-  if (family) setOption("seating", "sofa");
-  if (data.sensory === "quiet") {
-    setOption("scheme", "cove");
-    setOption("temperature", "k3000");
-    setOption("tvplay", "off");
-  } else if (data.sensory === "routine") {
-    setOption("nightlight", "on");
-  }
-  const needsClearFloor = ["aid", "wheelchair", "assistance"].includes(data.mobility);
-  if (needsClearFloor) {
-    setOption("playmat", "off");
-    setOption("softtoys", "off");
-  }
-  if (longStay) setOption("wardrobeFinish", "warm");
-  const label = optionData.themes.find(t => t.id === theme)?.label || "Calm Clinical";
-  const extras = [
-    `${label} starting look`,
-    "sliding storage added at the far wall",
-    state.room === "W1" ? "W1 bathroom fixtures shown" : "no attached bathroom is modeled for W3",
-    needsClearFloor ? "floor play items removed to keep the route open" : "family and comfort options kept editable",
-  ];
-  const result = $("profileResult");
-  result.replaceChildren(
-    Object.assign(document.createElement("strong"), { textContent: "Editable room idea created" }),
-    document.createTextNode(`${extras.join(" · ")}. Your selected room stays ${state.room}. Sex and care-frequency answers did not change the draft. Other notes stay in this page and are not interpreted.`),
-  );
-  result.hidden = false;
+// ---------------------------------------------------------------- Tune it in: the rules are in options.json, and resolved in profile.js
+let idea = null; // the room idea just made, while it can still be compared or undone
+
+function showSelections(next) {
+  for (const k of Object.keys(selected)) delete selected[k];
+  Object.assign(selected, next);
+  applyAll();
+  relight();
   syncUi();
 }
+
+function endIdea() {
+  idea = null;
+  $("profileBar").hidden = true;
+}
+
+function createProfileIdea(form) {
+  const result = resolveProfile(optionData, Object.fromEntries(new FormData(form).entries()));
+  const before = { ...selected };
+  showSelections(result.selections);
+  idea = { before, after: { ...selected } };
+  // measured, so this can't claim a change that didn't happen
+  const changes = differences(optionData, before, idea.after);
+  // one row for each reason, so a theme's ten changes don't repeat it ten times
+  const byReason = new Map();
+  const add = (why, line) => byReason.set(why, [...(byReason.get(why) || []), line]);
+  for (const c of changes) add(result.why[c.group] || "Back to its usual setting for this starting look.", `${c.label}: ${c.to}`);
+  for (const o of result.overruled) add(result.why[o.group], `Left out: ${optionLabel(optionData, o.group, o.wanted)}`);
+  $("profileChanges").replaceChildren(...[...byReason].map(([why, lines]) => el("li", {}, el("strong", { textContent: lines.join(" · ") }), el("span", { textContent: why }))));
+  $("profileSummary").textContent = changes.length ? `${changes.length} ${changes.length === 1 ? "change" : "changes"} from your room. It stays ${state.room}, and anything can still be changed.` : `The room already matches. It stays ${state.room}.`;
+  const compare = $("profileCompare");
+  compare.setAttribute("aria-pressed", "false");
+  compare.disabled = $("profileUndo").disabled = !changes.length;
+  $("profileBar").hidden = false;
+  $("profile").close();
+  if (matchMedia("(max-width: 820px)").matches) setSheet(true);
+  $("panelBody").scrollTop = 0;
+  say(`Room idea made, with ${changes.length} ${changes.length === 1 ? "change" : "changes"}.`);
+}
+
+$("profileCompare").addEventListener("click", e => {
+  if (!idea) return;
+  const showBefore = e.currentTarget.getAttribute("aria-pressed") !== "true";
+  e.currentTarget.setAttribute("aria-pressed", String(showBefore));
+  showSelections(showBefore ? idea.before : idea.after);
+  say(showBefore ? "Showing the room before." : "Showing the room idea.");
+});
+$("profileUndo").addEventListener("click", () => {
+  if (!idea) return;
+  showSelections(idea.before);
+  endIdea();
+  say("Room idea undone.");
+});
 
 $("openProfile").addEventListener("click", () => $("profile").showModal());
 $("closeProfile").addEventListener("click", () => $("profile").close());
@@ -431,6 +445,7 @@ function remember() {
 }
 
 async function applySpec(spec) {
+  endIdea();
   for (const k of Object.keys(selected)) delete selected[k];
   Object.assign(selected, spec.selected);
   state.hour = spec.hour;
@@ -666,6 +681,7 @@ window.__config = {
   partNames: () => Object.keys(stage.current.parts),
   roomVents: () => rig.meta.vents,
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
+  profile: answers => resolveProfile(optionData, answers),
   fading: () => glass.fading,
   glassLevel: () => glass.k,
   /** Stand in front of an anchor, looking at it, and return where it is on screen. */
