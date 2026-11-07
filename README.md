@@ -23,7 +23,7 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 The [configurator](https://ihama1305-design.github.io/ICU-competition/configurator/) lets you spec one room the way you'd spec a car. Everything on it is a proposal, not the room as built.
 
 - **Rooms:** isolation room W1 with its ante room, or standard room W3.
-- **Views:** Overview, Family zone, Entrance, From the bed, Head turned, Window and Dollhouse. Drag to look around, or press <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>+</kbd> <kbd>-</kbd>. There's also a cinematic tour.
+- **Views:** Overview, Family zone, Entrance, From the bed, Head turned, Window and Dollhouse. Drag to look around, or press <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>+</kbd> <kbd>-</kbd>. There's also a cinematic tour that starts and ends at the Dollhouse.
 - **Themes:** Calm Clinical, Desert Sanctuary, Paediatric Play and Family Suite. Anything can still be changed afterwards.
 - **Options:** paint, feature walls, floors, a sky ceiling, four lighting schemes, smart glass, blinds, TV, console, toys, seating, an aquarium, a patio and palms.
 - **Day and night:** the sun follows a real path at Abu Dhabi's latitude.
