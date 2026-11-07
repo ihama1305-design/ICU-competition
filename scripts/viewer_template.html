@@ -618,7 +618,7 @@ window.__teleport = (x, y) => { walkPos.copy(W2T(x, y, VIEW.eye)); placeCamera()
 window.__walk = async (code, ms) => { keys.add(code); await new Promise(r => setTimeout(r, ms)); keys.delete(code); return window.__walker(); };
 window.__mode = () => mode;
 window.__ceilingParts = () => [...new Set(ceilingParts.map(n => n.userData.top))];
-window.__face = (x, y) => { const t = W2T(x, y, VIEW.eye); yaw = Math.atan2(walkPos.x - t.x, walkPos.z - t.z); pitch = 0; placeCamera(); };
+window.__face = (x, y, z = VIEW.eye) => { const t = W2T(x, y, z); yaw = Math.atan2(walkPos.x - t.x, walkPos.z - t.z); pitch = Math.atan2(t.y - walkPos.y, Math.hypot(t.x - walkPos.x, t.z - walkPos.z)); placeCamera(); };
 window.__pathClear = (x0, y0, x1, y1) => { const a = W2T(x0, y0, VIEW.eye), d = W2T(x1, y1, VIEW.eye).sub(a), len = d.length(); return !blocked(a, d.normalize(), len); };
 window.__project = (x, y, z = 0) => { const v = W2T(x, y, z).project(camera), r = canvas.getBoundingClientRect();
   return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; };

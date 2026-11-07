@@ -2,7 +2,7 @@
 
 A realistic, walkable 3D model of the existing ICU at Sheikh Shakhbout Medical City (Tower D, 4th floor, Part a), built for the SSMC ICU Interior Design Student Competition. The walls, doors, glazing and joinery are read straight from the vector CAD layers of the as-built record drawing. The 16 patient rooms are furnished with a typical ICU kit, and the scene is rendered with Blender Cycles.
 
-**[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Walk through the model](https://ihama1305-design.github.io/ICU-competition/viewer/)** · **[Configure a room](https://ihama1305-design.github.io/ICU-competition/configurator/)** · **[Read the report](REPORT.md)**
+**[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Walk through the model](https://ihama1305-design.github.io/ICU-competition/viewer/)** · **[Configure a room](https://ihama1305-design.github.io/ICU-competition/configurator/)** · **[See the ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/)** · **[Read the report](REPORT.md)**
 
 The model and walkthrough show the floor as built, as a starting point for a redesign. The configurator is a design proposal built on top of it. All of it is independent student work, not made or endorsed by SSMC. Furnishings and finishes are assumed; [REPORT.md](REPORT.md) separates what is measured from what is assumed.
 
@@ -31,6 +31,10 @@ The [configurator](https://ihama1305-design.github.io/ICU-competition/configurat
 
 To add an option, edit [`scripts/site/configurator/options.json`](scripts/site/configurator/options.json). A new kind of effect also needs a handler in `main.js`. Never renumber a `code` there: share links depend on them.
 
+## Ventilation concept
+
+The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/) shows supply, return and exhaust grilles for the floor, with the air-change and pressure basis for each kind of room. **It's concept work, not SSMC's mechanical design:** the drawings show no grilles, ducts or air data. The plan, the walkthrough and the configurator all read the same list, so they can't disagree.
+
 ## Renders
 
 | | |
@@ -54,7 +58,7 @@ To add an option, edit [`scripts/site/configurator/options.json`](scripts/site/c
 | [`REPORT.md`](REPORT.md) | How it was built, what is accurate and what is assumed |
 | [`spec/icu_spec.json`](spec/icu_spec.json) | Every height, material, equipment position, light and camera ([field guide](spec/icu_spec.README.md)) |
 | [`scripts/`](scripts/) | The pipeline, from drawing to website |
-| `index.html`, `viewer/`, `configurator/`, `assets/` | The published website, served from the repo root. It is generated, so edit `scripts/site/` and rebuild instead |
+| `index.html`, `viewer/`, `configurator/`, `ventilation/`, `assets/` | The published website, served from the repo root. It is generated, so edit `scripts/site/` and rebuild instead |
 | [`docs/`](docs/) | The configurator's brief and build plan |
 
 ## Rebuild
@@ -65,7 +69,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 scripts/run_all.sh            # about 20 minutes on an M-series Mac, most of it testing; --preview for quick renders
 ```
 
-The pipeline runs 01 extract plan, 02 Blender scene, 03 renders, 04 GLB and viewer, 05 viewer test, 07 configurator rooms, 06 website, then 08 configurator test. 07 has to come before 06, which publishes what it writes. 05 and 08 need a network connection, because Three.js comes from a CDN.
+The pipeline runs 01 extract plan, 02 Blender scene, 09 fixture check, 10 ventilation plan, 03 renders, 04 GLB and viewer, 05 viewer test, 07 configurator rooms, 06 website, then 08 configurator test. 07 has to come before 06, which publishes what it writes. 05 and 08 need a network connection, because Three.js comes from a CDN.
 
 Change a number in `spec/icu_spec.json` and run `scripts/run_all.sh` again. A rebuild replaces `output/icu.blend`, so save your own Blender edits under another name.
 
