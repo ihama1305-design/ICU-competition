@@ -16,6 +16,7 @@ The PDFs are AutoCAD exports that still carry their layers, so no tracing was ne
 | `A-GLAZ` | 16 observation window panes, plus the lobby's glazed screen (`WN35 0 - 2800`), which is modelled from its tag |
 | `A-EQPM` | Joinery outlines: sink counters with basins, observation desks, the U-shaped nurse station |
 | `P-SANR-FIXT` | The seven sinks on counters that are CAD blocks: bowl outline and drain here, tap on `A-EQPM`. Five are rounded rectangles and two are ovals with a rim on `A-EQPM`. Also the four oval sinks with nothing on `A-EQPM`: bowl, tap and the front edge of the vanity top are all here |
+| `A-GENM` | The four dark red blocks that the `FIRE EXTINGUISHER CABINET` labels point to: position and width of the extinguisher cabinets |
 | Text | Room names, which decide floor finish, ceiling type and which rooms get the patient kit |
 
 **Scale** comes from the drawing itself. The structural grid (32–37, A-3 to E-3) is 9.000 m both ways
@@ -31,6 +32,8 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
 | Door head height 2.41 m | High | `H=2410` tags |
 | Observation windows: sill 1.0 m, head 1.4 m | Medium | `WA31 1000-1400` tag read with the sheet legend (X = sill, Y = underside of lintel). `WN35 0 - 2800` on the same sheet uses the same format. Check against the window schedule (A5102/A5105) |
 | Facade: 700 mm upstand, curtain wall, external fins | Medium | `TOW +700 AFFL` and the facade lines. Mullion and fin spacing are approximate |
+| Fire extinguisher cabinets: position and width | High | Drawn outlines on `A-GENM`, with labelled leaders pointing to them. 09 checks the spec against the sheet |
+| Fire extinguisher cabinets: height, door, sign and the extinguisher itself | Low | Not on the sheets. See [Fire extinguisher cabinets](#fire-extinguisher-cabinets) |
 | Ceiling height 2.85 m | **Low** | Not on these sheets. One number in the spec |
 | Ceiling panel layout | **Low** | Not on these sheets. A regular 2.4 m grid, plus nine panels where that grid leaves floor in the dark (`lighting.gap_fill` in the spec) and four over desk chairs it leaves dim (`lighting.desk_fill`). None of their positions come from the drawing |
 | Finishes and colours (LIN36/LIN37 vinyl, wall paint) | Low | Finish codes are on the plan. The colours are assumed |
@@ -53,9 +56,39 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
   - Dictation desk with a workstation, chair and knee space
   - Corridor handrails, coved skirting, lay-in 600 mm ceiling grid in corridors and plain ceilings in patient rooms
   - Crash cart and stretcher alcoves
+  - Four recessed fire extinguisher cabinets, where the drawing has them
 - **Lighting:**
   - 179 LED ceiling panels, each a real area light in the renders
   - Afternoon sun from the west-south-west, physical sky
+
+### Fire extinguisher cabinets
+
+**Where they are is measured.** Sheet A1104-a draws four cabinets on `A-GENM`, each with a leader from a `FIRE EXTINGUISHER CABINET` label. Each is a block 0.35 m wide and 0.26 m deep, with a 0.43 m face on the corridor side. The face positions in `fire.cabinets` match the sheet to the nearest millimetre, and `scripts/09_check_fixtures.py` checks that on every build. Nothing was chosen.
+
+**How high they are and what they look like is assumed,** because the sheets show neither. The sheet gives no height, door, sign or extinguisher type.
+
+| Assumed | Value | Limit used | Source of the limit |
+|---|---|---|---|
+| Top of the extinguisher | 1.40 m | No more than 1.5 m | UAE code as reported by [DMCC's bulletin](https://dmcc.ae/blog/health-and-safety-information-bulletin-01-fire-extinguishers). NFPA 10 as reported by [this guide](https://fireinspected.pages.dev/nfpa-10-guide/location-requirements/): 5 ft (1.52 m) for a unit up to 40 lb |
+| Bottom of the extinguisher | 0.80 m | At least 0.30 m | DMCC's bulletin. The same NFPA 10 guide gives 4 in (10 cm) |
+| Walking distance | See below | 22.9 m (75 ft), reference only | [NFPA 10 as reported by this guide](https://servicedfireequipment.com/nfpa-10-placement-spacing-guide/), for Class A hazards |
+
+**These sources are secondhand.** NFPA 10 and the UAE Fire and Life Safety Code weren't read directly: NFPA's text is paywalled, and the Dubai Civil Defence page refused the connection. Hospital rules may be stricter. **None of this is a compliance finding.** It's a measurement of a student model, and it needs checking against the code the authority has adopted.
+
+**Walking distance, measured on the model.** From the free floor to the nearest cabinet, walking round walls and counters on a 10 cm grid:
+
+| | |
+|---|---|
+| Median | 9.9 m |
+| Furthest patient room label | 21.5 m |
+| Longest anywhere | 27.3 m, at the south cut line (15.0, -4.7) |
+| Labels past 22.9 m | 4 of 65: three lift shafts, `L45` to `L47`, and `STORAGE EQUIP` at 24.8 m |
+
+This only counts the four cabinets on this sheet, so it overstates some distances. The floor continues past the cut line into Part b, whose sheet shows four more cabinets. Two `FHC` hose closets are on this sheet too, and what they hold isn't shown.
+
+**How they sit in the model.** The sheet's walls stop either side of each cabinet, with a small void behind, so each cabinet comes with a wall panel from floor to ceiling that closes the gap. Before this, the corridor looked through a slot into the void, and the rail code treated the void as corridor and ran rail inside it. That rail is gone, and corridor rail now stops 0.15 m short of each cabinet so it can't block the door. 09 also checks that the space in front of each cabinet is clear of walls, counters, door openings, handrails, alcove equipment and the door swings drawn on the sheet.
+
+The configurator's removed safety work, described under [Configurator redesign summary](#configurator-redesign-summary-november-2026), mentions a corridor hose cabinet with an extinguisher. That isn't active, and it isn't related to these.
 
 ## Observations relevant to the competition
 

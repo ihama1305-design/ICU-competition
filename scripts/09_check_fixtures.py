@@ -79,6 +79,21 @@ for ob_id in cabs:
     long_side = max(np.linalg.norm(np.diff(np.array(strip.minimum_rotated_rectangle.exterior.coords), axis=0), axis=1))
     check(abs(long_side - c["face_width"]) < 0.02, f"{ob_id['id']}: its width is the drawn {long_side:.3f} m")
 
+# the doors' swings, from their arcs on the sheet: a leaf's arc is centred on its hinge
+SWINGS = []
+for d in planlib.drawings(spec):
+    if d["layer"] != "A-DOOR":
+        continue
+    for _, p_ in d["items"]:
+        if len(p_) == 9:  # a bezier, sampled at nine points by planlib
+            w_ = planlib.page_to_world(spec, p_)
+            A_ = np.c_[2 * w_[:, 0], 2 * w_[:, 1], np.ones(len(w_))]
+            (cx_, cy_, k_), *_ = np.linalg.lstsq(A_, (w_ ** 2).sum(1), rcond=None)
+            r_ = (k_ + cx_ * cx_ + cy_ * cy_) ** 0.5
+            if spec["plan"]["leaf_length_m"][0] < r_ < spec["plan"]["leaf_length_m"][1]:
+                SWINGS.append(([round(float(cx_), 2), round(float(cy_), 2)], MultiPoint(np.vstack([w_, [cx_, cy_]])).convex_hull))
+check(len(SWINGS) > 30, f"the sheet's door swings are read ({len(SWINGS)} arcs)")
+
 # ---------------------------------------------------------------- each cabinet in the scene
 ALCOVE = unary_union([footprint(o) for o in bpy.data.objects if o.type == "MESH" and (o.name == "crash_cart" or o.name.startswith("stretcher_")) and o.users_collection[0].name != "Kit"])
 e = FIRE["extinguisher"]
@@ -117,12 +132,8 @@ for fc in cabs:
     stand = Polygon([at - t * h + n * front, at + t * h + n * front, at + t * h + n * (front + reach), at - t * h + n * (front + reach)])
     for what, geom, limit in (("walls", WALLS, 0.0), ("counters", COUNTERS, 0.0), ("door openings", HEADERS, 0.0), ("handrails", RAILS, 0.0), ("alcove equipment", ALCOVE, 0.0)):
         check(geom.intersection(stand).area <= limit, f"{name}: {reach:.2f} m in front of it is clear of {what}")
-    leaf_near = []
-    for leaf in plan["leaves"]:
-        swing = Point(leaf["c"]).buffer(leaf["length"])  # the leaf's middle plus its length covers any swing
-        if swing.intersects(stand):
-            leaf_near.append(leaf["c"])
-    check(not leaf_near, f"{name}: no door leaf swings across the space in front of it {leaf_near[:2]}")
+    crossing = [hinge for hinge, sector in SWINGS if sector.intersects(stand)]
+    check(not crossing, f"{name}: no door swings across the space in front of it, by the arcs on the sheet {crossing[:2]}")
     rail_gap = RAILS.distance(LineString([at - t * h, at + t * h]))
     check(rail_gap >= FIRE["rail_clearance"] - 0.02, f"{name}: the nearest handrail stops {rail_gap:.2f} m from it")
 
