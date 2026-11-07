@@ -322,6 +322,83 @@
    20.2
   ]
  ],
+ "vents": [
+  {
+   "id": "W3_supply_0",
+   "kind": "supply",
+   "zone": "W3",
+   "type": "patient",
+   "at": [
+    10.1,
+    20.7
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W3_supply_1",
+   "kind": "supply",
+   "zone": "W3",
+   "type": "patient",
+   "at": [
+    11.2,
+    19.4
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W3_return_0",
+   "kind": "return",
+   "zone": "W3",
+   "type": "patient",
+   "at": [
+    7.6,
+    21.9
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W3_return_1",
+   "kind": "return",
+   "zone": "W3",
+   "type": "patient",
+   "at": [
+    7.6,
+    18.7
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_13_19_supply_0",
+   "kind": "supply",
+   "zone": "observation_13_19",
+   "type": "observation",
+   "at": [
+    13.4,
+    18.5
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  }
+ ],
  "bed": {
   "head": [
    10.31,

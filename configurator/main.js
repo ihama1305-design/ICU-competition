@@ -663,6 +663,9 @@ window.__config = {
   set: setOption,
   selected: () => ({ ...selected }),
   options: () => optionData,
+  partNames: () => Object.keys(stage.current.parts),
+  roomVents: () => rig.meta.vents,
+  ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
   fading: () => glass.fading,
   glassLevel: () => glass.k,
   /** Stand in front of an anchor, looking at it, and return where it is on screen. */
