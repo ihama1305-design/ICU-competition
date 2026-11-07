@@ -603,6 +603,42 @@
   "stand_clear": 0.75,
   "void_max_m2": 3.0
  },
+ "ventilation": {
+  "_note": "CONCEPT, not SSMC's mechanical design. The sheets show no grilles, ducts or air data, only the shaft and riser labels in shafts_on_sheet. Air changes and pressures in room_types come from the sources in REPORT.md, read as noted there. Grille positions come from rules in scripts/ventlib.py, with overrides here. Sizes, capacities and clearances are assumed. 02 writes the result to build/vents.json, and the scene, the rooms and the 2D plan all read that",
+  "grilles": {
+   "supply": { "size": [0.6, 0.6], "capacity_ls": 150, "label": "Supply" },
+   "return": { "size": [0.6, 0.3], "capacity_ls": 150, "label": "Return" },
+   "exhaust": { "size": [0.45, 0.45], "capacity_ls": 200, "label": "Exhaust" }
+  },
+  "clearance": { "ceiling_items": 0.1, "walls": 0.15, "grilles": 0.5 },
+  "search_step": 0.1,
+  "zone_radius": 2.0,
+  "suite_gap": 0.7,
+  "corridor_spacing": 8.0,
+  "corridor_inset": 0.5,
+  "plate_thickness": 0.012,
+  "exhaust_from_head_max": 1.5,
+  "shafts_on_sheet": [
+   { "name": "VENTILATION SHAFT", "at": [11.89, 34.89] },
+   { "name": "VENTILATION SHAFT", "at": [33.27, 34.65] },
+   { "name": "RISER", "at": [18.99, 18.84] }
+  ],
+  "room_types": [
+   { "type": "isolation", "label": "Isolation room", "match": ["ICU ISOLATION PATIENT ROOM"], "pressure": "Negative, about -10 Pa", "ach_total": 12, "ach_outdoor": 2, "air": ["supply", "exhaust"], "exhaust_margin": 1.1, "basis": "ASHRAE 170-2008 Table 7.1 (AII room); HFG Part E 2026 (Class N); DHA Part D (pressure)" },
+   { "type": "isolation_ante", "label": "Isolation ante room", "match": ["ANTE"], "pressure": "Negative, about -5 Pa", "ach_total": 10, "air": ["supply", "exhaust"], "count": { "supply": 1, "exhaust": 1 }, "basis": "ASHRAE 170-2008 Table 7.1 (AII anteroom); HFG Part E 2026; DHA Part D (pressure)" },
+   { "type": "isolation_toilet", "label": "Isolation toilet", "match": ["ISOLATION TOILET"], "pressure": "Negative, about -15 Pa", "ach_total": 10, "air": ["exhaust"], "basis": "ASHRAE 170-2008 Table 7.1 (toilet room); DHA Part D (pressure)" },
+   { "type": "patient", "label": "ICU patient room", "match": ["ICU PATIENT ROOM"], "pressure": "None required", "ach_total": 6, "ach_outdoor": 2, "air": ["supply", "return"], "basis": "ASHRAE 170-2008 Table 7.1 (critical and intensive care); HFG Part E 2026" },
+   { "type": "toilet", "label": "Toilet", "match": ["TOILET", "TOILET STAFF"], "pressure": "Negative", "ach_total": 10, "air": ["exhaust"], "basis": "ASHRAE 170-2008 Table 7.1 (toilet room)" },
+   { "type": "soiled", "label": "Soiled utility, housekeeping", "match": ["SOILED UTILITY", "HSKP"], "pressure": "Negative", "ach_total": 10, "air": ["exhaust"], "basis": "ASHRAE 170-2008 Table 7.1 (soiled workroom, janitor's closet)" },
+   { "type": "clean", "label": "Clean utility, medicines", "match": ["CLEAN UTILITY", "MEDS"], "pressure": "Positive", "ach_total": 4, "ach_outdoor": 2, "air": ["supply", "return"], "basis": "ASHRAE 170-2008 Table 7.1 (clean workroom, medication room)" },
+   { "type": "storage", "label": "Linen and equipment storage", "match": ["STORAGE LINEN", "STORAGE EQUIP"], "pressure": "Positive", "ach_total": 2, "air": ["supply"], "basis": "ASHRAE 170-2008 Table 7.1 (clean linen storage); equipment storage assumed the same" },
+   { "type": "staff", "label": "Nurse station, staff rooms", "match": ["NURSE ST.", "DICTATION", "OFFICE", "STAFF LOUNGE", "NOURISHMENT", "MULTIPURPOSE ROOM"], "pressure": "None assumed", "ach_total": 6, "air": ["supply", "return"], "zone_radius": 3.0, "basis": "Assumed. No row in the table read; HFG Part E sends these to ASHRAE 62.1, which wasn't read" },
+   { "type": "observation", "label": "Observation nook", "match": ["OBSERVATION"], "pressure": "None assumed", "ach_total": 6, "air": ["supply"], "count": { "supply": 1 }, "zone_radius": 1.4, "basis": "Assumed, as a staff space" },
+   { "type": "corridor", "label": "Corridors and lobbies", "match": ["CORRIDOR", "LOBBY", "LIFT LOBBY", "ALCOVE*", "TUBE STATION"], "pressure": "None required", "ach_total": 2, "air": ["supply", "return"], "basis": "ASHRAE 170-2008 Table 7.1 (patient corridor)" },
+   { "type": "none", "label": "No grilles shown", "match": ["STAIR*", "RISER", "ELEC", "FHC", "L4*", "LIFT*"], "air": [], "basis": "Not occupied rooms" }
+  ],
+  "overrides": []
+ },
  "lighting": {
   "panel_size": 0.6,
   "panel_grid": 2.4,
