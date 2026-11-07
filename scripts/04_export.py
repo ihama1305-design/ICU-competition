@@ -92,6 +92,9 @@ S = [  # (id, group, label, confidence, regex on object names, notes)
     ("rails", "Building", "Handrails and wall protection", "med", "^handrails|^bumper|^skirting", "Corridor handrail at 0.9 m, bumper rail and coved skirting."),
     ("fire", "Building", "Fire extinguisher cabinets", "med", "^fire_cabinet", "Four cabinets at the positions and widths drawn on record drawing A1104-a (A-GENM, labelled FIRE EXTINGUISHER CABINET). Mounting height, door, sign and the extinguisher itself are assumed. The sheet shows no heights or extinguisher type."),
     ("ceiling", "Building", "Ceilings and lights", "low", "^ceiling|exam_light", f"Ceiling at {H:.2f} m, which is not on these sheets (assumed). Lay-in grid in corridors, plain in patient rooms. The panel layout is assumed too."),
+    ("vent_supply", "Ventilation concept", "Supply grilles", "low", "^vent_supply", "Concept, not SSMC's mechanical design. The drawings show no grilles, ducts or air data. Positions come from rules by room type, for the air changes in REPORT.md. See the ventilation plan on the site."),
+    ("vent_return", "Ventilation concept", "Return grilles", "low", "^vent_return", "Concept, not SSMC's mechanical design. Positions are assumed. Patient rooms and staff areas return air here, and isolation suites have none, because all their air goes out as exhaust."),
+    ("vent_exhaust", "Ventilation concept", "Exhaust grilles", "low", "^vent_exhaust", "Concept, not SSMC's mechanical design. Positions are assumed. In isolation rooms the exhaust is as near the bed head as the pendant allows, and toilets and soiled rooms exhaust too."),
     ("slab", "Building", "Floor slab", "low", "^slab", "Slab edge and overhang beyond the facade."),
 ]
 for sid, grp, lab, conf, rx, notes in S:

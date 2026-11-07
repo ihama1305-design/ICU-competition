@@ -21,6 +21,7 @@ from shapely.prepared import prep
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kit  # noqa: E402
 import planlib  # noqa: E402
+import ventlib  # noqa: E402
 from kit import T, frame_matrix, place, rot_z  # noqa: E402
 
 ROOT = planlib.ROOT
@@ -775,8 +776,12 @@ panel = kit.Builder()
 n_l = 0
 
 
+panel_at = []
+
+
 def add_panel(x, y):
     global n_l
+    panel_at.append((float(x), float(y)))
     panel.box((x, y, H - 0.006), (L_, L_, 0.012), "led_panel")
     ld = bpy.data.lights.new(f"panel_{n_l}", "AREA"); ld.shape = "SQUARE"; ld.size = L_
     ld.energy = LT["panel_watts"]; ld.color = LT["panel_kelvin_rgb"]
@@ -899,6 +904,38 @@ for r in rooms_index:
 for ob in C["Ceiling"].objects:
     if "exam_light" in ob.name:
         ob.visible_diffuse = False; ob.visible_shadow = False
+
+# ------------------------------------------------------------------ ventilation grilles: a concept. See ventlib
+def at_ceiling(ob, M):
+    """What a kit object has within reach of the ceiling, on the plan. A pendant's arms hang well below it, so a grille can sit over them."""
+    V_ = np.array([v.co for v in ob.data.vertices])
+    M_ = np.asarray(M, float)
+    W_ = (np.c_[V_, np.ones(len(V_))] @ M_.T)[:, :3]
+    W_ = W_[W_[:, 2] > H - 0.2]
+    return MultiPoint(W_[:, :2]).convex_hull if len(W_) >= 3 else Polygon()
+
+
+planlib.label_rooms(rooms_index, spec)
+ceiling_items = [box_ for box_ in (Polygon([(x - L_ / 2, y - L_ / 2), (x + L_ / 2, y - L_ / 2), (x + L_ / 2, y + L_ / 2), (x - L_ / 2, y + L_ / 2)]) for x, y in panel_at)]
+beds = [(r["head"], r["foot_dir"]) for r in rooms_index]
+# a room the configurator lays out differently has its pendant and light somewhere else there, and the grilles have to suit both
+for cfg_room in spec["configurator"]["rooms"].values():
+    if cfg_room.get("layout"):
+        beds.append((cfg_room["layout"]["head"], cfg_room["layout"]["foot_dir"]))
+    ceiling_items += [Point(p_).buffer(0.1) for p_ in cfg_room["fixtures"]["downlights"]]
+    ceiling_items += [LineString([q_[:2], q_[2:]]).buffer(0.05) for q_ in cfg_room["fixtures"]["slots"]]
+for head_, foot_ in beds:
+    M_bed = frame_matrix(head_, foot_)
+    ceiling_items += [at_ceiling(src_, M_bed) for src_ in pend]
+    ceiling_items.append(at_ceiling(exam, M_bed @ T(0, 1.1)))
+for r in rooms_index:  # the curtain's track, as built above
+    o_ = np.array(r["front"]) + np.array(r["front_normal_in"]) * K["curtain"]["offset_from_front"]
+    a_ = np.array(r["front_axis"]) * (r["front_width"] + 0.2) / 2
+    ceiling_items.append(LineString([o_ - a_, o_ + a_]).buffer(0.015))
+vent_plan = ventlib.layout(spec, plan, spaces, rooms_index, unary_union(ceiling_items), H)
+kit.vents(vent_plan["vents"], spec, C["Ceiling"], H)
+json.dump(vent_plan, open(os.path.join(ROOT, "build", "vents.json"), "w"), indent=1)
+print(f"ventilation concept: {len(vent_plan['vents'])} grilles in {len(vent_plan['zones'])} zones")
 
 sun = spec["lighting"]["sun"]
 sd = bpy.data.lights.new("sun", "SUN"); sd.energy = sun["strength"]; sd.angle = math.radians(0.53)

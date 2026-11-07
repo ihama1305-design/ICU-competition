@@ -126,6 +126,14 @@ with sync_playwright() as pw:
         along = pg.evaluate(f"window.__pathClear({px - tx * 1.2}, {py - ty * 1.2}, {px + tx * 1.2}, {py + ty * 1.2})")
         check(along, f"walking along the wall past cabinet {c['id']} isn't blocked")
 
+    # ventilation grilles: named, labelled as a concept, and hidden with the ceiling
+    for kind in ("supply", "return", "exhaust"):
+        title = pg.evaluate(f"window.__select('vent_{kind}')")
+        check(kind in title.lower(), f"selecting the {kind} grilles names them (card: {title!r})")
+    check("concept" in pg.inner_text("#iNotes" if pg.locator("#iNotes").count() else "#info").lower(), "the grilles' card says they're a concept")
+    parts = pg.evaluate("window.__ceilingParts()")
+    check(all(f"vent_{k}" in parts for k in ("supply", "return", "exhaust")), f"the grilles hide with the ceiling {parts[:6]}")
+
     ok = pg.evaluate("window.__miniGo(0.5, 0.45)")
     check(ok is not None, "minimap click failed")
     pg.screenshot(path=os.path.join(ROOT, "renders", "viewer_minimap_jump.png"))
