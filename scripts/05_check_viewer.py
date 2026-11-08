@@ -159,6 +159,34 @@ with sync_playwright() as pw:
 
     check(not errs, f"console errors: {errs[:3]}")
 
+    # an idle page stops drawing; using it draws again
+    pg.evaluate("window.__view('orbit')"); pg.wait_for_timeout(2500)
+    f0 = pg.evaluate("window.__viewerFrames"); pg.wait_for_timeout(2500); f1 = pg.evaluate("window.__viewerFrames")
+    check(f1 == f0, f"an idle page stops drawing ({f1 - f0} frames in 2.5 s)")
+    pg.mouse.move(300, 400); pg.mouse.move(340, 420); pg.wait_for_timeout(1200)
+    check(pg.evaluate("window.__viewerFrames") > f1, "moving the pointer over it draws again")
+
+    # a touch phone: one slim row of controls, and a joystick that walks forward, back and sideways
+    ctx = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    tp = ctx.new_page()
+    tp.goto(url)
+    tp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
+    bar_h = tp.evaluate("document.getElementById('bar').offsetHeight")
+    names = tp.evaluate("[...document.querySelectorAll('#bar button')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+    check(bar_h <= 64 and {"Orbit", "First person", "Top", "Place person"} <= set(names), f"phone: the controls fit one slim row, with none left out ({bar_h}px) {names}")
+    tp.evaluate("window.__view('first')"); tp.wait_for_timeout(1500)
+    check(tp.is_visible("#pad .stick"), "phone: first person shows the walking joystick")
+    for label, (dx, dy) in [("forward", (0, -60)), ("sideways", (60, 0))]:
+        p0 = tp.evaluate("window.__walker()")
+        bb = tp.locator("#pad .stick").bounding_box(); cx, cy = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
+        tp.mouse.move(cx, cy); tp.mouse.down(); tp.mouse.move(cx + dx, cy + dy, steps=5); tp.wait_for_timeout(4000); tp.mouse.up()
+        p1 = tp.evaluate("window.__walker()")
+        moved = ((p1[0] - p0[0]) ** 2 + (p1[1] - p0[1]) ** 2) ** 0.5
+        print(f"  joystick {label}: {moved:.2f} m")
+        check(moved > 0.1, f"phone: the joystick walks {label} ({moved:.2f} m)")
+    tp.screenshot(path=os.path.join(ROOT, "renders", "viewer_phone_walk.png"))
+    ctx.close()
+
     # a browser without WebGL 2 is told why, instead of seeing "Loading" for ever; the website's copy also links to the pictures
     ctx = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
     ctx.add_init_script("HTMLCanvasElement.prototype.getContext = (g => function (t, ...a) { return /webgl/.test(t) ? null : g.call(this, t, ...a); })(HTMLCanvasElement.prototype.getContext);")
@@ -173,5 +201,5 @@ with sync_playwright() as pw:
         check(pg.locator("#load a").get_attribute("href") == "../", "without WebGL 2 the website links to the pictures on the home page")
     ctx.close()
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, no-WebGL message)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, idle drawing, phone joystick, no-WebGL message)"))
 sys.exit(1 if fail else 0)
