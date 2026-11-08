@@ -67,7 +67,7 @@ python3.13 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 scripts/run_all.sh            # about 20 minutes on an M-series Mac, most of it testing; --preview for quick renders
 ```
 
-The pipeline runs 01 extract plan, 02 Blender scene, 03 renders, 04 GLB and viewer, 05 viewer test, 07 configurator rooms, 06 website, then 08 configurator test. 07 has to come before 06, which publishes what it writes. 05 and 08 need a network connection, because Three.js comes from a CDN.
+The pipeline runs 01 extract plan, 02 Blender scene, 09 fixture check, 03 renders, 04 GLB and viewer, 05 viewer test, 07 configurator rooms, 06 website, then 08 configurator test. 07 has to come before 06, which publishes what it writes. 05 and 08 need a network connection, because Three.js comes from a CDN.
 
 Change a number in `spec/icu_spec.json` and run `scripts/run_all.sh` again. A rebuild replaces `output/icu.blend`, so save your own Blender edits under another name.
 
