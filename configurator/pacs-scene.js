@@ -27,7 +27,7 @@ export class PacsRoom {
     const centre = name => { const b = new THREE.Box3(); (room.parts[name] || []).forEach(o => b.expandByObject(o)); return b.isEmpty() ? null : b.getCenter(new THREE.Vector3()); };
     const monitor = centre("cfg_kit_monitor");
     const light = room.meta.panels?.[0];
-    const comfortControl = (room.parts.addon_ventilation || []).find(n => n.userData.itemInfo?.title === "Room comfort control");
+    const comfortControl = (room.parts.addon_comfortControl || []).find(n => n.userData.itemInfo?.title === "Room comfort control");
     const targets = {
       monitor, patient: room.patient.worldAnchor("ecg"),
       lights: light ? new THREE.Vector3(light[0], room.meta.ceiling - 0.08, -light[1]) : centre("cfg_panels"),
