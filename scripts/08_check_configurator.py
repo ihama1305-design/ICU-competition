@@ -407,8 +407,8 @@ with sync_playwright() as p:
     pg.evaluate("window.dispatchEvent(new Event('resize'))")
     for room in ROOMS:
         go(pg, room)
-        # a group that only applies in another room isn't offered here, so it has nothing to show
-        groups = [g for g in pg.evaluate("window.__config.options().sections.flatMap(s => s.groups)") if g.get("requires", {}).get("room", room) == room]
+        # a group that only applies in another room isn't offered here, so it has nothing to show; nor is a hidden one, anywhere
+        groups = [g for g in pg.evaluate("window.__config.options().sections.flatMap(s => s.groups)") if g.get("requires", {}).get("room", room) == room and not g.get("hidden")]
         unchecked = [g["id"] for g in groups if "check" not in g]
         check(not unchecked, f"{room}: every option group says where to look for its effect {unchecked[:6]}")
         groups = [g for g in groups if "check" in g]
@@ -653,8 +653,11 @@ with sync_playwright() as p:
         go(pg, room)
         names = pg.evaluate("window.__config.partNames()")
         check(not [n for n in names if n.startswith("vent_")], f"{room}: the floor's grilles aren't in the room model, so it has one set")
-        # the grilles are hidden, but the wall control they used to come with isn't: the Comfort systems demo and PACS both use it
-        check("addon_comfortControl" in names and "addon_ventilation" not in names, f"{room}: the wall comfort control is there and the grilles aren't")
+        # the grilles are hidden, but the wall control they used to come with isn't: the Comfort systems demo and PACS both use it.
+        # (The last room's turn below switched the grilles on, so they go back to the default first.)
+        pg.evaluate("window.__config.set('ventilation', 'off')")
+        shown = pg.evaluate("({ control: window.__config.addonShown('comfortControl'), grilles: window.__config.addonShown('ventilation') })")
+        check(shown["control"] and not shown["grilles"], f"{room}: the wall comfort control is there and the grilles aren't {shown}")
         pg.evaluate("document.getElementById('demoTemp').value = 19; document.getElementById('demoTemp').dispatchEvent(new Event('input'))")
         tint = pg.evaluate("window.__config.comfortTint()")
         check(tint == "63aecd", f"{room}: the temperature demo tints the control's status light ({tint})")
@@ -879,8 +882,9 @@ with sync_playwright() as p:
     ctx, pg, errs, _, _ = open_page(b, 1366, 900, query="?tier=low")
     pg.add_script_tag(url=AXE)
     faults = axe_faults(pg, "#panel")
-    for i in range(pg.locator("details").count()):
-        pg.locator("summary").nth(i).click()
+    # the panel's own sections: PACS and APIS have theirs inside panels that stay hidden until they open
+    for i in range(pg.locator("#panel details").count()):
+        pg.locator("#panel details > summary").nth(i).click()
         faults += axe_faults(pg, "#panel")
     pg.evaluate("window.__config.set('front', 'smart')")
     faults += axe_faults(pg, "#panel")
