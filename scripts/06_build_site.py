@@ -109,7 +109,8 @@ def capture_configurator_shots(tmp):
             pg.evaluate(f"window.__config.room('{room}')")
             pg.wait_for_function(f"window.__config.state().room === '{room}'")
             pg.evaluate(f"window.__config.theme('{theme}'); window.__config.time(window.__config.stops.{when}); window.__config.camera('{view}', {{ instant: true }})")
-            pg.evaluate(f"document.getElementById('panel').style.display = '{'' if panel else 'none'}'; dispatchEvent(new Event('resize'))")
+            # a shot without the panel is of the room alone, so the room-mode bar goes too
+            pg.evaluate(f"for (const id of ['panel', 'hud']) document.getElementById(id).style.display = '{'' if panel else 'none'}'; dispatchEvent(new Event('resize'))")
             settle(pg)
             pg.screenshot(path=os.path.join(tmp, f"{name}.png"))
             codes[name] = pg.evaluate("window.__config.code()")
