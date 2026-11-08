@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import { PacsSimulation, GUIDE } from "./site/configurator/pacs-state.js";
+const s = new PacsSimulation();
+assert.deepEqual(s.readings(), { hr: 78, sys: 118, dia: 76, rr: 16, spo2: 98, hrv: null });
+s.setScenario("possible"); assert.equal(s.readings(6).hr, 92); assert.equal(s.readings(12).hr, 105);
+assert.equal(s.recommend(), false); assert.equal(s.approve(), null);
+s.review(true); assert.equal(s.recommend(), true);
+const before = { ...s.environment }; s.reject(); assert.deepEqual(s.environment, before); assert.equal(s.approve(), null);
+s.recommend(); s.selection = { lighting: false, blinds: true, audio: false, temperature: true };
+const result = s.approve(); assert.equal(result.light, before.light); assert.equal(result.blinds, 0.5); assert.equal(result.temperature, 23);
+assert.equal(s.setFeedback("unable"), true); assert.equal(s.readings(12).hr, 105);
+s.review(false); assert.equal(s.approval, "none"); assert.equal(s.feedback, null); assert.equal(s.approve(), null);
+s.review(true); s.recommend(); s.raiseWarning(); assert.equal(s.approve(), null); assert.equal(s.recommend(), false);
+s.acknowledge(); assert.equal(s.warning, true); assert.equal(s.approval, "suspended");
+s.setScenario("possible"); s.review(true); s.recommend();
+assert.equal(s.setPreferences({ ...s.preferences, tempMin: 25, tempMax: 20 }), false);
+assert.equal(s.setPreferences({ ...s.preferences, lighting: "dim" }), true); assert.equal(s.approve(), null); assert.equal(s.reviewed, false);
+s.setScenario("deterioration"); assert.equal(s.warning, true); assert.equal(s.readings(0).spo2, 97); // alert is scripted, not a saturation threshold
+assert.equal(s.setFeedback("improved"), false);
+s.setScenario("stable"); assert.equal(s.warning, false); assert.equal(s.approval, "none");
+assert.equal(GUIDE.length * 7, 77);
+console.log("PASS PACS scenarios/readings, selected-only approval, reject, stale approval invalidation, warning priority, persistent acknowledgment, feedback independence, temperature review-only and 77-second guide definition");

@@ -129,6 +129,14 @@ try {
   // The existing summary waits for an asynchronously captured room image.
   await page.waitForFunction(() => document.getElementById("summaryBody").textContent.length > 100, null, { timeout: 60000 });
   await page.locator("#closeSummary").click();
+  // Review the shared patient after PACS integration without changing the original profile/option checks.
+  if (await page.locator("#openPacs").count()) {
+    await page.locator("#openPacs").click();
+    await page.locator('[data-pacs-view="patient"]').click();
+    await page.locator("#pacsConnections").click();
+    await page.screenshot({ path: path.join(SHOTS, "pacs_patient_routes.png") });
+    await page.locator("#pacsExit").click();
+  }
   await page.evaluate(() => window.__config.startTour()); assert.equal(await page.evaluate(() => window.__config.tour().running), true);
   await page.locator("#openApis").click(); assert.equal(await page.evaluate(() => window.__config.tour().running), false); await page.locator("#apisClose").click();
   const code = await page.evaluate(() => window.__config.code()); await page.reload(); await page.waitForFunction(() => window.__configReady, null, { timeout: 180000 });
