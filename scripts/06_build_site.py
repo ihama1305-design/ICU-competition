@@ -96,7 +96,7 @@ def capture_configurator_shots(tmp):
     threading.Thread(target=server.serve_forever, daemon=True).start()
     views = {  # name: room, theme, view, time, whether the panel shows
         "config-desert": ("W1", "desert", "overview", "night", True),
-        "config-play": ("W1", "paediatric", "family", "afternoon", False),
+        "config-calm": ("W3", "calm", "overview", "afternoon", False),
         "config-patio": ("W3", "family", "bed_window", "afternoon", False),
     }
     codes = {}

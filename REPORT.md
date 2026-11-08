@@ -47,7 +47,7 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
 - **Patient rooms:** 16, of which 2 are isolation rooms with an ante room and toilet. Areas run from 30.3 to 38.5 m², median 34.9 m², measured to the glass line.
 - **Equipment in each patient room:**
   - ICU bed with the backrest raised 30°, split rails and bedding
-  - Twin-arm ceiling pendant with gas outlets, shelves, a patient monitor and three infusion pumps
+  - Twin-arm ceiling pendant with gas outlets, shelves, a patient monitor and three infusion pumps. The monitor, pump and ventilator screens show made-up readings, each with an amber SIMULATED band
   - Ventilator with breathing circuit, IV pole, recliner, visitor chair and overbed table
   - Examination light, privacy curtain on a track behind the glass front
   - Wood-look feature wall with a TV, bed-protection rails, and roller blinds on the facade
@@ -113,6 +113,8 @@ The [plan](https://ihama1305-design.github.io/ICU-competition/ventilation/) has 
 **What wasn't read.** Abu Dhabi's Department of Health governs this hospital, and its guidance wasn't found. ASHRAE 170 was read in its 2008 edition, and the current 170-2025 is paywalled, so its values may differ. The FGI Guidelines weren't read directly. Sources are linked on the plan page.
 
 **Isolation rooms.** Exhaust grilles sit 0.4 to 0.5 m from the bed head, as near as the pendant allows, and supply is about 4.3 m away by the door. A low-level exhaust is the guidance's alternative, and it isn't modelled. Air would need to go directly outdoors on its own system with pressure monitoring and an alarm, and none of that is designed or shown. No duct mains are drawn.
+
+**Hidden for now.** Since 8 November 2026, `ventilation.show_in_model` in the spec is false. `02` still builds the grilles but hides them, `04` leaves them out of the walkthrough, the renders don't show them, and the configurator's `ventilation` group is hidden (its share-link code is kept). Set it to true to bring them back.
 
 **In the 3D model** the grilles are flush with the ceiling, in the Ceiling collection, so they go with the ceiling in cutaways and the dollhouse. `09` measures them from the meshes against light panels, exam lights, pendants, curtain tracks and walls, and against W3's different bed layout and the lighting fixtures in the configurator.
 
@@ -180,20 +182,22 @@ A short survey that turns answers into an editable comfort and furnishing draft.
 
 The rules are data, in the `profile` block of `options.json`, and `profile.js` resolves them with no 3D involved:
 
-1. Answers pick one of the four themes.
+1. Answers pick one of the three themes.
 2. Rules adjust it, highest tier first. An access rule beats a comfort rule: with wheelchair access and visiting family, the sofa-bed is left out, and the panel says so.
 3. Each rule uses `sets`, the same map as a theme, so the result reaches the share code and can be compared and undone.
 
 | Rule | When | Basis |
 |---|---|---|
 | The patio stays off | Always | Assumed. It's a choice with its own pressure, structure and fall-safety notes |
-| Play mat, soft toys and sofa-bed left out | Walking aid, wheelchair or assistance | Assumed. Less stands on the floor, but **the route through the room hasn't been measured** |
+| Sofa-bed left out | Walking aid, wheelchair or assistance | Assumed. Less stands on the floor, but **the route through the room hasn't been measured** |
 | Sofa-bed | Children visit, or a familiar visitor nearby | Assumed |
 | Cove light, 3000 K, TV off, no aquarium | Quieter, lower-stimulation room | Assumed |
 | Night light | Consistent routine and clear cues | Assumed |
 | Warmer wardrobe finish | Stay over two weeks, or longer-stay patient | Assumed |
 
-Sex, care frequency and the three free-text boxes change nothing, and the form says so. Answers aren't stored or put in links. A link holds only the room, though a room can still hint at an answer: Paediatric Play suggests a child.
+Sex, care frequency and the three free-text boxes change nothing, and the form says so. Answers aren't stored or put in links. A link holds only the room, though a room can still hint at an answer, such as a sofa-bed suggesting visitors.
+
+**Adult ICU only.** On 8 November 2026 the Paediatric Play theme, the toy shelf, soft toys, play mat and gaming console were taken out, along with the survey's "Child or teen" answer. The groups are hidden rather than deleted, because share links are positional. An older link that set one still opens, without it, and says what it left out.
 
 ### Performance
 
