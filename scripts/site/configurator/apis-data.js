@@ -1,0 +1,87 @@
+// Educational examples, not a device specification or a care-selection algorithm.
+export const SOURCES = {
+  pressure: ["International Guideline (2025): device-related pressure injuries", "https://www.internationalguideline.com/drpi"],
+  tape: ["Mölnlycke: soft silicone fixation tape", "https://www.molnlycke.com/en-nz/products/wound-care/fixation--compression-therapy/mepitac/"],
+  foam: ["Mölnlycke: silicone contact layer, polyurethane foam and film", "https://www.molnlycke.com/en-gb/products/wound-care/non-bordered-foam-dressings/mepilex-lite"],
+  iv: ["CDC: intravascular catheter recommendations", "https://www.cdc.gov/infection-control/hcp/intravascular-catheter-related-infections/summary-recommendations.html"],
+  urinary: ["CDC: urinary catheter recommendations", "https://www.cdc.gov/infection-control/hcp/cauti/summary-of-recommendations.html"],
+  silicone: ["ResMed: manufactured silicone mask cushions", "https://maskguide.resmed.com/glossary"],
+  tpe: ["Avient: medical TPE material grades", "https://www.avient.com/thermoplastic-elastomers/versaflex-hc-thermoplastic-elastomers"],
+};
+
+export const MATERIALS = [
+  { id: "adhesive", name: "Medical-grade soft silicone adhesive", color: "#6cc5ba", role: "A gentle adhesive contact layer in a purpose-made fixation product.", limit: "Adhesion and holding strength depend on the product, skin and moisture. It is not a universal replacement for critical tube securement.", status: "Established material · product-specific use" },
+  { id: "foam", name: "Soft silicone multilayer foam dressing", color: "#e8cb88", role: "A silicone contact layer, absorbent polyurethane foam and outer film; selective protection at compatible device contact points.", limit: "The foam is not solid silicone. Added thickness can increase pressure or alter fit. Inspect underneath and preserve device function; it is not primary securement.", status: "Established dressing · conditional application" },
+  { id: "elastomer", name: "Medical-grade silicone elastomer", color: "#94b9ec", role: "A molded, flexible component, such as a manufacturer-designed interface cushion.", limit: "It is not adhesive or absorbent foam. Compatibility, cleaning and fit belong to the finished device; soft does not mean pressure-free.", status: "Established component material" },
+  { id: "tpe", name: "Medical-grade thermoplastic elastomer (TPE)", color: "#c4ade6", role: "A family of moldable polymers; illustrated here as an external line-guide insert away from skin.", limit: "The APIS guide is experimental. A medical-grade resin does not validate the assembled device, cleaning method, retention force or tube compatibility.", status: "Established material · experimental APIS guide" },
+];
+
+const layer = (name, color, purpose) => ({ name, color, purpose });
+export const ATTACHMENTS = [
+  {
+    id: "ng", short: "Feeding tube", title: "Nasogastric feeding tube", number: "01", material: "adhesive", kind: "tube", at: [-0.14, 0.47, 1.20],
+    status: "Established material · conditional example", evidence: "A soft silicone fixation product can be considered only where its instructions and local protocol support the intended fixation. This diagram does not validate NG securement.",
+    conventional: "Illustrative tape fixation on the external cheek with the feeding tube supported. Conventional securement can be appropriate; assess skin and tube stability.",
+    proposed: "Illustrate a purpose-made soft silicone fixation layer on intact external skin, with the primary NG securement and external tube support reviewed together.",
+    benefit: "May reduce skin stripping and discomfort during removal of a compatible fixation product. Supporting the external tube can reduce drag at the attachment.",
+    limitation: "Do not substitute low-hold tape for required primary securement, apply it inside the nostril, or obstruct the tube. Moisture may weaken adhesion. Tube position verification remains required by local protocol; this model cannot verify placement.",
+    conventionalLayers: [layer("Skin", "#d8a387", "External cheek; inspect skin and the nasal contact point."), layer("External feeding tube", "#eed6a0", "Primary fixation and tube position remain clinical responsibilities."), layer("Existing fixation tape", "#d8dce1", "Illustrative tape over the tube with ends contacting skin; not an application instruction.")],
+    layers: [layer("Skin", "#d8a387", "Intact external cheek; no material placed inside the nostril."), layer("External feeding tube", "#eed6a0", "Supported tubing; no automatic release or active tension control."), layer("Soft silicone adhesive", "#6cc5ba", "Compatible fixation product shown over the tube, with adhesive ends contacting skin; not padding beneath the tube."), layer("Flexible backing", "#e5eee7", "Supports the adhesive; not an additional pressure pad.")],
+    sources: ["tape", "pressure"],
+  },
+  {
+    id: "iv", short: "IV securement", title: "IV catheter securement", number: "02", material: "tpe", kind: "iv", at: [0.32, 1.0, 0.89],
+    status: "Established site care + experimental external guide", evidence: "Sterile site dressings and compatible securement are established. The separate TPE line guide is an unvalidated APIS design concept.",
+    conventional: "A catheter secured with a compatible system and sterile site dressing. The transparent dressing shown preserves visibility of the insertion site.",
+    proposed: "Retain the same site dressing and securement. Add a proposed external TPE guide, away from the insertion site and skin, to organize the extension line.",
+    benefit: "The design intent is to limit external snagging while leaving site inspection and connector access available. No reduction in infection or displacement has been demonstrated for APIS.",
+    limitation: "Do not place foam or generic silicone tape under the catheter hub, substitute for the sterile dressing, or cover the site. The guide must not compress tubing, carry catheter fixation loads, or obstruct disinfection. Follow device instructions and local IV policy.",
+    conventionalLayers: [layer("Skin / insertion site", "#d8a387", "Keep the site inspectable."), layer("Catheter and securement", "#94b9ec", "Compatible primary stabilization."), layer("Sterile transparent dressing", "#cce7df", "Illustrated sterile barrier; product chosen under clinical policy.")],
+    layers: [layer("Skin / insertion site", "#d8a387", "Keep the site inspectable."), layer("Catheter and securement", "#94b9ec", "Unchanged primary stabilization."), layer("Sterile transparent dressing", "#cce7df", "Unchanged site dressing; no foam inserted beneath it."), layer("Separate TPE guide · concept", "#c4ade6", "Shown to the side, outside the dressing and away from skin; not part of its layer stack.")],
+    sources: ["iv", "tpe"],
+  },
+  {
+    id: "oxygen", short: "Oxygen interface", title: "Oxygen / respiratory interface", number: "03", material: "elastomer", kind: "mask", at: [0.12, 0.39, 1.25],
+    status: "Established component · device-specific fit", evidence: "Manufactured silicone cushions exist in respiratory interfaces. A component must be supplied or approved for the particular device and therapy.",
+    conventional: "A manufacturer-designed respiratory interface with its specified cushion. Existing interfaces may already use silicone; this is not a claim that conventional devices are inherently unsafe.",
+    proposed: "Show the molded silicone elastomer cushion separately from the shell. Appropriate sizing, fit and supported tubing remain central to comfort.",
+    benefit: "A compliant, correctly fitted interface may distribute contact forces more comfortably. Its performance depends on the complete interface and patient fit.",
+    limitation: "Do not modify a seal, cover vents, increase strap tension to compensate for leakage, or exchange unapproved components. A soft cushion can still cause injury. Check fit, therapy delivery and skin according to protocol.",
+    conventionalLayers: [layer("Skin", "#d8a387", "Face contact area, schematically flattened."), layer("Specified interface cushion", "#b6c9d7", "May already be silicone in an existing device."), layer("Interface shell", "#e4eced", "Keep ports and vents unobstructed.")],
+    layers: [layer("Skin", "#d8a387", "Face contact area; inspect regularly."), layer("Molded silicone elastomer", "#94b9ec", "Manufacturer-designed compliant cushion; not adhesive or foam."), layer("Interface shell", "#e4eced", "A matched device component with unobstructed ports.")],
+    sources: ["silicone", "pressure"],
+  },
+  {
+    id: "strap", short: "Strap contact", title: "Respiratory strap contact area", number: "04", material: "foam", kind: "strap", at: [-0.27, 0.43, 1.10],
+    status: "Established dressing · compatibility required", evidence: "The International Guideline supports preventive dressings only when position and function are preserved; the supporting evidence has very low certainty. This is a conditional contact-point illustration, outside the mask seal.",
+    conventional: "A correctly fitted device strap contacting intact skin. Fit, inspection and appropriate repositioning remain necessary with or without a dressing.",
+    proposed: "Show a thin silicone-contact foam dressing at a compatible external strap contact point, away from the mask seal, only after device-specific assessment.",
+    benefit: "May reduce friction and manage local moisture. It is an adjunct to skin assessment and pressure relief; benefit for this particular arrangement is unproven.",
+    limitation: "Extra thickness can increase local pressure or change fit. Do not stack padding, hide injury, obstruct vents or compromise a seal. Lift the dressing for skin inspection as appropriate; review moisture and device function. No universal dressing thickness is specified here.",
+    conventionalLayers: [layer("Skin", "#d8a387", "External strap contact point, outside the mask seal."), layer("Device strap", "#768c9b", "Correct fit and regular skin assessment remain necessary.")],
+    layers: [layer("Skin", "#d8a387", "Inspect beneath the dressing."), layer("Soft silicone contact layer", "#6cc5ba", "Gentle contact surface."), layer("Absorbent polyurethane foam", "#e8cb88", "Thin foam; local moisture and friction management."), layer("Outer protective film", "#e5eee7", "Film backing; not another foam layer."), layer("Device strap", "#768c9b", "Shown separated for explanation; reassess fit with any dressing.")],
+    sources: ["pressure", "foam"],
+  },
+  {
+    id: "ecg", short: "ECG electrode", title: "ECG electrode and lead", number: "05", material: "tpe", kind: "electrode", at: [0.05, 0.77, 1.03],
+    status: "Established electrode + experimental lead guide", evidence: "The original electrode is retained. The APIS external TPE lead organizer is a concept requiring electrical-safety, cleaning and usability review.",
+    conventional: "An approved electrode with conductive gel contacting the skin and a lead attached to its connector.",
+    proposed: "Keep the approved electrode and its conductive contact intact. Organize the external lead with a proposed separate TPE guide away from the skin.",
+    benefit: "The intent is to reduce lead clutter and external tugging during care. Signal quality and skin comfort must be assessed in any future evaluation.",
+    limitation: "Do not put silicone, foam or another insulating layer beneath the conductive electrode contact, cover an electrode with extra padding, or alter lead placement. Skin sensitivity and replacement frequency require product-specific review.",
+    conventionalLayers: [layer("Skin", "#d8a387", "Electrode contact area."), layer("Conductive gel / electrode", "#e8cb88", "Conductive contact directly on the skin."), layer("Electrode backing and connector", "#e4eced", "Original approved electrode assembly.")],
+    layers: [layer("Skin", "#d8a387", "No added insulating layer."), layer("Conductive gel / electrode", "#e8cb88", "Original electrical contact maintained."), layer("Electrode backing and connector", "#e4eced", "Original approved electrode assembly."), layer("Separate TPE guide · concept", "#c4ade6", "External lead organization; off skin and outside the electrode stack.")],
+    sources: ["tpe", "pressure"],
+  },
+  {
+    id: "urinary", short: "Urinary securement", title: "Urinary catheter securement", number: "06", material: "tpe", kind: "tube", at: [-0.27, 1.48, 0.79],
+    status: "Established securement + experimental line guide", evidence: "Securement to limit movement and urethral traction is established practice. The proposed APIS external routing guide remains experimental.",
+    conventional: "A purpose-designed catheter securement device holds the catheter on intact skin with unobstructed drainage.",
+    proposed: "Retain the approved securement device. A separate external TPE routing guide illustrates keeping tubing visible and away from bed mechanisms.",
+    benefit: "The design intent is easier line tracing and fewer external snags while repositioning. This demonstration does not establish a reduction in displacement or injury.",
+    limitation: "Maintain the closed drainage system, avoid kinks, and keep the bag below bladder level and off the floor. No dependent loops in drainage tubing. A routing guide is not primary securement; never clamp the lumen or attach the bag to a moving side rail.",
+    conventionalLayers: [layer("Skin", "#d8a387", "Securement site on intact skin, not a urethral cross-section."), layer("Approved fixation base", "#e5eee7", "Original product-specific adhesive or securement system."), layer("Catheter retainer and tube", "#94b9ec", "Compatible retainer, without lumen compression.")],
+    layers: [layer("Skin", "#d8a387", "Unchanged securement site."), layer("Approved fixation base", "#e5eee7", "Unchanged fixation product; no substituted adhesive."), layer("Catheter retainer and tube", "#94b9ec", "Unchanged primary securement."), layer("Separate TPE guide · concept", "#c4ade6", "External drainage routing, away from skin; not a replacement retainer.")],
+    sources: ["urinary", "tpe"],
+  },
+];
