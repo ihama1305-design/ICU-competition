@@ -119,7 +119,9 @@ try {
   assert.equal(await page.evaluate(() => window.__config.state().night), true);
   const selections = await page.evaluate(() => window.__config.selected());
   await page.locator("#openProfile").click();
-  await page.locator('[name="patientType"]').selectOption("child");
+  // "Child or teen" left the form when the room became adult ICU only; visiting children still make a room idea
+  await page.locator('[name="patientType"]').selectOption("adult");
+  await page.locator('[name="children"]').selectOption("yes");
   await page.locator('#profileForm button[type="submit"]').click();
   await page.locator("#profileCompare").click();
   assert.deepEqual(await page.evaluate(() => window.__config.selected()), selections);
