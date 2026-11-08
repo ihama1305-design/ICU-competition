@@ -17,7 +17,24 @@
 <body>
 <canvas id="c" class="pending" tabindex="0" aria-label="3D view of the room. Drag or use the arrow keys to look around."></canvas>
 <div id="load" role="status">Loading the room…</div>
-<button type="button" id="leavePatient" class="leave-patient" hidden>Return</button>
+<div id="hud" class="hud">
+  <div id="modeBar" class="mode-bar" role="group" aria-labelledby="modeTitle">
+    <span id="modeTitle" class="mode-title">Room mode</span>
+    <div class="mode-seg">
+      <button type="button" data-mode="standard" aria-pressed="true">Standard</button>
+      <button type="button" data-mode="comfort" aria-pressed="false">Comfort</button>
+      <button type="button" data-mode="clinical" aria-pressed="false">Clinical</button>
+    </div>
+    <button type="button" data-mode="emergency" class="mode-emergency" aria-pressed="false">Emergency-ready</button>
+    <span class="alarm-chip"><span class="dot" aria-hidden="true"></span>Clinical alarms unaffected</span>
+  </div>
+  <p id="modeNote" class="mode-note" hidden></p>
+  <div id="modeBanner" class="mode-banner" hidden>
+    <p><strong>Emergency-ready</strong>, started by staff. Room lights full, task light on, the TV and aquarium screen off, the glazed front clear. The monitor keeps running; clinical alarms and medical devices are not changed.</p>
+    <button type="button" id="leaveEmergency">Exit Emergency-ready</button>
+  </div>
+  <button type="button" id="leavePatient" class="leave-patient" hidden>Return</button>
+</div>
 <div id="announce" class="sr" aria-live="polite"></div>
 
 <aside id="panel" aria-label="Room options">

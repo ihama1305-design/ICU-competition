@@ -607,6 +607,44 @@
       }
      ],
      "code": 7
+    },
+    {
+     "id": "task",
+     "label": "Examination task light",
+     "control": "choice",
+     "default": "off",
+     "check": {
+      "view": "overview",
+      "time": "night"
+     },
+     "options": [
+      {
+       "id": "off",
+       "label": "Off",
+       "effects": [
+        {
+         "do": "light",
+         "task": false
+        }
+       ],
+       "code": 0
+      },
+      {
+       "id": "on",
+       "label": "On",
+       "effects": [
+        {
+         "do": "light",
+         "task": true
+        }
+       ],
+       "code": 1
+      }
+     ],
+     "note": {
+      "text": "The ceiling examination light over the bed, on its own switch: room modes and comfort scenes never dim it, and Clinical and Emergency-ready turn it on. Its brightness here is illustrative, not a lux level or a lighting design."
+     },
+     "code": 32
     }
    ]
   },
