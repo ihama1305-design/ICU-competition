@@ -147,6 +147,20 @@ with sync_playwright() as pw:
     pg.screenshot(path=os.path.join(ROOT, "renders", "viewer_phone.png"))
 
     check(not errs, f"console errors: {errs[:3]}")
+
+    # a browser without WebGL 2 is told why, instead of seeing "Loading" for ever; the website's copy also links to the pictures
+    ctx = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+    ctx.add_init_script("HTMLCanvasElement.prototype.getContext = (g => function (t, ...a) { return /webgl/.test(t) ? null : g.call(this, t, ...a); })(HTMLCanvasElement.prototype.getContext);")
+    pg = ctx.new_page()
+    pg.goto(url)
+    pg.wait_for_function("window.__cantDraw", timeout=60000)
+    pg.wait_for_timeout(2000)
+    text = pg.inner_text("#load") if pg.is_visible("#load") else ""
+    check("it needs WebGL 2" in text, f"without WebGL 2 the page says why it can't draw ({text[:80]!r})")
+    check(not pg.is_visible("#bar"), "without WebGL 2 there's no toolbar of controls that would do nothing")
+    if url.startswith("http"):
+        check(pg.locator("#load a").get_attribute("href") == "../", "without WebGL 2 the website links to the pictures on the home page")
+    ctx.close()
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, no-WebGL message)"))
 sys.exit(1 if fail else 0)

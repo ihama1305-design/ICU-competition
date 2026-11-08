@@ -4,6 +4,10 @@ import * as THREE from "three";
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 const DURATION = 1500;
+// a look_around view (Patient View) turns about a point this close in front of the eye, so the eye itself stays put
+const LOOK_R = 0.05;
+// how far either way it turns from where it first looks, in radians: about as far as a head and eyes can
+const HEAD_TURN = 1.75;
 
 /** Where a->b first leaves the polygon, as a fraction of the way along it; 1 if it never does. */
 function exitFraction(ax, ay, bx, by, poly) {
@@ -28,10 +32,20 @@ export function inside(x, y, poly) {
   return c;
 }
 
+/** An azimuth held between min and max, which may run across the -pi/pi seam. */
+function turnWithin(theta, min, max) {
+  const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+  const t = wrap(theta), lo = wrap(min), hi = wrap(max);
+  const within = lo <= hi ? t >= lo && t <= hi : t >= lo || t <= hi;
+  if (within) return t;
+  const gap = a => Math.abs(wrap(t - a));
+  return gap(lo) < gap(hi) ? lo : hi;
+}
+
 export class Rig {
   constructor(camera, controls, W2T, onChange) {
     this.camera = camera; this.controls = controls; this.W2T = W2T; this.onChange = onChange;
-    this.meta = null; this.view = null; this.tween = null;
+    this.meta = null; this.view = null; this.tween = null; this.lookAround = false;
     this.hfov = 70; this.visible = { w: 1, h: 1 };
     this.onView = () => {};
     controls.enablePan = false;
@@ -58,6 +72,7 @@ export class Rig {
     if (view === this.meta.cameras.dollhouse) return l;
     const dir = l.clone().sub(e), len = dir.length();
     dir.normalize();
+    if (view.look_around) return e.clone().addScaledVector(dir, LOOK_R);
     // orbit around a point just ahead, inside the room, so dragging looks around rather than swinging through a wall
     const f = exitFraction(view.eye[0], view.eye[1], view.look[0], view.look[1], this.meta.walkable);
     const reach = Math.min(1.6, Math.max(0.25, f * len - 0.05));
@@ -95,7 +110,7 @@ export class Rig {
     const toEye = this.W2T(...v.eye), toTarget = this.pivotFor(v);
     const isDoll = name === "dollhouse";
     this.onView(name, isDoll);
-    this.limits(isDoll);
+    this.limits(name);
     if (instant || reduced() || !this.view) {
       this.tween = null;
       this.controls.enabled = true;
@@ -119,8 +134,28 @@ export class Rig {
     this.onChange();
   }
 
-  limits(isDoll) {
-    const c = this.controls;
+  /**
+   * Orbit limits for a view, by name. APIS and PACS restore a view with limits(true) for the dollhouse and limits(false)
+   * for any other, after setting rig.view, so a boolean still works.
+   */
+  limits(name) {
+    if (typeof name === "boolean") name = name ? "dollhouse" : this.view;
+    const c = this.controls, view = this.meta.cameras[name] || {}, isDoll = name === "dollhouse";
+    this.lookAround = !!view.look_around;
+    c.enableZoom = !this.lookAround; // a scroll or pinch would only move the eye off the pillow
+    if (this.lookAround) {
+      // from looking well down at the bed to straight up at the ceiling, and as far left and right as a head can turn,
+      // centred on where the view first looks
+      const off = this.W2T(...view.eye).sub(this.W2T(...view.look));
+      c.minDistance = c.maxDistance = LOOK_R;
+      c.minPolarAngle = 0.6;
+      c.maxPolarAngle = Math.PI - 0.06;
+      c.minAzimuthAngle = Math.atan2(off.x, off.z) - HEAD_TURN;
+      c.maxAzimuthAngle = Math.atan2(off.x, off.z) + HEAD_TURN;
+      return;
+    }
+    c.minAzimuthAngle = -Infinity;
+    c.maxAzimuthAngle = Infinity;
     c.minPolarAngle = isDoll ? 0.05 : 0.2;
     c.maxPolarAngle = isDoll ? 1.2 : 2.75;
     c.minDistance = isDoll ? 6 : 0.2;
@@ -152,6 +187,7 @@ export class Rig {
       p.y = Math.max(p.y, m.ceiling + 0.8);
       return;
     }
+    if (this.lookAround) return; // the camera turns in place, within a few centimetres of the eye
     const ax = tg.x, ay = -tg.z;
     if (inside(ax, ay, m.walkable)) {
       const f = exitFraction(ax, ay, p.x, -p.z, m.walkable);
@@ -163,18 +199,27 @@ export class Rig {
 
   /** Move toward or away from what the view is centred on. */
   dolly(k) {
+    if (this.lookAround) {
+      // the patient can't move closer, so this narrows or widens what they take in instead
+      this.hfov = Math.min(90, Math.max(40, this.hfov * k));
+      this.fit();
+      this.onChange();
+      return;
+    }
     const p = this.camera.position, t = this.controls.target;
     p.sub(t).multiplyScalar(k).add(t);
     this.clamp();
     this.onChange();
   }
 
-  /** Keyboard orbit, in radians. */
+  /** Keyboard orbit, in radians. A look_around view turns the same way: left looks left, up looks up. */
   orbitBy(yaw, pitch) {
     const off = this.camera.position.clone().sub(this.controls.target);
     const s = new THREE.Spherical().setFromVector3(off);
     s.theta += yaw;
-    s.phi = Math.min(this.controls.maxPolarAngle, Math.max(this.controls.minPolarAngle, s.phi + pitch));
+    if (this.lookAround) s.theta = turnWithin(s.theta, this.controls.minAzimuthAngle, this.controls.maxAzimuthAngle);
+    // orbiting, up raises the camera over what it circles, so it looks further down; turning in place, up looks up
+    s.phi = Math.min(this.controls.maxPolarAngle, Math.max(this.controls.minPolarAngle, s.phi + (this.lookAround ? -pitch : pitch)));
     off.setFromSpherical(s);
     this.camera.position.copy(this.controls.target).add(off);
     this.clamp();
