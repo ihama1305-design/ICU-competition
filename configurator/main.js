@@ -12,6 +12,7 @@ import { decodeSpec, encodeSpec } from "./state.js";
 import { differences, optionLabel, resolveProfile } from "./profile.js";
 import { summaryContent } from "./summary.js";
 import { el, Panel } from "./panel.js";
+import { APIS } from "./apis.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -133,6 +134,7 @@ async function setRoom(label, { keepView = true } = {}) {
   const room = await stage.load(label, f => { status.textContent = `Loading the room… ${Math.round(f * 100)}%`; });
   if (state.room !== label) return; // another room was chosen while this one loaded
   stage.show(room);
+  apis.setRoom(room);
   rig.setRoom(room.meta);
   if (!room.meta.cameras[state.view]) state.view = "overview";
   daylight.setCentre((room.meta.room[0] + room.meta.room[2]) / 2, (room.meta.room[1] + room.meta.room[3]) / 2);
@@ -524,6 +526,10 @@ canvas.addEventListener("pointerdown", () => { if (tour.running) tour.stop(); })
 canvas.addEventListener("wheel", () => { if (tour.running) tour.stop(); }, { passive: true });
 canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 
+// APIS owns a reversible inspection camera and separate schematic detail scene.
+// Room options, profile answers, share codes and original model meshes stay independent.
+const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
+
 const OBJECT_DETAILS = {
   cfg_kit_bed: ["Adjustable ICU bed", "A modeled patient bed with a raised backrest, side rails, mattress, and bedding."],
   cfg_kit_pendant: ["Ceiling service pendant", "A visual equipment pendant with shelves and service outlets."],
@@ -585,6 +591,7 @@ canvas.addEventListener("pointerup", e => {
     return [h.object.material].flat().filter(Boolean).every(m => !m.transparent && !m.transmission);
   });
   if (!hit) { $("objectCard").hidden = true; return; }
+  if (apis.pick(hit.object)) return;
   if (glass.isSwitch(hit.object)) setOption("switch", selected.switch === "opaque" ? "clear" : "opaque");
   let info = null;
   for (let node = hit.object; node && node !== stage.current.root; node = node.parent) {
@@ -604,7 +611,7 @@ const adaptive = !navigator.webdriver; // a software renderer in a test shouldn'
 function frame(now) {
   requestAnimationFrame(frame);
   if (!rig.meta) return;
-  const moving = rig.update(now);
+  const moving = apis.active ? apis.update(now) : rig.update(now);
   if (moving) {
     dirty = true;
     if (adaptive && lastMovingDraw) stage.noteFrame(now - lastMovingDraw);
@@ -629,6 +636,8 @@ function fail(err) {
 
 // ---------------------------------------------------------------- for the headless check
 window.__config = {
+  apis: () => apis.inspect(),
+  apisPoint: id => apis.screenPoint(id),
   state: () => ({ ...state, night: isNight(state.hour), sun: sunAt(state.hour, SITE), moving: !!rig.tween, ceiling: stage.ceilingOn, roomBox: rig.meta?.room }),
   views: () => Object.keys(rig.meta.cameras),
   room: label => setRoom(label),
