@@ -15,6 +15,7 @@ import { el, Panel } from "./panel.js";
 import { APIS } from "./apis.js";
 import { PACS } from "./pacs.js";
 import { MODES, RoomModes } from "./modes.js";
+import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -500,6 +501,46 @@ const leftOut = labels => {
   return `This link included ${list}, which the configurator no longer offers, so ${labels.length > 1 ? "they're" : "it's"} left out.`;
 };
 
+// ---------------------------------------------------------------- saved rooms, in this browser only (presets.js)
+const presetSay = text => { $("presetStatus").textContent = text; };
+function renderPresets() {
+  $("presetList").replaceChildren(...readPresets().map(p => {
+    const load = el("button", { type: "button", textContent: "Open" }), drop = el("button", { type: "button", textContent: "Delete" });
+    load.setAttribute("aria-label", `Open ${p.name}`);
+    drop.setAttribute("aria-label", `Delete ${p.name}`);
+    load.addEventListener("click", () => openPreset(p));
+    drop.addEventListener("click", () => {
+      const left = deletePreset(p.name);
+      renderPresets();
+      presetSay(left ? `Deleted “${p.name}”.` : "This browser won't let the page change its saved rooms.");
+    });
+    return el("li", {}, el("span", { className: "name", textContent: p.name, title: p.name }), load, drop);
+  }));
+}
+function openPreset(p) {
+  const spec = decodeSpec(optionData, `#c=${p.code}`);
+  if (!spec) { presetSay(`“${p.name}” can't be read any more, so the room is unchanged.`); return; }
+  applySpec(spec).then(() => {
+    presetSay(spec.dropped.length ? `Opened “${p.name}”. ${leftOut(spec.dropped)}` : `Opened “${p.name}”.`);
+    say(`Opened ${p.name}.`);
+  }).catch(fail);
+}
+$("presetForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const input = $("presetName"), name = input.value.trim().replace(/\s+/g, " ") || `Saved room ${readPresets().length + 1}`;
+  const r = savePreset(name, specCode());
+  if (r.ok) { input.value = ""; renderPresets(); presetSay(r.replaced ? `Updated “${name}”.` : `Saved “${name}” in this browser.`); }
+  else presetSay(r.reason === "full" ? `There are already ${MAX_PRESETS} saved rooms. Delete one to save another.` : "This browser won't let the page save rooms, so nothing was saved.");
+});
+$("resetRoom").addEventListener("click", () => {
+  if (pacs.active) pacs.exit();
+  endIdea();
+  showSelections(Object.fromEntries(allGroups().map(g => [g.id, g.default]))); // also ends any room mode
+  modes.leave();
+  presetSay("The room is back to its defaults. The view and the time stay as they were.");
+  say("Room reset.");
+});
+
 function shareLink() { return `${location.origin}${location.pathname}#c=${specCode()}`; }
 
 // ---------------------------------------------------------------- summary and saving a picture
@@ -811,6 +852,7 @@ window.__config = {
     };
   },
   setMode: (name, opts) => modes.set(name, opts),
+  presets: () => readPresets(),
   addonShown: id => !!stage.current.addons?.[id]?.visible,
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
@@ -860,6 +902,9 @@ async function boot() {
   $("themes").querySelectorAll("button").forEach((b, i) => { b.dataset.value = optionData.themes[i].id; });
   resize();
   const fromLink = location.hash ? decodeSpec(optionData, location.hash) : null;
+  // the walkthrough links each configurable room here with ?room=W1 or ?room=W3
+  if (!fromLink && optionData.rooms.includes(query.get("room"))) state.room = query.get("room");
+  renderPresets();
   if (fromLink) {
     Object.assign(selected, fromLink.selected);
     state.room = fromLink.room; state.view = fromLink.view; state.hour = fromLink.hour;

@@ -152,6 +152,17 @@ footer p { margin: 0; }
 .outline-action { min-height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; transition: background-color var(--t-enter) var(--ease-out), transform var(--t-spring) var(--spring); }
 .outline-action:hover { background: var(--hover); }
 .outline-action:active { transform: scale(var(--press)); }
+.preset-form { display: flex; gap: 6px; margin-bottom: 8px; }
+.preset-form input { flex: 1; min-width: 0; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-solid); color: var(--ink); font: 14px var(--ui); }
+.preset-form input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.preset-form button { min-height: 40px; padding: 6px 14px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: var(--accent-ink); font: 500 14px var(--ui); cursor: pointer; }
+.preset-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 4px; }
+.preset-list:empty { display: none; }
+.preset-list li { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.preset-list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preset-list button { min-height: 36px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--ink); cursor: pointer; }
+.preset-list button:hover { background: var(--hover); }
+#resetRoom { margin-bottom: 6px; }
 
 .object-card { position: fixed; z-index: 5; width: min(280px, calc(100vw - 24px)); padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); animation: card-in var(--t-enter) var(--ease-out) both; }
 .object-kicker { margin: 0 30px 3px 0; color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }

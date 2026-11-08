@@ -70,6 +70,8 @@ for r in planlib.label_rooms(idx["rooms"], spec):
                   + ("The layout is fitted to this room's shape, with the bed near the drawn bed circle."
                      if iso else "It's placed the same way in every standard room.")),
         "entry": {"eye": [fx + nx * 0.6, fy + ny * 0.6, EYE], "look": [hx, hy, 1.0]},
+        # the rooms the configurator can open: the website links them there
+        **({"configure": r["label"]} if r["label"] in spec["configurator"]["rooms"] else {}),
     })
 S = [  # (id, group, label, confidence, regex on object names, notes)
     ("curtains", "Patient rooms", "Privacy curtains", "low", "^curtains", "Ceiling-track curtain behind each glazed front, partly drawn."),

@@ -112,6 +112,10 @@
   #info { position: fixed; left: calc(var(--g) + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px));
     padding: 12px 14px; width: min(440px, calc(100vw - 2 * var(--g) - 250px)); }
   #info h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  #info .configure { display: inline-block; margin-top: 8px; min-height: 36px; padding: 8px 12px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-weight: 500; text-decoration: none; }
+  #info .configure::after { content: " →"; }
+  #info .configure:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .row .cfg { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--current); color: var(--accent); font: 500 10px/1.6 var(--mono); }
   #info .meta { color: var(--muted); font: 12px var(--mono); margin-bottom: 6px; }
   #info p { margin: 0; font-size: 13px; max-width: 65ch; }
   #tip { position: fixed; pointer-events: none; padding: 4px 8px; border-radius: 6px; background: var(--tip-bg); color: var(--tip-ink);
@@ -192,7 +196,7 @@
   <div id="list"></div>
 </aside>
 <div id="mini" class="card" tabindex="0" role="img" aria-label="Floor plan minimap. Click a spot to go there."><canvas id="miniC" width="440" height="440"></canvas><span class="cap">Plan · click to go there</span></div>
-<div id="info" class="card" aria-live="polite" hidden><h3 id="iTitle"></h3><div class="meta" id="iMeta"></div><p id="iNotes"></p></div>
+<div id="info" class="card" aria-live="polite" hidden><h3 id="iTitle"></h3><div class="meta" id="iMeta"></div><p id="iNotes"></p><a id="iConfigure" class="configure" hidden>Configure this room in 3D</a></div>
 <div id="tip" hidden></div>
 <div id="ghost" hidden><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.6" r="2.6" fill="currentColor"/><path d="M8.6 9.2c0-.9.7-1.6 1.6-1.6h3.6c.9 0 1.6.7 1.6 1.6l-.6 6.3h-1.3l-.5 7h-2l-.5-7H9.2z" fill="currentColor"/></svg></div>
 <div id="pad" hidden aria-label="Walk controls">
@@ -524,6 +528,10 @@ function select(id, frame) {
   document.getElementById("iTitle").textContent = o.label;
   document.getElementById("iMeta").textContent = `${o.group} · ${o.confidence} confidence`;
   document.getElementById("iNotes").textContent = o.notes || "";
+  // the website links a configurable room to the configurator; the offline file has nowhere to send anyone
+  const cfg = document.getElementById("iConfigure"), site = document.querySelector("#bar a[href]");
+  cfg.hidden = !(o.configure && site);
+  if (!cfg.hidden) cfg.href = `${site.getAttribute("href")}configurator/?room=${encodeURIComponent(o.configure)}`;
   const row = document.querySelector(`.row[data-id="${CSS.escape(id)}"]`);
   if (row) row.scrollIntoView({ block: "nearest" });
   if (!frame) return;
@@ -558,6 +566,10 @@ function buildList() {
       b.innerHTML = `<span class="dot ${o.confidence}" title="${o.confidence} confidence"></span><span class="tx"><span class="lb"></span><span class="id"></span></span>`;
       b.querySelector(".lb").textContent = o.label;
       b.querySelector(".id").textContent = o.sub || "";
+      if (o.configure && document.querySelector("#bar a[href]")) {
+        const tag = document.createElement("span"); tag.className = "cfg"; tag.textContent = "configurable";
+        b.querySelector(".lb").appendChild(tag);
+      }
       b.addEventListener("click", () => { select(o.id, true); if (innerWidth <= 820) toggleSide(false); });
       b.addEventListener("mouseenter", () => { hovered = o.id; paint(); });
       b.addEventListener("mouseleave", () => { hovered = null; paint(); });

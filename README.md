@@ -16,7 +16,7 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 - <kbd>V</kbd> shows the person from behind.
 - Walls, counters and the facade stop you. Doors and glass fronts let you through.
 - The plan in the corner shows where you are. Click it to jump.
-- Click anything to name it and see how sure the model is about it.
+- Click anything to name it and see how sure the model is about it. Rooms W1 and W3 are marked **configurable**, and their card links to that room in the configurator.
 - If the browser can't draw 3D (no WebGL 2, or too old for the way the page loads its 3D code), this page and the configurator say so and link to the pictures, instead of loading for ever.
 
 ## Configure a room
@@ -30,6 +30,7 @@ The [configurator](https://ihama1305-design.github.io/ICU-competition/configurat
 - **Themes:** Calm Clinical, Desert Sanctuary and Family Suite. Anything can still be changed afterwards.
 - **Options:** paint, feature walls, floors, a sky ceiling, four lighting schemes, an examination task light on its own switch, smart glass, blinds, TV, seating, an aquarium, a patio and palms. It's an adult ICU room, so there are no toys or games console. Earlier links that set them still open, without those items.
 - **Day and night:** the sun follows a real path at Abu Dhabi's latitude.
+- **Saved rooms:** give the room a name and save it, then open, update or delete it later. **Reset the room** puts every choice back to its default. Saved rooms are kept in this browser only and never sent anywhere. If the browser refuses storage, Save says so and nothing else changes.
 - **Share:** the link holds the exact room. The summary lists every choice with its clinical notes, and you can save an image.
 
 - **Tune it in:** answer a few questions for an editable comfort and furnishing draft. The panel shows what changed and why, with before-and-after and undo. It never changes the room or recommends care, and answers stay out of links.
