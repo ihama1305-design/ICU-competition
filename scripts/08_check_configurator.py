@@ -638,6 +638,11 @@ with sync_playwright() as p:
         go(pg, room)
         names = pg.evaluate("window.__config.partNames()")
         check(not [n for n in names if n.startswith("vent_")], f"{room}: the floor's grilles aren't in the room model, so it has one set")
+        # the grilles are hidden, but the wall control they used to come with isn't: the Comfort systems demo and PACS both use it
+        check("addon_comfortControl" in names and "addon_ventilation" not in names, f"{room}: the wall comfort control is there and the grilles aren't")
+        pg.evaluate("document.getElementById('demoTemp').value = 19; document.getElementById('demoTemp').dispatchEvent(new Event('input'))")
+        tint = pg.evaluate("window.__config.comfortTint()")
+        check(tint == "63aecd", f"{room}: the temperature demo tints the control's status light ({tint})")
         here = pg.evaluate("window.__config.roomVents()")
         check(len(here) > 0 and all(by_id.get(v["id"], {}).get("at") == v["at"] for v in here), f"{room}: its {len(here)} grilles are the plan's own")
         pg.evaluate("window.__config.set('ventilation', 'on')")

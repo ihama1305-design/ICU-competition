@@ -176,11 +176,12 @@ export class Lighting {
   update(hour, day) {
     const p = this.params, s = p.scheme, f = this.room?.fixtures;
     if (!f) return;
-    const k = p.kelvin === "auto" ? autoKelvin(hour) : p.kelvin;
+    const k = this.comfort?.kelvin ?? (p.kelvin === "auto" ? autoKelvin(hour) : p.kelvin);
     const col = this.colour.copy(kelvinColour(k));
     const night = 1 - day;
     const dark = night > 0.5;
     let level = s.circadian ? circadianLevel(hour) : 1;
+    level *= this.comfort?.level ?? 1; // transient PACS rendering overlay; original option settings are preserved
     if (p.nightLight === "rounds" && dark) level = 0;
 
     this.rects.forEach(l => { l.color.copy(col); l.intensity = (s.rect || 0) * level * this.rectWeight; });

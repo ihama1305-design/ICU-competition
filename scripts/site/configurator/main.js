@@ -12,6 +12,8 @@ import { decodeSpec, encodeSpec } from "./state.js";
 import { differences, optionLabel, resolveProfile } from "./profile.js";
 import { summaryContent } from "./summary.js";
 import { el, Panel } from "./panel.js";
+import { APIS } from "./apis.js";
+import { PACS } from "./pacs.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -62,7 +64,7 @@ function resize() {
   const w = innerWidth, h = innerHeight;
   stage.resize(w, h);
   stage.camera.aspect = w / h;
-  const rect = panel.getBoundingClientRect();
+  const rect = (document.body.classList.contains("pacs-active") ? $("pacsPanel") : panel).getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -142,6 +144,7 @@ function setTime(h) {
 }
 
 async function setRoom(label, { keepView = true } = {}) {
+  if (pacs.active) pacs.exit();
   state.room = label;
   pressed($("rooms"), label);
   const status = $("roomStatus");
@@ -150,12 +153,15 @@ async function setRoom(label, { keepView = true } = {}) {
   const room = await stage.load(label, f => { status.textContent = `Loading the room… ${Math.round(f * 100)}%`; });
   if (state.room !== label) return; // another room was chosen while this one loaded
   stage.show(room);
+  apis.setRoom(room);
   rig.setRoom(room.meta);
   if (!room.meta.cameras[state.view]) state.view = "overview";
   daylight.setCentre((room.meta.room[0] + room.meta.room[2]) / 2, (room.meta.room[1] + room.meta.room[3]) / 2);
   lighting.setRoom(room);
   glass.setRoom(room);
+  setAddon(room, "comfortControl", true); // not an option: the wall control is always there
   applyAll();
+  setDemoReadout();
   relight();
   rig.view = null;
   rig.go(keepView ? state.view : "overview", { instant: true });
@@ -304,6 +310,7 @@ function applyAll() {
 }
 
 function setOption(groupId, optionId, custom) {
+  if (pacs.active) pacs.exit();
   endIdea();
   const group = groupById(groupId);
   if (custom !== undefined) selected[`${groupId}:custom`] = custom;
@@ -329,6 +336,7 @@ function themeSelections(theme) {
 }
 
 function applyTheme(id) {
+  if (pacs.active) pacs.exit();
   endIdea();
   const theme = optionData.themes.find(t => t.id === id);
   for (const k of Object.keys(selected)) delete selected[k];
@@ -410,8 +418,8 @@ function setDemoReadout() {
   $("demoTempValue").textContent = `${temp} °C`;
   $("demoHumidityValue").textContent = `${humidity}%`;
   const tint = temp < 22 ? "#63aecd" : temp > 25 ? "#df9762" : "#4aaeb2";
-  for (const mesh of stage.current?.parts.addon_ventilation || []) {
-    for (const mat of [mesh.material].flat()) if (mat?.name === "vent_status") mat.color.set(tint);
+  for (const mesh of stage.current?.parts.addon_comfortControl || []) {
+    for (const mat of [mesh.material].flat()) if (mat?.name === "comfort_status") mat.color.set(tint);
   }
   invalidate();
 }
@@ -442,6 +450,10 @@ $("objectAction").addEventListener("click", e => {
     invalidate();
   } else if (e.currentTarget.dataset.action === "soundAlert") {
     previewSoundAlert();
+  } else if (e.currentTarget.dataset.action.startsWith("apis:")) {
+    apis.open(e.currentTarget.dataset.action.slice(5));
+  } else if (e.currentTarget.dataset.action === "pacs") {
+    pacs.open();
   }
 });
 
@@ -464,6 +476,7 @@ function remember() {
 }
 
 async function applySpec(spec) {
+  if (pacs.active) pacs.exit();
   endIdea();
   for (const k of Object.keys(selected)) delete selected[k];
   Object.assign(selected, spec.selected);
@@ -549,6 +562,17 @@ canvas.addEventListener("pointerdown", () => { if (tour.running) tour.stop(); })
 canvas.addEventListener("wheel", () => { if (tour.running) tour.stop(); }, { passive: true });
 canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 
+// APIS owns a reversible inspection camera and separate schematic detail scene.
+// Room options, profile answers, share codes and original model meshes stay independent.
+const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
+const pacs = new PACS({ stage, lighting, rig, controls, relight, invalidate,
+  stopTour: () => tour.stop(), getState: () => state,
+  closeApis: () => { const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
+  restoreApisMarkers: on => apis.setEnabled(on),
+});
+apis.beforeOpen = () => { if (pacs.active) pacs.exit(); };
+pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); describe(); };
+
 const OBJECT_DETAILS = {
   cfg_kit_bed: ["Adjustable ICU bed", "A modeled patient bed with a raised backrest, side rails, mattress, and bedding."],
   cfg_kit_pendant: ["Ceiling service pendant", "A visual equipment pendant with shelves and service outlets."],
@@ -580,8 +604,10 @@ function showObjectCard(info, x, y) {
   action.dataset.action = info.action || "";
   if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
   else if (info.action === "soundAlert") action.textContent = "Preview sound alert";
+  else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";
+  else if (info.action === "pacs") action.textContent = "Physiological Adaptive Mode";
   card.hidden = false;
-  const rect = card.getBoundingClientRect(), panelRect = panel.getBoundingClientRect();
+  const rect = card.getBoundingClientRect(), panelRect = (pacs.active ? $("pacsPanel") : panel).getBoundingClientRect();
   let left = x + 14, top = y + 14;
   if (left + rect.width > panelRect.left && x < panelRect.left) left = Math.max(12, panelRect.left - rect.width - 12);
   if (left + rect.width > innerWidth - 12) left = innerWidth - rect.width - 12;
@@ -610,6 +636,7 @@ canvas.addEventListener("pointerup", e => {
     return [h.object.material].flat().filter(Boolean).every(m => !m.transparent && !m.transmission);
   });
   if (!hit) { $("objectCard").hidden = true; return; }
+  if (apis.pick(hit.object)) return;
   if (glass.isSwitch(hit.object)) setOption("switch", selected.switch === "opaque" ? "clear" : "opaque");
   let info = null;
   for (let node = hit.object; node && node !== stage.current.root; node = node.parent) {
@@ -619,6 +646,7 @@ canvas.addEventListener("pointerup", e => {
     const top = stage.topName(hit.object, stage.current.root), known = OBJECT_DETAILS[top];
     const label = top.replace(/^cfg_(kit_|)/, "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase()) || "Room object";
     info = known ? { title: known[0], description: known[1] } : { title: label, description: "A modeled room surface or furnishing in this editable design proposal." };
+    if (top === "cfg_kit_monitor") info.action = "pacs";
   }
   showObjectCard(info, e.clientX, e.clientY);
 });
@@ -629,7 +657,7 @@ const adaptive = !navigator.webdriver; // a software renderer in a test shouldn'
 function frame(now) {
   requestAnimationFrame(frame);
   if (!rig.meta) return;
-  const moving = rig.update(now);
+  const moving = apis.active ? apis.update(now) : rig.update(now);
   if (moving) {
     dirty = true;
     if (adaptive && lastMovingDraw) stage.noteFrame(now - lastMovingDraw);
@@ -639,6 +667,7 @@ function frame(now) {
   }
   if (glass.update(now)) dirty = true;
   if (tickAddons(stage.current, now, stage.camera)) dirty = true;
+  if (pacs.update(now)) dirty = true;
   if (dirty) {
     dirty = false;
     stage.draw();
@@ -654,6 +683,18 @@ function fail(err) {
 
 // ---------------------------------------------------------------- for the headless check
 window.__config = {
+  pacs: () => pacs.inspect(),
+  pacsSimulation: () => pacs.sim,
+  patient: () => ({ anchors: stage.current?.patient?.anchors, routes: stage.current?.patient?.routes.children.map(n => n.userData.itemInfo?.title) }),
+  itemPoint: title => {
+    let item = null; stage.current.root.traverse(n => { if (n.userData.itemInfo?.title === title) item = n; });
+    if (!item) return null;
+    stage.current.root.updateMatrixWorld(true); stage.camera.updateMatrixWorld();
+    const p = new THREE.Box3().setFromObject(item).getCenter(new THREE.Vector3()).project(stage.camera);
+    return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2 };
+  },
+  apis: () => apis.inspect(),
+  apisPoint: id => apis.screenPoint(id),
   state: () => ({ ...state, night: isNight(state.hour), sun: sunAt(state.hour, SITE), moving: !!rig.tween, ceiling: stage.ceilingOn, roomBox: rig.meta?.room }),
   views: () => Object.keys(rig.meta.cameras),
   room: label => setRoom(label),
@@ -708,6 +749,7 @@ window.__config = {
   options: () => optionData,
   partNames: () => Object.keys(stage.current.parts),
   roomVents: () => rig.meta.vents,
+  comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
   profile: answers => resolveProfile(optionData, answers),
   fading: () => glass.fading,
