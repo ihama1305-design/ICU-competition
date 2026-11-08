@@ -817,8 +817,9 @@ with sync_playwright() as p:
     ctx, pg, errs, _, _ = open_page(b, 1366, 900, query="?tier=low")
     pg.add_script_tag(url=AXE)
     faults = axe_faults(pg, "#panel")
-    for i in range(pg.locator("details").count()):
-        pg.locator("summary").nth(i).click()
+    # the panel's own sections: PACS and APIS have theirs inside panels that stay hidden until they open
+    for i in range(pg.locator("#panel details").count()):
+        pg.locator("#panel details > summary").nth(i).click()
         faults += axe_faults(pg, "#panel")
     pg.evaluate("window.__config.set('front', 'smart')")
     faults += axe_faults(pg, "#panel")
