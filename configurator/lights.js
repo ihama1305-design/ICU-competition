@@ -59,7 +59,14 @@ export class Lighting {
     });
     this.reading = new THREE.SpotLight(0xfff0dc, 0, 5, 0.42, 0.6, 1.5);
     stage.scene.add(this.reading, this.reading.target);
-    this.params = { scheme: { kind: "panels", rect: 30, fill: 0.4, panel: 2.2 }, kelvin: 4000, reading: false, nightLight: "off" };
+    // the examination task light: straight down from the ceiling fitting over the bed, on its own switch
+    this.task = new THREE.SpotLight(0xffffff, 0, 4.5, 0.55, 0.5, 1.4);
+    this.task.visible = false;
+    stage.scene.add(this.task, this.task.target);
+    this.params = { scheme: { kind: "panels", rect: 30, fill: 0.4, panel: 2.2 }, kelvin: 4000, reading: false, nightLight: "off", task: false };
+    // a room mode's look, { kelvin, level }, laid over the configured light (main.js eases it), and whether it turns the task light on
+    this.scene = null; this.sceneTask = false;
+    this.day = 1;
     this.room = null;
     this.colour = new THREE.Color();
   }
@@ -112,6 +119,20 @@ export class Lighting {
     stem.position.set(lamp.position.x, (H + lamp.position.y) / 2, lamp.position.z);
     room.root.add(lamp, stem, group);
     f.readingLamp = lamp;
+    // the examination light's lens, lit when the task light is on. Its own disc, so the fitting's material stays as exported
+    room.root.updateMatrixWorld(true);
+    const exam = new THREE.Box3();
+    (room.parts.cfg_kit_exam_light || []).forEach(n => exam.expandByObject(n));
+    if (!exam.isEmpty()) {
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.26, 32), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      lens.rotation.x = Math.PI / 2; // facing down
+      const c = exam.getCenter(new THREE.Vector3());
+      lens.position.set(c.x, exam.min.y - 0.003, c.z);
+      lens.visible = false;
+      lens.raycast = () => {}; // a click names the fitting, not the lens
+      room.root.add(lens);
+      f.taskLens = lens;
+    }
     room.fixtures = f;
     room.ceilingFixtures = [f.cove[0], f.cove[1], ...f.slot, ...f.discs];
     return f;
@@ -170,19 +191,37 @@ export class Lighting {
     const bed = W2T(m.bed.head[0] + m.bed.foot[0] * 0.45, m.bed.head[1] + m.bed.foot[1] * 0.45, 0.7);
     this.reading.target.position.copy(bed);
     this.reading.target.updateMatrixWorld();
+    if (f.taskLens) {
+      this.task.position.copy(f.taskLens.position);
+      this.task.position.y -= 0.02;
+      this.task.target.position.set(f.taskLens.position.x, 0.6, f.taskLens.position.z);
+      this.task.target.updateMatrixWorld();
+    }
   }
+
+  /** The room's electric light as configured, before any mode or PACS look: colour temperature and level. */
+  base(hour, day = this.day) {
+    const p = this.params, s = p.scheme;
+    let level = s.circadian ? circadianLevel(hour) : 1;
+    if (p.nightLight === "rounds" && 1 - day > 0.5) level = 0;
+    return { kelvin: p.kelvin === "auto" ? autoKelvin(hour) : p.kelvin, level };
+  }
+
+  /** Whether the examination task light is on, by its own switch or a mode's. */
+  get taskOn() { return !!(this.params.task || this.sceneTask) && !!this.room?.fixtures?.taskLens; }
 
   /** Set brightness and colour for the time of day. */
   update(hour, day) {
     const p = this.params, s = p.scheme, f = this.room?.fixtures;
     if (!f) return;
-    const k = this.comfort?.kelvin ?? (p.kelvin === "auto" ? autoKelvin(hour) : p.kelvin);
+    this.day = day;
+    // a room mode's look replaces the configured one while it's on; neither changes the option settings
+    const look = this.scene || this.base(hour, day);
+    const k = this.comfort?.kelvin ?? look.kelvin;
     const col = this.colour.copy(kelvinColour(k));
     const night = 1 - day;
-    const dark = night > 0.5;
-    let level = s.circadian ? circadianLevel(hour) : 1;
+    let level = look.level;
     level *= this.comfort?.level ?? 1; // transient PACS rendering overlay; original option settings are preserved
-    if (p.nightLight === "rounds" && dark) level = 0;
 
     this.rects.forEach(l => { l.color.copy(col); l.intensity = (s.rect || 0) * level * this.rectWeight; });
     this.spots.forEach(l => { l.color.copy(col); l.intensity = (s.spot || 0) * level * this.spotWeight; });
@@ -198,12 +237,18 @@ export class Lighting {
     this.reading.color.copy(kelvinColour(Math.min(k, 3000)));
     f.readingLamp.material.emissiveIntensity = p.reading ? 3 : 0;
 
+    const task = this.taskOn;
+    this.task.visible = task;
+    this.task.intensity = 26;
+    this.task.color.copy(kelvinColour(4500));
+    if (f.taskLens) f.taskLens.visible = task;
+
     const nightOn = p.nightLight !== "off";
     f.night.forEach(n => { n.visible = nightOn; });
     f.amber.color.copy(AMBER).multiplyScalar(2.2);
     f.floorGlow.color.copy(AMBER).multiplyScalar(0.2 * (0.15 + 0.85 * night));
 
-    const fill = s.fill * level + (nightOn ? 0.015 : 0) + (p.reading ? 0.02 : 0);
+    const fill = s.fill * level + (nightOn ? 0.015 : 0) + (p.reading ? 0.02 : 0) + (task ? 0.03 : 0);
     this.daylight.setFill(fill, col);
     this.stage.setBloom(0.5 * night);
   }

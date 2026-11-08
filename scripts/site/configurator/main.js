@@ -14,6 +14,7 @@ import { summaryContent } from "./summary.js";
 import { el, Panel } from "./panel.js";
 import { APIS } from "./apis.js";
 import { PACS } from "./pacs.js";
+import { MODES, RoomModes } from "./modes.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -145,6 +146,7 @@ function setTime(h) {
 
 async function setRoom(label, { keepView = true } = {}) {
   if (pacs.active) pacs.exit();
+  endMode();
   state.room = label;
   pressed($("rooms"), label);
   const status = $("roomStatus");
@@ -311,6 +313,7 @@ function applyAll() {
 
 function setOption(groupId, optionId, custom) {
   if (pacs.active) pacs.exit();
+  endMode();
   endIdea();
   const group = groupById(groupId);
   if (custom !== undefined) selected[`${groupId}:custom`] = custom;
@@ -337,6 +340,7 @@ function themeSelections(theme) {
 
 function applyTheme(id) {
   if (pacs.active) pacs.exit();
+  endMode();
   endIdea();
   const theme = optionData.themes.find(t => t.id === id);
   for (const k of Object.keys(selected)) delete selected[k];
@@ -356,6 +360,7 @@ const currentTheme = () => optionData.themes.find(t => {
 let idea = null; // the room idea just made, while it can still be compared or undone
 
 function showSelections(next) {
+  endMode();
   for (const k of Object.keys(selected)) delete selected[k];
   Object.assign(selected, next);
   applyAll();
@@ -477,6 +482,7 @@ function remember() {
 
 async function applySpec(spec) {
   if (pacs.active) pacs.exit();
+  endMode();
   endIdea();
   for (const k of Object.keys(selected)) delete selected[k];
   Object.assign(selected, spec.selected);
@@ -567,11 +573,55 @@ canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
 const pacs = new PACS({ stage, lighting, rig, controls, relight, invalidate,
   stopTour: () => tour.stop(), getState: () => state,
-  closeApis: () => { const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
+  closeApis: () => { endMode(); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
   restoreApisMarkers: on => apis.setEnabled(on),
 });
 apis.beforeOpen = () => { if (pacs.active) pacs.exit(); };
 pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); describe(); };
+
+// ---------------------------------------------------------------- room modes: scenes over the configured room (modes.js)
+const modeApi = {
+  baseLight: () => lighting.base(state.hour),
+  setLight: (look, task) => { lighting.scene = look; lighting.sceneTask = task; relight(); },
+  blindsNow: () => {
+    const node = stage.current?.root.getObjectByName("cfg_blinds");
+    return node && (stage.current.parts.cfg_blinds || []).some(n => n.visible) ? node.scale.y : 0;
+  },
+  configuredBlinds: () => optionOf("blinds", selected.blinds)?.effects.find(e => e.do === "blinds")?.level ?? 0,
+  setBlinds: level => { EFFECTS.blinds({ level }); stage.renderer.shadowMap.needsUpdate = true; invalidate(); },
+  restore: ids => { for (const id of ids) runEffects(groupById(id), selected[id]); stage.renderer.shadowMap.needsUpdate = true; invalidate(); },
+  screens: on => {
+    if (!on) setTv(stage.current, { playing: false });
+    // the digital aquarium's picture; its dark case stays, like a screen that's off
+    stage.current.addons?.digital?.traverse(n => { if (n.isMesh && n.material?.isMeshBasicMaterial && n.material.map) n.visible = on; });
+    invalidate();
+  },
+  glassClear: () => { glass.set({ mode: "clear", opaque: false }); EFFECTS.visible({ part: "cfg_curtain", on: false }); },
+  beforeChange: () => { if (pacs.active) pacs.exit(); },
+  changed: name => syncModes(name),
+};
+const modes = new RoomModes(modeApi);
+function syncModes(name) {
+  $("modeBar").querySelectorAll("button[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === name)));
+  const note = $("modeNote"), m = MODES[name];
+  note.textContent = name === "emergency" ? "" : m.note;
+  note.hidden = !note.textContent;
+  $("modeBanner").hidden = name !== "emergency";
+  document.body.classList.toggle("emergency-ready", name === "emergency");
+  say(m.say);
+  invalidate();
+}
+/** Something is about to change the room's design: a mode would hide that, so it ends first. */
+function endMode() {
+  if (!modes.leave()) return;
+  $("modeNote").textContent = "Back to Standard: the room's design changed, so the mode ended.";
+  $("modeNote").hidden = false;
+}
+$("modeBar").addEventListener("click", e => {
+  const b = e.target.closest("button[data-mode]");
+  if (b) modes.set(b.dataset.mode);
+});
+$("leaveEmergency").addEventListener("click", () => modes.exitEmergency());
 
 const OBJECT_DETAILS = {
   cfg_kit_bed: ["Adjustable ICU bed", "A modeled patient bed with a raised backrest, side rails, mattress, and bedding."],
@@ -667,6 +717,7 @@ function frame(now) {
   }
   if (glass.update(now)) dirty = true;
   if (tickAddons(stage.current, now, stage.camera)) dirty = true;
+  if (modes.update(now)) dirty = true;
   if (pacs.update(now)) dirty = true;
   if (dirty) {
     dirty = false;
@@ -749,6 +800,17 @@ window.__config = {
   options: () => optionData,
   partNames: () => Object.keys(stage.current.parts),
   roomVents: () => rig.meta.vents,
+  mode: () => {
+    const tv = stage.current.addons?.tv?.userData;
+    let aquariumScreen = null;
+    stage.current.addons?.digital?.traverse(n => { if (n.isMesh && n.material?.isMeshBasicMaterial && n.material.map) aquariumScreen = n.visible; });
+    return {
+      current: modes.current, before: modes.before, easing: modes.easing, look: lighting.scene && { ...lighting.scene }, task: lighting.taskOn,
+      blinds: modeApi.blindsNow(), tvPlaying: !!tv && tv.screen.material === tv.on, glass: glass.mode === "smart" && glass.opaque ? "opaque" : glass.mode,
+      curtain: (stage.current.parts.cfg_curtain || []).some(n => n.visible), aquariumScreen,
+    };
+  },
+  setMode: (name, opts) => modes.set(name, opts),
   addonShown: id => !!stage.current.addons?.[id]?.visible,
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
