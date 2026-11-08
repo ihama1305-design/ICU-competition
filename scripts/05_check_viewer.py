@@ -103,6 +103,29 @@ with sync_playwright() as pw:
     check(pg.get_attribute("#cam3", "aria-pressed") == "true", "V did not switch to the view from behind")
     pg.keyboard.press("v")
 
+    # extinguisher cabinets: named when selected and when clicked, solid head-on, and not in the way along the wall
+    fire = spec["fire"]["cabinets"]
+    pg.evaluate("window.__view('first')"); pg.wait_for_timeout(600)
+    if pg.get_attribute("#cam3", "aria-pressed") == "true":
+        pg.keyboard.press("v")
+    title = pg.evaluate("window.__select('fire')")
+    check("extinguisher" in title.lower(), f"selecting the extinguisher cabinets names them (card: {title!r})")
+    for c in fire:
+        (x, y), (nx, ny) = c["face_at"], c["normal"]
+        tx, ty = ny, -nx  # along the wall
+        pg.evaluate(f"window.__teleport({x + nx * 1.3}, {y + ny * 1.3}); window.__face({x}, {y})")
+        pg.wait_for_timeout(1500)
+        sx, sy = pg.evaluate(f"window.__project({x}, {y}, 1.1)")
+        picked = pg.evaluate(f"window.__pick({sx}, {sy})")
+        print(f"  cabinet {c['id']}: clicked {picked!r}")
+        check(picked == "fire", f"clicking cabinet {c['id']} names it (got {picked!r})")
+        if c is fire[0]:
+            pg.screenshot(path=os.path.join(ROOT, "renders", "viewer_fire_cabinet.png"))
+        check(not pg.evaluate(f"window.__pathClear({x + nx * 0.8}, {y + ny * 0.8}, {x + nx * 0.05}, {y + ny * 0.05})"), f"walking straight into cabinet {c['id']} is stopped")
+        px, py = x + nx * 0.45, y + ny * 0.45
+        along = pg.evaluate(f"window.__pathClear({px - tx * 1.2}, {py - ty * 1.2}, {px + tx * 1.2}, {py + ty * 1.2})")
+        check(along, f"walking along the wall past cabinet {c['id']} isn't blocked")
+
     ok = pg.evaluate("window.__miniGo(0.5, 0.45)")
     check(ok is not None, "minimap click failed")
     pg.screenshot(path=os.path.join(ROOT, "renders", "viewer_minimap_jump.png"))
@@ -114,5 +137,5 @@ with sync_playwright() as pw:
 
     check(not errs, f"console errors: {errs[:3]}")
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, minimap, phone width)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width)"))
 sys.exit(1 if fail else 0)

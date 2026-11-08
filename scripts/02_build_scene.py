@@ -232,6 +232,32 @@ def rooms_off_corridor(sp):
     return unary_union(out) if out else Polygon()
 
 
+# a rail would block an extinguisher cabinet's door: it stops short of each one
+FIRE = spec["fire"]
+fire_clear, fire_plates = [], []
+for fc in FIRE["cabinets"]:
+    fp, fn = np.array(fc["face_at"]), np.array(fc["normal"])
+    ft = np.array([fn[1], -fn[0]])
+    half = FIRE["cabinet"]["face_width"] / 2
+    fire_clear.append(LineString([fp - ft * (half + FIRE["rail_clearance"]), fp + ft * (half + FIRE["rail_clearance"])]).buffer(0.3, cap_style="flat"))
+    fire_plates.append((fc["id"], Point(fp - fn * FIRE["cabinet"]["infill_depth"]), LineString([fp - ft * half - fn * 0.03, fp + ft * half - fn * 0.03]).buffer(0.02, cap_style="flat")))
+fire_clear = unary_union(fire_clear)
+fire_voids = []
+
+
+def voids_behind_cabinets(sp):
+    """What each cabinet's plate shuts off from a rail space. The drawn walls stop either side of a cabinet, so the void behind it counts as corridor until the plate closes it."""
+    out = []
+    for name, behind, plate in fire_plates:
+        if sp.distance(behind) > 1e-6:
+            continue
+        void = next((g for g in geoms(sp.difference(plate)) if g.distance(behind) < 1e-6), None)
+        if void is None or void.area > FIRE["void_max_m2"]:
+            raise SystemExit(f"fire cabinet {name}: its plate doesn't shut off a void from the corridor ({None if void is None else round(void.area, 1)} m2 behind it)")
+        out.append(void)
+    fire_voids.extend(out)
+    return unary_union(out) if out else Polygon()
+
 rail_spaces = [s["poly"] for s in spaces if any(is_rail_name(n) for n in s["names"])]
 rails = []
 for sp in rail_spaces:
@@ -241,6 +267,7 @@ for sp in rail_spaces:
     r = r.difference(rooms_off_corridor(sp))
     r = r.difference(unary_union([h.buffer(0.35) for h in headers]))
     r = r.difference(unary_union([floor_within(Polygon(c["poly"]).buffer(0), 0.3) for c in plan["counters"]]))
+    r = r.difference(fire_clear).difference(voids_behind_cabinets(sp))
     for g in getattr(r, "geoms", [r]):
         if g.area > 0.03:
             rails.append(g)
@@ -735,6 +762,11 @@ for r in plan["rooms"]:
     elif "STRETCHER" in r["name"]:
         place_in_alcove(stretch, f"stretcher_{int(r['label_at'][0])}", r["label_at"])
 
+# extinguisher cabinets, where the drawing has them
+fec = kit.fire_cabinet(spec, KITC, H)
+for fc in FIRE["cabinets"]:
+    place(fec, f"fire_cabinet_{fc['id']}", frame_matrix(fc["face_at"], fc["normal"]), C["Equipment"])
+
 # ------------------------------------------------------------------ lights
 L_ = LT["panel_size"]; g = LT["panel_grid"]
 xs = np.arange(math.floor(outline.bounds[0]), outline.bounds[2], g)
@@ -957,7 +989,7 @@ bpy.ops.file.pack_all()
 bpy.ops.wm.save_as_mainfile(filepath=os.environ.get("ICU_BLEND") or os.path.join(ROOT, "output", "icu.blend"), compress=True)
 planlib.label_rooms(rooms_index, spec)
 # the 2D plan as built, for steps that work on one room (07)
-geometry = {"walls": walls_u.wkt, "inside_glass": inside_glass.wkt,
+geometry = {"walls": walls_u.wkt, "inside_glass": inside_glass.wkt, "handrails": unary_union(rails).wkt, "fire_voids": unary_union(fire_voids).wkt,
             "spaces": [{"names": s["names"], "labels": s["labels"], "poly": s["poly"].wkt} for s in spaces]}
 json.dump({"rooms": rooms_index, "hero": hero["id"], "lights": n_l, "gap_panels": filled, "desk_panels": over_desks, "spaces": len(spaces), "geometry": geometry},
           open(os.path.join(ROOT, "build", "scene_index.json"), "w"), indent=1)

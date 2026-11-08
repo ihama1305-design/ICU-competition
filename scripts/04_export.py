@@ -90,6 +90,7 @@ S = [  # (id, group, label, confidence, regex on object names, notes)
     ("floor_rooms", "Building", "Patient room floor", "med", "^floor_rooms", "Sheet vinyl LIN36 per the drawing's finish tags. Colour assumed."),
     ("floor", "Building", "Corridor floor", "med", "^floor_vinyl", "Sheet vinyl LIN37/LIN02 per the finish tags. Colour assumed."),
     ("rails", "Building", "Handrails and wall protection", "med", "^handrails|^bumper|^skirting", "Corridor handrail at 0.9 m, bumper rail and coved skirting."),
+    ("fire", "Building", "Fire extinguisher cabinets", "med", "^fire_cabinet", "Four cabinets at the positions and widths drawn on record drawing A1104-a (A-GENM, labelled FIRE EXTINGUISHER CABINET). Mounting height, door, sign and the extinguisher itself are assumed. The sheet shows no heights or extinguisher type."),
     ("ceiling", "Building", "Ceilings and lights", "low", "^ceiling|exam_light", f"Ceiling at {H:.2f} m, which is not on these sheets (assumed). Lay-in grid in corridors, plain in patient rooms. The panel layout is assumed too."),
     ("slab", "Building", "Floor slab", "low", "^slab", "Slab edge and overhang beyond the facade."),
 ]
@@ -107,7 +108,7 @@ view = {
     "eye": EYE, "ceiling": H, "radius": 0.28,
     # rays that stop a walker. The middle one meets a desk top's edge: where knee space is open below it, the other two pass under and over the top
     "walk_heights": [0.3, spec["building"]["desk_height"] - 0.015, 1.0],
-    "collide": "^(walls|joinery_|facade_upstand|facade_sill)",
+    "collide": "^(walls|joinery_|facade_upstand|facade_sill|fire_cabinet)",
     "first": {"eye": [fx + nx * 0.6, fy + ny * 0.6, EYE], "look": [hx, hy, 1.0]},
     "orbit": {"eye": cams.get("aerial_eye", [44.0, -16.0, 34.0]), "look": cams.get("aerial_look", [22.5, 15.5, 0.0])},
     "top": {"center": [mini["cx"], mini["cy"]], "size": mini["S"]},
