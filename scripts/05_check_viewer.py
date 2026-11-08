@@ -146,6 +146,17 @@ with sync_playwright() as pw:
     check(sw <= 400, f"horizontal overflow at phone width ({sw}px)")
     pg.screenshot(path=os.path.join(ROOT, "renders", "viewer_phone.png"))
 
+    # the website's copy links the two rooms the configurator has; the offline file doesn't link anywhere
+    pg.set_viewport_size({"width": 1366, "height": 820}); pg.wait_for_timeout(400)
+    tags = pg.evaluate("[...document.querySelectorAll('.row')].filter(r => r.querySelector('.cfg')).map(r => r.querySelector('.lb').firstChild.textContent)")
+    if url.startswith("http"):
+        check(sorted(tags) == ["Room W1 · isolation", "Room W3"], f"the configurable rooms are marked in the list {tags}")
+        pg.locator(".row", has_text="Room W3").first.click(); pg.wait_for_timeout(500)
+        href = pg.get_attribute("#iConfigure", "href") if pg.is_visible("#iConfigure") else None
+        check(href == "../configurator/?room=W3", f"W3's card links to it in the configurator ({href})")
+    else:
+        check(not tags and not pg.is_visible("#iConfigure"), "the offline file has no configurator links")
+
     check(not errs, f"console errors: {errs[:3]}")
 
     # a browser without WebGL 2 is told why, instead of seeing "Loading" for ever; the website's copy also links to the pictures
