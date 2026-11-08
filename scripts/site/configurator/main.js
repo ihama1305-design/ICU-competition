@@ -142,7 +142,9 @@ async function setRoom(label, { keepView = true } = {}) {
   daylight.setCentre((room.meta.room[0] + room.meta.room[2]) / 2, (room.meta.room[1] + room.meta.room[3]) / 2);
   lighting.setRoom(room);
   glass.setRoom(room);
+  setAddon(room, "comfortControl", true); // not an option: the wall control is always there
   applyAll();
+  setDemoReadout();
   relight();
   rig.view = null;
   rig.go(keepView ? state.view : "overview", { instant: true });
@@ -397,8 +399,8 @@ function setDemoReadout() {
   $("demoTempValue").textContent = `${temp} °C`;
   $("demoHumidityValue").textContent = `${humidity}%`;
   const tint = temp < 22 ? "#63aecd" : temp > 25 ? "#df9762" : "#4aaeb2";
-  for (const mesh of stage.current?.parts.addon_ventilation || []) {
-    for (const mat of [mesh.material].flat()) if (mat?.name === "vent_status") mat.color.set(tint);
+  for (const mesh of stage.current?.parts.addon_comfortControl || []) {
+    for (const mat of [mesh.material].flat()) if (mat?.name === "comfort_status") mat.color.set(tint);
   }
   invalidate();
 }
@@ -725,6 +727,7 @@ window.__config = {
   options: () => optionData,
   partNames: () => Object.keys(stage.current.parts),
   roomVents: () => rig.meta.vents,
+  comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
   profile: answers => resolveProfile(optionData, answers),
   fading: () => glass.fading,

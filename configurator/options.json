@@ -1633,7 +1633,7 @@
       {"id":"on","label":"Show the grilles","effects":[{"do":"addon","id":"ventilation","on":true}],"code":0},
       {"id":"off","label":"Hide grilles","effects":[{"do":"addon","id":"ventilation","on":false}],"code":1}
      ],
-     "note": {"text":"The ceiling grilles are the floor's ventilation concept plan, not SSMC's mechanical design. They and the wall control are visual only: no air or temperature is controlled."},
+     "note": {"text":"The ceiling grilles are the floor's ventilation concept plan, not SSMC's mechanical design. They're visual only: no air moves."},
      "code": 30
     },
     {
