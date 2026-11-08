@@ -811,6 +811,7 @@ window.__config = {
     };
   },
   setMode: (name, opts) => modes.set(name, opts),
+  addonShown: id => !!stage.current.addons?.[id]?.visible,
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
   profile: answers => resolveProfile(optionData, answers),
