@@ -460,7 +460,8 @@ with sync_playwright() as p:
 
     # ---------------------------------------------------------------- every option does something
     ctx, pg, errs, _, _ = open_page(b, 480, 300, query="?tier=low")
-    pg.add_style_tag(content="#panel { display: none; }")
+    # the room alone: at this size the room-mode bar takes the phone layout across the top, where it would cover the walls
+    pg.add_style_tag(content="#panel, #hud { display: none; }")
     pg.evaluate("window.dispatchEvent(new Event('resize'))")
     for room in ROOMS:
         go(pg, room)
