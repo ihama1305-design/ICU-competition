@@ -171,8 +171,9 @@ with sync_playwright() as pw:
     check(not errs, f"console errors: {errs[:3]}")
 
     # an idle page stops drawing; using it draws again
-    # (the camera's damping can take a moment to come to rest on a slow software renderer, so it gets a few tries)
-    pg.evaluate("window.__view('orbit')")
+    # measured in first person: orbit's damping eases a little each frame, and at a software renderer's frame or so a second
+    # it can take minutes to come to rest, where a real GPU takes a second. The walking figure still gets a few tries to settle.
+    pg.evaluate("window.__view('first')")
     for _ in range(6):
         f0 = pg.evaluate("window.__viewerFrames"); pg.wait_for_timeout(2500); f1 = pg.evaluate("window.__viewerFrames")
         if f1 == f0:
@@ -182,7 +183,9 @@ with sync_playwright() as pw:
     check(pg.evaluate("window.__viewerFrames") > f1, "moving the pointer over it draws again")
 
     # a touch phone: one slim row of controls, and a joystick that walks forward, back and sideways
-    ctx = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    # in a browser of its own, like a phone: one that has run the desktop checks can hold up a second page's start
+    tb = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
+    ctx = tb.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     tp = ctx.new_page()
     tp.goto(url, timeout=120000)
     tp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
@@ -200,7 +203,7 @@ with sync_playwright() as pw:
         print(f"  joystick {label}: {moved:.2f} m")
         check(moved > 0.1, f"phone: the joystick walks {label} ({moved:.2f} m)")
     tp.screenshot(path=os.path.join(ROOT, "renders", "viewer_phone_walk.png"))
-    ctx.close()
+    tb.close()
 
     # a browser without WebGL 2 is told why, instead of seeing "Loading" for ever; the website's copy also links to the pictures
     ctx = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
