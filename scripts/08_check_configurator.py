@@ -499,6 +499,7 @@ with sync_playwright() as p:
     check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps"], "a link restores the placed items")
     pg.click("#openSummary")
     pg.wait_for_selector("#summary[open]")
+    pg.wait_for_function("document.getElementById('summaryBody').textContent.length > 100", timeout=120000)  # it fills in once its picture is taken
     check("Placed items" in pg.inner_text("#summaryBody") and "Sharps box" in pg.inner_text("#summaryBody"), "the summary lists the placed items")
     pg.click("#closeSummary")
     pg.click("#resetRoom")
@@ -1201,11 +1202,11 @@ with sync_playwright() as p:
     pg.wait_for_timeout(600)
     pg.locator("#placeItems button[data-item='bins']").scroll_into_view_if_needed()
     pg.tap("#placeItems button[data-item='bins']")
-    pg.wait_for_timeout(600)
+    drawn(pg)  # the sheet slides away first, and the room's framing changes with it
     spot = pg.evaluate("""(() => { const c = window.__config, w = c.walkable(), cx = w.reduce((a, p) => a + p[0], 0) / w.length, cy = w.reduce((a, p) => a + p[1], 0) / w.length; return c.screenOf(cx, cy, 0); })()""")
     closed_sheet = not pg.evaluate("document.getElementById('panel').classList.contains('open')")
     pg.tap("#c", position={"x": spot["x"], "y": spot["y"]})
-    check(closed_sheet and [q["type"] for q in pg.evaluate("window.__config.placed()")] == ["bins"], f"phone: tapping an item, then the floor, places it {spot}")
+    check(closed_sheet and [q["type"] for q in pg.evaluate("window.__config.placed()")] == ["bins"], f"phone: tapping an item, then the floor, places it {spot} {pg.inner_text('#placeStatus')!r}")
     pg.evaluate("document.getElementById('resetRoom').click()")
     closed = pg.evaluate("document.getElementById('panel').getBoundingClientRect().top")
     pg.tap("#sheet")
