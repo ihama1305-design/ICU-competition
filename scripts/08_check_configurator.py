@@ -418,6 +418,93 @@ with sync_playwright() as p:
     check(pg.evaluate("window.__config.presets()") == [] and pg.locator("#presetList li").count() == 0, "Delete removes a saved room")
     set_defaults(pg)
 
+    # ---------------------------------------------------------------- placing items: dragged from the panel onto the room
+    go(pg, "W1")
+    set_defaults(pg)
+    pg.evaluate("window.__config.camera('overview', { instant: true })")
+    check(pg.locator("#placeItems button").count() == 6, "the panel offers the six items to place")
+
+    def drag_to(src, x, y):
+        pg.locator(src).scroll_into_view_if_needed()
+        bb = pg.locator(src).bounding_box()
+        pg.mouse.move(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
+        pg.mouse.down()
+        for i in range(1, 9):
+            pg.mouse.move(bb["x"] + bb["width"] / 2 + (x - bb["x"] - bb["width"] / 2) * i / 8, bb["y"] + bb["height"] / 2 + (y - bb["y"] - bb["height"] / 2) * i / 8)
+        pg.mouse.up()
+
+    def floor_spot(k=0.5):
+        """A point of open floor in view: part way between the walkable area's centre and its first corner."""
+        return pg.evaluate("""(k) => {
+          const c = window.__config, w = c.walkable(), cx = w.reduce((a, p) => a + p[0], 0) / w.length, cy = w.reduce((a, p) => a + p[1], 0) / w.length;
+          const x = cx + (w[0][0] - cx) * k * 0.3, y = cy + (w[0][1] - cy) * k * 0.3;
+          return { world: [x, y], screen: c.screenOf(x, y, 0) };
+        }""", k)
+
+    s1 = floor_spot(0)
+    drag_to("#placeItems button[data-item='screen']", s1["screen"]["x"], s1["screen"]["y"])
+    placed = pg.evaluate("window.__config.placed()")
+    check(len(placed) == 1 and placed[0]["type"] == "screen" and abs(placed[0]["x"] - s1["world"][0]) < 0.05 and abs(placed[0]["y"] - s1["world"][1]) < 0.05, f"dragging the privacy screen onto the floor puts it there {placed} {s1['world']}")
+    code = pg.evaluate("window.__config.code()")
+    check("." in code, "the share link holds the placed item")
+    w = pg.evaluate("window.__config.faceWall()")
+    drag_to("#placeItems button[data-item='rub']", w["x"], w["y"])
+    placed = pg.evaluate("window.__config.placed()")
+    check(len(placed) == 2 and placed[1]["type"] == "rub", f"dragging the hand-rub dispenser onto a wall hangs it there {placed}")
+    # a floor item dropped on a wall doesn't go anywhere, and the page says why
+    drag_to("#placeItems button[data-item='bins']", w["x"], w["y"])
+    check(len(pg.evaluate("window.__config.placed()")) == 2 and "open floor" in pg.inner_text("#placeStatus"), "a floor item dropped on a wall isn't placed, and the page says why")
+    shot(pg, "w1_placed_wall")
+    pg.evaluate("window.__config.camera('overview', { instant: true })")
+    # move the screen by dragging it, then turn and remove it from its card
+    s1 = floor_spot(0)
+    s2 = floor_spot(1)
+    pg.mouse.move(s1["screen"]["x"], s1["screen"]["y"] - 40); pg.mouse.down()
+    for i in range(1, 9):
+        pg.mouse.move(s1["screen"]["x"] + (s2["screen"]["x"] - s1["screen"]["x"]) * i / 8, s1["screen"]["y"] - 40 + (s2["screen"]["y"] - s1["screen"]["y"]) * i / 8)
+    pg.mouse.up()
+    moved = pg.evaluate("window.__config.placed()")[0]
+    check(abs(moved["x"] - s1["world"][0]) > 0.1 or abs(moved["y"] - s1["world"][1]) > 0.1, f"dragging a placed item moves it {moved}")
+    check(pg.evaluate("window.__config.state().view") == "overview" and not pg.evaluate("window.__config.state().moving"), "moving an item leaves the camera where it was")
+    shot(pg, "w1_placed")
+    p = pg.evaluate(f"window.__config.screenOf({moved['x']}, {moved['y']}, 1.0)")
+    pg.mouse.click(p["x"], p["y"])
+    check(pg.is_visible("#objectCard") and pg.inner_text("#objectTitle") == "Privacy screen" and pg.inner_text("#objectAction2") == "Remove", "clicking a placed item opens its card, with Turn and Remove")
+    rot0 = pg.evaluate("window.__config.placed()")[0]["rot"]
+    pg.click("#objectAction")
+    check(pg.evaluate("window.__config.placed()")[0]["rot"] == (rot0 + 45) % 360, "Turn 45° turns it")
+    pg.click("#objectAction2")
+    check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub"], "Remove takes it away")
+    # from the keyboard: Enter places an item in view and focuses its card, where keys move, turn and remove it
+    pg.focus("#placeItems button[data-item='chair']")
+    pg.keyboard.press("Enter")
+    chair = pg.evaluate("window.__config.placed()")[-1]
+    check(chair["type"] == "chair" and pg.evaluate("document.activeElement.id") == "objectCard", f"Enter places the chair in view and focuses its card {chair}")
+    pg.keyboard.press("ArrowRight"); pg.keyboard.press("r")
+    after = pg.evaluate("window.__config.placed()")[-1]
+    check(abs(after["x"] - chair["x"]) + abs(after["y"] - chair["y"]) > 0.05 and after["rot"] == (chair["rot"] + 15) % 360, f"the arrow keys move it and R turns it {chair} {after}")
+    pg.keyboard.press("Delete")
+    check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub"], "Delete removes it")
+    # choose, then click: the sharps box on the wall
+    w = pg.evaluate("window.__config.faceWall()")
+    pg.click("#placeItems button[data-item='sharps']")
+    check(pg.locator("#placeItems button[data-item='sharps']").get_attribute("aria-pressed") == "true", "clicking an item waits for a spot")
+    pg.mouse.click(w["x"] + 60, w["y"])
+    check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps"], "then clicking a wall places it there")
+    # links, the summary and Reset
+    code = pg.evaluate("window.__config.code()")
+    pg.goto("about:blank")  # a fresh load: the same page with a new hash would only be a hashchange
+    pg.goto(URL + "#c=" + code)
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps"], "a link restores the placed items")
+    pg.click("#openSummary")
+    pg.wait_for_selector("#summary[open]")
+    check("Placed items" in pg.inner_text("#summaryBody") and "Sharps box" in pg.inner_text("#summaryBody"), "the summary lists the placed items")
+    pg.click("#closeSummary")
+    pg.click("#resetRoom")
+    check(pg.evaluate("window.__config.placed()") == [], "Reset the room removes placed items")
+    set_defaults(pg)
+
     # the options
     go(pg, "W1")
     set_defaults(pg)
@@ -1109,6 +1196,17 @@ with sync_playwright() as p:
     shot(pg, "phone_emergency")
     pg.tap("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+    # placing by touch: tap an item in the sheet, which closes to show the room, then tap the floor
+    pg.tap("#sheet")
+    pg.wait_for_timeout(600)
+    pg.locator("#placeItems button[data-item='bins']").scroll_into_view_if_needed()
+    pg.tap("#placeItems button[data-item='bins']")
+    pg.wait_for_timeout(600)
+    spot = pg.evaluate("""(() => { const c = window.__config, w = c.walkable(), cx = w.reduce((a, p) => a + p[0], 0) / w.length, cy = w.reduce((a, p) => a + p[1], 0) / w.length; return c.screenOf(cx, cy, 0); })()""")
+    closed_sheet = not pg.evaluate("document.getElementById('panel').classList.contains('open')")
+    pg.tap("#c", position={"x": spot["x"], "y": spot["y"]})
+    check(closed_sheet and [q["type"] for q in pg.evaluate("window.__config.placed()")] == ["bins"], f"phone: tapping an item, then the floor, places it {spot}")
+    pg.evaluate("document.getElementById('resetRoom').click()")
     closed = pg.evaluate("document.getElementById('panel').getBoundingClientRect().top")
     pg.tap("#sheet")
     drawn(pg)

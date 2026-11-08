@@ -16,6 +16,7 @@ import { APIS } from "./apis.js";
 import { PACS } from "./pacs.js";
 import { MODES, RoomModes } from "./modes.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
+import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById } from "./placed.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -35,6 +36,7 @@ const stage = (() => {
   try { return new Stage(canvas, tier); } catch (err) { window.cantDraw?.("webgl2"); throw err; }
 })();
 const controls = new OrbitControls(stage.camera, canvas);
+const placement = new Placement(stage); // items the visitor places, room by room
 const state = { room: "W1", view: "overview", hour: STOPS.afternoon };
 let beforePatient = "overview"; // where Return goes from Patient view
 let dirty = true, lastDayHour = STOPS.afternoon;
@@ -156,6 +158,7 @@ async function setRoom(label, { keepView = true } = {}) {
   const room = await stage.load(label, f => { status.textContent = `Loading the room… ${Math.round(f * 100)}%`; });
   if (state.room !== label) return; // another room was chosen while this one loaded
   stage.show(room);
+  placement.show(room);
   apis.setRoom(room);
   rig.setRoom(room.meta);
   if (!room.meta.cameras[state.view]) state.view = "overview";
@@ -460,7 +463,14 @@ $("objectAction").addEventListener("click", e => {
     apis.open(e.currentTarget.dataset.action.slice(5));
   } else if (e.currentTarget.dataset.action === "pacs") {
     pacs.open();
+  } else if (e.currentTarget.dataset.action.startsWith("placed:")) {
+    const found = placement.find(Number(e.currentTarget.dataset.action.slice(7)));
+    if (found) turnPlaced(found.entry, 45);
   }
+});
+$("objectAction2").addEventListener("click", e => {
+  const found = placement.find(Number(e.currentTarget.dataset.action.slice(7)));
+  if (found) removePlaced(found.entry);
 });
 
 function syncUi() {
@@ -472,7 +482,7 @@ function syncUi() {
 }
 
 // ---------------------------------------------------------------- sharing: the room is in the URL
-const specCode = () => encodeSpec(optionData, state, selected);
+const specCode = () => encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room)));
 let rememberTimer = 0;
 function remember() {
   if (!optionData || !window.__configReady) return;
@@ -489,8 +499,9 @@ async function applySpec(spec) {
   Object.assign(selected, spec.selected);
   state.hour = spec.hour;
   state.view = spec.view;
+  placement.set(spec.room, decodePlaced(spec.placed));
   if (spec.room !== state.room || !stage.current) await setRoom(spec.room);
-  else { applyAll(); rig.go(spec.view, { instant: true }); }
+  else { placement.show(stage.current); applyAll(); rig.go(spec.view, { instant: true }); }
   setTime(spec.hour);
   syncUi();
 }
@@ -535,9 +546,11 @@ $("presetForm").addEventListener("submit", e => {
 $("resetRoom").addEventListener("click", () => {
   if (pacs.active) pacs.exit();
   endIdea();
+  placement.set(state.room, []);
+  placement.show(stage.current);
   showSelections(Object.fromEntries(allGroups().map(g => [g.id, g.default]))); // also ends any room mode
   modes.leave();
-  presetSay("The room is back to its defaults. The view and the time stay as they were.");
+  presetSay("The room is back to its defaults, with no placed items. The view and the time stay as they were.");
   say("Room reset.");
 });
 
@@ -557,7 +570,7 @@ async function openSummary() {
   const dialog = $("summary");
   const picture = URL.createObjectURL(await captureBlob());
   const roomLabel = rig.meta.isolation ? `Isolation room ${state.room}, with ante room and toilet` : `Standard room ${state.room}`;
-  const body = summaryContent(optionData, selected, state.room, { roomLabel, picture, code: specCode(), theme: currentTheme()?.label });
+  const body = summaryContent(optionData, selected, state.room, { roomLabel, picture, code: specCode(), theme: currentTheme()?.label, placed: placement.list(state.room).map(p => itemById(p.type).label) });
   $("summaryBody").replaceChildren(body);
   $("copyStatus").textContent = "";
   dialog.showModal();
@@ -688,11 +701,23 @@ const OBJECT_DETAILS = {
 };
 
 function showObjectCard(info, x, y) {
-  const card = $("objectCard"), action = $("objectAction");
+  const card = $("objectCard"), action = $("objectAction"), action2 = $("objectAction2");
   $("objectTitle").textContent = info.title;
   $("objectDescription").textContent = info.description;
   action.hidden = !info.action;
   action.dataset.action = info.action || "";
+  // a placed item: turn it (on the floor) and remove it, by button or, with the card focused, by key
+  const placedEntry = info.action?.startsWith("placed:") ? placement.find(Number(info.action.slice(7)))?.entry : null;
+  card.dataset.placed = placedEntry ? String(placedEntry.uid) : "";
+  action2.hidden = !placedEntry;
+  action2.dataset.action = info.action || "";
+  if (placedEntry) {
+    const onFloor = itemById(placedEntry.type).on === "floor";
+    action.hidden = !onFloor;
+    action.textContent = "Turn 45°";
+    action2.textContent = "Remove";
+    $("objectDescription").textContent = `${info.description} Drag it to move it. With this card focused, the arrow keys move it${onFloor ? ", R turns it" : ""} and Delete removes it.`;
+  }
   if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
   else if (info.action === "soundAlert") action.textContent = "Preview sound alert";
   else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";
@@ -717,6 +742,7 @@ canvas.addEventListener("pointerdown", e => { pressAt = [e.clientX, e.clientY]; 
 canvas.addEventListener("pointerup", e => {
   if (!pressAt || Math.hypot(e.clientX - pressAt[0], e.clientY - pressAt[1]) > 6) return;
   pressAt = null;
+  if (placing) { placeAtClick(e.clientX, e.clientY); return; }
   pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(pointer, stage.camera);
   // Only the nearest solid object responds, so clicks don't pass through walls or equipment.
@@ -741,6 +767,230 @@ canvas.addEventListener("pointerup", e => {
   }
   showObjectCard(info, e.clientX, e.clientY);
 });
+
+// ---------------------------------------------------------------- placing items: drag from the panel onto the room (placed.js)
+let placing = null; // an item chosen from the list and waiting for a click or tap on the room
+const placeSay = text => { $("placeStatus").textContent = text; };
+const isPhone = () => matchMedia("(max-width: 820px)").matches;
+function rayAt(x, y) {
+  pointer.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
+  ray.setFromCamera(pointer, stage.camera);
+  return ray;
+}
+const locateAt = (type, x, y) => placement.locate(rayAt(x, y), stage.current, type, stage.camera);
+const whyNot = type => (itemById(type).on === "wall"
+  ? "That isn't a clear piece of wall at the right height. Try another spot on a wall."
+  : "That isn't open floor inside the room. Try another spot.");
+
+function setPlacing(type) {
+  placing = type;
+  $("placeItems").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.item === type)));
+  document.body.classList.toggle("placing", !!type);
+  if (!type) return;
+  const item = itemById(type);
+  placeSay(`Now click or tap where the ${item.label.toLowerCase()} goes${item.on === "wall" ? ", on a wall" : ""}. Esc cancels.`);
+  if (isPhone()) setSheet(false); // the sheet would cover the room
+}
+
+function placeItem(type, at) {
+  const entry = placement.add(stage.current, type, at.x, at.y, at.rot);
+  if (!entry) { placeSay(`This room already has ${MAX_PLACED} placed items. Remove one to place another.`); return null; }
+  stage.renderer.shadowMap.needsUpdate = true;
+  invalidate();
+  remember();
+  placeSay(`Placed the ${itemById(type).label.toLowerCase()}.`);
+  say(`${itemById(type).label} placed.`);
+  return entry;
+}
+
+function placeAtClick(x, y) {
+  const type = placing, at = locateAt(type, x, y);
+  if (!at.ok) { placeSay(whyNot(type)); return; }
+  setPlacing(null);
+  placeItem(type, at);
+}
+
+/** From the keyboard: straight into the room, somewhere in view, with its card open to move it by key. */
+function placeInView(type) {
+  const w = rig.visible.w, h = innerHeight;
+  for (const [fx, fy] of [[0.5, 0.62], [0.5, 0.5], [0.35, 0.6], [0.65, 0.6], [0.5, 0.75], [0.3, 0.45], [0.7, 0.45], [0.5, 0.35]]) {
+    const at = locateAt(type, w * fx, h * fy);
+    if (!at.ok) continue;
+    const entry = placeItem(type, at);
+    if (entry) showPlacedCard(entry);
+    return;
+  }
+  setPlacing(type);
+  placeSay(`There's no ${itemById(type).on === "wall" ? "clear wall" : "open floor"} in the middle of this view. Click or tap where it goes, or choose another view first.`);
+}
+
+function showPlacedCard(entry) {
+  const p = entry.node.getWorldPosition(new THREE.Vector3()).project(stage.camera);
+  showObjectCard(entry.node.userData.itemInfo, ((p.x + 1) / 2) * innerWidth, ((1 - p.y) / 2) * innerHeight);
+}
+
+function removePlaced(entry) {
+  const found = placement.find(entry.uid);
+  if (!found) return;
+  placement.remove(found.label, entry);
+  $("objectCard").hidden = true;
+  canvas.focus({ preventScroll: true });
+  stage.renderer.shadowMap.needsUpdate = true;
+  invalidate();
+  remember();
+  placeSay(`Removed the ${itemById(entry.type).label.toLowerCase()}.`);
+  say(`${itemById(entry.type).label} removed.`);
+}
+
+function turnPlaced(entry, degrees) {
+  if (itemById(entry.type).on !== "floor") return; // a wall item faces out from its wall
+  placement.move(entry, entry.x, entry.y, (entry.rot + degrees + 360) % 360);
+  stage.renderer.shadowMap.needsUpdate = true;
+  invalidate();
+  remember();
+}
+
+/** Arrow keys on a placed item's card: 10 cm at a time, across the screen as you see it; a wall item slides along its wall. */
+function nudgePlaced(entry, dx, dy) {
+  const item = itemById(entry.type), f = stage.camera.getWorldDirection(new THREE.Vector3());
+  const fwd = new THREE.Vector2(f.x, -f.z).normalize(), right = new THREE.Vector2(fwd.y, -fwd.x);
+  let x = entry.x, y = entry.y;
+  if (item.on === "floor") {
+    x += (right.x * dx + fwd.x * dy) * 0.1; y += (right.y * dx + fwd.y * dy) * 0.1;
+    if (!inside(x, y, stage.current.meta.walkable)) { placeSay("That's the edge of the open floor."); return; }
+  } else {
+    if (!dx) return;
+    const t = (entry.rot * Math.PI) / 180, along = new THREE.Vector2(Math.cos(t), Math.sin(t)); // the wall's own direction, in plan
+    const sign = Math.sign(along.dot(right)) || 1;
+    x += along.x * sign * dx * 0.1; y += along.y * sign * dx * 0.1;
+    if (!placement.onWall(stage.current, entry, x, y)) { placeSay("That's the end of the clear wall."); return; }
+  }
+  placement.move(entry, x, y);
+  stage.renderer.shadowMap.needsUpdate = true;
+  invalidate();
+  remember();
+}
+
+$("objectCard").addEventListener("keydown", e => {
+  const found = placement.find(Number($("objectCard").dataset.placed || 0));
+  if (!found || $("objectCard").hidden) return;
+  const { entry } = found;
+  if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removePlaced(entry); return; }
+  if (e.key === "r" || e.key === "R") { e.preventDefault(); turnPlaced(entry, e.shiftKey ? -15 : 15); return; }
+  const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+  if (!d) return;
+  e.preventDefault();
+  nudgePlaced(entry, ...d);
+});
+
+// the ghost that follows a drag from the list: the item itself, see-through, red where it can't go
+function makeGhost(type) {
+  const g = itemById(type).build();
+  g.traverse(n => {
+    if (!n.isMesh) return;
+    n.material = n.material.clone();
+    Object.assign(n.material, { transparent: true, opacity: 0.55, depthWrite: false });
+    n.castShadow = false;
+  });
+  g.visible = false;
+  stage.current.root.add(g);
+  return g;
+}
+function showGhost(g, type, at) {
+  g.visible = at.x !== undefined;
+  if (g.visible) {
+    const item = itemById(type);
+    g.position.copy(W2T(at.x, at.y, item.on === "wall" ? item.height : 0));
+    g.rotation.y = ((at.rot ?? 0) * Math.PI) / 180;
+    g.traverse(n => { if (n.isMesh) n.material.emissive?.set(at.ok ? 0x000000 : 0x8a1c12); });
+  }
+  invalidate();
+}
+function dropGhost(g) {
+  g.removeFromParent();
+  g.traverse(n => { if (n.isMesh) { n.material.dispose(); n.geometry.dispose(); } });
+  invalidate();
+}
+
+function buildPlaceItems() {
+  $("placeItems").replaceChildren(...ITEMS.map(item => {
+    const b = el("button", { type: "button" }, el("span", { textContent: item.label }), el("small", { textContent: item.on === "wall" ? "On a wall" : "On the floor" }));
+    b.dataset.item = item.id;
+    b.setAttribute("aria-pressed", "false");
+    let drag = null;
+    b.addEventListener("pointerdown", e => {
+      if (e.button !== 0 || !stage.current) return;
+      drag = { x: e.clientX, y: e.clientY, id: e.pointerId, ghost: null, at: null };
+      b.setPointerCapture(e.pointerId);
+    });
+    b.addEventListener("pointermove", e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!drag.ghost) {
+        if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+        drag.ghost = makeGhost(item.id);
+        setPlacing(null);
+        document.body.classList.add("dragging-item");
+        if (isPhone()) setSheet(false);
+      }
+      drag.at = document.elementFromPoint(e.clientX, e.clientY) === canvas ? locateAt(item.id, e.clientX, e.clientY) : { ok: false };
+      showGhost(drag.ghost, item.id, drag.at);
+    });
+    const end = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag;
+      drag = null;
+      document.body.classList.remove("dragging-item");
+      if (!d.ghost) return; // no drag: it's a click
+      dropGhost(d.ghost);
+      b.dataset.dragged = "1";
+      if (e.type !== "pointerup") return;
+      if (d.at?.ok) placeItem(item.id, d.at);
+      else if (document.elementFromPoint(e.clientX, e.clientY) === canvas) placeSay(whyNot(item.id));
+    };
+    b.addEventListener("pointerup", end);
+    b.addEventListener("pointercancel", end);
+    b.addEventListener("click", e => {
+      if (b.dataset.dragged) { delete b.dataset.dragged; return; } // the click that ends a drag
+      if (e.detail === 0) placeInView(item.id); // from the keyboard
+      else setPlacing(placing === item.id ? null : item.id);
+    });
+    return b;
+  }));
+}
+addEventListener("keydown", e => { if (e.key === "Escape" && placing) { setPlacing(null); placeSay("Placing cancelled."); } });
+
+// a placed item drags to a new spot; this runs before the camera's own controls see the press
+let moving = null;
+addEventListener("pointerdown", e => {
+  if (e.target !== canvas || e.button !== 0 || placing || !stage.current || apis.active) return;
+  const entry = placement.hit(rayAt(e.clientX, e.clientY), stage.current);
+  if (!entry) return;
+  moving = { entry, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, controls: controls.enabled };
+  controls.enabled = false;
+}, true);
+addEventListener("pointermove", e => {
+  if (!moving || e.pointerId !== moving.id) return;
+  if (!moving.moved && Math.hypot(e.clientX - moving.x, e.clientY - moving.y) < 6) return;
+  moving.moved = true;
+  document.body.classList.add("dragging-item");
+  const at = locateAt(moving.entry.type, e.clientX, e.clientY);
+  if (at.ok) { placement.move(moving.entry, at.x, at.y, itemById(moving.entry.type).on === "wall" ? at.rot : moving.entry.rot); invalidate(); }
+}, true);
+const endMove = e => {
+  if (!moving || e.pointerId !== moving.id) return;
+  const m = moving;
+  moving = null;
+  controls.enabled = m.controls;
+  document.body.classList.remove("dragging-item");
+  if (!m.moved) return; // a click: the card opens as for anything else
+  pressAt = null;
+  stage.renderer.shadowMap.needsUpdate = true;
+  invalidate();
+  remember();
+  say(`${itemById(m.entry.type).label} moved.`);
+};
+addEventListener("pointerup", endMove, true);
+addEventListener("pointercancel", endMove, true);
 
 // ---------------------------------------------------------------- drawing: only when something has changed
 let lastMovingDraw = 0;
@@ -853,6 +1103,23 @@ window.__config = {
   },
   setMode: (name, opts) => modes.set(name, opts),
   presets: () => readPresets(),
+  walkable: () => rig.meta.walkable,
+  placed: () => placement.list(state.room).map(({ type, x, y, rot }) => ({ type, x: +x.toFixed(2), y: +y.toFixed(2), rot })),
+  screenOf: (x, y, z) => { const v = W2T(x, y, z).project(stage.camera); return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight }; },
+  /** Stand 2.2 m in front of the room's longest plain wall and return where a point on it, 1.2 m up, is on screen. */
+  faceWall: () => {
+    const m = rig.meta, run = m.wall_runs.filter(r => !r.door).map(r => ({ r, len: Math.hypot(r.b[0] - r.a[0], r.b[1] - r.a[1]) })).sort((a, b) => b.len - a.len)[0].r;
+    const dx = run.b[0] - run.a[0], dy = run.b[1] - run.a[1], len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len; // into the room
+    const mx = (run.a[0] + run.b[0]) / 2, my = (run.a[1] + run.b[1]) / 2;
+    rig.go("overview", { instant: true });
+    stage.camera.position.copy(W2T(mx + nx * 2.2, my + ny * 2.2, 1.5));
+    controls.target.copy(W2T(mx, my, 1.25));
+    controls.update();
+    stage.camera.updateMatrixWorld();
+    invalidate();
+    const v = W2T(mx + nx * 0.01, my + ny * 0.01, 1.2).project(stage.camera);
+    return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight };
+  },
   addonShown: id => !!stage.current.addons?.[id]?.visible,
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
@@ -905,7 +1172,9 @@ async function boot() {
   // the walkthrough links each configurable room here with ?room=W1 or ?room=W3
   if (!fromLink && optionData.rooms.includes(query.get("room"))) state.room = query.get("room");
   renderPresets();
+  buildPlaceItems();
   if (fromLink) {
+    placement.set(fromLink.room, decodePlaced(fromLink.placed));
     Object.assign(selected, fromLink.selected);
     state.room = fromLink.room; state.view = fromLink.view; state.hour = fromLink.hour;
   }
