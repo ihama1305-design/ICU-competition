@@ -17,6 +17,7 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 - Walls, counters and the facade stop you. Doors and glass fronts let you through.
 - The plan in the corner shows where you are. Click it to jump.
 - Click anything to name it and see how sure the model is about it.
+- If the browser can't draw 3D (no WebGL 2, or too old for the way the page loads its 3D code), this page and the configurator say so and link to the pictures, instead of loading for ever.
 
 ## Configure a room
 
@@ -24,6 +25,7 @@ The [configurator](https://ihama1305-design.github.io/ICU-competition/configurat
 
 - **Rooms:** isolation room W1 with its ante room, or standard room W3.
 - **Views:** Overview, Family zone, Entrance, From the bed, Head turned, Window and Dollhouse. Drag to look around, or press <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>+</kbd> <kbd>-</kbd>. There's also a cinematic tour that starts and ends at the Dollhouse.
+- **Patient view:** the camera moves to the pillow and stays there. Drag or use the arrow keys to turn your head, as far as a head can turn, from your own body up to the ceiling. <kbd>+</kbd> <kbd>-</kbd> narrow or widen what you take in. **Return**, or <kbd>Esc</kbd>, goes back to the view you came from.
 - **Themes:** Calm Clinical, Desert Sanctuary and Family Suite. Anything can still be changed afterwards.
 - **Options:** paint, feature walls, floors, a sky ceiling, four lighting schemes, smart glass, blinds, TV, seating, an aquarium, a patio and palms. It's an adult ICU room, so there are no toys or games console. Earlier links that set them still open, without those items.
 - **Day and night:** the sun follows a real path at Abu Dhabi's latitude.

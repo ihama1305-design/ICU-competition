@@ -28,9 +28,13 @@ const canvas = $("c"), panel = $("panel");
 const query = new URLSearchParams(location.search);
 // phones and small screens skip bloom and glass transmission, and get fewer lights
 const tier = query.get("tier") || (matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 600 ? "low" : "high");
-const stage = new Stage(canvas, tier);
+const stage = (() => {
+  // the page checked for WebGL 2 before loading, but a context can still be refused (a blocklisted GPU, too many open tabs)
+  try { return new Stage(canvas, tier); } catch (err) { window.cantDraw?.("webgl2"); throw err; }
+})();
 const controls = new OrbitControls(stage.camera, canvas);
 const state = { room: "W1", view: "overview", hour: STOPS.afternoon };
+let beforePatient = "overview"; // where Return goes from Patient view
 let dirty = true, lastDayHour = STOPS.afternoon;
 const invalidate = () => { dirty = true; };
 const rig = new Rig(stage.camera, controls, W2T, invalidate);
@@ -42,11 +46,12 @@ controls.addEventListener("change", invalidate);
 rig.onView = (name, isDoll) => {
   // going up: the ceiling goes first, so the camera doesn't pass through it. Coming down: it returns on arrival
   if (isDoll) stage.setCeiling(false);
+  if (name === "patient" && state.view !== "patient") beforePatient = state.view;
   state.view = name;
   syncViews();
   remember();
   describe();
-  say(`${viewLabel(name)} view.`);
+  say(name === "patient" ? "Patient view, from the pillow. Drag or use the arrow keys to turn. Escape goes back." : `${viewPhrase(name)}.`);
 };
 rig.onArrive = name => {
   if (name !== "dollhouse") stage.setCeiling(true);
@@ -85,15 +90,27 @@ function syncViews() {
   pressed($("views"), state.view);
   const bathroom = $("views").querySelector('[data-value="bathroom"]');
   if (bathroom) bathroom.hidden = !!rig.meta && !rig.meta.cameras.bathroom;
+  const leave = $("leavePatient");
+  leave.hidden = state.view !== "patient";
+  if (!leave.hidden) leave.textContent = `Return to ${viewLabel(returnView())}`;
+}
+// the view Return goes to: the one before Patient view, if this room has it
+const returnView = () => (rig.meta?.cameras[beforePatient] && beforePatient !== "patient" ? beforePatient : "overview");
+function leavePatient() {
+  tour.stop();
+  rig.go(returnView());
+  remember();
 }
 
 // what the 3D view shows, for anyone who can't see it
 const viewLabel = name => $("views").querySelector(`[data-value="${name}"]`).textContent;
+const viewPhrase = name => (/ view$/i.test(viewLabel(name)) ? viewLabel(name) : `${viewLabel(name)} view`);
 const say = text => { $("announce").textContent = text; };
 function describe() {
   if (!rig.meta) return;
   const room = rig.meta.isolation ? `isolation room ${state.room}` : `standard room ${state.room}`;
-  canvas.setAttribute("aria-label", `3D view of ${room}, ${viewLabel(state.view)} view, ${clock(state.hour)} solar time. Drag or use the arrow keys to look around, and plus and minus to move closer.`);
+  const moves = state.view === "patient" ? "Drag or use the arrow keys to turn your head, and plus and minus to narrow or widen what you see. Escape goes back." : "Drag or use the arrow keys to look around, and plus and minus to move closer.";
+  canvas.setAttribute("aria-label", `3D view of ${room}, ${viewPhrase(state.view)}, ${clock(state.hour)} solar time. ${moves}`);
 }
 
 const clock = h => {
@@ -221,7 +238,9 @@ addEventListener("pointerup", e => {
 });
 addEventListener("pointercancel", () => { swipeFrom = null; });
 
+$("leavePatient").addEventListener("click", leavePatient);
 canvas.addEventListener("keydown", e => {
+  if (e.key === "Escape" && state.view === "patient") { e.preventDefault(); leavePatient(); return; }
   const s = 0.09, map = { ArrowLeft: [s, 0], ArrowRight: [-s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] }[e.key];
   const zoom = { "+": 0.88, "=": 0.88, "-": 1.14, _: 1.14 }[e.key];
   if (!map && !zoom) return;
@@ -704,6 +723,9 @@ window.__config = {
     return { tier, size: [innerWidth, innerHeight], ratio: stage.renderer.getPixelRatio(), frames: times.length, medianMs: +times[times.length >> 1].toFixed(1), p95Ms: +times[Math.floor(times.length * 0.95)].toFixed(1), drawCalls: info.render.calls, triangles: info.render.triangles, programs: info.programs.length, textures: info.memory.textures };
   },
   eye: () => rig.worldEye(),
+  /** Which way the camera faces, as a model-coordinate unit vector. */
+  look: () => { const d = stage.camera.getWorldDirection(new THREE.Vector3()); return { x: d.x, y: -d.z, z: d.y }; },
+  hfov: () => rig.hfov,
   inRoom: () => { const e = rig.worldEye(); return inside(e.x, e.y, rig.meta.walkable); },
   renderNow: () => { rig.update(performance.now()); },
   invalidate,
