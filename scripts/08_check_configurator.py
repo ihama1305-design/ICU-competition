@@ -499,7 +499,10 @@ with sync_playwright() as p:
     check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps"], "a link restores the placed items")
     pg.click("#openSummary")
     pg.wait_for_selector("#summary[open]")
-    pg.wait_for_function("document.getElementById('summaryBody').textContent.length > 100", timeout=120000)  # it fills in once its picture is taken
+    try:  # it fills in once its picture is taken, replacing what an earlier summary showed
+        pg.wait_for_function("document.getElementById('summaryBody').textContent.includes('Sharps box')", timeout=120000)
+    except Exception:
+        pass
     check("Placed items" in pg.inner_text("#summaryBody") and "Sharps box" in pg.inner_text("#summaryBody"), "the summary lists the placed items")
     pg.click("#closeSummary")
     pg.click("#resetRoom")
