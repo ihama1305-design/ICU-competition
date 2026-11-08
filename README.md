@@ -24,8 +24,8 @@ The [configurator](https://ihama1305-design.github.io/ICU-competition/configurat
 
 - **Rooms:** isolation room W1 with its ante room, or standard room W3.
 - **Views:** Overview, Family zone, Entrance, From the bed, Head turned, Window and Dollhouse. Drag to look around, or press <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>+</kbd> <kbd>-</kbd>. There's also a cinematic tour that starts and ends at the Dollhouse.
-- **Themes:** Calm Clinical, Desert Sanctuary, Paediatric Play and Family Suite. Anything can still be changed afterwards.
-- **Options:** paint, feature walls, floors, a sky ceiling, four lighting schemes, smart glass, blinds, TV, console, toys, seating, an aquarium, a patio and palms.
+- **Themes:** Calm Clinical, Desert Sanctuary and Family Suite. Anything can still be changed afterwards.
+- **Options:** paint, feature walls, floors, a sky ceiling, four lighting schemes, smart glass, blinds, TV, seating, an aquarium, a patio and palms. It's an adult ICU room, so there are no toys or games console. Earlier links that set them still open, without those items.
 - **Day and night:** the sun follows a real path at Abu Dhabi's latitude.
 - **Share:** the link holds the exact room. The summary lists every choice with its clinical notes, and you can save an image.
 
@@ -35,7 +35,7 @@ To add an option, edit [`scripts/site/configurator/options.json`](scripts/site/c
 
 ## Ventilation concept
 
-The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/) shows supply, return and exhaust grilles for the floor, with the air-change and pressure basis for each kind of room. **It's concept work, not SSMC's mechanical design:** the drawings show no grilles, ducts or air data. The plan, the walkthrough and the configurator all read the same list, so they can't disagree.
+The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/) shows supply, return and exhaust grilles for the floor, with the air-change and pressure basis for each kind of room. **It's concept work, not SSMC's mechanical design:** the drawings show no grilles, ducts or air data. The grilles are hidden in the walkthrough, the renders and the configurator for now, so the plan is the only place they show. The model still builds them, hidden, from the same list.
 
 ## Renders
 
@@ -44,7 +44,7 @@ The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventil
 | ![Whole floor](renders/aerial.png) | ![West wing cutaway](renders/aerial_close.png) |
 | The whole floor with the ceiling off | Close cutaway of the west wing |
 | ![Bedside](renders/bedside.png) | ![Nurse station](renders/corridor.png) |
-| At the bedside (screens show made-up waveforms) | The central nurse station from the corridor |
+| At the bedside (made-up readings, each screen marked SIMULATED) | The central nurse station from the corridor |
 | ![Observation window](renders/observation.png) | ![Top view](renders/plan.png) |
 | Into a patient room through an observation window | Top view |
 | ![Isolation room](renders/iso_room.png) | ![Bed and window](renders/iso_window.png) |

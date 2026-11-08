@@ -456,6 +456,12 @@ async function applySpec(spec) {
   syncUi();
 }
 
+/** What to say when a link asked for options that aren't offered any more. */
+const leftOut = labels => {
+  const list = labels.length > 1 ? `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}` : labels[0];
+  return `This link included ${list}, which the configurator no longer offers, so ${labels.length > 1 ? "they're" : "it's"} left out.`;
+};
+
 function shareLink() { return `${location.origin}${location.pathname}#c=${specCode()}`; }
 
 // ---------------------------------------------------------------- summary and saving a picture
@@ -495,7 +501,7 @@ $("copyLink").addEventListener("click", async () => {
 $("themes").addEventListener("click", e => { const b = e.target.closest("button"); if (b) applyTheme(b.dataset.value); });
 addEventListener("hashchange", () => {
   const spec = decodeSpec(optionData, location.hash);
-  if (spec && specCode() !== location.hash.slice(3)) applySpec(spec).catch(fail);
+  if (spec && specCode() !== location.hash.slice(3)) applySpec(spec).then(() => { if (spec.dropped.length) $("roomStatus").textContent = leftOut(spec.dropped); }).catch(fail);
 });
 
 // ---------------------------------------------------------------- the cinematic tour
@@ -737,6 +743,7 @@ async function boot() {
   setTime(state.hour);
   window.__configStage = "drawing the first frame";
   if (location.hash && !fromLink) $("roomStatus").textContent = "That link's code couldn't be read, so this is the default room.";
+  else if (fromLink?.dropped.length) $("roomStatus").textContent = leftOut(fromLink.dropped);
   $("load").hidden = true;
   requestAnimationFrame(frame);
   requestAnimationFrame(() => requestAnimationFrame(() => {
