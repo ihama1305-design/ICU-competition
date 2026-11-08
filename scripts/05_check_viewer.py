@@ -22,6 +22,17 @@ def check(ok, msg):
         fail.append(msg)
 
 
+def camera_still(pg):
+    """Wait until the camera stops: a view change flies in over a second, longer on a busy machine."""
+    last = None
+    for _ in range(60):
+        c = pg.evaluate("window.__camera()")
+        if last and max(abs(a - b) for a, b in zip(c, last)) < 1e-4:
+            return
+        last = c
+        pg.wait_for_timeout(250)
+
+
 with sync_playwright() as pw:
     b = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
     pg = b.new_page(viewport={"width": 1366, "height": 820})
@@ -70,7 +81,7 @@ with sync_playwright() as pw:
     check(end[0] > face_x + 0.1, "walked through the facade")
 
     # drop the person by dragging the toolbar button onto open corridor floor (top view)
-    pg.evaluate("window.__view('top')"); pg.wait_for_timeout(800)
+    pg.evaluate("window.__view('top')"); pg.wait_for_timeout(800); camera_still(pg)
     tx, ty = spec["cameras"].get("corridor_eye", [22.3, 27.0])
     sx, sy = pg.evaluate(f"window.__project({tx}, {ty}, 0)")
     bb = pg.locator("#drop").bounding_box()
