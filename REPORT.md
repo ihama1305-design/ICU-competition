@@ -34,6 +34,7 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
 | Facade: 700 mm upstand, curtain wall, external fins | Medium | `TOW +700 AFFL` and the facade lines. Mullion and fin spacing are approximate |
 | Fire extinguisher cabinets: position and width | High | Drawn outlines on `A-GENM`, with labelled leaders pointing to them. 09 checks the spec against the sheet |
 | Fire extinguisher cabinets: height, door, sign and the extinguisher itself | Low | Not on the sheets. See [Fire extinguisher cabinets](#fire-extinguisher-cabinets) |
+| Ventilation grilles, air changes and pressures | Low | **Concept, not SSMC's design.** The sheets show none of it. See [Ventilation concept](#ventilation-concept) |
 | Ceiling height 2.85 m | **Low** | Not on these sheets. One number in the spec |
 | Ceiling panel layout | **Low** | Not on these sheets. A regular 2.4 m grid, plus nine panels where that grid leaves floor in the dark (`lighting.gap_fill` in the spec) and four over desk chairs it leaves dim (`lighting.desk_fill`). None of their positions come from the drawing |
 | Finishes and colours (LIN36/LIN37 vinyl, wall paint) | Low | Finish codes are on the plan. The colours are assumed |
@@ -57,6 +58,7 @@ and measures 359.25 pt on the sheet, so the sheet is not printed at true 1:100. 
   - Corridor handrails, coved skirting, lay-in 600 mm ceiling grid in corridors and plain ceilings in patient rooms
   - Crash cart and stretcher alcoves
   - Four recessed fire extinguisher cabinets, where the drawing has them
+  - A concept set of ventilation grilles on the ceilings, not from the drawing
 - **Lighting:**
   - 179 LED ceiling panels, each a real area light in the renders
   - Afternoon sun from the west-south-west, physical sky
@@ -89,6 +91,32 @@ This only counts the four cabinets on this sheet, so it overstates some distance
 **How they sit in the model.** The sheet's walls stop either side of each cabinet, with a small void behind, so each cabinet comes with a wall panel from floor to ceiling that closes the gap. Before this, the corridor looked through a slot into the void, and the rail code treated the void as corridor and ran rail inside it. That rail is gone, and corridor rail now stops 0.15 m short of each cabinet so it can't block the door. 09 also checks that the space in front of each cabinet is clear of walls, counters, door openings, handrails, alcove equipment and the door swings drawn on the sheet.
 
 The configurator's removed safety work, described under [Configurator redesign summary](#configurator-redesign-summary-november-2026), mentions a corridor hose cabinet with an extinguisher. That isn't active, and it isn't related to these.
+
+### Ventilation concept
+
+**This is concept work, not SSMC's mechanical design.** All four sheets were searched: they have no mechanical layers and no grilles, ducts or air data. The only related marks are two `VENTILATION SHAFT` labels and a `RISER` on this sheet, shown as such on the plan. It hasn't been reviewed by a mechanical engineer or infection control, and it isn't a compliance finding.
+
+The [plan](https://ihama1305-design.github.io/ICU-competition/ventilation/) has the full table of air changes, pressures and grille counts by room type.
+
+**One source.** `scripts/ventlib.py` places grilles by rule from each room's type, using `ventilation` in the spec, with overrides there. `02` writes them to `build/vents.json`. The Blender scene, the configurator's rooms and the 2D plan all read that, so they can't disagree, and `09` compares the meshes with the list. The plan is drawn from the derived plan geometry and never from the sheet.
+
+| Assumption | Basis |
+|---|---|
+| ICU room: 6 air changes, 2 outdoor, no set pressure | ASHRAE 170-2008 Table 7.1. HFG Part E (2026) repeats it |
+| Isolation room: 12 air changes, 2 outdoor, negative, no return air | The same two sources |
+| Isolation ante room and toilet: 10 air changes, all exhausted | ASHRAE 170-2008 Table 7.1 |
+| Pressures: room −10 Pa, ante room −5 Pa, toilet −15 Pa | Dubai DHA Part D, used as an assumption. HFG Part E recommends 10 Pa for the room |
+| Exhaust near the bed head, supply by the door | HFG Part E: "over the patient head or at low level near the head" |
+| Nurse station, offices and staff rooms: 6 air changes | **Assumed.** No row in the table read, and HFG Part E sends them to ASHRAE 62.1, which wasn't read |
+| Grille positions, sizes and capacities, corridor spacing, clearances | **Assumed** |
+
+**What wasn't read.** Abu Dhabi's Department of Health governs this hospital, and its guidance wasn't found. ASHRAE 170 was read in its 2008 edition, and the current 170-2025 is paywalled, so its values may differ. The FGI Guidelines weren't read directly. Sources are linked on the plan page.
+
+**Isolation rooms.** Exhaust grilles sit 0.4 to 0.5 m from the bed head, as near as the pendant allows, and supply is about 4.3 m away by the door. A low-level exhaust is the guidance's alternative, and it isn't modelled. Air would need to go directly outdoors on its own system with pressure monitoring and an alarm, and none of that is designed or shown. No duct mains are drawn.
+
+**In the 3D model** the grilles are flush with the ceiling, in the Ceiling collection, so they go with the ceiling in cutaways and the dollhouse. `09` measures them from the meshes against light panels, exam lights, pendants, curtain tracks and walls, and against W3's different bed layout and the lighting fixtures in the configurator.
+
+**W1 and W3 have one set of grilles.** `07` leaves the floor's grilles out of the configurator's rooms and passes on their positions, and the existing `ventilation` option draws them. No option code changed.
 
 ## Observations relevant to the competition
 

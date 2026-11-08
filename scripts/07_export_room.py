@@ -45,6 +45,7 @@ INSIDE = wkt.loads(GEO["inside_glass"])
 SPACES = [{"names": s["names"], "poly": wkt.loads(s["poly"])} for s in GEO["spaces"]]
 HEADERS = [Polygon(h["poly"]).buffer(0) for h in plan["headers"]]
 OUTLINE = Polygon(spec["plan"]["outline"]["points"])
+VENTS = json.load(open(os.path.join(ROOT, "build", "vents.json")))["vents"]
 
 # floor-wide solids, cut with a boolean; everything else in the scene is made of separate parts, kept or dropped whole
 CUT_WIDE = re.compile(r"^(walls|wall_caps|slab|facade_upstand|facade_sill|facade_glass|facade_transom_.*)$")
@@ -341,7 +342,8 @@ def export_room(label, cfg):
             continue
         nm = ob.name
         # the nook's desk and chair too: the nook isn't part of the room
-        if re.match(r"room\d\d_|obs_(ws|chair)_", nm) or nm in ("room_feature_walls", "floor_rooms", "facade_blinds"):
+        # the floor's grilles too: the page draws this room's from its data, as the `ventilation` option, so there's only one set
+        if re.match(r"room\d\d_|obs_(ws|chair)_|vent_", nm) or nm in ("room_feature_walls", "floor_rooms", "facade_blinds"):
             remove(ob)
         elif CUT_WIDE.match(nm):
             cut(ob, wide)
@@ -509,6 +511,7 @@ def export_room(label, cfg):
         "label": label, "isolation": iso, "ceiling": H, "room": [round(v, 3) for v in room.bounds],
         "walkable": [[round(x, 3), round(y, 3)] for x, y in walk.exterior.coords[:-1]],
         "cameras": cfg["cameras"], "via": cfg["via"], "panels": panels,
+        "vents": [v for v in VENTS if included.buffer(0.01).contains(Point(v["at"]))],
         "bed": {"head": head.round(3).tolist(), "foot": foot.round(4).tolist(), "eye": (head + foot * 0.74).round(3).tolist() + [1.3]},
         "facade": {"at": gc.round(3).tolist(), "normal": n.round(4).tolist()},
         "feature": {"length": L, "height": fw["height"]}, "fixtures": cfg["fixtures"], "wall_runs": runs,

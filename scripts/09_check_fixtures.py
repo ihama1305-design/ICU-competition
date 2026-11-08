@@ -6,7 +6,9 @@ standing in walls, so the geometry is measured from the meshes in output/icu.ble
 Extinguisher cabinets: each is where sheet A1104-a draws it; its plate covers the gap the sheet leaves in the wall, with both
 ends on wall; the corridor in front is clear of walls, counters, doors, handrails and alcove equipment; the cabinet's body stays
 in its void and out of any other room; the extinguisher is within the height limits in the spec; and every labelled room can
-reach one. These are measurements of a concept, not a compliance finding.
+reach one. Ventilation grilles: the meshes match build/vents.json, which the 2D plan draws from; each is on the ceiling of a room, clear of walls,
+light panels, exam lights, pendants, curtain tracks and the configurator's own fixtures and layout; and each kind of room has the
+grilles its type calls for, with an isolation room's exhaust nearest the bed head. These are measurements of a concept, not a compliance finding.
 """
 import json
 import os
@@ -202,9 +204,141 @@ for v, nm, at in labelled[:10]:
 unreachable = [nm for v, nm, _ in labelled if not np.isfinite(v)]
 check(len(unreachable) == 0 or all(nm in ("RISER", "ELEC", "FHC") or nm.startswith("L4") for nm in unreachable), f"every occupied room can walk to a cabinet {sorted(set(unreachable))[:6]}")
 
+# ---------------------------------------------------------------- ventilation grilles, as built
+V = spec["ventilation"]
+H = spec["building"]["ceiling_height"]
+vent_data = json.load(open(os.path.join(ROOT, "build", "vents.json")))
+vents, zones = vent_data["vents"], vent_data["zones"]
+rooms = json.load(open(os.path.join(ROOT, "build", "scene_index.json")))["rooms"]
+planlib.label_rooms(rooms, spec)
+check(len({v["id"] for v in vents}) == len(vents) > 0, f"{len(vents)} grilles, each with its own id")
+
+# the meshes hold exactly the listed grilles: a plate's four corners at its place on the ceiling
+t = V["plate_thickness"]
+missing, extra = [], 0
+for kind in ("supply", "return", "exhaust"):
+    ob = bpy.data.objects.get(f"vent_{kind}")
+    here = [v for v in vents if v["kind"] == kind]
+    if ob is None:
+        missing += [v["id"] for v in here]
+        continue
+    check(ob.users_collection[0].name == "Ceiling", f"{kind} grilles are in the Ceiling collection, so they go with the ceiling in cutaways")
+    pts_ = world_points(ob)
+    low = pts_[np.abs(pts_[:, 2] - (H - t)) < 1e-4][:, :2]
+    plates = len(low) // 4
+    if plates != len(here):
+        extra += 1
+    for v in here:
+        x, y = v["at"]; w, d = v["size"]
+        for c_ in ((x - w / 2, y - d / 2), (x + w / 2, y - d / 2), (x + w / 2, y + d / 2), (x - w / 2, y + d / 2)):
+            if np.min(np.hypot(low[:, 0] - c_[0], low[:, 1] - c_[1])) > 0.002:
+                missing.append(v["id"])
+                break
+    top = pts_[:, 2].max()
+    if abs(top - H) > 1e-4:
+        missing.append(f"{kind} top at {top:.3f}")
+check(not missing and not extra, f"the 3D grilles are exactly the plan's list {missing[:4]}")
+
+# what's really on the ceiling, read from the meshes
+items = []
+cp = bpy.data.objects["ceiling_panels"]
+M_ = np.array(cp.matrix_world)
+for poly in cp.data.polygons:
+    vs = np.array([cp.data.vertices[i].co for i in poly.vertices])
+    if abs(poly.normal.z) > 0.9 and poly.area > 0.1:
+        items.append(("light panel", MultiPoint(vs[:, :2]).convex_hull))
+near_ceiling = lambda ob: MultiPoint(world_points(ob)[world_points(ob)[:, 2] > H - 0.2][:, :2]).convex_hull  # noqa: E731
+placed = [o for o in bpy.data.objects if o.type == "MESH" and o.name.startswith("room") and o.users_collection[0].name != "Kit"]
+for o in placed:
+    if o.name.endswith("_exam_light"):
+        items.append(("exam light", near_ceiling(o)))
+    elif world_points(o)[:, 2].max() > H - 0.2:
+        items.append(("pendant", near_ceiling(o)))
+cur = bpy.data.objects["curtains"]
+cur_pts = world_points(cur)
+cur_top = cur_pts[cur_pts[:, 2] > H - 0.05]
+for r in rooms:
+    close = cur_top[np.hypot(cur_top[:, 0] - r["front"][0], cur_top[:, 1] - r["front"][1]) < r["front_width"] / 2 + 0.6]
+    if len(close) >= 3:
+        items.append(("curtain track", MultiPoint(close[:, :2]).convex_hull))
+counts_ = {}
+for k_, _g in items:
+    counts_[k_] = counts_.get(k_, 0) + 1
+print(f"        on the ceiling, from the meshes: {counts_}")
+check(counts_.get("exam light", 0) == len(rooms) and counts_.get("curtain track", 0) == len(rooms) and counts_.get("pendant", 0) >= len(rooms), "the check sees each room's exam light, pendant and curtain track")
+# a room the configurator lays out differently has them somewhere else there, and shares these grilles
+for label_, cfg in spec["configurator"]["rooms"].items():
+    for q in cfg["fixtures"]["downlights"]:
+        items.append((f"{label_} downlight", Point(q).buffer(0.1)))
+    for q in cfg["fixtures"]["slots"]:
+        items.append((f"{label_} slot light", LineString([q[:2], q[2:]]).buffer(0.05)))
+    lay = cfg.get("layout")
+    if lay:
+        bed = np.array(lay["head"]) + np.array(lay["foot_dir"]) * 1.1
+        items.append((f"{label_} exam light", Point(bed).buffer(0.32)))
+        hub = next(o for o in placed if o.name.endswith("_pendant"))
+        V_ = np.array([v.co for v in hub.data.vertices])
+        V_ = V_[V_[:, 2] > H - 0.2][:, :2]
+        fy = np.array(lay["foot_dir"], float); fx = np.array([fy[1], -fy[0]])
+        items.append((f"{label_} pendant", MultiPoint(np.array(lay["head"]) + V_[:, :1] * fx + V_[:, 1:] * fy).convex_hull))
+
+space_u = unary_union([s_["poly"] for s_ in SPACES])
+tight, off_ceiling = [], []
+gap_min = 9.0
+for v in vents:
+    x, y = v["at"]; w, d = v["size"]
+    rect = Polygon([(x - w / 2, y - d / 2), (x + w / 2, y - d / 2), (x + w / 2, y + d / 2), (x - w / 2, y + d / 2)])
+    if not space_u.contains(rect) or rect.intersects(WALLS):
+        off_ceiling.append(v["id"])
+    for what, g_ in items:
+        gap = rect.distance(g_)
+        gap_min = min(gap_min, gap)
+        if gap < V["clearance"]["ceiling_items"] - 0.02:
+            tight.append(f"{v['id']} {gap * 100:.0f} cm from a {what}")
+check(not off_ceiling, f"every grille is on a ceiling, clear of the walls {off_ceiling[:4]}")
+check(not tight, f"every grille clears what's on the ceiling, by {gap_min * 100:.0f} cm at the least {tight[:4]}")
+apart = min((Point(a["at"]).distance(Point(b["at"])) for i, a in enumerate(vents) for b in vents[i + 1:]), default=9)
+check(apart > 0.4, f"no two grilles overlap (closest centres {apart:.2f} m)")
+
+# each kind of room has what its type calls for
+of = lambda z, k: [v for v in vents if v["zone"] == z and v["kind"] == k]  # noqa: E731
+bad = []
+for r in rooms:
+    lab = r["label"]
+    iso = any("ISOLATION" in n for n in r["names"])
+    if iso:
+        if not of(lab, "supply") or not of(lab, "exhaust") or of(lab, "return"):
+            bad.append(f"{lab}: an isolation room needs supply and exhaust and no return")
+        head = np.array(r["head"]) + np.array(r["foot_dir"]) * 0.1
+        dist = lambda v: float(np.hypot(*(np.array(v["at"]) - head)))  # noqa: E731
+        ex = min(dist(v) for v in of(lab, "exhaust"))
+        su = min(dist(v) for v in of(lab, "supply"))
+        print(f"        {lab}: exhaust {ex:.2f} m from the bed head, supply {su:.2f} m; {len(of(lab, 'supply'))} supply, {len(of(lab, 'exhaust'))} exhaust")
+        if ex > V["exhaust_from_head_max"] or ex >= su:
+            bad.append(f"{lab}: exhaust is {ex:.2f} m from the head and the nearest supply {su:.2f} m")
+        for part, want in ((f"{lab}_ante", ("supply", "exhaust")), (f"{lab}_toilet", ("exhaust",))):
+            if any(not of(part, k) for k in want) or of(part, "return"):
+                bad.append(f"{part}: needs {want}, has {[v['kind'] for v in vents if v['zone'] == part]}")
+    elif not of(lab, "supply") or not of(lab, "return") or of(lab, "exhaust"):
+        bad.append(f"{lab}: a patient room needs supply and return")
+check(not bad, f"patient rooms and isolation suites have the right grilles {bad[:3]}")
+for z in zones:
+    if z["type"] in ("toilet", "soiled") and any(v["kind"] != "exhaust" for v in vents if v["zone"] == z["id"]):
+        bad.append(f"{z['id']} should only exhaust")
+check(not bad, f"toilets and soiled rooms only exhaust {bad[:3]}")
+names = {z["id"].rstrip("_0123456789") for z in zones}
+for want in ("nurse_st", "corridor"):
+    check(any(n.startswith(want) for n in names), f"{want} has grilles")
+unserved = []
+for r in plan["rooms"]:
+    rule = next((t_ for t_ in V["room_types"] if any(r["name"] == m or (m.endswith("*") and r["name"].startswith(m[:-1])) for m in t_["match"])), None)
+    if rule is None:
+        unserved.append(r["name"])
+check(not unserved, f"every label on the plan has a room type {sorted(set(unserved))[:6]}")
+
 if fail:
     print(f"fixture check FAILED, {len(fail)} problem(s):")
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  fixture check: ok (extinguisher cabinets against the sheet, walls, counters, doors, handrails, alcoves, height limits, walking distance)")
+print("  fixture check: ok (extinguisher cabinets against the sheet, walls, counters, doors, handrails, alcoves, height limits, walking distance; ventilation grilles against the plan's list, the ceiling's fixtures and each room's type)")

@@ -749,6 +749,40 @@ def fire_cabinet(spec, coll, ceiling):
     return b.obj("kit_fire_cabinet", coll, bevel=0.0)
 
 
+def vents(vent_list, spec, coll, ceiling):
+    """The ceiling grilles, one mesh for each kind, from the list ventlib made. A plate and dark slots, flush with the ceiling."""
+    t = spec["ventilation"]["plate_thickness"]
+    out = {}
+    for kind in ("supply", "return", "exhaust"):
+        here = [v for v in vent_list if v["kind"] == kind]
+        if not here:
+            continue
+        b = Builder()
+        for v in here:
+            x, y = v["at"]
+            w, d = v["size"]
+            b.box((x, y, ceiling - t / 2), (w, d, t), "plastic_white")
+            z = ceiling - t - 0.001
+
+            def slot(x0, y0, x1, y1):
+                b.add([(x0, y1, z), (x1, y1, z), (x1, y0, z), (x0, y0, z)], [[0, 1, 2, 3]], "dark_plastic")
+
+            if kind == "supply":  # square rings, like a four-way diffuser
+                for r in (0.42, 0.72):
+                    hw, hd, g = w / 2 * r, d / 2 * r, 0.012
+                    slot(x - hw, y + hd - g, x + hw, y + hd)
+                    slot(x - hw, y - hd, x + hw, y - hd + g)
+                    slot(x - hw, y - hd, x - hw + g, y + hd)
+                    slot(x + hw - g, y - hd, x + hw, y + hd)
+            else:  # parallel slots, wider apart on an exhaust so the two kinds read apart
+                n = 7 if kind == "return" else 4
+                for i in range(n):
+                    yy = y - d * 0.36 + d * 0.72 * i / (n - 1)
+                    slot(x - w * 0.42, yy - 0.006, x + w * 0.42, yy + 0.006)
+        out[kind] = b.obj(f"vent_{kind}", coll, bevel=0.0)
+    return out
+
+
 def bins(spec, coll):
     b = Builder()
     for x, m in ((0, "bin_yellow"), (0.42, "bin_black")):

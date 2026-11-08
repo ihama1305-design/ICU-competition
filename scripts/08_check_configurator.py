@@ -564,6 +564,50 @@ with sync_playwright() as p:
         check(0 <= level <= 1, f"a frame timed before the click keeps the glass fade in range, going {to} (level {level:.2f})")
     ctx.close()
 
+    # ---------------------------------------------------------------- one set of grilles, and the plan that shows them
+    ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
+    plan_vents = json.load(open(os.path.join(SITE, "assets", "model", "vents.json")))["vents"]
+    by_id = {v["id"]: v for v in plan_vents}
+    for room in ROOMS:
+        go(pg, room)
+        names = pg.evaluate("window.__config.partNames()")
+        check(not [n for n in names if n.startswith("vent_")], f"{room}: the floor's grilles aren't in the room model, so it has one set")
+        here = pg.evaluate("window.__config.roomVents()")
+        check(len(here) > 0 and all(by_id.get(v["id"], {}).get("at") == v["at"] for v in here), f"{room}: its {len(here)} grilles are the plan's own")
+        pg.evaluate("window.__config.set('ventilation', 'on')")
+        check(pg.evaluate("window.__config.ventPlates()") == len(here), f"{room}: the option draws each of them once")
+        kinds = {v["kind"] for v in here}
+        check({"supply", "exhaust"} <= kinds and "return" not in {v["kind"] for v in here if v["zone"] == room} if room == "W1" else {"supply", "return"} <= kinds, f"{room}: it has the right kinds of grille {sorted(kinds)}")
+    check(not errs, f"grilles in the rooms: no errors {errs[:3]}")
+    ctx.close()
+    ctx = b.new_context(viewport={"width": 1280, "height": 900})
+    pg = ctx.new_page()
+    page_errs = []
+    pg.on("console", lambda m, e=page_errs: e.append(m.text) if m.type == "error" else None)
+    pg.on("pageerror", lambda e, l=page_errs: l.append(str(e)))
+    pg.goto(URL.replace("configurator/", "ventilation/"))
+    text = pg.inner_text("main")
+    check("not SSMC's mechanical design" in pg.inner_text("#status"), "the plan says it's concept work, not SSMC's design")
+    drawn_ids = pg.evaluate("[...document.querySelectorAll('#grilles .v')].map(g => g.dataset.id)")
+    check(sorted(drawn_ids) == sorted(by_id), f"the plan draws exactly the 3D model's grilles ({len(drawn_ids)} of {len(by_id)})")
+    legend = pg.inner_text("#legend")
+    check(all(w in legend for w in ("Supply", "Return", "Exhaust")), "the plan has a legend for supply, return and exhaust")
+    check(all(w in text for w in ("air changes", "Isolation room", "Abu Dhabi", "wasn't found")), "the plan gives its basis, and says what wasn't read")
+    check("W1 isolation" in pg.text_content("svg.plan .room-labels") and "Corridor" in pg.text_content("svg.plan .room-labels"), "the plan names the rooms")
+    faded = pg.evaluate("[...document.querySelectorAll('svg.plan, svg.plan g')].filter(g => getComputedStyle(g).animationName !== 'none').map(g => g.getAttribute('class'))")
+    check(not faded, f"nothing on the plan picks up an animation from the site's stylesheet {faded[:3]}")
+    check(pg.locator("svg.plan image").count() == 0 and "<image" not in pg.content(), "the plan embeds no picture, so nothing from the drawings")
+    pg.add_script_tag(url=AXE)
+    faults = axe_faults(pg, "main")
+    check(not faults, f"axe finds no serious faults on the plan page {faults[:4]}")
+    pg.screenshot(path=os.path.join(SHOTS, "ventilation_plan.png"), full_page=True)
+    pg.set_viewport_size({"width": 390, "height": 844})
+    over = pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    check(over <= 0, f"the plan page has no sideways scroll on a phone ({over})")
+    pg.screenshot(path=os.path.join(SHOTS, "ventilation_phone.png"))
+    check(not page_errs, f"the plan page has no errors {page_errs[:3]}")
+    pg.goto(URL.replace("configurator/", "index.html"))
+    check(pg.locator("a[href='ventilation/']").count() > 0, "the home page links to the plan")
     # ---------------------------------------------------------------- Tune it in: answers to a room, from the data in options.json
     ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
     plain = {"patientType": "adult", "stay": "short", "sex": "skip", "children": "no", "mobility": "independent", "care": "routine", "sensory": "none"}
@@ -887,4 +931,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, accessibility, adaptive quality, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, accessibility, adaptive quality, phone)")
