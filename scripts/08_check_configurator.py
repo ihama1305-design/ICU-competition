@@ -318,6 +318,21 @@ with sync_playwright() as p:
         pg.focus("#c")
         pg.keyboard.press("Escape")
         check(pg.evaluate("window.__config.state().view") == "family", f"{room} Patient view: Escape goes back too")
+        if room == "W1":
+            # PACS borrows the camera and gives it back: Patient view keeps its limits afterwards
+            pg.click("#views button[data-value='patient']")
+            pg.wait_for_function("window.__config.state().view === 'patient' && !window.__config.state().moving", timeout=60000)
+            pg.click("#openPacs")
+            pg.wait_for_function("document.body.classList.contains('pacs-active')", timeout=60000)
+            pg.click("#pacsExit")
+            pg.wait_for_function("!document.body.classList.contains('pacs-active')", timeout=60000)
+            worst = pg.evaluate("""(pillow) => {
+              const c = window.__config; let w = 0;
+              for (let i = 0; i < 30; i++) { c.orbit(0.2, 0.1); c.zoomOut(1.4); c.renderNow(); const e = c.eye(); w = Math.max(w, Math.hypot(e.x - pillow[0], e.y - pillow[1], e.z - pillow[2])); }
+              return w;
+            }""", pillow)
+            check(pg.evaluate("window.__config.state().view") == "patient" and worst < 0.11, f"W1 Patient view: after PACS, the eye still stays at the pillow ({worst:.3f} m)")
+            pg.keyboard.press("Escape") if pg.evaluate("document.activeElement === document.getElementById('c')") else pg.click("#leavePatient")
     pg.evaluate("window.__config.camera('overview', { instant: true })")
 
     # the options

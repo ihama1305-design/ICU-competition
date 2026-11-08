@@ -110,7 +110,7 @@ export class Rig {
     const toEye = this.W2T(...v.eye), toTarget = this.pivotFor(v);
     const isDoll = name === "dollhouse";
     this.onView(name, isDoll);
-    this.limits(v, toEye, toTarget);
+    this.limits(name);
     if (instant || reduced() || !this.view) {
       this.tween = null;
       this.controls.enabled = true;
@@ -134,13 +134,19 @@ export class Rig {
     this.onChange();
   }
 
-  limits(view, eye, target) {
-    const c = this.controls, isDoll = view === this.meta.cameras.dollhouse;
+  /**
+   * Orbit limits for a view, by name. APIS and PACS restore a view with limits(true) for the dollhouse and limits(false)
+   * for any other, after setting rig.view, so a boolean still works.
+   */
+  limits(name) {
+    if (typeof name === "boolean") name = name ? "dollhouse" : this.view;
+    const c = this.controls, view = this.meta.cameras[name] || {}, isDoll = name === "dollhouse";
     this.lookAround = !!view.look_around;
     c.enableZoom = !this.lookAround; // a scroll or pinch would only move the eye off the pillow
     if (this.lookAround) {
-      // from looking well down at the bed to straight up at the ceiling, and as far left and right as a head can turn
-      const off = eye.clone().sub(target);
+      // from looking well down at the bed to straight up at the ceiling, and as far left and right as a head can turn,
+      // centred on where the view first looks
+      const off = this.W2T(...view.eye).sub(this.W2T(...view.look));
       c.minDistance = c.maxDistance = LOOK_R;
       c.minPolarAngle = 0.6;
       c.maxPolarAngle = Math.PI - 0.06;
