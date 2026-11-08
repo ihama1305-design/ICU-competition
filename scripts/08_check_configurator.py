@@ -503,7 +503,8 @@ with sync_playwright() as p:
         pg.wait_for_function("document.getElementById('summaryBody').textContent.includes('Sharps box')", timeout=120000)
     except Exception:
         pass
-    check("Placed items" in pg.inner_text("#summaryBody") and "Sharps box" in pg.inner_text("#summaryBody"), "the summary lists the placed items")
+    summary_text = pg.text_content("#summaryBody")  # the headings are shown in capitals, so not inner_text
+    check("Placed items" in summary_text and "Sharps box" in summary_text, "the summary lists the placed items")
     pg.click("#closeSummary")
     pg.click("#resetRoom")
     check(pg.evaluate("window.__config.placed()") == [], "Reset the room removes placed items")
