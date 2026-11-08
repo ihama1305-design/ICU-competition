@@ -933,7 +933,10 @@ for r in rooms_index:  # the curtain's track, as built above
     a_ = np.array(r["front_axis"]) * (r["front_width"] + 0.2) / 2
     ceiling_items.append(LineString([o_ - a_, o_ + a_]).buffer(0.015))
 vent_plan = ventlib.layout(spec, plan, spaces, rooms_index, unary_union(ceiling_items), H)
-kit.vents(vent_plan["vents"], spec, C["Ceiling"], H)
+vent_objs = kit.vents(vent_plan["vents"], spec, C["Ceiling"], H)
+if not spec["ventilation"]["show_in_model"]:  # hidden for now, but still built so 09 can measure them
+    for ob in vent_objs.values():
+        ob.hide_render = ob.hide_viewport = True
 json.dump(vent_plan, open(os.path.join(ROOT, "build", "vents.json"), "w"), indent=1)
 print(f"ventilation concept: {len(vent_plan['vents'])} grilles in {len(vent_plan['zones'])} zones")
 

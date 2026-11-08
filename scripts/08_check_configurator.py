@@ -343,8 +343,8 @@ with sync_playwright() as p:
     pg.evaluate("window.dispatchEvent(new Event('resize'))")
     for room in ROOMS:
         go(pg, room)
-        # a group that only applies in another room isn't offered here, so it has nothing to show
-        groups = [g for g in pg.evaluate("window.__config.options().sections.flatMap(s => s.groups)") if g.get("requires", {}).get("room", room) == room]
+        # a group that only applies in another room isn't offered here, so it has nothing to show; nor is a hidden one, anywhere
+        groups = [g for g in pg.evaluate("window.__config.options().sections.flatMap(s => s.groups)") if g.get("requires", {}).get("room", room) == room and not g.get("hidden")]
         unchecked = [g["id"] for g in groups if "check" not in g]
         check(not unchecked, f"{room}: every option group says where to look for its effect {unchecked[:6]}")
         groups = [g for g in groups if "check" in g]
@@ -413,8 +413,7 @@ with sync_playwright() as p:
     go(pg, "W3")
     pg.evaluate("window.__config.camera('bed_window', { instant: true })")
     shot(pg, "w3_patio_from_bed")
-    pg.evaluate("window.__config.theme('paediatric')")
-    check(pg.evaluate("window.__config.selected().aquarium") == "digital", "Paediatric Play uses the digital aquarium, not a tank")
+    pg.evaluate("window.__config.set('floor', 'terrazzo'); window.__config.set('feature', 'sea')")  # for the summary below
     pg.evaluate("window.__config.set('aquarium', 'sealed')")
     check("avoid fish tanks" in pg.text_content("#options"), "the sealed tank carries the CDC note")
     pg.evaluate("window.__config.frameAnchor('aquarium', 1.6, 0.1)")
@@ -431,9 +430,10 @@ with sync_playwright() as p:
     check(all(t in text for t in ("Vinyl floor", "Terrazzo", "Sea mural", "Digital screen", "65 inch", "proposal", "endorsed")), "the summary lists the choices and the proposal note")
     check(pg.evaluate("window.__config.code()") in text, "the summary shows the spec code")
     check("isn't made or endorsed" in text, "the summary carries the not-endorsed note")
-    groups = sum(len(sec["groups"]) for sec in data["sections"])
+    groups = sum(1 for sec in data["sections"] for g in sec["groups"] if not g.get("hidden"))
     rows = pg.locator("#summaryBody dt").count()
     check(rows >= groups - 3, f"the summary lists every option that applies ({rows} rows)")
+    check(not [g["label"] for sec in data["sections"] for g in sec["groups"] if g.get("hidden") and g["label"] in text], "the summary leaves out what isn't offered")
     pg.locator("#summaryBody img").evaluate("i => i.decode()")
     pg.screenshot(path=os.path.join(SHOTS, "config_summary.png"))
     with pg.expect_download(timeout=120000) as dl:
@@ -492,7 +492,7 @@ with sync_playwright() as p:
             pg.evaluate(f"window.__config.theme('{which}')")
         else:
             go(pg, rnd.choice(ROOMS))
-            for g in groups:
+            for g in (x for x in groups if not x.get("hidden")):
                 o = rnd.choice(g["options"])["id"]
                 pg.evaluate(f"window.__config.set('{g['id']}', '{o}')")
             if rnd.random() < 0.4:
@@ -524,6 +524,22 @@ with sync_playwright() as p:
     pg.reload()
     pg.wait_for_function("window.__configReady === true", timeout=120000)
     check("couldn't be read" in pg.inner_text("#roomStatus"), "a bad code says so and opens the default room")
+    # a link made before a group was hidden still opens: what it asked for that isn't offered falls back, and the page says so
+    ALPHA = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    hidden = [g for g in groups if g.get("hidden")]
+    check(hidden and not [g["id"] for g in hidden if pg.locator(f"#g-{g['id']}").count()], "the panel doesn't offer the hidden groups")
+    pg.evaluate("window.__config.theme('desert')")
+    old_code = list(pg.evaluate("window.__config.code()"))
+    for g in hidden:
+        old_code[5 + g["code"]] = ALPHA[next(o["code"] for o in g["options"] if o["id"] != g["default"])]
+    pg.goto(URL + "?tier=low#c=" + "".join(old_code))
+    pg.reload()
+    pg.wait_for_function("window.__configReady === true", timeout=120000)
+    sel = pg.evaluate("window.__config.selected()")
+    check(all(sel[g["id"]] == g["default"] for g in hidden), f"an old link's hidden options fall back to their defaults {[(g['id'], sel[g['id']]) for g in hidden if sel[g['id']] != g['default']]}")
+    check(sel["paint"] == "sand" and sel["feature"] == "mashrabiya", "and the rest of that link's room is kept")
+    status = pg.inner_text("#roomStatus")
+    check(all(g["label"] in status for g in hidden), f"the page names what the link asked for that it left out ({status!r})")
     ctx.close()
 
     # ---------------------------------------------------------------- a frame timed before the click
@@ -572,6 +588,14 @@ with sync_playwright() as p:
         go(pg, room)
         names = pg.evaluate("window.__config.partNames()")
         check(not [n for n in names if n.startswith("vent_")], f"{room}: the floor's grilles aren't in the room model, so it has one set")
+        # the grilles are hidden, but the wall control they used to come with isn't: the Comfort systems demo and PACS both use it.
+        # (The last room's turn below switched the grilles on, so they go back to the default first.)
+        pg.evaluate("window.__config.set('ventilation', 'off')")
+        shown = pg.evaluate("({ control: window.__config.addonShown('comfortControl'), grilles: window.__config.addonShown('ventilation') })")
+        check(shown["control"] and not shown["grilles"], f"{room}: the wall comfort control is there and the grilles aren't {shown}")
+        pg.evaluate("document.getElementById('demoTemp').value = 19; document.getElementById('demoTemp').dispatchEvent(new Event('input'))")
+        tint = pg.evaluate("window.__config.comfortTint()")
+        check(tint == "63aecd", f"{room}: the temperature demo tints the control's status light ({tint})")
         here = pg.evaluate("window.__config.roomVents()")
         check(len(here) > 0 and all(by_id.get(v["id"], {}).get("at") == v["at"] for v in here), f"{room}: its {len(here)} grilles are the plan's own")
         pg.evaluate("window.__config.set('ventilation', 'on')")
@@ -613,17 +637,16 @@ with sync_playwright() as p:
     plain = {"patientType": "adult", "stay": "short", "sex": "skip", "children": "no", "mobility": "independent", "care": "routine", "sensory": "none"}
     PROFILE_CASES = [  # answers that differ from plain, theme, what has to be set, what a higher tier has to overrule
         ({}, "calm", {"patio": "off"}, []),
-        ({"patientType": "child"}, "paediatric", {"toyshelf": "on", "playmat": "on", "aquarium": "digital"}, []),
         ({"children": "yes"}, "family", {"seating": "sofa", "patio": "off", "tvplay": "on"}, []),
         ({"children": "sometimes"}, "family", {"seating": "sofa"}, []),
         ({"sensory": "company"}, "family", {"seating": "sofa"}, []),
         ({"stay": "long"}, "desert", {"wardrobeFinish": "warm"}, []),
         ({"patientType": "longstay"}, "desert", {"wardrobeFinish": "warm"}, []),
-        ({"patientType": "child", "children": "yes", "stay": "long"}, "paediatric", {"seating": "sofa", "wardrobeFinish": "warm"}, []),
+        ({"children": "yes", "stay": "long"}, "family", {"seating": "sofa", "wardrobeFinish": "warm"}, []),
         ({"mobility": "wheelchair", "children": "yes"}, "family", {"seating": "chairs"}, ["seating"]),
         ({"mobility": "aid", "sensory": "company"}, "family", {"seating": "chairs"}, ["seating"]),
-        ({"mobility": "assistance", "patientType": "child"}, "paediatric", {"playmat": "off", "softtoys": "off", "seating": "chairs"}, []),
-        ({"sensory": "quiet", "patientType": "child"}, "paediatric", {"tvplay": "off", "aquarium": "none", "scheme": "cove", "temperature": "k3000"}, []),
+        ({"mobility": "assistance"}, "calm", {"seating": "chairs"}, []),
+        ({"sensory": "quiet"}, "calm", {"tvplay": "off", "aquarium": "none", "scheme": "cove", "temperature": "k3000"}, []),
         ({"sensory": "quiet", "children": "yes"}, "family", {"tvplay": "off", "scheme": "cove", "temperature": "k3000", "seating": "sofa"}, []),
         ({"sensory": "routine"}, "calm", {"nightlight": "on"}, []),
         ({"sex": "female", "care": "frequent", "notes": "anything"}, "calm", {}, []),
@@ -656,6 +679,7 @@ with sync_playwright() as p:
       for (const x of [...P.rules, ...data.themes]) for (const [g, o] of Object.entries(x.sets)) if (!groups[g]?.options.some(q => q.id === o)) out.problems.push(`${x.id} sets ${g}=${o}, which doesn't exist`);
       for (const x of [...P.rules, ...P.themes]) { if (!x.because) out.problems.push(`${x.id || x.theme} gives no reason`); if (/wheelchair|walking aid|diagnos|\\bsex\\b|female|\\bmale\\b|mobility/i.test(x.because)) out.problems.push(`${x.id || x.theme}'s reason talks about the person: ${x.because}`); }
       for (const t of P.themes) if (!data.themes.some(q => q.id === t.theme)) out.problems.push(`no theme ${t.theme}`);
+      for (const x of [...P.rules, ...data.themes]) for (const g of Object.keys(x.sets)) if (groups[g]?.hidden) out.problems.push(`${x.id} sets ${g}, which isn't offered`);
       for (const r of P.rules) if (!P.tiers.includes(r.tier)) out.problems.push(`${r.id}: no tier ${r.tier}`);
       // all answers together
       const fixed = Object.fromEntries(texts.map(n => [n, '']));
@@ -667,8 +691,9 @@ with sync_playwright() as p:
           for (const g of Object.keys(groups)) if (!groups[g].options.some(q => q.id === s[g])) out.problems.push(`${JSON.stringify(a)}: ${g}=${s[g]}`);
           if (Object.keys(s).some(k => !groups[k])) out.problems.push(`${JSON.stringify(a)} sets something that isn't an option, like the room: ${Object.keys(s).filter(k => !groups[k])}`);
           if (s.patio !== 'off') out.problems.push(`${JSON.stringify(a)}: the patio is on`);
-          for (const g of ['wardrobe', 'ventilation', 'soundSensor']) if (s[g] !== 'on') out.problems.push(`${JSON.stringify(a)}: ${g} is off`);
-          if (['aid', 'wheelchair', 'assistance'].includes(a.mobility) && (s.seating !== 'chairs' || s.playmat !== 'off' || s.softtoys !== 'off')) out.problems.push(`${JSON.stringify(a)}: still a lot on the floor`);
+          for (const g of ['wardrobe', 'soundSensor']) if (s[g] !== 'on') out.problems.push(`${JSON.stringify(a)}: ${g} is off`);
+          for (const g of Object.values(groups).filter(g => g.hidden)) if (s[g.id] !== g.default) out.problems.push(`${JSON.stringify(a)}: ${g.id}, which isn't offered, is ${s[g.id]}`);
+          if (['aid', 'wheelchair', 'assistance'].includes(a.mobility) && s.seating !== 'chairs') out.problems.push(`${JSON.stringify(a)}: still a lot on the floor`);
           return;
         }
         const [name, values] = selects[i];
@@ -754,7 +779,7 @@ with sync_playwright() as p:
     # a link to a room idea opens the same room
     pg.click("#openProfile")
     pg.select_option("select[name=sensory]", "quiet")
-    pg.select_option("select[name=patientType]", "child")
+    pg.select_option("select[name=stay]", "long")
     pg.click("#profileForm button[type=submit]")
     pg.wait_for_function("!document.getElementById('profile').open")
     code = pg.evaluate("window.__config.code()")
@@ -792,8 +817,9 @@ with sync_playwright() as p:
     ctx, pg, errs, _, _ = open_page(b, 1366, 900, query="?tier=low")
     pg.add_script_tag(url=AXE)
     faults = axe_faults(pg, "#panel")
-    for i in range(pg.locator("details").count()):
-        pg.locator("summary").nth(i).click()
+    # the panel's own sections: PACS and APIS have theirs inside panels that stay hidden until they open
+    for i in range(pg.locator("#panel details").count()):
+        pg.locator("#panel details > summary").nth(i).click()
         faults += axe_faults(pg, "#panel")
     pg.evaluate("window.__config.set('front', 'smart')")
     faults += axe_faults(pg, "#panel")

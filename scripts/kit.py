@@ -170,7 +170,8 @@ def make_materials(spec):
 
 # ------------------------------------------------------------------ screen textures
 def make_textures():
-    """Draw the monitor / ventilator / workstation screens once (synthetic, no real data)."""
+    """Draw the monitor / ventilator / workstation screens once (synthetic, no real data). Every screen that shows a
+    patient's numbers carries a SIMULATED band, so no render or 3D view can be read as a real reading."""
     from PIL import Image, ImageDraw
     os.makedirs(TEX, exist_ok=True)
 
@@ -196,16 +197,27 @@ def make_textures():
             pts.append((x0 + i, (y0 + y1) / 2 - v * (y1 - y0) * 0.42))
         g.line(pts, fill=col, width=w)
 
+    def simulated(g, width, y0, y1, text="SIMULATED - NOT PATIENT DATA"):
+        """An amber band with black capitals, readable from across a room."""
+        g.rectangle([0, y0, width, y1], fill=(255, 196, 40))
+        size = int((y1 - y0) * 0.62)
+        while size > 8 and g.textlength(text, font_size=size) > width - 16:
+            size -= 1
+        x = (width - g.textlength(text, font_size=size)) / 2
+        g.text((x, (y0 + y1) / 2), text, fill=(0, 0, 0), font_size=size, anchor="lm")
+
     W, H = 640, 480
     im = Image.new("RGB", (W, H), (6, 10, 14)); g = ImageDraw.Draw(im)
     rows = [("ecg", (60, 230, 90)), ("pleth", (60, 210, 230)), ("art", (235, 70, 70)), ("resp", (240, 230, 90))]
     for k, (kind, col) in enumerate(rows):
-        y = 20 + k * 110
-        wave(g, (10, y, 450, y + 95), kind, col)
-        g.line([(10, y + 100), (450, y + 100)], fill=(30, 40, 50))
-        g.rectangle([470, y, 630, y + 95], outline=(30, 40, 50))
+        y = 14 + k * 104
+        wave(g, (10, y, 450, y + 92), kind, col)
+        g.line([(10, y + 97), (450, y + 97)], fill=(30, 40, 50))
+        g.rectangle([470, y, 630, y + 92], outline=(30, 40, 50))
         g.text((480, y + 8), ["HR", "SpO2", "ART", "RR"][k], fill=col)
-        g.text((520, y + 35), ["78", "97", "118/72", "16"][k], fill=col, font_size=40)
+        val = ["78", "97", "118/72", "16"][k]
+        g.text((520 if len(val) < 4 else 482, y + 32), val, fill=col, font_size=40 if len(val) < 4 else 34)
+    simulated(g, W, 432, H)
     im.save(os.path.join(TEX, "monitor.png"))
 
     im = Image.new("RGB", (512, 384), (14, 22, 30)); g = ImageDraw.Draw(im)
@@ -213,10 +225,12 @@ def make_textures():
     wave(g, (10, 60, 380, 190), "pleth", (240, 200, 70)); wave(g, (10, 200, 380, 330), "resp", (90, 200, 240))
     for k, (lab, val) in enumerate((("Ppeak", "22"), ("VTe", "450"), ("RR", "14"), ("MV", "6.3"))):
         g.text((400, 60 + k * 75), lab, fill=(150, 170, 180), font_size=16); g.text((400, 80 + k * 75), val, fill=(240, 240, 240), font_size=30)
+    simulated(g, 512, 346, 384)
     im.save(os.path.join(TEX, "ventilator.png"))
 
     im = Image.new("RGB", (256, 128), (20, 40, 30)); g = ImageDraw.Draw(im)
-    g.text((10, 10), "12.5 mL/h", fill=(150, 240, 160), font_size=34); g.text((10, 70), "VTBI 250", fill=(150, 200, 160), font_size=22)
+    g.text((10, 6), "12.5 mL/h", fill=(150, 240, 160), font_size=34); g.text((10, 52), "VTBI 250", fill=(150, 200, 160), font_size=22)
+    simulated(g, 256, 90, 128, "SIMULATED")
     im.save(os.path.join(TEX, "pump.png"))
 
     im = Image.new("RGB", (640, 400), (236, 241, 245)); g = ImageDraw.Draw(im)

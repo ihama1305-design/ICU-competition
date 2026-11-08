@@ -27,6 +27,10 @@ for cname in ("Kit", "Lights", "Cameras", "Context"):
     if c:
         for ob in list(c.objects):
             bpy.data.objects.remove(ob, do_unlink=True)
+VENTS_SHOWN = spec["ventilation"]["show_in_model"]
+if not VENTS_SHOWN:  # the grilles are hidden for now (spec ventilation.show_in_model)
+    for ob in [o for o in bpy.data.objects if o.name.startswith("vent_")]:
+        bpy.data.objects.remove(ob, do_unlink=True)
 
 glb = os.path.join(ROOT, "output", "icu.glb")
 bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True, export_yup=True,
@@ -98,6 +102,8 @@ S = [  # (id, group, label, confidence, regex on object names, notes)
     ("slab", "Building", "Floor slab", "low", "^slab", "Slab edge and overhang beyond the facade."),
 ]
 for sid, grp, lab, conf, rx, notes in S:
+    if sid.startswith("vent_") and not VENTS_SHOWN:
+        continue
     objects.append({"id": sid, "group": grp, "label": lab, "confidence": conf, "match": rx, "notes": notes})
 
 hero = next(r for r in idx["rooms"] if r["id"] == idx["hero"])
