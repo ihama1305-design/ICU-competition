@@ -697,6 +697,15 @@ window.__config = {
     const s = p.clone().project(stage.camera);
     return { x: ((s.x + 1) / 2) * innerWidth, y: ((1 - s.y) / 2) * innerHeight };
   },
+  /** Stand somewhere no view does, for an option that no set view shows well. */
+  lookFrom: (eye, look) => {
+    rig.go("overview", { instant: true });
+    stage.camera.position.copy(W2T(...eye));
+    controls.target.copy(W2T(...look));
+    controls.update();
+    stage.camera.updateMatrixWorld();
+    invalidate();
+  },
   code: specCode,
   theme: applyTheme,
   currentTheme: () => currentTheme()?.id,

@@ -183,11 +183,13 @@ def tour_stopped(pg, what):
 
 
 def look_for(pg, ch, room):
-    """Put the camera where an option group's check entry says its effect shows: a view, or at an anchor. `rooms` gives what differs by room."""
+    """Put the camera where an option group's check entry says its effect shows: a view, at an anchor, or an eye and a look point. `rooms` gives what differs by room."""
     ch = {**ch, **ch.get("rooms", {}).get(room, {})}
     pg.evaluate(f"window.__config.time(window.__config.stops.{ch['time']})")
     if "aim" in ch:
         pg.evaluate(f"window.__config.frameAnchor('{ch['aim']}', 1.8, 0.5)")
+    elif "eye" in ch:
+        pg.evaluate("([e, l]) => window.__config.lookFrom(e, l)", [ch["eye"], ch["look"]])
     else:
         pg.evaluate(f"window.__config.camera('{ch['view']}', {{ instant: true }})")
 
