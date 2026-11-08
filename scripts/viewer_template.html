@@ -839,7 +839,8 @@ renderer.setAnimationLoop(() => {
   } else if (mode === "first") stepWalk(dt); else controls.update();
   updatePerson();
   camera.updateMatrixWorld();
-  const busy = fly || moving > 0.01 || dropPreview || !window.__viewerReady || performance.now() - lastInput < 700;
+  // (a person-drop preview only changes when the pointer moves, which already counts as someone using the page)
+  const busy = fly || moving > 0.01 || !window.__viewerReady || performance.now() - lastInput < 700;
   if (!needDraw && !busy && lastView.equals(camera.matrixWorld)) return;
   needDraw = false;
   lastView.copy(camera.matrixWorld);
