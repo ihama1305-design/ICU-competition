@@ -392,6 +392,32 @@ with sync_playwright() as p:
     set_defaults(pg)
     pg.evaluate("window.__config.camera('overview', { instant: true })")
 
+    # ---------------------------------------------------------------- saved rooms: in this browser only, by name
+    go(pg, "W1")
+    pg.evaluate("window.__config.theme('desert')")
+    saved_code = pg.evaluate("window.__config.code()")
+    pg.fill("#presetName", "Evening calm")
+    pg.click("#presetForm button[type='submit']")
+    presets = pg.evaluate("window.__config.presets()")
+    check([p["name"] for p in presets] == ["Evening calm"] and presets[0]["code"] == saved_code, f"Save keeps the room's own code under its name {presets}")
+    pg.click("#resetRoom")
+    defaults = pg.evaluate("Object.fromEntries(window.__config.options().sections.flatMap(s => s.groups).map(g => [g.id, g.default]))")
+    check(pg.evaluate("window.__config.selected()") == defaults, "Reset the room puts every choice back to its default")
+    pg.click("#presetList button[aria-label='Open Evening calm']")
+    pg.wait_for_function(f"window.__config.code() === '{saved_code}'", timeout=60000)
+    check("Opened" in pg.inner_text("#presetStatus"), "opening a saved room brings it back exactly and says so")
+    pg.evaluate("window.__config.theme('family')")
+    pg.fill("#presetName", "evening CALM")
+    pg.click("#presetForm button[type='submit']")
+    presets = pg.evaluate("window.__config.presets()")
+    check(len(presets) == 1 and presets[0]["code"] != saved_code and "Updated" in pg.inner_text("#presetStatus"), f"saving under the same name, in any case, updates it {presets}")
+    pg.reload()
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    check(pg.locator("#presetList li").count() == 1, "saved rooms are still there after a reload")
+    pg.click("#presetList button[aria-label='Delete evening CALM']")
+    check(pg.evaluate("window.__config.presets()") == [] and pg.locator("#presetList li").count() == 0, "Delete removes a saved room")
+    set_defaults(pg)
+
     # the options
     go(pg, "W1")
     set_defaults(pg)
@@ -1024,6 +1050,26 @@ with sync_playwright() as p:
     pg.goto(URL)
     pg.wait_for_function("window.__configErrors.length > 0", timeout=60000)
     check("could not be loaded" in pg.inner_text("#load"), "if Three.js can't be fetched, the page says so instead of loading for ever")
+    ctx.close()
+
+    # ---------------------------------------------------------------- storage refused: saving says so, nothing breaks
+    ctx = b.new_context(viewport={"width": 1100, "height": 700})
+    ctx.add_init_script("Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('refused', 'SecurityError'); } });")
+    pg = ctx.new_page()
+    perrs = []
+    pg.on("pageerror", lambda e: perrs.append(str(e)))
+    pg.goto(URL)
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    pg.fill("#presetName", "Test")
+    pg.click("#presetForm button[type='submit']")
+    check("won't let the page save" in pg.inner_text("#presetStatus") and not perrs, f"with storage refused, Save says nothing was saved {perrs[:2]}")
+    ctx.close()
+    # the walkthrough links each configurable room here with ?room=
+    ctx = b.new_context(viewport={"width": 1100, "height": 700})
+    pg = ctx.new_page()
+    pg.goto(URL + "?room=W3")
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    check(pg.evaluate("window.__config.state().room") == "W3", "?room=W3 opens W3")
     ctx.close()
 
     # ---------------------------------------------------------------- a browser that can't draw says why, and where the pictures are

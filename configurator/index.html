@@ -63,6 +63,19 @@
       <p id="themeNote" class="note" role="status"></p>
     </section>
 
+    <section aria-labelledby="hSaved">
+      <h2 id="hSaved">Saved rooms</h2>
+      <form id="presetForm" class="preset-form">
+        <label class="sr" for="presetName">Name for this room</label>
+        <input id="presetName" name="presetName" type="text" maxlength="40" autocomplete="off" placeholder="A name, like Evening calm">
+        <button type="submit">Save</button>
+      </form>
+      <ul id="presetList" class="preset-list" aria-label="Saved rooms"></ul>
+      <button type="button" id="resetRoom" class="outline-action">Reset the room</button>
+      <p id="presetStatus" class="note" role="status"></p>
+      <p class="note">Kept in this browser only, never sent anywhere. Don't use a patient's name.</p>
+    </section>
+
     <section aria-labelledby="hRoom">
       <h2 id="hRoom">Room</h2>
       <div id="rooms" class="seg" role="group" aria-labelledby="hRoom">
