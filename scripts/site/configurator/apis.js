@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { ATTACHMENTS, MATERIALS, SOURCES } from "./apis-data.js";
+import { ensurePatient, PATIENT_ANCHORS } from "./patient.js";
 
 const $ = id => document.getElementById(id);
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -165,19 +166,18 @@ export class APIS {
   setRoom(room) {
     if (this.active) { this.dialog.close(); this.restore(); }
     this.room = room;
+    ensurePatient(room);
     if (!room.apis) {
       const root = new THREE.Group(); root.name = "apis_attachments";
       const { head, foot } = room.meta.bed;
       root.position.set(head[0], 0, -head[1]); root.rotation.y = Math.atan2(foot[0], -foot[1]);
       const markers = new Map();
       ATTACHMENTS.forEach(item => {
-        const g = new THREE.Group(); g.position.set(item.at[0], item.at[2], item.at[1]);
+        const at = PATIENT_ANCHORS[item.id];
+        const g = new THREE.Group(); g.position.set(at[0], at[2], at[1]);
         g.userData.apisId = item.id; g.name = `apis_${item.id}`;
         const material = MATERIALS.find(m => m.id === item.material);
-        const patch = box(0.12, 0.012, 0.09, material.color); g.add(patch);
-        if (["ng", "iv", "urinary"].includes(item.id)) g.add(tube([[0, 0.02, -0.09], [0.02, 0.02, 0], [0.08, 0.03, 0.15]], "#e6d5ae", 0.009));
-        if (item.id === "oxygen") { const ring = mesh(new THREE.TorusGeometry(0.06, 0.012, 8, 24), material.color, 0, 0.035); ring.rotation.x = -Math.PI / 2; g.add(ring); }
-        if (item.id === "ecg") g.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.015, 24), "#e4eced", 0, 0.025));
+        // The shared patient owns attachment geometry and line routes. APIS adds only inspection markers.
         const bead = mesh(new THREE.SphereGeometry(0.045, 16, 12), material.color, 0, 0.13);
         bead.material.emissive.set(material.color); bead.material.emissiveIntensity = 0.35; g.add(bead);
         g.add(box(0.008, 0.12, 0.008, material.color, 0, 0.06));
@@ -194,6 +194,7 @@ export class APIS {
   }
   open(id = this.item.id) {
     if (!this.room) return;
+    this.beforeOpen?.();
     if (!this.active) {
       this.returnFocus = document.activeElement; this.stopTour();
       this.snapshot = { position: this.stage.camera.position.clone(), target: this.controls.target.clone(), view: this.rig.view, hfov: this.rig.hfov, ceiling: this.stage.ceilingOn };
