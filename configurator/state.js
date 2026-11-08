@@ -25,7 +25,7 @@ export function encodeSpec(data, state, selected) {
   return customs.length ? `${code}~${customs.join("~")}` : code;
 }
 
-/** Read a hash like #c=...; returns null if it isn't a valid code. */
+/** Read a hash like #c=...; returns null if it isn't a valid code. `dropped` names what it set that isn't offered any more. */
 export function decodeSpec(data, hash) {
   const m = /^#c=([0-9a-zA-Z_~]+)$/.exec(hash);
   if (!m) return null;
@@ -49,5 +49,23 @@ export function decodeSpec(data, hash) {
     if (!option) return null;
     selected[g.id] = option.id;
   }
-  return { room, view, hour, selected };
+  return { room, view, hour, selected, dropped: holdHidden(data, selected) };
+}
+
+/**
+ * A group with `hidden: true` in options.json isn't offered any more (the toys, play mat, console and ventilation grilles),
+ * but it keeps its place in the code, so a link made before it was hidden still reads. A link may still set one to
+ * something other than its default, like a play mat that's on.
+ * Puts every hidden group in `selected` back to its default, and returns the labels of the ones the link had set to
+ * something else, so the page can say what it left out. An empty list means the link is shown exactly as it was made.
+ */
+export function holdHidden(data, selected) {
+  const dropped = [];
+  for (const g of groupsInOrder(data)) {
+    if (!g.hidden || selected[g.id] === g.default) continue;
+    dropped.push(g.label);
+    selected[g.id] = g.default;
+    delete selected[`${g.id}:custom`]; // none has a custom colour today, but a stale one shouldn't linger
+  }
+  return dropped;
 }

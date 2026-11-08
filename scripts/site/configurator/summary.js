@@ -16,6 +16,7 @@ export function summaryContent(data, selected, room, { roomLabel, picture, code,
     const spec = list();
     for (const g of section.groups) {
       const needs = g.requires;
+      if (g.hidden) continue; // not offered any more
       if (needs && !Object.entries(needs).every(([k, v]) => context[k] === v)) continue;
       const option = g.options.find(o => o.id === selected[g.id]);
       row(spec, g.label, option ? option.label : `Custom colour ${selected[`${g.id}:custom`]}`);

@@ -1,5 +1,5 @@
 {
- "_": "Everything a person can choose, and what each choice does. Effects use a fixed vocabulary, handled in main.js: color, material, visible, addon, light, glass, blinds, tv, shade. `check` is where 08_check_configurator.py looks to see that an option changes the room. `code` values go into share links: never reuse or renumber them, only add new ones.",
+ "_": "Everything a person can choose, and what each choice does. Effects use a fixed vocabulary, handled in main.js: color, material, visible, addon, light, glass, blinds, tv, shade. `check` is where 08_check_configurator.py looks to see that an option changes the room. `code` values go into share links: never reuse or renumber them, only add new ones. A group with `hidden: true` is no longer offered: it keeps its code so old links still read, stays at its default, and themes and rules never set it. Hidden today: the toys, play mat and gaming console (not part of an adult ICU) and the ventilation grilles.",
  "version": 1,
  "sections": [
   {
@@ -1040,6 +1040,7 @@
     {
      "id": "console",
      "label": "Gaming console",
+     "hidden": true,
      "control": "choice",
      "default": "off",
      "check": {
@@ -1078,7 +1079,7 @@
   },
   {
    "id": "family",
-   "label": "Family and children",
+   "label": "Family",
    "groups": [
     {
      "id": "seating",
@@ -1236,6 +1237,7 @@
     {
      "id": "toyshelf",
      "label": "Toy shelf",
+     "hidden": true,
      "control": "choice",
      "default": "off",
      "check": {
@@ -1273,6 +1275,7 @@
     {
      "id": "softtoys",
      "label": "Soft toys",
+     "hidden": true,
      "control": "choice",
      "default": "off",
      "check": {
@@ -1310,6 +1313,7 @@
     {
      "id": "playmat",
      "label": "Play mat",
+     "hidden": true,
      "control": "choice",
      "default": "off",
      "check": {
@@ -1621,14 +1625,15 @@
     {
      "id": "ventilation",
      "label": "Visible ventilation grilles",
+     "hidden": true,
      "control": "choice",
-     "default": "on",
+     "default": "off",
      "check": {"view":"family","time":"afternoon"},
      "options": [
       {"id":"on","label":"Show the grilles","effects":[{"do":"addon","id":"ventilation","on":true}],"code":0},
       {"id":"off","label":"Hide grilles","effects":[{"do":"addon","id":"ventilation","on":false}],"code":1}
      ],
-     "note": {"text":"The ceiling grilles are the floor's ventilation concept plan, not SSMC's mechanical design. They and the wall control are visual only: no air or temperature is controlled."},
+     "note": {"text":"The ceiling grilles are the floor's ventilation concept plan, not SSMC's mechanical design. They're visual only: no air moves."},
      "code": 30
     },
     {
@@ -1665,14 +1670,13 @@
    "_": "Tune it in: answers pick a theme, then rules adjust it. Rules use `sets`, the group-to-option map themes use, because `effects` only change the scene and never reach the share code, comparison or undo. A rule with no `when` always applies. `when` is one set of conditions, or a list where any one will do. A higher tier locks what it sets against lower tiers. `because` is shown to the person, so it talks about the room and never about the patient. Every answer has to be used by a `when` or listed in `noEffect`: 08_check_configurator.py fails otherwise. This never changes the room and doesn't recommend care.",
    "tiers": ["access", "comfort"],
    "themes": [
-     { "when": { "patientType": ["child"] }, "theme": "paediatric", "because": "Paediatric Play is the starting look for a younger patient." },
      { "when": [{ "children": ["yes", "sometimes"] }, { "sensory": ["company"] }], "theme": "family", "because": "Family Suite is the starting look when family stay close." },
      { "when": [{ "stay": ["long"] }, { "patientType": ["longstay"] }], "theme": "desert", "because": "Desert Sanctuary is the starting look for a longer stay." },
      { "theme": "calm", "because": "Calm Clinical is the plain starting look." }
    ],
    "rules": [
      { "id": "patio-by-choice", "tier": "access", "sets": { "patio": "off" }, "because": "A patio stays your own choice. Its notes cover the pressure, structure and fall-safety questions." },
-     { "id": "less-on-the-floor", "tier": "access", "when": { "mobility": ["aid", "wheelchair", "assistance"] }, "sets": { "playmat": "off", "softtoys": "off", "seating": "chairs" }, "because": "Floor-level play items and the larger sofa-bed are left out, so less stands on the floor. The route through the room hasn't been measured." },
+     { "id": "less-on-the-floor", "tier": "access", "when": { "mobility": ["aid", "wheelchair", "assistance"] }, "sets": { "seating": "chairs" }, "because": "The larger sofa-bed is left out, so less stands on the floor. The route through the room hasn't been measured." },
      { "id": "seat-for-visitors", "tier": "comfort", "when": [{ "children": ["yes", "sometimes"] }, { "sensory": ["company"] }], "sets": { "seating": "sofa" }, "because": "A sofa-bed gives visitors somewhere to stay." },
      { "id": "lower-stimulation", "tier": "comfort", "when": { "sensory": ["quiet"] }, "sets": { "scheme": "cove", "temperature": "k3000", "tvplay": "off", "aquarium": "none" }, "because": "Softer, warmer light and nothing moving on a screen, for a quieter room." },
      { "id": "clear-cues", "tier": "comfort", "when": { "sensory": ["routine"] }, "sets": { "nightlight": "on" }, "because": "A low night light keeps the room easy to read after dark." },
@@ -1711,25 +1715,6 @@
     "accent": "clay",
     "planting": "on",
     "reading": "on"
-   }
-  },
-  {
-   "id": "paediatric",
-   "label": "Paediatric Play",
-   "blurb": "Bright accents, toys, a play mat, fish and a sky ceiling.",
-   "sets": {
-    "paint": "butter",
-    "feature": "sea",
-    "floor": "terrazzo",
-    "ceiling": "sky",
-    "scheme": "circadian",
-    "temperature": "auto",
-    "accent": "coral",
-    "toyshelf": "on",
-    "softtoys": "on",
-    "playmat": "on",
-    "aquarium": "digital",
-    "tvplay": "on"
    }
   },
   {

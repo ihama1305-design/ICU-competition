@@ -126,13 +126,16 @@ with sync_playwright() as pw:
         along = pg.evaluate(f"window.__pathClear({px - tx * 1.2}, {py - ty * 1.2}, {px + tx * 1.2}, {py + ty * 1.2})")
         check(along, f"walking along the wall past cabinet {c['id']} isn't blocked")
 
-    # ventilation grilles: named, labelled as a concept, and hidden with the ceiling
-    for kind in ("supply", "return", "exhaust"):
-        title = pg.evaluate(f"window.__select('vent_{kind}')")
-        check(kind in title.lower(), f"selecting the {kind} grilles names them (card: {title!r})")
-    check("concept" in pg.inner_text("#iNotes" if pg.locator("#iNotes").count() else "#info").lower(), "the grilles' card says they're a concept")
+    # ventilation grilles: named, labelled as a concept, and hidden with the ceiling. Or not in the model at all while they're hidden
     parts = pg.evaluate("window.__ceilingParts()")
-    check(all(f"vent_{k}" in parts for k in ("supply", "return", "exhaust")), f"the grilles hide with the ceiling {parts[:6]}")
+    if spec["ventilation"]["show_in_model"]:
+        for kind in ("supply", "return", "exhaust"):
+            title = pg.evaluate(f"window.__select('vent_{kind}')")
+            check(kind in title.lower(), f"selecting the {kind} grilles names them (card: {title!r})")
+        check("concept" in pg.inner_text("#iNotes" if pg.locator("#iNotes").count() else "#info").lower(), "the grilles' card says they're a concept")
+        check(all(f"vent_{k}" in parts for k in ("supply", "return", "exhaust")), f"the grilles hide with the ceiling {parts[:6]}")
+    else:
+        check(not [p for p in parts if p.startswith("vent_")], f"the grilles are hidden, so the walkthrough has none {parts[:6]}")
 
     ok = pg.evaluate("window.__miniGo(0.5, 0.45)")
     check(ok is not None, "minimap click failed")

@@ -314,12 +314,11 @@ Object.assign(BUILD, {
     return g;
   },
 
-  /** Quiet, static supply and return grilles plus a wall control; no simulated airflow. */
+  /** Quiet, static supply and return grilles; no simulated airflow. Hidden for now: see the ventilation group in options.json. */
   ventilation(room) {
     const g = new THREE.Group(), H = room.meta.ceiling;
     g.name = "addon_ventilation";
-    const panel = std("#e4e8e7", 0.62), slat = std("#a3abad", 0.5), light = std("#4aaeb2", 0.35, { emissive: "#4aaeb2", emissiveIntensity: 0.45 });
-    light.name = "vent_status";
+    const panel = std("#e4e8e7", 0.62), slat = std("#a3abad", 0.5);
     const NAMES = { supply: "Ceiling supply grille", return: "Ceiling return grille", exhaust: "Ceiling exhaust grille" };
     // the same grilles as the floor's ventilation concept plan, from the room's data
     for (const v of room.meta.vents) {
@@ -332,10 +331,22 @@ Object.assign(BUILD, {
         fin.position.copy(W2T(x, y - d * 0.36 + (d * 0.72 * i) / (slots - 1), H - 0.014)); g.add(fin);
       }
     }
+    return g;
+  },
+
+  /**
+   * The wall control for the Comfort systems demo, and one of PACS's connection points. Always shown: it used to come
+   * with the grilles, and stays when they're hidden.
+   */
+  comfortControl(room) {
+    const g = new THREE.Group();
+    g.name = "addon_comfortControl";
+    const light = std("#4aaeb2", 0.35, { emissive: "#4aaeb2", emissiveIntensity: 0.45 });
+    light.name = "comfort_status"; // the Comfort systems temperature slider tints it
     const wall = room.label === "W1" ? [17.78, 30.85] : [14.40, 21.4];
     const control = tagItem(box(0.19, 0.24, 0.035, std("#e6e9e7", 0.48), 0, 0, 0), "Room comfort control", "A wall-mounted temperature and humidity control concept. It is not connected to room equipment or patient measurements.");
     control.position.copy(W2T(wall[0], wall[1], 1.55)); control.rotation.y = Math.PI / 2; g.add(control);
-    const led = tagItem(ball(0.025, light, 0, 0, 0), "Ventilation status light", "An illustrative status light for the room comfort concept.");
+    const led = tagItem(ball(0.025, light, 0, 0, 0), "Comfort control status light", "An illustrative status light for the room comfort concept. The Comfort systems temperature demo changes its colour.");
     led.position.copy(W2T(wall[0] - 0.045, wall[1], 1.61)); g.add(led);
     return g;
   },

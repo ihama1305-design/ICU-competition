@@ -28,7 +28,7 @@ export class Panel {
         el("span", { className: "section-mark", textContent: String(index + 1).padStart(2, "0"), ariaHidden: "true" }),
         el("span", { className: "section-title", textContent: section.label }));
       const details = el("details", { className: "section", name: "options" }, summary);
-      for (const group of section.groups) details.append(this.buildGroup(group, onSet));
+      for (const group of section.groups) if (!group.hidden) details.append(this.buildGroup(group, onSet)); // a hidden group isn't offered
       root.append(details);
     });
     // `name` makes these exclusive in current browsers; this click handler keeps the same behavior elsewhere.

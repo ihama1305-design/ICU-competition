@@ -142,7 +142,9 @@ async function setRoom(label, { keepView = true } = {}) {
   daylight.setCentre((room.meta.room[0] + room.meta.room[2]) / 2, (room.meta.room[1] + room.meta.room[3]) / 2);
   lighting.setRoom(room);
   glass.setRoom(room);
+  setAddon(room, "comfortControl", true); // not an option: the wall control is always there
   applyAll();
+  setDemoReadout();
   relight();
   rig.view = null;
   rig.go(keepView ? state.view : "overview", { instant: true });
@@ -397,8 +399,8 @@ function setDemoReadout() {
   $("demoTempValue").textContent = `${temp} °C`;
   $("demoHumidityValue").textContent = `${humidity}%`;
   const tint = temp < 22 ? "#63aecd" : temp > 25 ? "#df9762" : "#4aaeb2";
-  for (const mesh of stage.current?.parts.addon_ventilation || []) {
-    for (const mat of [mesh.material].flat()) if (mat?.name === "vent_status") mat.color.set(tint);
+  for (const mesh of stage.current?.parts.addon_comfortControl || []) {
+    for (const mat of [mesh.material].flat()) if (mat?.name === "comfort_status") mat.color.set(tint);
   }
   invalidate();
 }
@@ -467,6 +469,12 @@ async function applySpec(spec) {
   syncUi();
 }
 
+/** What to say when a link asked for options that aren't offered any more. */
+const leftOut = labels => {
+  const list = labels.length > 1 ? `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}` : labels[0];
+  return `This link included ${list}, which the configurator no longer offers, so ${labels.length > 1 ? "they're" : "it's"} left out.`;
+};
+
 function shareLink() { return `${location.origin}${location.pathname}#c=${specCode()}`; }
 
 // ---------------------------------------------------------------- summary and saving a picture
@@ -506,7 +514,7 @@ $("copyLink").addEventListener("click", async () => {
 $("themes").addEventListener("click", e => { const b = e.target.closest("button"); if (b) applyTheme(b.dataset.value); });
 addEventListener("hashchange", () => {
   const spec = decodeSpec(optionData, location.hash);
-  if (spec && specCode() !== location.hash.slice(3)) applySpec(spec).catch(fail);
+  if (spec && specCode() !== location.hash.slice(3)) applySpec(spec).then(() => { if (spec.dropped.length) $("roomStatus").textContent = leftOut(spec.dropped); }).catch(fail);
 });
 
 // ---------------------------------------------------------------- the cinematic tour
@@ -719,6 +727,8 @@ window.__config = {
   options: () => optionData,
   partNames: () => Object.keys(stage.current.parts),
   roomVents: () => rig.meta.vents,
+  addonShown: id => !!stage.current.addons?.[id]?.visible,
+  comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
   profile: answers => resolveProfile(optionData, answers),
   fading: () => glass.fading,
@@ -776,6 +786,7 @@ async function boot() {
   setTime(state.hour);
   window.__configStage = "drawing the first frame";
   if (location.hash && !fromLink) $("roomStatus").textContent = "That link's code couldn't be read, so this is the default room.";
+  else if (fromLink?.dropped.length) $("roomStatus").textContent = leftOut(fromLink.dropped);
   $("load").hidden = true;
   requestAnimationFrame(frame);
   requestAnimationFrame(() => requestAnimationFrame(() => {

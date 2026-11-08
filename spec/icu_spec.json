@@ -604,6 +604,8 @@
   "void_max_m2": 3.0
  },
  "ventilation": {
+  "show_in_model": false,
+  "_show_in_model": "false hides the grilles in the 3D model, the walkthrough, the renders and the configurator (decided 8 Nov 2026). They are still built, hidden, so 09 can measure them, and the 2D plan still draws them",
   "_note": "CONCEPT, not SSMC's mechanical design. The sheets show no grilles, ducts or air data, only the shaft and riser labels in shafts_on_sheet. Air changes and pressures in room_types come from the sources in REPORT.md, read as noted there. Grille positions come from rules in scripts/ventlib.py, with overrides here. Sizes, capacities and clearances are assumed. 02 writes the result to build/vents.json, and the scene, the rooms and the 2D plan all read that",
   "grilles": {
    "supply": { "size": [0.6, 0.6], "capacity_ls": 150, "label": "Supply" },
