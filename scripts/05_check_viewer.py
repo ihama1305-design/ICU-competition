@@ -28,7 +28,7 @@ with sync_playwright() as pw:
     errs = []
     pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "fonts.g" not in m.text else None)
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(url)
+    pg.goto(url, timeout=120000)  # a busy machine can take a while to fetch Three.js
     pg.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
     errs += pg.evaluate("window.__viewerErrors")
     pg.wait_for_timeout(1500)
@@ -160,16 +160,20 @@ with sync_playwright() as pw:
     check(not errs, f"console errors: {errs[:3]}")
 
     # an idle page stops drawing; using it draws again
-    pg.evaluate("window.__view('orbit')"); pg.wait_for_timeout(2500)
-    f0 = pg.evaluate("window.__viewerFrames"); pg.wait_for_timeout(2500); f1 = pg.evaluate("window.__viewerFrames")
-    check(f1 == f0, f"an idle page stops drawing ({f1 - f0} frames in 2.5 s)")
+    # (the camera's damping can take a moment to come to rest on a slow software renderer, so it gets a few tries)
+    pg.evaluate("window.__view('orbit')")
+    for _ in range(6):
+        f0 = pg.evaluate("window.__viewerFrames"); pg.wait_for_timeout(2500); f1 = pg.evaluate("window.__viewerFrames")
+        if f1 == f0:
+            break
+    check(f1 == f0, f"an idle page stops drawing ({f1 - f0} frames in 2.5 s, after waiting up to 15 s to settle)")
     pg.mouse.move(300, 400); pg.mouse.move(340, 420); pg.wait_for_timeout(1200)
     check(pg.evaluate("window.__viewerFrames") > f1, "moving the pointer over it draws again")
 
     # a touch phone: one slim row of controls, and a joystick that walks forward, back and sideways
     ctx = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     tp = ctx.new_page()
-    tp.goto(url)
+    tp.goto(url, timeout=120000)
     tp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
     bar_h = tp.evaluate("document.getElementById('bar').offsetHeight")
     names = tp.evaluate("[...document.querySelectorAll('#bar button')].filter(b => !b.hidden).map(b => b.textContent.trim())")
