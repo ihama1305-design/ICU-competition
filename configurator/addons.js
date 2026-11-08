@@ -318,14 +318,18 @@ Object.assign(BUILD, {
   ventilation(room) {
     const g = new THREE.Group(), H = room.meta.ceiling;
     g.name = "addon_ventilation";
-    const points = room.label === "W1" ? [[12.9, 30.8], [15.3, 30.0]] : [[9.0, 21.8], [12.8, 19.3]];
     const panel = std("#e4e8e7", 0.62), slat = std("#a3abad", 0.5), light = std("#4aaeb2", 0.35, { emissive: "#4aaeb2", emissiveIntensity: 0.45 });
     light.name = "vent_status";
-    for (const [x, y] of points) {
-      const p = W2T(x, y, H - 0.035), plate = tagItem(box(0.58, 0.028, 0.34, panel), "Ceiling supply grille", "A low-profile ceiling air grille shown as a visual design feature.");
-      plate.position.copy(p); g.add(plate);
-      for (let i = -2; i <= 2; i++) {
-        const fin = box(0.46, 0.009, 0.012, slat); fin.position.copy(W2T(x, y + i * 0.045, H - 0.017)); g.add(fin);
+    const NAMES = { supply: "Ceiling supply grille", return: "Ceiling return grille", exhaust: "Ceiling exhaust grille" };
+    // the same grilles as the floor's ventilation concept plan, from the room's data
+    for (const v of room.meta.vents) {
+      const [x, y] = v.at, [w, d] = v.size;
+      const plate = tagItem(box(w, 0.012, d, panel), NAMES[v.kind], "A concept position from the floor's ventilation plan, not SSMC's mechanical design. No air moves in this model.");
+      plate.position.copy(W2T(x, y, H - 0.006)); g.add(plate);
+      const slots = v.kind === "supply" ? 3 : v.kind === "return" ? 5 : 3;
+      for (let i = 0; i < slots; i++) {
+        const fin = box(w * 0.8, 0.004, 0.012, slat);
+        fin.position.copy(W2T(x, y - d * 0.36 + (d * 0.72 * i) / (slots - 1), H - 0.014)); g.add(fin);
       }
     }
     const wall = room.label === "W1" ? [17.78, 30.85] : [14.40, 21.4];

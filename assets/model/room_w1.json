@@ -262,6 +262,143 @@
    29.8
   ]
  ],
+ "vents": [
+  {
+   "id": "W1_supply_0",
+   "kind": "supply",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    17.0,
+    29.5
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_supply_1",
+   "kind": "supply",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    16.6,
+    31.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_supply_2",
+   "kind": "supply",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    15.4,
+    31.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_exhaust_0",
+   "kind": "exhaust",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    11.8,
+    30.5
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_exhaust_1",
+   "kind": "exhaust",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    10.7,
+    30.2
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_ante_supply_0",
+   "kind": "supply",
+   "zone": "W1_ante",
+   "type": "isolation_ante",
+   "at": [
+    19.8,
+    28.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_ante_exhaust_0",
+   "kind": "exhaust",
+   "zone": "W1_ante",
+   "type": "isolation_ante",
+   "at": [
+    17.3,
+    28.1
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_toilet_exhaust_0",
+   "kind": "exhaust",
+   "zone": "W1_toilet",
+   "type": "isolation_toilet",
+   "at": [
+    18.8,
+    29.8
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_14_28_supply_0",
+   "kind": "supply",
+   "zone": "observation_14_28",
+   "type": "observation",
+   "at": [
+    14.6,
+    27.6
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  }
+ ],
  "bed": {
   "head": [
    11.2,

@@ -1,0 +1,2430 @@
+{
+ "_note": "Ventilation concept, not SSMC's mechanical design. The same grilles as the 3D model.",
+ "vents": [
+  {
+   "id": "W5_supply_0",
+   "kind": "supply",
+   "zone": "W5",
+   "type": "patient",
+   "at": [
+    8.1,
+    11.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W5_supply_1",
+   "kind": "supply",
+   "zone": "W5",
+   "type": "patient",
+   "at": [
+    9.7,
+    11.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W5_return_0",
+   "kind": "return",
+   "zone": "W5",
+   "type": "patient",
+   "at": [
+    5.6,
+    12.9
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W5_return_1",
+   "kind": "return",
+   "zone": "W5",
+   "type": "patient",
+   "at": [
+    5.6,
+    9.7
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W4_supply_0",
+   "kind": "supply",
+   "zone": "W4",
+   "type": "patient",
+   "at": [
+    9.0,
+    16.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W4_supply_1",
+   "kind": "supply",
+   "zone": "W4",
+   "type": "patient",
+   "at": [
+    10.6,
+    15.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W4_return_0",
+   "kind": "return",
+   "zone": "W4",
+   "type": "patient",
+   "at": [
+    6.5,
+    17.4
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W4_return_1",
+   "kind": "return",
+   "zone": "W4",
+   "type": "patient",
+   "at": [
+    6.5,
+    14.2
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W3_supply_0",
+   "kind": "supply",
+   "zone": "W3",
+   "type": "patient",
+   "at": [
+    10.1,
+    20.7
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W3_supply_1",
+   "kind": "supply",
+   "zone": "W3",
+   "type": "patient",
+   "at": [
+    11.2,
+    19.4
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W3_return_0",
+   "kind": "return",
+   "zone": "W3",
+   "type": "patient",
+   "at": [
+    7.6,
+    21.9
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W3_return_1",
+   "kind": "return",
+   "zone": "W3",
+   "type": "patient",
+   "at": [
+    7.6,
+    18.7
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W2_supply_0",
+   "kind": "supply",
+   "zone": "W2",
+   "type": "patient",
+   "at": [
+    10.7,
+    24.6
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W2_supply_1",
+   "kind": "supply",
+   "zone": "W2",
+   "type": "patient",
+   "at": [
+    12.6,
+    24.6
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W2_return_0",
+   "kind": "return",
+   "zone": "W2",
+   "type": "patient",
+   "at": [
+    8.5,
+    26.2
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W2_return_1",
+   "kind": "return",
+   "zone": "W2",
+   "type": "patient",
+   "at": [
+    8.5,
+    23.0
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_supply_0",
+   "kind": "supply",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    17.0,
+    29.5
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_supply_1",
+   "kind": "supply",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    16.6,
+    31.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_supply_2",
+   "kind": "supply",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    15.4,
+    31.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_exhaust_0",
+   "kind": "exhaust",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    11.8,
+    30.5
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_exhaust_1",
+   "kind": "exhaust",
+   "zone": "W1",
+   "type": "isolation",
+   "at": [
+    10.7,
+    30.2
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_supply_0",
+   "kind": "supply",
+   "zone": "E1",
+   "type": "isolation",
+   "at": [
+    28.9,
+    29.7
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_supply_1",
+   "kind": "supply",
+   "zone": "E1",
+   "type": "isolation",
+   "at": [
+    28.4,
+    31.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_supply_2",
+   "kind": "supply",
+   "zone": "E1",
+   "type": "isolation",
+   "at": [
+    29.5,
+    31.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_exhaust_0",
+   "kind": "exhaust",
+   "zone": "E1",
+   "type": "isolation",
+   "at": [
+    34.2,
+    30.2
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_exhaust_1",
+   "kind": "exhaust",
+   "zone": "E1",
+   "type": "isolation",
+   "at": [
+    33.2,
+    30.5
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_exhaust_2",
+   "kind": "exhaust",
+   "zone": "E1",
+   "type": "isolation",
+   "at": [
+    34.2,
+    31.2
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E2_supply_0",
+   "kind": "supply",
+   "zone": "E2",
+   "type": "patient",
+   "at": [
+    34.0,
+    24.6
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E2_return_0",
+   "kind": "return",
+   "zone": "E2",
+   "type": "patient",
+   "at": [
+    36.5,
+    23.0
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E3_supply_0",
+   "kind": "supply",
+   "zone": "E3",
+   "type": "patient",
+   "at": [
+    34.6,
+    20.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E3_supply_1",
+   "kind": "supply",
+   "zone": "E3",
+   "type": "patient",
+   "at": [
+    33.3,
+    20.9
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E3_return_0",
+   "kind": "return",
+   "zone": "E3",
+   "type": "patient",
+   "at": [
+    37.4,
+    18.7
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E3_return_1",
+   "kind": "return",
+   "zone": "E3",
+   "type": "patient",
+   "at": [
+    37.4,
+    21.9
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E4_supply_0",
+   "kind": "supply",
+   "zone": "E4",
+   "type": "patient",
+   "at": [
+    36.1,
+    15.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E4_supply_1",
+   "kind": "supply",
+   "zone": "E4",
+   "type": "patient",
+   "at": [
+    34.4,
+    15.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E4_return_0",
+   "kind": "return",
+   "zone": "E4",
+   "type": "patient",
+   "at": [
+    38.5,
+    14.2
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E4_return_1",
+   "kind": "return",
+   "zone": "E4",
+   "type": "patient",
+   "at": [
+    38.5,
+    17.4
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E5_supply_0",
+   "kind": "supply",
+   "zone": "E5",
+   "type": "patient",
+   "at": [
+    36.9,
+    11.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E5_supply_1",
+   "kind": "supply",
+   "zone": "E5",
+   "type": "patient",
+   "at": [
+    35.3,
+    11.4
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E5_return_0",
+   "kind": "return",
+   "zone": "E5",
+   "type": "patient",
+   "at": [
+    39.4,
+    9.7
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E5_return_1",
+   "kind": "return",
+   "zone": "E5",
+   "type": "patient",
+   "at": [
+    39.4,
+    12.9
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E6_supply_0",
+   "kind": "supply",
+   "zone": "E6",
+   "type": "patient",
+   "at": [
+    37.4,
+    6.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E6_supply_1",
+   "kind": "supply",
+   "zone": "E6",
+   "type": "patient",
+   "at": [
+    35.8,
+    6.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E6_return_0",
+   "kind": "return",
+   "zone": "E6",
+   "type": "patient",
+   "at": [
+    39.9,
+    5.2
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E6_return_1",
+   "kind": "return",
+   "zone": "E6",
+   "type": "patient",
+   "at": [
+    39.4,
+    8.4
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E7_supply_0",
+   "kind": "supply",
+   "zone": "E7",
+   "type": "patient",
+   "at": [
+    37.4,
+    2.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E7_supply_1",
+   "kind": "supply",
+   "zone": "E7",
+   "type": "patient",
+   "at": [
+    35.8,
+    2.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E7_return_0",
+   "kind": "return",
+   "zone": "E7",
+   "type": "patient",
+   "at": [
+    39.5,
+    0.5
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E7_return_1",
+   "kind": "return",
+   "zone": "E7",
+   "type": "patient",
+   "at": [
+    39.9,
+    4.0
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E8_supply_0",
+   "kind": "supply",
+   "zone": "E8",
+   "type": "patient",
+   "at": [
+    37.4,
+    -2.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E8_supply_1",
+   "kind": "supply",
+   "zone": "E8",
+   "type": "patient",
+   "at": [
+    35.8,
+    -2.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E8_return_0",
+   "kind": "return",
+   "zone": "E8",
+   "type": "patient",
+   "at": [
+    39.4,
+    -3.8
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E8_return_1",
+   "kind": "return",
+   "zone": "E8",
+   "type": "patient",
+   "at": [
+    39.9,
+    -0.6
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W8_supply_0",
+   "kind": "supply",
+   "zone": "W8",
+   "type": "patient",
+   "at": [
+    7.6,
+    -2.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W8_supply_1",
+   "kind": "supply",
+   "zone": "W8",
+   "type": "patient",
+   "at": [
+    9.2,
+    -2.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W8_return_0",
+   "kind": "return",
+   "zone": "W8",
+   "type": "patient",
+   "at": [
+    5.1,
+    -0.6
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W8_return_1",
+   "kind": "return",
+   "zone": "W8",
+   "type": "patient",
+   "at": [
+    5.1,
+    -3.8
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W7_supply_0",
+   "kind": "supply",
+   "zone": "W7",
+   "type": "patient",
+   "at": [
+    7.6,
+    2.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W7_supply_1",
+   "kind": "supply",
+   "zone": "W7",
+   "type": "patient",
+   "at": [
+    9.2,
+    2.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W7_return_0",
+   "kind": "return",
+   "zone": "W7",
+   "type": "patient",
+   "at": [
+    5.1,
+    3.9
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W7_return_1",
+   "kind": "return",
+   "zone": "W7",
+   "type": "patient",
+   "at": [
+    5.1,
+    0.7
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W6_supply_0",
+   "kind": "supply",
+   "zone": "W6",
+   "type": "patient",
+   "at": [
+    7.6,
+    6.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W6_supply_1",
+   "kind": "supply",
+   "zone": "W6",
+   "type": "patient",
+   "at": [
+    9.2,
+    6.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W6_return_0",
+   "kind": "return",
+   "zone": "W6",
+   "type": "patient",
+   "at": [
+    5.1,
+    8.4
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W6_return_1",
+   "kind": "return",
+   "zone": "W6",
+   "type": "patient",
+   "at": [
+    5.1,
+    5.2
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_ante_supply_0",
+   "kind": "supply",
+   "zone": "W1_ante",
+   "type": "isolation_ante",
+   "at": [
+    19.8,
+    28.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_ante_exhaust_0",
+   "kind": "exhaust",
+   "zone": "W1_ante",
+   "type": "isolation_ante",
+   "at": [
+    17.3,
+    28.1
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "W1_toilet_exhaust_0",
+   "kind": "exhaust",
+   "zone": "W1_toilet",
+   "type": "isolation_toilet",
+   "at": [
+    18.8,
+    29.8
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "staff_lounge_28_supply_0",
+   "kind": "supply",
+   "zone": "staff_lounge_28",
+   "type": "staff",
+   "at": [
+    23.6,
+    14.7
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "staff_lounge_28_return_0",
+   "kind": "return",
+   "zone": "staff_lounge_28",
+   "type": "staff",
+   "at": [
+    22.5,
+    12.0
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "nourishment_29_supply_0",
+   "kind": "supply",
+   "zone": "nourishment_29",
+   "type": "staff",
+   "at": [
+    26.3,
+    16.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "nourishment_29_return_0",
+   "kind": "return",
+   "zone": "nourishment_29",
+   "type": "staff",
+   "at": [
+    27.7,
+    14.7
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "clean_utility_30_supply_0",
+   "kind": "supply",
+   "zone": "clean_utility_30",
+   "type": "clean",
+   "at": [
+    18.8,
+    16.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "clean_utility_30_return_0",
+   "kind": "return",
+   "zone": "clean_utility_30",
+   "type": "clean",
+   "at": [
+    17.4,
+    15.2
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_toilet_exhaust_0",
+   "kind": "exhaust",
+   "zone": "E1_toilet",
+   "type": "isolation_toilet",
+   "at": [
+    25.2,
+    30.1
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "storage_equip_35_supply_0",
+   "kind": "supply",
+   "zone": "storage_equip_35",
+   "type": "storage",
+   "at": [
+    28.1,
+    41.1
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_ante_supply_0",
+   "kind": "supply",
+   "zone": "E1_ante",
+   "type": "isolation_ante",
+   "at": [
+    24.9,
+    27.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "E1_ante_exhaust_0",
+   "kind": "exhaust",
+   "zone": "E1_ante",
+   "type": "isolation_ante",
+   "at": [
+    28.9,
+    28.1
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_31_28_supply_0",
+   "kind": "supply",
+   "zone": "observation_31_28",
+   "type": "observation",
+   "at": [
+    31.3,
+    27.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "toilet_staff_25_39_exhaust_0",
+   "kind": "exhaust",
+   "zone": "toilet_staff_25_39",
+   "type": "toilet",
+   "at": [
+    25.1,
+    39.0
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "multipurpose_room_21_40_supply_0",
+   "kind": "supply",
+   "zone": "multipurpose_room_21_40",
+   "type": "staff",
+   "at": [
+    21.1,
+    40.5
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "multipurpose_room_21_40_return_0",
+   "kind": "return",
+   "zone": "multipurpose_room_21_40",
+   "type": "staff",
+   "at": [
+    22.7,
+    42.3
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_31_19_supply_0",
+   "kind": "supply",
+   "zone": "observation_31_19",
+   "type": "observation",
+   "at": [
+    31.2,
+    18.5
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "dictation_23_19_supply_0",
+   "kind": "supply",
+   "zone": "dictation_23_19",
+   "type": "staff",
+   "at": [
+    22.5,
+    18.9
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "dictation_23_19_return_0",
+   "kind": "return",
+   "zone": "dictation_23_19",
+   "type": "staff",
+   "at": [
+    25.1,
+    18.0
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "meds_21_16_supply_0",
+   "kind": "supply",
+   "zone": "meds_21_16",
+   "type": "clean",
+   "at": [
+    21.0,
+    16.4
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "meds_21_16_return_0",
+   "kind": "return",
+   "zone": "meds_21_16",
+   "type": "clean",
+   "at": [
+    21.2,
+    17.8
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_14_28_supply_0",
+   "kind": "supply",
+   "zone": "observation_14_28",
+   "type": "observation",
+   "at": [
+    14.6,
+    27.6
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_13_19_supply_0",
+   "kind": "supply",
+   "zone": "observation_13_19",
+   "type": "observation",
+   "at": [
+    13.4,
+    18.5
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_12_1_supply_0",
+   "kind": "supply",
+   "zone": "observation_12_1",
+   "type": "observation",
+   "at": [
+    11.7,
+    0.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_12_9_supply_0",
+   "kind": "supply",
+   "zone": "observation_12_9",
+   "type": "observation",
+   "at": [
+    12.7,
+    9.3
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "toilet_16_5_exhaust_0",
+   "kind": "exhaust",
+   "zone": "toilet_16_5",
+   "type": "toilet",
+   "at": [
+    16.4,
+    5.4
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_33_1_supply_0",
+   "kind": "supply",
+   "zone": "observation_33_1",
+   "type": "observation",
+   "at": [
+    32.8,
+    0.5
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "observation_32_10_supply_0",
+   "kind": "supply",
+   "zone": "observation_32_10",
+   "type": "observation",
+   "at": [
+    32.2,
+    9.5
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "soiled_utility_26_13_exhaust_0",
+   "kind": "exhaust",
+   "zone": "soiled_utility_26_13",
+   "type": "soiled",
+   "at": [
+    26.5,
+    13.4
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "toilet_29_5_exhaust_0",
+   "kind": "exhaust",
+   "zone": "toilet_29_5",
+   "type": "toilet",
+   "at": [
+    28.6,
+    5.1
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "hskp_29_2_exhaust_0",
+   "kind": "exhaust",
+   "zone": "hskp_29_2",
+   "type": "soiled",
+   "at": [
+    28.6,
+    2.1
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "nurse_st_22_22_supply_0",
+   "kind": "supply",
+   "zone": "nurse_st_22_22",
+   "type": "staff",
+   "at": [
+    22.2,
+    22.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "nurse_st_22_22_return_0",
+   "kind": "return",
+   "zone": "nurse_st_22_22",
+   "type": "staff",
+   "at": [
+    19.6,
+    22.2
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "storage_linen_16_2_supply_0",
+   "kind": "supply",
+   "zone": "storage_linen_16_2",
+   "type": "storage",
+   "at": [
+    16.3,
+    1.7
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "office_28_-5_supply_0",
+   "kind": "supply",
+   "zone": "office_28_-5",
+   "type": "staff",
+   "at": [
+    28.4,
+    -4.2
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "office_28_-5_return_0",
+   "kind": "return",
+   "zone": "office_28_-5",
+   "type": "staff",
+   "at": [
+    30.2,
+    -2.7
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "toilet_staff_19_14_exhaust_0",
+   "kind": "exhaust",
+   "zone": "toilet_staff_19_14",
+   "type": "toilet",
+   "at": [
+    18.8,
+    13.7
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "toilet_staff_21_14_exhaust_0",
+   "kind": "exhaust",
+   "zone": "toilet_staff_21_14",
+   "type": "toilet",
+   "at": [
+    20.9,
+    13.7
+   ],
+   "size": [
+    0.45,
+    0.45
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_supply_0",
+   "kind": "supply",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    13.1,
+    -3.6
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_return_0",
+   "kind": "return",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    32.0,
+    -3.6
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_supply_1",
+   "kind": "supply",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    21.8,
+    -2.4
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_return_1",
+   "kind": "return",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    13.4,
+    4.8
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_supply_2",
+   "kind": "supply",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    25.4,
+    4.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_return_2",
+   "kind": "return",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    30.8,
+    11.2
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_supply_3",
+   "kind": "supply",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    15.2,
+    12.6
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_return_3",
+   "kind": "return",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    28.4,
+    18.6
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_supply_4",
+   "kind": "supply",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    17.0,
+    20.4
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_return_4",
+   "kind": "return",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    23.0,
+    25.8
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_supply_5",
+   "kind": "supply",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    26.6,
+    33.0
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_return_5",
+   "kind": "return",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    15.8,
+    34.0
+   ],
+   "size": [
+    0.6,
+    0.3
+   ],
+   "basis": "rule"
+  },
+  {
+   "id": "corridor_supply_6",
+   "kind": "supply",
+   "zone": "corridor",
+   "type": "corridor",
+   "at": [
+    24.8,
+    40.8
+   ],
+   "size": [
+    0.6,
+    0.6
+   ],
+   "basis": "rule"
+  }
+ ],
+ "zones": [
+  {
+   "id": "W5",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 36.5,
+   "air_ls": 174,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    8.339,
+    11.954
+   ]
+  },
+  {
+   "id": "W4",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 34.1,
+   "air_ls": 162,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    8.339,
+    15.507
+   ]
+  },
+  {
+   "id": "W3",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 34.2,
+   "air_ls": 162,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    10.633,
+    21.009
+   ]
+  },
+  {
+   "id": "W2",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 32.2,
+   "air_ls": 153,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    10.498,
+    24.665
+   ]
+  },
+  {
+   "id": "W1",
+   "name": "Isolation room",
+   "type": "isolation",
+   "area_m2": 37.6,
+   "air_ls": 357,
+   "grilles": {
+    "supply": 3,
+    "exhaust": 2
+   },
+   "label_at": [
+    11.548,
+    30.461
+   ]
+  },
+  {
+   "id": "E1",
+   "name": "Isolation room",
+   "type": "isolation",
+   "area_m2": 38.5,
+   "air_ls": 365,
+   "grilles": {
+    "supply": 3,
+    "exhaust": 3
+   },
+   "label_at": [
+    33.548,
+    30.509
+   ]
+  },
+  {
+   "id": "E2",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 30.3,
+   "air_ls": 144,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    34.815,
+    24.695
+   ]
+  },
+  {
+   "id": "E3",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 34.6,
+   "air_ls": 164,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    34.65,
+    21.159
+   ]
+  },
+  {
+   "id": "E4",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 34.1,
+   "air_ls": 162,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    36.544,
+    15.541
+   ]
+  },
+  {
+   "id": "E5",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 36.6,
+   "air_ls": 174,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    36.679,
+    11.918
+   ]
+  },
+  {
+   "id": "E6",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 35.7,
+   "air_ls": 170,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    37.915,
+    6.486
+   ]
+  },
+  {
+   "id": "E7",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 35.0,
+   "air_ls": 166,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    38.149,
+    3.167
+   ]
+  },
+  {
+   "id": "E8",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 34.8,
+   "air_ls": 165,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    37.909,
+    -2.5
+   ]
+  },
+  {
+   "id": "W8",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 34.8,
+   "air_ls": 165,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    6.788,
+    -2.641
+   ]
+  },
+  {
+   "id": "W7",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 34.9,
+   "air_ls": 166,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    6.788,
+    2.992
+   ]
+  },
+  {
+   "id": "W6",
+   "name": "Patient room",
+   "type": "patient",
+   "area_m2": 35.7,
+   "air_ls": 169,
+   "grilles": {
+    "supply": 2,
+    "return": 2
+   },
+   "label_at": [
+    6.8,
+    6.423
+   ]
+  },
+  {
+   "id": "W1_ante",
+   "name": "Ante",
+   "type": "isolation_ante",
+   "area_m2": 7.3,
+   "air_ls": 58,
+   "grilles": {
+    "supply": 1,
+    "exhaust": 1
+   },
+   "label_at": [
+    19.38,
+    27.959
+   ]
+  },
+  {
+   "id": "W1_toilet",
+   "name": "Toilet",
+   "type": "isolation_toilet",
+   "area_m2": 4.8,
+   "air_ls": 38,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    19.344,
+    30.629
+   ]
+  },
+  {
+   "id": "staff_lounge_28",
+   "name": "Staff Lounge",
+   "type": "staff",
+   "area_m2": 16.9,
+   "air_ls": 80,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    23.58,
+    14.933
+   ]
+  },
+  {
+   "id": "nourishment_29",
+   "name": "Nourishment",
+   "type": "staff",
+   "area_m2": 8.8,
+   "air_ls": 42,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    26.293,
+    16.253
+   ]
+  },
+  {
+   "id": "clean_utility_30",
+   "name": "Clean Utility",
+   "type": "clean",
+   "area_m2": 6.7,
+   "air_ls": 21,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    18.8,
+    16.818
+   ]
+  },
+  {
+   "id": "E1_toilet",
+   "name": "Toilet",
+   "type": "isolation_toilet",
+   "area_m2": 4.9,
+   "air_ls": 39,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    25.507,
+    30.662
+   ]
+  },
+  {
+   "id": "storage_equip_35",
+   "name": "Storage Equip",
+   "type": "storage",
+   "area_m2": 11.1,
+   "air_ls": 18,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    28.142,
+    40.571
+   ]
+  },
+  {
+   "id": "E1_ante",
+   "name": "Ante",
+   "type": "isolation_ante",
+   "area_m2": 7.9,
+   "air_ls": 63,
+   "grilles": {
+    "supply": 1,
+    "exhaust": 1
+   },
+   "label_at": [
+    25.39,
+    27.986
+   ]
+  },
+  {
+   "id": "observation_31_28",
+   "name": "Observation",
+   "type": "observation",
+   "area_m2": 5.0,
+   "air_ls": 24,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    30.65,
+    27.611
+   ]
+  },
+  {
+   "id": "toilet_staff_25_39",
+   "name": "Toilet Staff",
+   "type": "toilet",
+   "area_m2": 4.8,
+   "air_ls": 38,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    25.138,
+    38.833
+   ]
+  },
+  {
+   "id": "multipurpose_room_21_40",
+   "name": "Multipurpose Room",
+   "type": "staff",
+   "area_m2": 26.5,
+   "air_ls": 126,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    21.089,
+    40.453
+   ]
+  },
+  {
+   "id": "observation_31_19",
+   "name": "Observation",
+   "type": "observation",
+   "area_m2": 5.6,
+   "air_ls": 27,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    31.233,
+    18.514
+   ]
+  },
+  {
+   "id": "dictation_23_19",
+   "name": "Dictation",
+   "type": "staff",
+   "area_m2": 14.9,
+   "air_ls": 71,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    22.692,
+    18.908
+   ]
+  },
+  {
+   "id": "meds_21_16",
+   "name": "Meds",
+   "type": "clean",
+   "area_m2": 7.1,
+   "air_ls": 23,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    20.984,
+    16.43
+   ]
+  },
+  {
+   "id": "observation_14_28",
+   "name": "Observation",
+   "type": "observation",
+   "area_m2": 5.0,
+   "air_ls": 24,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    14.347,
+    27.584
+   ]
+  },
+  {
+   "id": "observation_13_19",
+   "name": "Observation",
+   "type": "observation",
+   "area_m2": 5.4,
+   "air_ls": 26,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    13.358,
+    18.529
+   ]
+  },
+  {
+   "id": "observation_12_1",
+   "name": "Observation",
+   "type": "observation",
+   "area_m2": 5.5,
+   "air_ls": 26,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    11.701,
+    0.512
+   ]
+  },
+  {
+   "id": "observation_12_9",
+   "name": "Observation",
+   "type": "observation",
+   "area_m2": 6.1,
+   "air_ls": 29,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    12.393,
+    9.275
+   ]
+  },
+  {
+   "id": "toilet_16_5",
+   "name": "Toilet",
+   "type": "toilet",
+   "area_m2": 7.8,
+   "air_ls": 62,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    16.413,
+    5.316
+   ]
+  },
+  {
+   "id": "observation_33_1",
+   "name": "Observation",
+   "type": "observation",
+   "area_m2": 5.7,
+   "air_ls": 27,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    33.19,
+    0.518
+   ]
+  },
+  {
+   "id": "observation_32_10",
+   "name": "Observation",
+   "type": "observation",
+   "area_m2": 5.6,
+   "air_ls": 27,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    32.466,
+    9.546
+   ]
+  },
+  {
+   "id": "soiled_utility_26_13",
+   "name": "Soiled Utility",
+   "type": "soiled",
+   "area_m2": 5.7,
+   "air_ls": 45,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    26.313,
+    13.376
+   ]
+  },
+  {
+   "id": "toilet_29_5",
+   "name": "Toilet",
+   "type": "toilet",
+   "area_m2": 8.1,
+   "air_ls": 64,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    28.564,
+    5.205
+   ]
+  },
+  {
+   "id": "hskp_29_2",
+   "name": "Hskp",
+   "type": "soiled",
+   "area_m2": 7.5,
+   "air_ls": 59,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    28.56,
+    2.097
+   ]
+  },
+  {
+   "id": "nurse_st_22_22",
+   "name": "Nurse St.",
+   "type": "staff",
+   "area_m2": 27.0,
+   "air_ls": 128,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    22.182,
+    22.229
+   ]
+  },
+  {
+   "id": "storage_linen_16_2",
+   "name": "Storage Linen",
+   "type": "storage",
+   "area_m2": 9.4,
+   "air_ls": 15,
+   "grilles": {
+    "supply": 1
+   },
+   "label_at": [
+    16.258,
+    1.643
+   ]
+  },
+  {
+   "id": "office_28_-5",
+   "name": "Office",
+   "type": "staff",
+   "area_m2": 10.1,
+   "air_ls": 48,
+   "grilles": {
+    "supply": 1,
+    "return": 1
+   },
+   "label_at": [
+    28.426,
+    -4.547
+   ]
+  },
+  {
+   "id": "toilet_staff_19_14",
+   "name": "Toilet Staff",
+   "type": "toilet",
+   "area_m2": 5.2,
+   "air_ls": 41,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    18.843,
+    13.505
+   ]
+  },
+  {
+   "id": "toilet_staff_21_14",
+   "name": "Toilet Staff",
+   "type": "toilet",
+   "area_m2": 5.0,
+   "air_ls": 39,
+   "grilles": {
+    "exhaust": 1
+   },
+   "label_at": [
+    20.924,
+    13.592
+   ]
+  },
+  {
+   "id": "corridor",
+   "name": "Corridors and lobbies",
+   "type": "corridor",
+   "area_m2": 446.1,
+   "air_ls": 706,
+   "grilles": {
+    "supply": 7,
+    "return": 6
+   },
+   "label_at": null
+  }
+ ]
+}
