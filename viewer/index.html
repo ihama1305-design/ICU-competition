@@ -135,6 +135,11 @@
   body.placing #c { cursor: crosshair; }
   #help.warn { color: var(--low); }
   #load { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); }
+  /* when the browser can't draw the model, the message is the whole page */
+  .cant-draw #c, .cant-draw #bar, .cant-draw #side, .cant-draw #mini, .cant-draw #pad { display: none; }
+  .cant-draw #load { padding: 24px; text-align: center; }
+  .cant-draw #load p { max-width: 34em; margin: 0; color: var(--ink); font-size: 16px; line-height: 1.55; text-wrap: pretty; }
+  .cant-draw #load a { color: var(--accent); text-underline-offset: 3px; }
   /* Elements toggled with hidden: display is held through the exit, so it plays in full, and a quick re-open just reverses it. */
   #info, #pad, #load { --t-in: var(--t-enter); --t-out: var(--t-exit); }
   #tip, #ghost { --t-in: var(--t-enter-s); --t-out: var(--t-exit-s); }
@@ -206,13 +211,49 @@
   <button class="dn" data-k="b" aria-label="Walk back">▼</button><button class="rt" data-k="tr" aria-label="Turn right">▶</button>
 </div>
 
+<script>
+  // The model can't be drawn if this browser lacks WebGL 2 or import maps, or if a module can't be fetched (Three.js comes
+  // from a CDN). Each case gets its own message, so the page never says "Loading" for ever.
+  window.__cantDraw = (function () {
+    var S = window.HTMLScriptElement;
+    if (S && S.supports && !S.supports("importmap")) return "importmap"; // without supports() at all, let the module try
+    var gl = null;
+    try { gl = document.createElement("canvas").getContext("webgl2"); } catch (e) { /* counts as missing */ }
+    if (!gl) return "webgl2";
+    var lose = gl.getExtension("WEBGL_lose_context");
+    if (lose) lose.loseContext(); // only a test: give the context back
+    return "";
+  })();
+  function cantDraw(reason) {
+    window.__cantDraw = reason;
+    var why = reason === "importmap"
+      ? "This browser can't draw the 3D model: it's too old for the way the page loads its 3D code. Updating the browser may help."
+      : reason === "fetch"
+      ? "The page could not be loaded. Check your connection and reload the page."
+      : "This browser can't draw the 3D model: it needs WebGL 2, which is missing or turned off here. Updating the browser, or turning on hardware acceleration in its settings, may help.";
+    var load = document.getElementById("load"), p = document.createElement("p"), home = document.querySelector("#bar a[href]");
+    p.textContent = why;
+    if (home && reason !== "fetch") {
+      // the website links home; the offline file has nowhere to send anyone
+      var a = document.createElement("a");
+      a.href = home.getAttribute("href"); a.textContent = "See the rooms in pictures on the home page.";
+      p.append(" ", a);
+    }
+    load.replaceChildren(p);
+    document.body.classList.add("cant-draw");
+    load.hidden = false;
+  }
+  if (window.__cantDraw) cantDraw(window.__cantDraw);
+  // an old browser without supports() and without import maps fails to resolve "three"
+  addEventListener("error", function (e) { if (!window.__viewerReady && !window.__cantDraw && /specifier/i.test(e.message || "")) cantDraw("importmap"); });
+</script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
 } }
 </script>
-<script type="module">
+<script type="module" onerror="window.__cantDraw || cantDraw('fetch')">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -237,7 +278,10 @@ document.getElementById("status").textContent = VIEW.status;
 const W2T = (x, y, z = 0) => new THREE.Vector3(x, z, -y);
 
 const canvas = document.getElementById("c");
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = (() => {
+  // the page checked for WebGL 2 before loading, but a context can still be refused (a blocklisted GPU, too many open tabs)
+  try { return new THREE.WebGLRenderer({ canvas, antialias: true }); } catch (err) { cantDraw("webgl2"); throw err; }
+})();
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;

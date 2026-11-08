@@ -37,6 +37,10 @@ body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--ui); }
 #c.pending { opacity: 0; transition: none; }
 #c:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
 #load { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); padding: 24px; text-align: center; }
+/* when the browser can't draw the room, the message is the whole page */
+.cant-draw #panel, .cant-draw #c { display: none; }
+.cant-draw #load p { max-width: 34em; margin: 0; color: var(--ink); font-size: 16px; line-height: 1.55; text-wrap: pretty; }
+.cant-draw #load a { color: var(--accent); text-underline-offset: 3px; }
 
 #panel { position: fixed; top: calc(var(--g) + env(safe-area-inset-top, 0px)); right: calc(var(--g) + env(safe-area-inset-right, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px)); width: var(--panel-w); display: flex; flex-direction: column; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 #panel header { padding: 14px 16px 12px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; }
@@ -58,6 +62,13 @@ button { font: inherit; color: inherit; }
 .seg, .grid, .stops { display: grid; gap: 6px; }
 .seg { grid-template-columns: 1fr 1fr; }
 .grid { grid-template-columns: 1fr 1fr; }
+.grid .wide { grid-column: 1 / -1; }
+/* over the room while in Patient view, clear of the panel on a desktop and of the sheet on a phone */
+.leave-patient { position: fixed; z-index: 4; top: calc(var(--g) + env(safe-area-inset-top, 0px)); left: calc(var(--g) + env(safe-area-inset-left, 0px)); min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: 500 14px/1.2 var(--ui); box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in); }
+.leave-patient::before { content: "← "; }
+.leave-patient:hover { background: var(--panel-solid); }
+.leave-patient:active { transform: scale(var(--press)); transition: transform var(--t-press) var(--spring); }
+.leave-patient:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .stops { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
 .seg button, .grid button, .stops button { min-height: 40px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: transparent; cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in), border-color var(--t-exit) var(--ease-in), color var(--t-exit) var(--ease-in); }
 .stops button { min-height: 36px; padding: 4px 2px; font-size: 11px; }

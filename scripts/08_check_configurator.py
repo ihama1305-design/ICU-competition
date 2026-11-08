@@ -271,6 +271,55 @@ with sync_playwright() as p:
         }""")
         check(not out, f"{room}: every route between views stays inside the room {out[:6]}")
 
+    # ---------------------------------------------------------------- Patient view: the eye stays at the pillow and only turns
+    for room in ROOMS:
+        go(pg, room)
+        pillow = spec["configurator"]["rooms"][room]["cameras"]["patient"]["eye"]
+        pg.evaluate("window.__config.camera('family', { instant: true })")
+        pg.click("#views button[data-value='patient']")
+        pg.wait_for_function("window.__config.state().view === 'patient' && !window.__config.state().moving", timeout=60000)
+        r = pg.evaluate("""(pillow) => {
+          const c = window.__config, off = () => { const e = c.eye(); return Math.hypot(e.x - pillow[0], e.y - pillow[1], e.z - pillow[2]); };
+          const yaw = d => Math.atan2(d.y, d.x), turned = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
+          const out = { arrived: off() }, start = c.look();
+          c.orbit(0.09, 0); c.renderNow();
+          out.leftIsLeft = turned(yaw(start), yaw(c.look())) > 0;  // counter-clockwise seen from above, with y north
+          let worst = 0, most = 0;
+          for (let i = 0; i < 40; i++) { c.orbit(0.09, 0); c.renderNow(); worst = Math.max(worst, off()); most = Math.max(most, Math.abs(turned(yaw(start), yaw(c.look())))); }
+          for (let i = 0; i < 80; i++) { c.orbit(-0.09, 0); c.renderNow(); worst = Math.max(worst, off()); most = Math.max(most, Math.abs(turned(yaw(start), yaw(c.look())))); }
+          out.mostTurn = most;
+          for (let i = 0; i < 40; i++) { c.orbit(0, -0.09); c.renderNow(); worst = Math.max(worst, off()); }
+          out.up = Math.asin(c.look().z);
+          for (let i = 0; i < 60; i++) { c.orbit(0, 0.09); c.renderNow(); worst = Math.max(worst, off()); }
+          out.down = Math.asin(c.look().z);
+          const before = c.eye(), h = c.hfov();
+          c.zoomOut(0.8); c.renderNow();
+          const after = c.eye();
+          out.zoomMoved = Math.hypot(after.x - before.x, after.y - before.y, after.z - before.z);
+          out.zoomNarrowed = c.hfov() < h;
+          out.worst = worst;
+          return out;
+        }""", pillow)
+        check(r["arrived"] < 0.06, f"{room} Patient view: arrives at the pillow ({r['arrived']:.3f} m off)")
+        check(r["worst"] < 0.11, f"{room} Patient view: turning keeps the eye at the pillow ({r['worst']:.3f} m at most)")
+        check(r["leftIsLeft"], f"{room} Patient view: the left arrow looks left")
+        check(1.5 < r["mostTurn"] < 1.85, f"{room} Patient view: turns about as far as a head can and no further ({r['mostTurn']:.2f} rad)")
+        check(r["up"] > 1.3, f"{room} Patient view: looks up to the ceiling ({r['up']:.2f} rad)")
+        check(-1.1 < r["down"] < -0.6, f"{room} Patient view: looks down at the bed, not under it ({r['down']:.2f} rad)")
+        check(r["zoomMoved"] < 0.001 and r["zoomNarrowed"], f"{room} Patient view: plus narrows the view without moving the eye ({r['zoomMoved']:.4f} m)")
+        leave = pg.locator("#leavePatient")
+        check(leave.is_visible() and leave.inner_text() == "Return to Family zone", f"{room} Patient view: Return names the view it goes back to ({leave.inner_text()!r})")
+        shot(pg, f"{room.lower()}_patient_up")
+        leave.click()
+        pg.wait_for_function("window.__config.state().view === 'family' && !window.__config.state().moving", timeout=60000)
+        check(not leave.is_visible(), f"{room} Patient view: Return goes back to Family zone and hides")
+        pg.click("#views button[data-value='patient']")
+        pg.wait_for_function("window.__config.state().view === 'patient' && !window.__config.state().moving", timeout=60000)
+        pg.focus("#c")
+        pg.keyboard.press("Escape")
+        check(pg.evaluate("window.__config.state().view") == "family", f"{room} Patient view: Escape goes back too")
+    pg.evaluate("window.__config.camera('overview', { instant: true })")
+
     # the options
     go(pg, "W1")
     set_defaults(pg)
@@ -459,7 +508,8 @@ with sync_playwright() as p:
     log = tour["log"]
     check(log[0] == "dollhouse" and log[-1] == "dollhouse", f"the tour starts and ends at the dollhouse {log[:1]} {log[-1:]}")
     check(log == tour["order"], f"the tour stops at each of its views in order ({len(log)} stops)")
-    check(set(log) == set(pg.evaluate("window.__config.views()")), f"the tour visits every view ({len(log)} stops)")
+    # Patient view is somewhere to go and come back from, not a stop: it starts where From the bed does
+    check(set(log) == set(pg.evaluate("window.__config.views()")) - {"patient"}, f"the tour visits every view but Patient view ({len(log)} stops)")
     tour_finished(pg, "the tour")
     # already on the first stop: its move goes nowhere, and has to arrive for the tour to go on
     pg.evaluate("window.__config.camera('dollhouse', { instant: true })")
@@ -796,7 +846,7 @@ with sync_playwright() as p:
         tour = pg.evaluate("window.__config.tour()")
         check(tour["log"] == tour["order"], f"reduced motion, {room}: the tour stops at each of its views in order ({len(tour['log'])} stops)")
         # W1's Bathroom view stands in a wall block, so the tour leaves it out on purpose
-        check(set(pg.evaluate("window.__config.views()")) - set(tour["log"]) <= {"bathroom"} and "bathroom" not in tour["log"], f"reduced motion, {room}: the tour visits every view but the bathroom")
+        check(set(pg.evaluate("window.__config.views()")) - set(tour["log"]) <= {"bathroom", "patient"} and not {"bathroom", "patient"} & set(tour["log"]), f"reduced motion, {room}: the tour visits every view but the bathroom and Patient view")
         tour_finished(pg, f"reduced motion, {room}: the tour")
     pg.evaluate("window.__config.startTour()")
     pg.wait_for_function("window.__config.tour().log.length >= 2", timeout=60000)
@@ -889,6 +939,24 @@ with sync_playwright() as p:
     pg.wait_for_function("window.__configErrors.length > 0", timeout=60000)
     check("could not be loaded" in pg.inner_text("#load"), "if Three.js can't be fetched, the page says so instead of loading for ever")
     ctx.close()
+
+    # ---------------------------------------------------------------- a browser that can't draw says why, and where the pictures are
+    NO_WEBGL2 = "HTMLCanvasElement.prototype.getContext = (g => function (t, ...a) { return /webgl/.test(t) ? null : g.call(this, t, ...a); })(HTMLCanvasElement.prototype.getContext);"
+    NO_IMPORT_MAPS = "HTMLScriptElement.supports = t => t !== 'importmap';"
+    for what, init, words in [("no WebGL 2", NO_WEBGL2, "it needs WebGL 2"), ("no import maps", NO_IMPORT_MAPS, "too old for the way the page loads")]:
+        ctx = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+        ctx.add_init_script(init)
+        pg = ctx.new_page()
+        if what == "no import maps":
+            pg.route("**/three.module.js", lambda r: r.abort())  # this Chromium has import maps: make "three" fail as it would without them
+        pg.goto(URL)
+        pg.wait_for_function("window.__cantDraw", timeout=60000)
+        pg.wait_for_timeout(2000)  # long enough for main.js to have failed, or to have hidden the message by mistake
+        text = pg.inner_text("#load") if pg.is_visible("#load") else ""
+        check(words in text, f"{what}: the page says why it can't draw ({text[:80]!r})")
+        check(pg.locator("#load a").get_attribute("href") == "../", f"{what}: it links to the pictures on the home page")
+        check(not pg.is_visible("#panel"), f"{what}: no panel of controls that would do nothing")
+        ctx.close()
 
     # ---------------------------------------------------------------- dark theme
     ctx, pg, errs, missing, _ = open_page(b, 1366, 820, scheme="dark")
