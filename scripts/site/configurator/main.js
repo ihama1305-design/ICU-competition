@@ -17,6 +17,7 @@ import { PACS } from "./pacs.js";
 import { MODES, RoomModes } from "./modes.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
 import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById } from "./placed.js";
+import { ClinicalView } from "./clinical.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -37,6 +38,8 @@ const stage = (() => {
 })();
 const controls = new OrbitControls(stage.camera, canvas);
 const placement = new Placement(stage); // items the visitor places, room by room
+const clinical = new ClinicalView({ stage, placement, layer: $("clinicalLabels") });
+let clinicalByHand = false, clinicalByMode = false; // Clinical view is on if either asks for it
 const state = { room: "W1", view: "overview", hour: STOPS.afternoon };
 let beforePatient = "overview"; // where Return goes from Patient view
 let dirty = true, lastDayHour = STOPS.afternoon;
@@ -168,6 +171,7 @@ async function setRoom(label, { keepView = true } = {}) {
   setAddon(room, "comfortControl", true); // not an option: the wall control is always there
   applyAll();
   setDemoReadout();
+  clinical.set(clinical.on, room);
   relight();
   rig.view = null;
   rig.go(keepView ? state.view : "overview", { instant: true });
@@ -195,6 +199,7 @@ $("views").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.id === "tour") { tour.toggle(); return; }
+  if (!b.dataset.value) return; // not a view, like the Clinical view toggle
   tour.stop();
   rig.go(b.dataset.value);
   remember();
@@ -651,6 +656,7 @@ const modeApi = {
     invalidate();
   },
   glassClear: () => { glass.set({ mode: "clear", opaque: false }); EFFECTS.visible({ part: "cfg_curtain", on: false }); },
+  overlay: on => { clinicalByMode = on; syncClinical(); },
   beforeChange: () => { if (pacs.active) pacs.exit(); },
   changed: name => syncModes(name),
 };
@@ -676,6 +682,23 @@ $("modeBar").addEventListener("click", e => {
   if (b) modes.set(b.dataset.mode);
 });
 $("leaveEmergency").addEventListener("click", () => modes.exitEmergency());
+
+// ---------------------------------------------------------------- Clinical view: labels and keep-clear areas (clinical.js)
+function syncClinical() {
+  const on = clinicalByHand || clinicalByMode, was = clinical.on;
+  if (stage.current) clinical.set(on, stage.current);
+  $("clinicalToggle").setAttribute("aria-pressed", String(on));
+  $("clinicalNote").hidden = !on;
+  invalidate();
+  if (on !== was) say(on ? `Clinical view on: ${clinical.fixed.length} pieces of equipment labelled, with keep-clear areas around the bed.` : "Clinical view off.");
+}
+$("clinicalToggle").addEventListener("click", () => {
+  // a mode that turned it on is overruled by hand until the mode changes
+  const on = !(clinicalByHand || clinicalByMode);
+  clinicalByHand = on;
+  if (!on) clinicalByMode = false;
+  syncClinical();
+});
 
 const OBJECT_DETAILS = {
   cfg_kit_bed: ["Adjustable ICU bed", "A modeled patient bed with a raised backrest, side rails, mattress, and bedding."],
@@ -1013,6 +1036,7 @@ function frame(now) {
   if (dirty) {
     dirty = false;
     stage.draw();
+    clinical.update(stage.camera, rig.visible.w);
     window.__configFrames = (window.__configFrames || 0) + 1;
   }
 }
@@ -1104,6 +1128,7 @@ window.__config = {
   setMode: (name, opts) => modes.set(name, opts),
   presets: () => readPresets(),
   walkable: () => rig.meta.walkable,
+  clinical: () => ({ on: clinical.on, labels: clinical.showing(), zones: !!stage.current.clinicalZones?.visible }),
   placed: () => placement.list(state.room).map(({ type, x, y, rot }) => ({ type, x: +x.toFixed(2), y: +y.toFixed(2), rot })),
   screenOf: (x, y, z) => { const v = W2T(x, y, z).project(stage.camera); return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight }; },
   /** Stand 2.2 m in front of the room's longest plain wall and return where a point on it, 1.2 m up, is on screen. */
