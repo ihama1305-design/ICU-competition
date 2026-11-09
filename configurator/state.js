@@ -1,7 +1,8 @@
 // A room as a short code in the URL hash, so a link restores it exactly.
 // One character each for the format version, room and view, two for the time, then one per option group in the order of its
-// `code` in options.json, with any custom colours after a ~. The codes are append-only, so links made today keep working:
-// a group added later is simply missing from an old code, and takes its default.
+// `code` in options.json, with any custom colours after a ~, and any items the visitor placed after a . (see placed.js).
+// The codes are append-only, so links made today keep working: a group added later is simply missing from an old code,
+// and takes its default.
 
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const VERSION = "1";
@@ -9,7 +10,7 @@ const CUSTOM = "_";
 
 const groupsInOrder = data => data.sections.flatMap(s => s.groups).sort((a, b) => a.code - b.code);
 
-export function encodeSpec(data, state, selected) {
+export function encodeSpec(data, state, selected, placed = "") {
   const tick = Math.round(state.hour * 12); // five-minute steps
   let code = VERSION + ALPHABET[data.rooms.indexOf(state.room)] + ALPHABET[data.views.indexOf(state.view)];
   code += ALPHABET[Math.floor(tick / 62)] + ALPHABET[tick % 62];
@@ -22,12 +23,13 @@ export function encodeSpec(data, state, selected) {
       code += ALPHABET[g.options.find(o => o.id === selected[g.id]).code];
     }
   }
-  return customs.length ? `${code}~${customs.join("~")}` : code;
+  if (customs.length) code += `~${customs.join("~")}`;
+  return placed ? `${code}.${placed}` : code;
 }
 
 /** Read a hash like #c=...; returns null if it isn't a valid code. `dropped` names what it set that isn't offered any more. */
 export function decodeSpec(data, hash) {
-  const m = /^#c=([0-9a-zA-Z_~]+)$/.exec(hash);
+  const m = /^#c=([0-9a-zA-Z_~]+)(?:\.([0-9a-zA-Z]*))?$/.exec(hash);
   if (!m) return null;
   const [body, ...hex] = m[1].split("~");
   if (body.length < 5 || body[0] !== VERSION || !hex.every(h => /^[0-9a-fA-F]{6}$/.test(h))) return null;
@@ -49,7 +51,7 @@ export function decodeSpec(data, hash) {
     if (!option) return null;
     selected[g.id] = option.id;
   }
-  return { room, view, hour, selected, dropped: holdHidden(data, selected) };
+  return { room, view, hour, selected, dropped: holdHidden(data, selected), placed: m[2] || "" };
 }
 
 /**

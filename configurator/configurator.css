@@ -152,6 +152,15 @@ footer p { margin: 0; }
 .outline-action { min-height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; transition: background-color var(--t-enter) var(--ease-out), transform var(--t-spring) var(--spring); }
 .outline-action:hover { background: var(--hover); }
 .outline-action:active { transform: scale(var(--press)); }
+.place-items { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.place-items button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 52px; padding: 8px 10px; border: 1px dashed var(--track); border-radius: 8px; background: transparent; color: var(--ink); text-align: left; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.place-items button small { color: var(--muted); font-size: 11px; }
+.place-items button:hover { background: var(--hover); }
+.place-items button[aria-pressed="true"] small { color: inherit; }
+.placing #c { cursor: crosshair; }
+.dragging-item, .dragging-item * { cursor: grabbing !important; }
+.object-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.object-actions:has(button:not([hidden])) { margin-top: 10px; }
 .preset-form { display: flex; gap: 6px; margin-bottom: 8px; }
 .preset-form input { flex: 1; min-width: 0; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-solid); color: var(--ink); font: 14px var(--ui); }
 .preset-form input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

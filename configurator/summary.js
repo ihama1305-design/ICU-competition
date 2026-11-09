@@ -1,7 +1,7 @@
 // The spec sheet: every choice, with the notes that go with them.
 import { el, noteElement } from "./panel.js";
 
-export function summaryContent(data, selected, room, { roomLabel, picture, code, theme }) {
+export function summaryContent(data, selected, room, { roomLabel, picture, code, theme, placed = [] }) {
   const box = el("div", { className: "summary" });
   const context = { ...selected, room };
   box.append(el("img", { src: picture, alt: "The current view of the room" }));
@@ -25,6 +25,15 @@ export function summaryContent(data, selected, room, { roomLabel, picture, code,
       }
     }
     box.append(el("div", {}, el("h3", { textContent: section.label }), spec));
+  }
+  if (placed.length) {
+    // items the visitor placed: how many of each, in the order they were first placed
+    const counts = new Map();
+    placed.forEach(label => counts.set(label, (counts.get(label) || 0) + 1));
+    const spec = list();
+    counts.forEach((n, label) => row(spec, label, n > 1 ? `${n} placed` : "Placed"));
+    box.append(el("div", {}, el("h3", { textContent: "Placed items" }), spec,
+      el("p", { className: "note", textContent: "Placed where you chose: staff access, clearances and infection-control positions haven't been checked." })));
   }
   if (notes.length) {
     const list = el("div", { className: "notes" }, el("h3", { textContent: "Clinical notes" }));

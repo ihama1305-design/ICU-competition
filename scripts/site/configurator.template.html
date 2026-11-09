@@ -63,6 +63,13 @@
       <p id="themeNote" class="note" role="status"></p>
     </section>
 
+    <section aria-labelledby="hPlace">
+      <h2 id="hPlace">Place items</h2>
+      <div id="placeItems" class="place-items" role="group" aria-labelledby="hPlace"></div>
+      <p id="placeStatus" class="note" role="status"></p>
+      <p class="note">Drag an item onto the room, or choose it and then click or tap where it goes. Drag a placed item to move it, and click it to turn or remove it. Where they go is up to you: access, clearances and infection-control positions aren't checked.</p>
+    </section>
+
     <section aria-labelledby="hSaved">
       <h2 id="hSaved">Saved rooms</h2>
       <form id="presetForm" class="preset-form">
@@ -152,7 +159,10 @@
   <p class="object-kicker">Selected object</p>
   <h2 id="objectTitle"></h2>
   <p id="objectDescription"></p>
-  <button type="button" id="objectAction" class="outline-action" hidden></button>
+  <div class="object-actions">
+    <button type="button" id="objectAction" class="outline-action" hidden></button>
+    <button type="button" id="objectAction2" class="outline-action" hidden></button>
+  </div>
 </aside>
 
 <dialog id="profile" aria-labelledby="profileTitle">
