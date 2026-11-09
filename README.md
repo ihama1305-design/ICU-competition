@@ -12,7 +12,8 @@ The model and walkthrough show the floor as built, as a starting point for a red
 
 The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) runs in the browser. Drag **Place person** onto any open floor spot and your view drops to their eye level.
 
-- <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to walk, <kbd>Shift</kbd> to run, drag or arrow keys to look. Phones get on-screen arrows.
+- <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to walk, <kbd>Shift</kbd> to run, drag or arrow keys to look. Touch screens get a joystick that walks forward, back and sideways, a little or a lot, and you drag the view to turn. On a phone the controls sit in one row that scrolls sideways, so the room keeps most of the screen.
+- The page draws only when something changes, so an idle page costs almost nothing. That matters most for a phone's battery.
 - <kbd>V</kbd> shows the person from behind.
 - Walls, counters and the facade stop you. Doors and glass fronts let you through.
 - The plan in the corner shows where you are. Click it to jump.
