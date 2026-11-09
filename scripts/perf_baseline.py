@@ -16,9 +16,12 @@ else:
 
 GPU = """() => { const c = document.createElement('canvas').getContext('webgl2'); if (!c) return 'no webgl2';
   const e = c.getExtension('WEBGL_debug_renderer_info'); return e ? c.getParameter(e.UNMASKED_RENDERER_WEBGL) : c.getParameter(c.RENDERER); }"""
-# rAF frames the page actually draws, over a fixed window
+# animation-frame callbacks over a fixed window: how responsive the page is. Since 8 November the walkthrough draws only when
+# something changes, so this no longer counts draws; VIEWER_DRAWS does, from the page's own counter
 VIEWER_FPS = """async s => { let n = 0, on = true; const f = () => { n++; if (on) requestAnimationFrame(f); }; requestAnimationFrame(f);
   await new Promise(r => setTimeout(r, s * 1000)); on = false; return +(n / s).toFixed(1); }"""
+VIEWER_DRAWS = """async s => { if (window.__viewerFrames === undefined) return null; const f0 = window.__viewerFrames;
+  await new Promise(r => setTimeout(r, s * 1000)); return +((window.__viewerFrames - f0) / s).toFixed(1); }"""
 # the configurator draws on demand: orbit a little every frame and count the frames it really drew
 CONFIG_FPS = """async s => { const c = window.__config, f0 = c.frames(); const end = performance.now() + s * 1000;
   while (performance.now() < end) { c.orbit(0.01, 0); await new Promise(requestAnimationFrame); }
@@ -41,7 +44,8 @@ with sync_playwright() as p:
         pg, ms, kb, errs = load(ctx, "/viewer/", "__viewerReady")
         gpu = pg.evaluate(GPU); pg.wait_for_timeout(1500)
         idle = pg.evaluate(VIEWER_FPS, 8)
-        rows.append(dict(page="walkthrough", view=name, ready_ms=ms, transfer_kb=kb, fps_idle=idle, gpu=gpu, errors=errs)); pg.close()
+        draws = pg.evaluate(VIEWER_DRAWS, 8)  # null before draw-on-change existed
+        rows.append(dict(page="walkthrough", view=name, ready_ms=ms, transfer_kb=kb, fps_idle=idle, draws_per_s_idle=draws, gpu=gpu, errors=errs)); pg.close()
         pg, ms, kb, errs = load(ctx, "/configurator/", "__configReady")
         pg.wait_for_timeout(1500)
         fps = pg.evaluate(CONFIG_FPS, 8); perf = pg.evaluate("window.__config.perf(4)")
