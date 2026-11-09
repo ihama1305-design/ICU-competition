@@ -1269,6 +1269,15 @@ with sync_playwright() as p:
     check(not faults, f"axe finds no serious faults on the home page {faults[:4]}")
     href = pg.locator("#configurator a").first.get_attribute("href")
     check("#c=" in href, "the home page's pictures link to their exact rooms")
+    check(pg.locator("#configurator a[href='configurator/?tour=guided']").count() == 1, "the home page offers the guided tour")
+    ctx.close()
+    # that link opens the configurator straight into the tour
+    ctx = b.new_context(viewport={"width": 1280, "height": 800})
+    pg = ctx.new_page()
+    pg.goto(URL + "?tour=guided")
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    pg.wait_for_function("window.__config.guide().running", timeout=30000)
+    check(pg.is_visible("#guide") and pg.evaluate("window.__config.guide().at") == 0, "?tour=guided starts the guided tour")
     ctx.close()
 
     # ---------------------------------------------------------------- a script that can't load says so
