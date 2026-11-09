@@ -7,7 +7,7 @@ import { Daylight, sunAt } from "./sky.js";
 import { Lighting } from "./lights.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
-import { setAddon, setAddonLook, setShade, setTv, syncPalms, tickAddons, toggleWardrobe } from "./addons.js";
+import { setAddon, setAddonLook, setOrientation, setShade, setTv, syncPalms, tickAddons, toggleWardrobe } from "./addons.js";
 import { decodeSpec, encodeSpec } from "./state.js";
 import { differences, optionLabel, resolveProfile } from "./profile.js";
 import { summaryContent } from "./summary.js";
@@ -128,6 +128,7 @@ const clock = h => {
 const isNight = h => h >= NIGHT_FROM;
 
 function relight() {
+  if (stage.current) setOrientation(stage.current, state.hour); // the orientation screen tells the room's time
   const day = daylight.apply(state.hour);
   lighting.update(state.hour, day);
   invalidate();
@@ -1176,6 +1177,7 @@ window.__config = {
     const v = W2T(mx + nx * 0.01, my + ny * 0.01, 1.2).project(stage.camera);
     return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight };
   },
+  orientation: () => stage.current.addons?.tv?.userData.orientText,
   addonShown: id => !!stage.current.addons?.[id]?.visible,
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },

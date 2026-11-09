@@ -591,6 +591,23 @@ with sync_playwright() as p:
     check(not pg.evaluate("window.__config.guide()")["running"], "Esc on the tour's card ends it, and the room is as it was")
     set_defaults(pg)
 
+    # ---------------------------------------------------------------- the orientation screen: the weekday, date and the room's own time
+    go(pg, "W1")
+    set_defaults(pg)
+    pg.evaluate("window.__config.set('tvplay', 'orientation'); window.__config.time(window.__config.stops.afternoon)")
+    o = pg.evaluate("window.__config.orientation()")
+    today = pg.evaluate("[new Date().toLocaleDateString('en-GB', { weekday: 'long' }), new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })]")
+    check(o and o[:2] == today and o[2] == pg.inner_text("#timeNow") and o[3] == "Afternoon", f"the orientation screen shows today and the room's own time {o} {today}")
+    pg.evaluate("window.__config.time(window.__config.stops.night)")
+    o = pg.evaluate("window.__config.orientation()")
+    check(o and o[2] == pg.inner_text("#timeNow") and o[3] == "Night", f"it follows the time of day into the night {o}")
+    pg.click("#modeBar button[data-mode='emergency']")
+    check(not pg.evaluate("window.__config.mode()")["tvPlaying"] and pg.evaluate("window.__config.orientation()") is not None, "Emergency-ready turns it off like any screen")
+    pg.click("#leaveEmergency")
+    pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+    check(pg.evaluate("window.__config.selected().tvplay") == "orientation", "and leaving puts it back")
+    set_defaults(pg)
+
     # the options
     go(pg, "W1")
     set_defaults(pg)
