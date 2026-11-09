@@ -18,7 +18,8 @@ export const MODES = {
     label: "Clinical",
     light: { kelvin: 4000, level: 1 },
     task: true,
-    note: "Clinical: full, neutral room light and the examination task light on, for care at the bed.",
+    overlay: true,
+    note: "Clinical: full, neutral room light, the examination task light on, and Clinical view's labels and keep-clear areas.",
     say: "Clinical mode. Full, neutral light and the examination task light on.",
   },
   emergency: {
@@ -27,6 +28,7 @@ export const MODES = {
     task: true,
     screensOff: true,
     glassClear: true,
+    overlay: true,
     note: "Emergency-ready, started by staff: room lights full, task light on, the TV and aquarium screen off, the glazed front clear. The monitor keeps running, and clinical alarms and medical devices are not changed.",
     say: "Emergency-ready. Lights full, task light on, screens off, the glass clear. Clinical alarms and medical devices are not changed.",
   },
@@ -41,7 +43,7 @@ const mix = (a, b, k) => a + (b - a) * k;
  * Runs the modes against the room through `api`, which main.js provides:
  * baseLight() and the room's light as configured, as { kelvin, level }; setLight(look, task) lays a look over it (null for none);
  * blindsNow(), configuredBlinds() and setBlinds(level); restore(groupIds) re-applies the configured choices;
- * screens(on), glassClear(); beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
+ * screens(on), glassClear(), overlay(on) for Clinical view; beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
  */
 export class RoomModes {
   constructor(api) {
@@ -66,6 +68,7 @@ export class RoomModes {
     api.screens(true);
     if (to.screensOff) api.screens(false);
     if (to.glassClear) api.glassClear();
+    api.overlay(!!to.overlay); // Clinical view's labels and keep-clear areas
     const fromLight = this.look || api.baseLight(), toLight = to.light || api.baseLight();
     const fromBlinds = api.blindsNow(), toBlinds = to.blinds ?? api.configuredBlinds();
     this.tween = { start: performance.now(), fromLight, toLight, fromBlinds, toBlinds, task: !!to.task, keep: !!to.light, ownBlinds: to.blinds !== undefined };
