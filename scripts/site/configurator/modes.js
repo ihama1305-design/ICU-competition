@@ -14,6 +14,13 @@ export const MODES = {
     note: "Comfort: the room lights warm and dim, and the blinds lower. The task light, the monitor and clinical alarms are unaffected.",
     say: "Comfort mode. The room lights warm and dim, and the blinds lower. Clinical alarms are unaffected.",
   },
+  privacy: {
+    label: "Privacy",
+    blinds: 0.5,
+    privateFront: true,
+    note: "Privacy: smart glass on the glazed front turns opaque (a curtain or blinds front is already closed) and the window blinds lower halfway. Staff can end it at any moment, and Emergency-ready clears the glass.",
+    say: "Privacy mode. The glazed front turns opaque and the blinds lower halfway. Staff can end it at any moment.",
+  },
   clinical: {
     label: "Clinical",
     light: { kelvin: 4000, level: 1 },
@@ -43,7 +50,7 @@ const mix = (a, b, k) => a + (b - a) * k;
  * Runs the modes against the room through `api`, which main.js provides:
  * baseLight() and the room's light as configured, as { kelvin, level }; setLight(look, task) lays a look over it (null for none);
  * blindsNow(), configuredBlinds() and setBlinds(level); restore(groupIds) re-applies the configured choices;
- * screens(on), glassClear(), overlay(on) for Clinical view; beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
+ * screens(on), glassClear(), glassPrivate(), overlay(on) for Clinical view; beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
  */
 export class RoomModes {
   constructor(api) {
@@ -68,6 +75,7 @@ export class RoomModes {
     api.screens(true);
     if (to.screensOff) api.screens(false);
     if (to.glassClear) api.glassClear();
+    if (to.privateFront) api.glassPrivate();
     api.overlay(!!to.overlay); // Clinical view's labels and keep-clear areas
     const fromLight = this.look || api.baseLight(), toLight = to.light || api.baseLight();
     const fromBlinds = api.blindsNow(), toBlinds = to.blinds ?? api.configuredBlinds();
