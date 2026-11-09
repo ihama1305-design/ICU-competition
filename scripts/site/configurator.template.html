@@ -17,6 +17,18 @@
 <body>
 <canvas id="c" class="pending" tabindex="0" aria-label="3D view of the room. Drag or use the arrow keys to look around."></canvas>
 <div id="load" role="status">Loading the room…</div>
+<section id="guide" class="guide" aria-labelledby="guideTitle" hidden>
+  <div class="guide-top"><span id="guideCount" class="guide-count"></span><span id="guideBar" class="guide-bar" aria-hidden="true"></span></div>
+  <h2 id="guideTitle"></h2>
+  <p id="guideText" aria-live="polite"></p>
+  <div id="guideLinks" class="guide-links"></div>
+  <div class="guide-buttons">
+    <button type="button" id="guidePrev">Previous</button>
+    <button type="button" id="guidePlay" aria-pressed="false">Pause</button>
+    <button type="button" id="guideNext" class="guide-next">Next</button>
+    <button type="button" id="guideExit">Exit</button>
+  </div>
+</section>
 <div id="clinicalLabels" class="clinical-labels" aria-hidden="true" hidden></div>
 <div id="hud" class="hud">
   <div id="modeBar" class="mode-bar" role="group" aria-labelledby="modeTitle">
@@ -46,6 +58,7 @@
     <h1>Room configurator</h1>
     <p class="tag">Design proposal</p>
     <button type="button" id="openProfile" class="profile-launch">Tune it in <span aria-hidden="true">↗</span></button>
+    <button type="button" id="openGuide" class="guide-launch"><span aria-hidden="true">▶</span> Guided tour, about a minute and a half</button>
   </header>
   <div id="panelBody">
     <section id="profileBar" aria-labelledby="hProfile" hidden>
