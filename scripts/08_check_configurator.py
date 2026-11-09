@@ -608,6 +608,31 @@ with sync_playwright() as p:
     check(pg.evaluate("window.__config.selected().tvplay") == "orientation", "and leaving puts it back")
     set_defaults(pg)
 
+    # ---------------------------------------------------------------- before and after: today's room, then the visitor's, at the same view
+    go(pg, "W1")
+    set_defaults(pg)
+    pg.evaluate("window.__config.theme('desert'); window.__config.camera('overview', { instant: true })")
+    pg.focus("#placeItems button[data-item='screen']"); pg.keyboard.press("Enter")
+    pg.evaluate("document.getElementById('objectCard').hidden = true")
+    mine, eye0 = pg.evaluate("window.__config.selected()"), pg.evaluate("window.__config.eye()")
+    code_mine = pg.evaluate("window.__config.code()")
+    defaults = pg.evaluate("Object.fromEntries(window.__config.options().sections.flatMap(s => s.groups).map(g => [g.id, g.default]))")
+    pg.click("#compareToggle")
+    check(pg.evaluate("window.__config.comparing()") and pg.evaluate("window.__config.selected()") == defaults and pg.evaluate("window.__config.placedShown()") == 0, "Compare shows today's room: every default, none of the placed items")
+    check(pg.evaluate("window.__config.eye()") == eye0 and pg.evaluate("window.__config.code()") == code_mine and pg.is_visible("#compareNote"), "at the same view, with the visitor's link unchanged, and a note saying so")
+    pg.wait_for_timeout(400)
+    check(pg.evaluate("location.hash") == "#c=" + code_mine, "the address bar keeps the visitor's room too")
+    shot(pg, "w1_compare_before")
+    pg.click("#compareToggle")
+    check(not pg.evaluate("window.__config.comparing()") and pg.evaluate("window.__config.selected()") == mine and pg.evaluate("window.__config.placedShown()") == 1, "pressing it again brings the visitor's room back exactly")
+    # a change while comparing lands on the visitor's own room, not on today's
+    pg.click("#compareToggle")
+    pg.evaluate("window.__config.set('tvplay', 'on')")
+    after = pg.evaluate("window.__config.selected()")
+    check(not pg.evaluate("window.__config.comparing()") and after["feature"] == mine["feature"] and after["tvplay"] == "on" and pg.evaluate("window.__config.placedShown()") == 1, "changing something while comparing ends it, and the change lands on the visitor's room")
+    pg.click("#resetRoom")
+    set_defaults(pg)
+
     # the options
     go(pg, "W1")
     set_defaults(pg)
