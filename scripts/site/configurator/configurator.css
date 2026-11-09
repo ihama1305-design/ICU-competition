@@ -69,6 +69,24 @@ button { font: inherit; color: inherit; }
 /* over the room, top left: room modes, then Patient view's Return. Clear of the panel on a desktop and of the sheet on a phone */
 .hud { position: fixed; z-index: 4; top: calc(var(--g) + env(safe-area-inset-top, 0px)); left: calc(var(--g) + env(safe-area-inset-left, 0px)); max-width: calc(100vw - var(--panel-w) - 4 * var(--g)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
 .hud > * { pointer-events: auto; }
+.guide-launch { grid-column: 1 / -1; margin-top: 8px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--hover); color: var(--accent); font: 500 13px/1.3 var(--ui); text-align: left; cursor: pointer; }
+.guide-launch:hover { background: var(--accent); color: var(--accent-ink); }
+/* the guided tour's card: bottom left, clear of the panel; on a phone, above the closed sheet */
+.guide { position: fixed; z-index: 5; left: calc(var(--g) + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px)); width: min(460px, calc(100vw - var(--panel-w) - 4 * var(--g))); padding: 14px 16px; border: 1px solid var(--accent); border-radius: 14px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); }
+.guide-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.guide-count { color: var(--muted); font: 500 12px var(--mono); white-space: nowrap; }
+.guide-bar { flex: 1; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) var(--done, 0%), var(--line) var(--done, 0%)); }
+.guide h2 { margin: 0 0 4px; color: var(--ink); font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; text-wrap: balance; }
+.guide p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; text-wrap: pretty; }
+.guide-links { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.guide-links:empty { display: none; }
+.guide-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.guide-buttons button { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: 500 13px var(--ui); cursor: pointer; }
+.guide-buttons button:hover:not(:disabled) { background: var(--hover); }
+.guide-buttons button:disabled { opacity: 0.45; cursor: default; }
+.guide-buttons .guide-next, .guide-buttons .guide-next:hover:not(:disabled) { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.guide-buttons .guide-next:hover:not(:disabled) { filter: brightness(1.08); }
+.guide-buttons button[aria-pressed] { background: transparent; color: var(--ink); border-color: var(--line); }
 /* Clinical view's labels, over the room and under the panel and the mode bar */
 .clinical-labels { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
 .clinical-labels span { position: absolute; left: 0; top: 0; padding: 3px 8px; border: 1px solid var(--accent); border-radius: 999px; background: var(--panel-solid); color: var(--ink); font: 500 11px/1.3 var(--ui); white-space: nowrap; box-shadow: 0 2px 8px rgba(16, 44, 54, 0.18); }
@@ -227,6 +245,8 @@ dialog::backdrop { background: rgba(10, 24, 30, 0.45); }
   .mode-title { display: none; }
   .mode-bar button { min-height: 40px; padding: 6px 10px; }
   .mode-note, .mode-banner { max-width: none; }
+  .guide { right: calc(var(--g) + env(safe-area-inset-right, 0px)); width: auto; bottom: calc(84px + var(--g) + env(safe-area-inset-bottom, 0px)); padding: 12px; }
+  .guide p { font-size: 12px; margin-bottom: 8px; }
   .mode-note, .mode-banner p { font-size: 12px; }
   .mode-banner { padding: 8px 10px; }
   #panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; height: min(62dvh, 520px); border-width: 1px 0 0; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); transform: translateY(calc(100% - 84px)); transition: transform var(--t-sheet-out) var(--ease-in); }

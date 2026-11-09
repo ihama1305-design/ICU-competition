@@ -18,6 +18,7 @@ import { MODES, RoomModes } from "./modes.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
 import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById } from "./placed.js";
 import { ClinicalView } from "./clinical.js";
+import { GuidedTour } from "./guide.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -622,8 +623,8 @@ const tour = {
   stop() { clearTimeout(this.timer); this.at = -1; this.mark(false); remember(); },
   mark(on) { const b = $("tour"); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Stop tour" : "Cinematic tour"; },
 };
-// anything the person does with the view ends the tour
-canvas.addEventListener("pointerdown", () => { if (tour.running) tour.stop(); });
+// anything the person does with the view ends the tour, and pauses the guided one
+canvas.addEventListener("pointerdown", () => { if (tour.running) tour.stop(); guide?.pause(); });
 canvas.addEventListener("wheel", () => { if (tour.running) tour.stop(); }, { passive: true });
 canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 
@@ -1015,6 +1016,34 @@ const endMove = e => {
 addEventListener("pointerup", endMove, true);
 addEventListener("pointercancel", endMove, true);
 
+// ---------------------------------------------------------------- the guided tour (guide.js)
+var guide = new GuidedTour({
+  snapshot: () => ({ code: specCode(), mode: modes.current, clinical: clinicalByHand }),
+  restore: snap => {
+    const spec = decodeSpec(optionData, `#c=${snap.code}`);
+    if (!spec) return;
+    applySpec(spec).then(() => {
+      modes.set(snap.mode, { instant: true });
+      clinicalByHand = snap.clinical;
+      syncClinical();
+    }).catch(fail);
+  },
+  room: label => (state.room === label && stage.current ? Promise.resolve() : setRoom(label)),
+  theme: id => applyTheme(id),
+  time: stop => setTime(STOPS[stop]),
+  camera: (name, instant) => { if (rig.meta.cameras[name]) rig.go(name, { instant: !!instant }); },
+  mode: name => modes.set(name),
+  place: types => { for (const t of types) placeInView(t); $("objectCard").hidden = true; },
+  open: id => $(id === "pacs" ? "startPacsGuide" : "openApis")?.click(),
+  shown: on => { document.body.classList.toggle("guided", on); if (on && isPhone()) setSheet(false); },
+  say, fail,
+}, {
+  card: $("guide"), count: $("guideCount"), bar: $("guideBar"), title: $("guideTitle"), text: $("guideText"), links: $("guideLinks"),
+  prev: $("guidePrev"), play: $("guidePlay"), next: $("guideNext"), exit: $("guideExit"),
+});
+$("openGuide").addEventListener("click", () => { tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
+$("guide").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); guide.exit(); } });
+
 // ---------------------------------------------------------------- drawing: only when something has changed
 let lastMovingDraw = 0;
 const adaptive = !navigator.webdriver; // a software renderer in a test shouldn't talk itself down from what it's testing
@@ -1128,6 +1157,8 @@ window.__config = {
   setMode: (name, opts) => modes.set(name, opts),
   presets: () => readPresets(),
   walkable: () => rig.meta.walkable,
+  guide: () => ({ running: guide.running, at: guide.at, playing: guide.playing, title: $("guideTitle").textContent }),
+  guideGo: i => guide.go(i),
   clinical: () => ({ on: clinical.on, labels: clinical.showing(), zones: !!stage.current.clinicalZones?.visible }),
   placed: () => placement.list(state.room).map(({ type, x, y, rot }) => ({ type, x: +x.toFixed(2), y: +y.toFixed(2), rot })),
   screenOf: (x, y, z) => { const v = W2T(x, y, z).project(stage.camera); return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight }; },
