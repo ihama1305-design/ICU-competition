@@ -1071,6 +1071,20 @@
         "text": "The picture is an original placeholder animation, not real footage."
        },
        "code": 1
+      },
+      {
+       "id": "orientation",
+       "label": "Orientation",
+       "effects": [
+        {
+         "do": "tv",
+         "playing": "orientation"
+        }
+       ],
+       "note": {
+        "text": "A calm orientation screen: the weekday and date, and the time of day from the room's own sun, large enough to read from the bed and darker at night. A concept: it shows no patient details, and it isn't a claim about delirium or sleep."
+       },
+       "code": 2
       }
      ],
      "code": 15
