@@ -153,6 +153,7 @@ function setTime(h) {
 }
 
 async function setRoom(label, { keepView = true } = {}) {
+  endCompare();
   if (pacs.active) pacs.exit();
   endMode();
   state.room = label;
@@ -323,6 +324,7 @@ function applyAll() {
 }
 
 function setOption(groupId, optionId, custom) {
+  endCompare();
   if (pacs.active) pacs.exit();
   endMode();
   endIdea();
@@ -350,6 +352,7 @@ function themeSelections(theme) {
 }
 
 function applyTheme(id) {
+  endCompare();
   if (pacs.active) pacs.exit();
   endMode();
   endIdea();
@@ -385,6 +388,7 @@ function endIdea() {
 }
 
 function createProfileIdea(form) {
+  endCompare();
   const result = resolveProfile(optionData, Object.fromEntries(new FormData(form).entries()));
   const before = { ...selected };
   showSelections(result.selections);
@@ -489,7 +493,8 @@ function syncUi() {
 }
 
 // ---------------------------------------------------------------- sharing: the room is in the URL
-const specCode = () => encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room)));
+// while today's room is showing for comparison, the link and summary stay with the visitor's own design
+const specCode = () => (compare ? compare.code : encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))));
 let rememberTimer = 0;
 function remember() {
   if (!optionData || !window.__configReady) return;
@@ -499,6 +504,7 @@ function remember() {
 }
 
 async function applySpec(spec) {
+  endCompare();
   if (pacs.active) pacs.exit();
   endMode();
   endIdea();
@@ -551,6 +557,7 @@ $("presetForm").addEventListener("submit", e => {
   else presetSay(r.reason === "full" ? `There are already ${MAX_PRESETS} saved rooms. Delete one to save another.` : "This browser won't let the page save rooms, so nothing was saved.");
 });
 $("resetRoom").addEventListener("click", () => {
+  endCompare();
   if (pacs.active) pacs.exit();
   endIdea();
   placement.set(state.room, []);
@@ -574,6 +581,7 @@ async function saveImage() {
 }
 
 async function openSummary() {
+  endCompare(); // the summary is of the visitor's own room
   const dialog = $("summary");
   const picture = URL.createObjectURL(await captureBlob());
   const roomLabel = rig.meta.isolation ? `Isolation room ${state.room}, with ante room and toilet` : `Standard room ${state.room}`;
@@ -634,7 +642,7 @@ canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
 const pacs = new PACS({ stage, lighting, rig, controls, relight, invalidate,
   stopTour: () => tour.stop(), getState: () => state,
-  closeApis: () => { endMode(); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
+  closeApis: () => { endCompare(); endMode(); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
   restoreApisMarkers: on => apis.setEnabled(on),
 });
 apis.beforeOpen = () => { if (pacs.active) pacs.exit(); };
@@ -681,7 +689,7 @@ function endMode() {
 }
 $("modeBar").addEventListener("click", e => {
   const b = e.target.closest("button[data-mode]");
-  if (b) modes.set(b.dataset.mode);
+  if (b) { endCompare(); modes.set(b.dataset.mode); }
 });
 $("leaveEmergency").addEventListener("click", () => modes.exitEmergency());
 
@@ -818,6 +826,7 @@ function setPlacing(type) {
 }
 
 function placeItem(type, at) {
+  endCompare(); // the comparison hides placed items: placing one goes back to the visitor's room
   const entry = placement.add(stage.current, type, at.x, at.y, at.rot);
   if (!entry) { placeSay(`This room already has ${MAX_PLACED} placed items. Remove one to place another.`); return null; }
   stage.renderer.shadowMap.needsUpdate = true;
@@ -1017,6 +1026,38 @@ const endMove = e => {
 addEventListener("pointerup", endMove, true);
 addEventListener("pointercancel", endMove, true);
 
+// ---------------------------------------------------------------- before and after: today's room against this one
+// Today's room is every option at its default, with none of the visitor's placed items, at the same view and time. The
+// visitor's design is kept aside and comes back exactly; their link and summary don't change while it shows.
+var compare = null;
+function setCompare(on) {
+  if (on === !!compare || !stage.current) return;
+  if (on) {
+    if (pacs.active) pacs.exit();
+    tour.stop();
+    compare = { selected: { ...selected }, mode: modes.current, code: specCode() };
+    modes.leave();
+    showSelections(Object.fromEntries(allGroups().map(g => [g.id, g.default])));
+    placement.list(state.room).forEach(p => { if (p.node) p.node.visible = false; });
+  } else {
+    const c = compare;
+    compare = null;
+    showSelections(c.selected);
+    placement.show(stage.current);
+    if (c.mode !== "standard") modes.set(c.mode, { instant: true });
+  }
+  $("compareToggle").setAttribute("aria-pressed", String(on));
+  $("compareToggle").textContent = on ? "Back to your room" : "Compare with today's room";
+  $("compareNote").hidden = !on;
+  stage.renderer.shadowMap.needsUpdate = true;
+  syncUi();
+  invalidate();
+  say(on ? "Showing today's room, at the same view and time." : "Showing your room again.");
+}
+/** Something is about to change the design: the comparison ends first, so the change lands on the visitor's own room. */
+function endCompare() { if (compare) setCompare(false); }
+$("compareToggle").addEventListener("click", () => setCompare(!compare));
+
 // ---------------------------------------------------------------- the guided tour (guide.js)
 var guide = new GuidedTour({
   snapshot: () => ({ code: specCode(), mode: modes.current, clinical: clinicalByHand }),
@@ -1042,7 +1083,7 @@ var guide = new GuidedTour({
   card: $("guide"), count: $("guideCount"), bar: $("guideBar"), title: $("guideTitle"), text: $("guideText"), links: $("guideLinks"),
   prev: $("guidePrev"), play: $("guidePlay"), next: $("guideNext"), exit: $("guideExit"),
 });
-$("openGuide").addEventListener("click", () => { tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
+$("openGuide").addEventListener("click", () => { endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
 $("guide").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); guide.exit(); } });
 
 // ---------------------------------------------------------------- drawing: only when something has changed
@@ -1177,6 +1218,8 @@ window.__config = {
     const v = W2T(mx + nx * 0.01, my + ny * 0.01, 1.2).project(stage.camera);
     return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight };
   },
+  comparing: () => !!compare,
+  placedShown: () => placement.list(state.room).filter(p => p.node?.visible).length,
   orientation: () => stage.current.addons?.tv?.userData.orientText,
   addonShown: id => !!stage.current.addons?.[id]?.visible,
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
