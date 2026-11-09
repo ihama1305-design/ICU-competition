@@ -191,6 +191,34 @@ function canvasTexture(w, h) {
   return { g: c.getContext("2d"), t, w, h };
 }
 
+/**
+ * The orientation screen: the weekday and date from this device's clock, and the time of day from the room's own solar time,
+ * so it agrees with the sky outside. Large and calm, darker at night. It shows no patient details.
+ */
+function drawOrientation({ g, t, w, h }, hour) {
+  const night = hour >= 19 || hour < 6.5;
+  const ink = night ? "#b8ccd1" : "#16282e", soft = night ? "#6f8a92" : "#5b6f75";
+  g.fillStyle = night ? "#0b1519" : "#f3eee4"; g.fillRect(0, 0, w, h);
+  const now = new Date();
+  const weekday = now.toLocaleDateString("en-GB", { weekday: "long" });
+  const date = now.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const m = Math.round(hour * 60), hh = Math.floor(m / 60) % 24, mm = m % 60;
+  const time = `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, "0")} ${hh < 12 ? "am" : "pm"}`;
+  const part = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : hour < 19.5 ? "Evening" : "Night";
+  g.fillStyle = ink; g.textBaseline = "alphabetic";
+  g.font = "600 46px sans-serif"; g.fillText(weekday, 32, 82);
+  g.font = "400 28px sans-serif"; g.fillText(date, 32, 124);
+  g.font = "600 54px sans-serif"; g.fillText(time, 32, 200);
+  g.fillStyle = soft; g.font = "400 24px sans-serif"; g.fillText(part, 32, 238);
+  // the sun by day, a crescent by night, in the corner
+  g.fillStyle = night ? "#c9d6da" : "#e8a23a";
+  g.beginPath(); g.arc(w - 70, 70, 26, 0, Math.PI * 2); g.fill();
+  if (night) { g.fillStyle = "#0b1519"; g.beginPath(); g.arc(w - 58, 62, 24, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = soft; g.font = "400 14px sans-serif"; g.fillText("Orientation display · concept", w - 214, h - 16);
+  t.needsUpdate = true;
+  return [weekday, date, time, part];
+}
+
 /** The TV's placeholder picture: an original loop of dunes drifting past under a slow sun. */
 function drawTvFrame({ g, t, w, h }, seconds) {
   const k = (seconds % 24) / 24;
@@ -375,12 +403,13 @@ Object.assign(BUILD, {
     drawTvFrame(pic, 3);
     const off = new THREE.MeshStandardMaterial({ color: "#0b0e10", roughness: 0.18 });
     const on = new THREE.MeshBasicMaterial({ map: pic.t });
+    const orient = canvasTexture(480, 270), orientOn = new THREE.MeshBasicMaterial({ map: orient.t });
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.97, 0.97 * 9 / 16), off);
     screen.position.z = 0.0665;
     const scaler = new THREE.Group();
     scaler.add(shell, screen);
     g.add(scaler);
-    Object.assign(g.userData, { scaler, screen, off, on, pic, fps: 12, tick: s => { if (screen.material === on) drawTvFrame(pic, s); }, animated: () => screen.material === on, tickTarget: screen });
+    Object.assign(g.userData, { scaler, screen, off, on, pic, orient, orientOn, orientText: null, fps: 12, tick: s => { if (screen.material === on) drawTvFrame(pic, s); }, animated: () => screen.material === on, tickTarget: screen });
     return g;
   },
 
@@ -626,7 +655,19 @@ export function setTv(room, { width, playing }) {
   (room.parts.cfg_tv_screen || []).forEach(n => { n.visible = false; });
   const u = room.addons.tv.userData;
   if (width !== undefined) u.scaler.scale.set(width, width, 1);
-  if (playing !== undefined) u.screen.material = playing ? u.on : u.off;
+  if (playing === "orientation") { u.screen.material = u.orientOn; u.orientAt = null; setOrientation(room, room.orientHour ?? 15.5); }
+  else if (playing !== undefined) u.screen.material = playing ? u.on : u.off;
+}
+
+/** Keep the orientation screen on the room's time of day; redrawn only when the minute it shows changes. */
+export function setOrientation(room, hour) {
+  room.orientHour = hour;
+  const u = room.addons?.tv?.userData;
+  if (!u || u.screen.material !== u.orientOn) return;
+  const minute = Math.round(hour * 60);
+  if (u.orientAt === minute) return;
+  u.orientAt = minute;
+  u.orientText = drawOrientation(u.orient, hour);
 }
 
 export function setShade(room, kind) {
