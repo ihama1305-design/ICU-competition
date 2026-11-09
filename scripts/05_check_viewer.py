@@ -22,13 +22,24 @@ def check(ok, msg):
         fail.append(msg)
 
 
+def camera_still(pg):
+    """Wait until the camera stops: a view change flies in over a second, longer on a busy machine."""
+    last = None
+    for _ in range(60):
+        c = pg.evaluate("window.__camera()")
+        if last and max(abs(a - b) for a, b in zip(c, last)) < 1e-4:
+            return
+        last = c
+        pg.wait_for_timeout(250)
+
+
 with sync_playwright() as pw:
     b = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
     pg = b.new_page(viewport={"width": 1366, "height": 820})
     errs = []
     pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "fonts.g" not in m.text else None)
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(url)
+    pg.goto(url, timeout=120000)  # a busy machine can take a while to fetch Three.js
     pg.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
     errs += pg.evaluate("window.__viewerErrors")
     pg.wait_for_timeout(1500)
@@ -70,7 +81,7 @@ with sync_playwright() as pw:
     check(end[0] > face_x + 0.1, "walked through the facade")
 
     # drop the person by dragging the toolbar button onto open corridor floor (top view)
-    pg.evaluate("window.__view('top')"); pg.wait_for_timeout(800)
+    pg.evaluate("window.__view('top')"); pg.wait_for_timeout(800); camera_still(pg)
     tx, ty = spec["cameras"].get("corridor_eye", [22.3, 27.0])
     sx, sy = pg.evaluate(f"window.__project({tx}, {ty}, 0)")
     bb = pg.locator("#drop").bounding_box()
@@ -159,6 +170,41 @@ with sync_playwright() as pw:
 
     check(not errs, f"console errors: {errs[:3]}")
 
+    # an idle page stops drawing; using it draws again
+    # measured in first person: orbit's damping eases a little each frame, and at a software renderer's frame or so a second
+    # it can take minutes to come to rest, where a real GPU takes a second. The walking figure still gets a few tries to settle.
+    pg.evaluate("window.__view('first')")
+    for _ in range(6):
+        f0 = pg.evaluate("window.__viewerFrames"); pg.wait_for_timeout(2500); f1 = pg.evaluate("window.__viewerFrames")
+        if f1 == f0:
+            break
+    check(f1 == f0, f"an idle page stops drawing ({f1 - f0} frames in 2.5 s, after waiting up to 15 s to settle)")
+    pg.mouse.move(300, 400); pg.mouse.move(340, 420); pg.wait_for_timeout(1200)
+    check(pg.evaluate("window.__viewerFrames") > f1, "moving the pointer over it draws again")
+
+    # a touch phone: one slim row of controls, and a joystick that walks forward, back and sideways
+    # in a browser of its own, like a phone: one that has run the desktop checks can hold up a second page's start
+    tb = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
+    ctx = tb.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    tp = ctx.new_page()
+    tp.goto(url, timeout=120000)
+    tp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
+    bar_h = tp.evaluate("document.getElementById('bar').offsetHeight")
+    names = tp.evaluate("[...document.querySelectorAll('#bar button')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+    check(bar_h <= 64 and {"Orbit", "First person", "Top", "Place person"} <= set(names), f"phone: the controls fit one slim row, with none left out ({bar_h}px) {names}")
+    tp.evaluate("window.__view('first')"); tp.wait_for_timeout(1500)
+    check(tp.is_visible("#pad .stick"), "phone: first person shows the walking joystick")
+    for label, (dx, dy) in [("forward", (0, -60)), ("sideways", (60, 0))]:
+        p0 = tp.evaluate("window.__walker()")
+        bb = tp.locator("#pad .stick").bounding_box(); cx, cy = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
+        tp.mouse.move(cx, cy); tp.mouse.down(); tp.mouse.move(cx + dx, cy + dy, steps=5); tp.wait_for_timeout(4000); tp.mouse.up()
+        p1 = tp.evaluate("window.__walker()")
+        moved = ((p1[0] - p0[0]) ** 2 + (p1[1] - p0[1]) ** 2) ** 0.5
+        print(f"  joystick {label}: {moved:.2f} m")
+        check(moved > 0.1, f"phone: the joystick walks {label} ({moved:.2f} m)")
+    tp.screenshot(path=os.path.join(ROOT, "renders", "viewer_phone_walk.png"))
+    tb.close()
+
     # a browser without WebGL 2 is told why, instead of seeing "Loading" for ever; the website's copy also links to the pictures
     ctx = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
     ctx.add_init_script("HTMLCanvasElement.prototype.getContext = (g => function (t, ...a) { return /webgl/.test(t) ? null : g.call(this, t, ...a); })(HTMLCanvasElement.prototype.getContext);")
@@ -173,5 +219,5 @@ with sync_playwright() as pw:
         check(pg.locator("#load a").get_attribute("href") == "../", "without WebGL 2 the website links to the pictures on the home page")
     ctx.close()
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, no-WebGL message)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, idle drawing, phone joystick, no-WebGL message)"))
 sys.exit(1 if fail else 0)

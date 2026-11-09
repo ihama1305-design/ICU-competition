@@ -128,10 +128,11 @@
   #info p { margin: 0; font-size: 13px; max-width: 65ch; }
   #tip { position: fixed; pointer-events: none; padding: 4px 8px; border-radius: 6px; background: var(--tip-bg); color: var(--tip-ink);
     font-size: 12px; white-space: nowrap; transform: translate(12px, 12px); z-index: 5; }
-  #pad { position: fixed; left: calc(var(--g) + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + 8px + env(safe-area-inset-bottom, 0px));
-    display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); gap: 6px; }
-  #pad button { font: 18px var(--ui); border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); touch-action: none; }
-  #pad .up { grid-column: 2; grid-row: 1; } #pad .lt { grid-column: 1; grid-row: 2; } #pad .dn { grid-column: 2; grid-row: 2; } #pad .rt { grid-column: 3; grid-row: 2; }
+  /* a joystick for walking on a touch screen: forward, back and sideways; dragging the view turns */
+  #pad { position: fixed; left: calc(var(--g) + 4px + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + 8px + env(safe-area-inset-bottom, 0px)); }
+  #pad .stick { position: relative; width: 124px; height: 124px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); touch-action: none; }
+  #pad .knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: var(--accent); opacity: 0.9; transition: transform var(--t-spring) var(--spring); }
+  #pad .stick.held .knob { transition: none; }
   button.v.person { display: inline-flex; gap: 6px; align-items: center; touch-action: none; }
   button.v.person svg { flex: none; transition: transform var(--t-spring) var(--spring); }
   #ghost { position: fixed; pointer-events: none; z-index: 6; transform: translate(-50%, -92%); color: var(--accent);
@@ -163,6 +164,12 @@
   @media (max-width: 820px) {
     #bar { max-width: calc(100vw - 2 * var(--g)); right: calc(var(--g) + env(safe-area-inset-right, 0px)); }
     #bar .help { display: none; }
+    /* every control stays, in one row that scrolls sideways, so the room keeps most of the screen */
+    #bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+    #bar::-webkit-scrollbar { display: none; }
+    #bar > * { flex: none; }
+    #bar .status { display: none; }
+    #bar h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
     #side { top: auto; left: var(--g); right: var(--g); width: auto; height: 46vh; bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px));
       transform: translateY(calc(100% + 24px)); transition: transform var(--t-sheet-out) var(--ease-in); z-index: 4; }
     #side.open { transform: none; transition: transform var(--t-sheet-in) var(--ease-out); }
@@ -210,9 +217,8 @@
 <div id="info" class="card" aria-live="polite" hidden><h3 id="iTitle"></h3><div class="meta" id="iMeta"></div><p id="iNotes"></p><a id="iConfigure" class="configure" hidden>Configure this room in 3D</a></div>
 <div id="tip" hidden></div>
 <div id="ghost" hidden><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.6" r="2.6" fill="currentColor"/><path d="M8.6 9.2c0-.9.7-1.6 1.6-1.6h3.6c.9 0 1.6.7 1.6 1.6l-.6 6.3h-1.3l-.5 7h-2l-.5-7H9.2z" fill="currentColor"/></svg></div>
-<div id="pad" hidden aria-label="Walk controls">
-  <button class="up" data-k="f" aria-label="Walk forward">▲</button><button class="lt" data-k="tl" aria-label="Turn left">◀</button>
-  <button class="dn" data-k="b" aria-label="Walk back">▼</button><button class="rt" data-k="tr" aria-label="Turn right">▶</button>
+<div id="pad" hidden>
+  <div class="stick" role="img" aria-label="Walk control: drag the knob to walk forward, back and sideways. Drag the view to look around."><span class="knob"></span></div>
 </div>
 
 <script>
@@ -291,7 +297,8 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;
 const scene = new THREE.Scene();
 const css = () => getComputedStyle(document.documentElement);
-const setBg = () => { scene.background = new THREE.Color(css().getPropertyValue("--bg").trim() || "#e4eef0"); };
+let needDraw = true; // set when something changes that the camera wouldn't show: see the drawing loop at the end
+const setBg = () => { scene.background = new THREE.Color(css().getPropertyValue("--bg").trim() || "#e4eef0"); needDraw = true; };
 setBg();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", setBg);
 new MutationObserver(setBg).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -449,7 +456,7 @@ window.__view = v => { setView(v); return mode; };
 
 // ---------------------------------------------------------------- walking
 const keys = new Set();
-const pad = { f: 0, b: 0, tl: 0, tr: 0 };
+const pad = { f: 0, s: 0 }; // the touch joystick
 addEventListener("keydown", e => {
   if (e.code === "Escape" && placing) { setPlacing(false); return; }
   if (mode !== "first" || e.target.closest("input, button, [role=toolbar] *")) return;
@@ -459,11 +466,19 @@ addEventListener("keydown", e => {
 });
 addEventListener("keyup", e => keys.delete(e.code));
 addEventListener("blur", () => keys.clear());
-document.querySelectorAll("#pad button").forEach(b => {
-  const k = b.dataset.k;
-  b.addEventListener("pointerdown", e => { pad[k] = 1; b.classList.add("held"); b.setPointerCapture(e.pointerId); e.preventDefault(); });
-  for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) b.addEventListener(ev, () => { pad[k] = 0; b.classList.remove("held"); });
-});
+// the joystick: how far the knob is pushed, -1 to 1, forward and to the right; walking speed follows it
+const stickEl = document.querySelector("#pad .stick"), knob = stickEl.querySelector(".knob");
+function pushStick(e) {
+  const r = stickEl.getBoundingClientRect(), reach = r.width * 0.36;
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const d = Math.hypot(dx, dy);
+  if (d > reach) { dx *= reach / d; dy *= reach / d; }
+  knob.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+  pad.s = dx / reach; pad.f = -dy / reach;
+}
+stickEl.addEventListener("pointerdown", e => { stickEl.setPointerCapture(e.pointerId); stickEl.classList.add("held"); pushStick(e); e.preventDefault(); });
+stickEl.addEventListener("pointermove", e => { if (stickEl.hasPointerCapture(e.pointerId)) pushStick(e); });
+for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) stickEl.addEventListener(ev, () => { pad.f = pad.s = 0; stickEl.classList.remove("held"); knob.style.transform = ""; });
 const ray = new THREE.Raycaster();
 function blocked(from, dir, dist) {
   for (const h of VIEW.walk_heights) {
@@ -505,12 +520,13 @@ function insideWall(p) {
 }
 function stepWalk(dt) {
   const k = c => keys.has(c);
-  const turn = (k("ArrowLeft") || pad.tl ? 1 : 0) - (k("ArrowRight") || pad.tr ? 1 : 0);
+  const turn = (k("ArrowLeft") ? 1 : 0) - (k("ArrowRight") ? 1 : 0);
   yaw += turn * 1.6 * dt;
-  const f = (k("KeyW") || k("ArrowUp") || pad.f ? 1 : 0) - (k("KeyS") || k("ArrowDown") || pad.b ? 1 : 0);
-  const s = (k("KeyD") ? 1 : 0) - (k("KeyA") ? 1 : 0);
-  if (f || s) {
-    const speed = (k("ShiftLeft") || k("ShiftRight") ? 3.2 : 1.4) * dt;
+  const f = (k("KeyW") || k("ArrowUp") ? 1 : 0) - (k("KeyS") || k("ArrowDown") ? 1 : 0) + pad.f;
+  const s = (k("KeyD") ? 1 : 0) - (k("KeyA") ? 1 : 0) + pad.s;
+  const push = Math.min(1, Math.hypot(f, s)); // the joystick walks slower when it's pushed less
+  if (push > 0.1) {
+    const speed = (k("ShiftLeft") || k("ShiftRight") ? 3.2 : 1.4) * dt * push;
     const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
     const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     const m = fwd.multiplyScalar(f).add(right.multiplyScalar(s)).normalize().multiplyScalar(speed);
@@ -813,6 +829,16 @@ window.__drop = (x, y) => tryDrop(...window.__project(x, y));
 
 const clock = new THREE.Clock();
 if (!GLB_B64) setView("orbit");  // frame the view while the model downloads
+// Draw only when something changes: the camera moves, the person is still settling, or someone is using the page. An idle
+// page then costs almost nothing, which matters most on a phone's battery.
+let lastInput = 0;
+const lastView = new THREE.Matrix4();
+for (const ev of ["pointerdown", "pointermove", "pointerup", "wheel", "keydown", "keyup", "click", "change"]) {
+  addEventListener(ev, () => { lastInput = performance.now(); }, { capture: true, passive: true });
+}
+addEventListener("resize", () => { needDraw = true; });
+plan.addEventListener("load", () => { needDraw = true; });
+window.__viewerInvalidate = () => { needDraw = true; };
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (fly) {
@@ -823,8 +849,15 @@ renderer.setAnimationLoop(() => {
     if (k >= 1) { fly = null; placeCamera(); }
   } else if (mode === "first") stepWalk(dt); else controls.update();
   updatePerson();
+  camera.updateMatrixWorld();
+  // (a person-drop preview only changes when the pointer moves, which already counts as someone using the page)
+  const busy = fly || moving > 0.01 || !window.__viewerReady || performance.now() - lastInput < 700;
+  if (!needDraw && !busy && lastView.equals(camera.matrixWorld)) return;
+  needDraw = false;
+  lastView.copy(camera.matrixWorld);
   renderer.render(scene, camera);
   drawMini();
+  window.__viewerFrames = (window.__viewerFrames || 0) + 1;
 });
 </script>
 
