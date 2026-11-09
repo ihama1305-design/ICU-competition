@@ -199,6 +199,28 @@ Sex, care frequency and the three free-text boxes change nothing, and the form s
 
 **Adult ICU only.** On 8 November 2026 the Paediatric Play theme, the toy shelf, soft toys, play mat and gaming console were taken out, along with the survey's "Child or teen" answer. The groups are hidden rather than deleted, because share links are positional. An older link that set one still opens, without it, and says what it left out.
 
+### Adaptive ICU features (8 November 2026)
+
+These were added on top of the configurator in one day. Each was checked before it went live, and each keeps to the same rules. Patient readings are simulated and say so. Comfort features never touch alarms or medical devices. Nothing claims clinical validation or compliance. The room's design and its share link change only when the visitor changes them.
+
+| Feature | What it does | What it isn't |
+|---|---|---|
+| Patient view | The camera moves to the pillow and only turns, about 100° each way and up to the ceiling, then returns to the view before | Not a measurement of sightlines. The eye is where the bed view's is |
+| Room modes | Standard, Comfort, Privacy, Clinical and Emergency-ready, laid over the configured room and eased in over about two seconds | They change no choice or link, and Standard puts back exactly what was there. Emergency-ready is started by staff and doesn't touch devices or alarms |
+| Task light | An examination light over the bed on its own switch, which modes never dim | Not a lux level or a lighting design |
+| Clinical view | Labels on the kit and on placed items, and hatched keep-clear areas beside the bed and at its foot, clipped to the open floor | Illustrative, without dimensions. Not a clearance or compliance check |
+| Placed items | A bedside tablet arm, privacy screen, hand-rub dispenser, waste bins, sharps box and family chair, dragged from the panel onto the floor or a wall wherever the visitor likes | Nothing checks staff access, clearances or infection-control positions, and each card says so |
+| Orientation screen | The TV can show the weekday and date and the room's own time of day, darker at night | It shows no patient details and makes no claim about delirium or sleep |
+| Before and after | Today's room (every default, no placed items) against the visitor's, at the same view and time | The visitor's design and link are untouched while it shows |
+| Saved rooms | Named rooms kept in this browser as share codes; Reset puts every choice back | Never sent anywhere. The form asks for no patient names |
+| Guided tour | Nine captioned steps with Previous, Pause, Next and Exit; Exit restores the room exactly | Not a substitute for exploring: dragging the room pauses it |
+| SIMULATED screens | The monitor, ventilator and pump screens carry an amber SIMULATED band in their textures | |
+| 3D fallback | A browser without WebGL 2 or import maps is told why and pointed to the pictures | |
+
+The walkthrough gained a joystick and a single slim toolbar row on phones. It now draws only when something changes, and it uses a lighter graphics tier on phones and small screens. The figures before and after are in `docs/adaptive-icu-baseline.md`.
+
+PACS (the Physiological Adaptive Comfort System), APIS (the Adaptive Patient Interface System) and the patient figure were built by a teammate. The README describes them, and their own checks (`scripts/11`, `12` and `13`) run alongside `08`.
+
 ### Performance
 
 The initial download is about 2.3 MB. The page draws only when something changes, or while the TV or fish are in view. Measured on one fast laptop, an Apple M5 GPU, timing the draw and a pixel read so the figure is the GPU's work and not the display's refresh rate:
@@ -223,7 +245,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 - **The furniture is low-poly.** It comes from the as-built kit, and it looks blocky next to a car configurator's scanned models.
 - **The toilet is empty.** In the dollhouse view its ceiling stays on for that reason.
 - **W1's bathroom fixtures aren't in W1's toilet.** The fixtures and the Bathroom view stand in a solid wall block in the corner of the ante room, around (17.98, 27.46), and the view works only because walls aren't drawn from behind. Moving them was left for later. The record drawing puts the toilet's WC in its north-east corner, the basin in the south-west alcove and a shower in the south-east alcove.
-- **Not tested on real phones or in Safari.** Touch was emulated in Chromium, and frame rates were only measured on one fast laptop.
+- **Not tested on real phones or in Safari.** Touch was emulated in Chromium, and frame rates were only measured on one fast laptop. The walkthrough's joystick, dragging items onto the room by touch and the phone layouts most need a real device.
 
 ## Rebuild and edit
 
