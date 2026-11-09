@@ -30,10 +30,29 @@ FPS is capped by the display's 60 Hz refresh, so the configurator's draw cost is
 
 The localhost walkthrough row at 2135 ms was the very first page load, which also fetched Three.js from the CDN. Later loads were faster.
 
+## After phase 1
+
+Measured on the evening of 8 November 2026 on the live site at `06628b9`, the same way, twice. It includes the teammate's APIS, PACS and patient figure, and today's work: the cleanup, Patient view, room modes, saved rooms, placed items, Clinical view, the phone walkthrough and the guided tour.
+
+| Page | Viewport | Ready (ms), run 1 / 2 | Download (KB) | FPS | Draws per second while idle | Draw, median / p95 (ms) |
+|---|---|---|---|---|---|---|
+| Walkthrough | 1440×900 @2x | 1215 / 836 | 1911 | 60 idle | **0** | |
+| Walkthrough | 1920×1080 @1x | 786 / 949 | 1912 | 60 idle | **0** | |
+| Configurator (W1) | 1440×900 @2x | 1178 / 1197 | 489 / 525 | 60 orbiting | | 20.6 / 21.5 |
+| Configurator (W1) | 1920×1080 @1x | 489 / 1203 | 525 | 60 orbiting | | 13.7–13.8 / 14.1 |
+
+What changed:
+- **The walkthrough no longer draws while idle.** Before, it drew every frame, about 60 a second, idle or not. Now it draws only when something changes, which saves the most on a phone's battery.
+  - The FPS column still counts animation-frame callbacks, so it reads 60 either way.
+  - The new column counts actual draws from the page's own counter.
+- **The configurator's draw cost is unchanged** within noise: 20.6 against 20.7 ms, and 13.7–13.8 against 13.4 ms.
+- **The configurator downloads 75–110 KB more:** the APIS, PACS, patient, modes, saved rooms, placed items, Clinical view and guided tour modules.
+- **Its ready time** at 1440×900 @2x was about 200 ms slower in both runs. Cold-cache load times vary a lot from run to run (489 to 1203 ms for the same page), so other differences are within noise.
+
 ## Not measured yet
 
 - **Safari:** it can't be driven here without "Allow Remote Automation", and Playwright's WebKit is not Safari.
 - **Phones and tablets:** desktop emulation is not a real device, so these need a test on a real phone and tablet.
 - **Integrated or older GPUs.**
 
-To compare after each phase, run `.venv/bin/python -I scripts/perf_baseline.py . local-<phase>` for this checkout, or pass the site's URL instead of `.`. It writes `build/perf_<label>.json`, which git ignores.
+The script also records the walkthrough's draws per second while idle, from `window.__viewerFrames`. To compare after each phase, run `.venv/bin/python -I scripts/perf_baseline.py . local-<phase>` for this checkout, or pass the site's URL instead of `.`. It writes `build/perf_<label>.json`, which git ignores.
