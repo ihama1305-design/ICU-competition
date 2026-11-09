@@ -170,6 +170,16 @@ with sync_playwright() as pw:
 
     check(not errs, f"console errors: {errs[:3]}")
 
+    # graphics tiers: a desktop gets the high one; ?tier=low swaps transmission glass for plain see-through glass and caps the resolution
+    q = pg.evaluate("window.__viewerQuality()")
+    check(q["tier"] == "high" and q["transmission"] > 0, f"a desktop gets the high tier, with transmission glass {q}")
+    lp = b.new_page(viewport={"width": 1100, "height": 700}, device_scale_factor=2)
+    lp.goto(url + ("&" if "?" in url else "?") + "tier=low", timeout=120000)
+    lp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
+    q = lp.evaluate("window.__viewerQuality()")
+    check(q["tier"] == "low" and q["transmission"] == 0 and q["glass"] > 0 and q["ratio"] <= 1.5 and q["antialias"] is False and not lp.evaluate("window.__viewerErrors"), f"?tier=low: plain glass, no antialiasing, at most 1.5x {q}")
+    lp.close()
+
     # an idle page stops drawing; using it draws again
     # measured in first person: orbit's damping eases a little each frame, and at a software renderer's frame or so a second
     # it can take minutes to come to rest, where a real GPU takes a second. The walking figure still gets a few tries to settle.
@@ -191,6 +201,8 @@ with sync_playwright() as pw:
     tp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
     bar_h = tp.evaluate("document.getElementById('bar').offsetHeight")
     names = tp.evaluate("[...document.querySelectorAll('#bar button')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+    q = tp.evaluate("window.__viewerQuality()")
+    check(q["tier"] == "low" and q["transmission"] == 0, f"phone: a touch screen gets the low tier by itself {q}")
     check(bar_h <= 64 and {"Orbit", "First person", "Top", "Place person"} <= set(names), f"phone: the controls fit one slim row, with none left out ({bar_h}px) {names}")
     tp.evaluate("window.__view('first')"); tp.wait_for_timeout(1500)
     check(tp.is_visible("#pad .stick"), "phone: first person shows the walking joystick")
@@ -219,5 +231,5 @@ with sync_playwright() as pw:
         check(pg.locator("#load a").get_attribute("href") == "../", "without WebGL 2 the website links to the pictures on the home page")
     ctx.close()
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, idle drawing, phone joystick, no-WebGL message)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, graphics tiers, idle drawing, phone joystick, no-WebGL message)"))
 sys.exit(1 if fail else 0)
