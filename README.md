@@ -14,6 +14,7 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 
 - <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to walk, <kbd>Shift</kbd> to run, drag or arrow keys to look. Touch screens get a joystick that walks forward, back and sideways, a little or a lot, and you drag the view to turn. On a phone the controls sit in one row that scrolls sideways, so the room keeps most of the screen.
 - The page draws only when something changes, so an idle page costs almost nothing. That matters most for a phone's battery.
+- **Graphics quality.** Phones and small screens get a lighter tier: no antialiasing, at most 1.5 pixels per screen point, and plain see-through glass instead of transmission glass, which costs a whole extra render pass. Any device steps its resolution down if it can't keep up. Every feature stays at either tier, and `?tier=low` or `?tier=high` picks one, as on the configurator.
 - <kbd>V</kbd> shows the person from behind.
 - Walls, counters and the facade stop you. Doors and glass fronts let you through.
 - The plan in the corner shows where you are. Click it to jump.

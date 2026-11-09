@@ -277,11 +277,20 @@ document.getElementById("status").textContent = VIEW.status;
 const W2T = (x, y, z = 0) => new THREE.Vector3(x, z, -y);
 
 const canvas = document.getElementById("c");
+// Graphics quality. Phones and small screens get the low tier: no antialiasing, at most 1.5 pixels per CSS pixel, and plain
+// see-through glass where the model's glass uses transmission, which costs a whole extra render pass. Every feature stays.
+// ?tier=low or ?tier=high overrides, as on the configurator. Any device steps its resolution down if it can't keep up.
+const tier = new URLSearchParams(location.search).get("tier") || (matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 600 ? "low" : "high");
 const renderer = (() => {
   // the page checked for WebGL 2 before loading, but a context can still be refused (a blocklisted GPU, too many open tabs)
-  try { return new THREE.WebGLRenderer({ canvas, antialias: true }); } catch (err) { cantDraw("webgl2"); throw err; }
+  try { return new THREE.WebGLRenderer({ canvas, antialias: tier === "high" }); } catch (err) { cantDraw("webgl2"); throw err; }
 })();
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, tier === "low" ? 1.5 : 2));
+/** Plain see-through glass for the low tier, in place of a transmission material. */
+const cheapGlass = m => new THREE.MeshStandardMaterial({
+  name: m.name, color: m.color.clone(), roughness: Math.max(0.05, m.roughness ?? 0.1), metalness: 0,
+  transparent: true, opacity: 0.2, depthWrite: false, side: m.side,
+});
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping;
 const scene = new THREE.Scene();
@@ -337,7 +346,7 @@ const onModel = gltf => {
       if (!n.isMesh) return;
       n.userData.objId = id;
       n.userData.top = top.name;
-      n.material = n.material.clone();
+      n.material = tier === "low" && (n.material.transmission || 0) > 0 ? cheapGlass(n.material) : n.material.clone();
       n.userData.baseEmissive = n.material.emissive ? n.material.emissive.clone() : null;
       n.userData.glass = (n.material.transmission || 0) > 0 || n.material.opacity < 0.99;
       meshes.push(n);
@@ -821,6 +830,29 @@ if (!GLB_B64) setView("orbit");  // frame the view while the model downloads
 // Draw only when something changes: the camera moves, the person is still settling, or someone is using the page. An idle
 // page then costs almost nothing, which matters most on a phone's battery.
 let lastInput = 0;
+// while drawing frame after frame, a median below about 25 fps lowers the resolution a step, down to one pixel per CSS pixel.
+// A software renderer in a test is left alone, as on the configurator, so it tests what a real device would get
+const adaptive = !navigator.webdriver;
+let lastDrawAt = 0, stepped = 0;
+const gaps = [];
+function stepDown(now) {
+  const gap = now - lastDrawAt;
+  lastDrawAt = now;
+  if (!adaptive || gap > 250) return; // not drawing continuously
+  gaps.push(gap);
+  if (gaps.length < 30) return;
+  gaps.sort((a, b) => a - b);
+  const median = gaps[15];
+  gaps.length = 0;
+  if (median > 40 && renderer.getPixelRatio() > 1) {
+    renderer.setPixelRatio(Math.max(1, renderer.getPixelRatio() - 0.25));
+    stepped += 1;
+  }
+}
+window.__viewerQuality = () => ({
+  tier, ratio: renderer.getPixelRatio(), antialias: renderer.getContext().getContextAttributes()?.antialias, stepped,
+  transmission: meshes.filter(m => (m.material.transmission || 0) > 0).length, glass: meshes.filter(m => m.userData.glass).length,
+});
 const lastView = new THREE.Matrix4();
 for (const ev of ["pointerdown", "pointermove", "pointerup", "wheel", "keydown", "keyup", "click", "change"]) {
   addEventListener(ev, () => { lastInput = performance.now(); }, { capture: true, passive: true });
@@ -844,6 +876,7 @@ renderer.setAnimationLoop(() => {
   if (!needDraw && !busy && lastView.equals(camera.matrixWorld)) return;
   needDraw = false;
   lastView.copy(camera.matrixWorld);
+  stepDown(performance.now());
   renderer.render(scene, camera);
   drawMini();
   window.__viewerFrames = (window.__viewerFrames || 0) + 1;
