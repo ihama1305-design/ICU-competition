@@ -666,6 +666,8 @@ const modeApi = {
     invalidate();
   },
   glassClear: () => { glass.set({ mode: "clear", opaque: false }); EFFECTS.visible({ part: "cfg_curtain", on: false }); },
+  // only smart glass changes: a clear front has its curtain, and a blinds front its slats, closed already
+  glassPrivate: () => { if (selected.front === "smart") glass.set({ opaque: true }); },
   overlay: on => { clinicalByMode = on; syncClinical(); },
   beforeChange: () => { if (pacs.active) pacs.exit(); },
   changed: name => syncModes(name),
