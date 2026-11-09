@@ -1290,6 +1290,8 @@ async function boot() {
   else if (fromLink?.dropped.length) $("roomStatus").textContent = leftOut(fromLink.dropped);
   $("load").hidden = true;
   requestAnimationFrame(frame);
+  // the home page's "Take the guided tour" link
+  if (query.get("tour") === "guided") requestAnimationFrame(() => guide.start());
   requestAnimationFrame(() => requestAnimationFrame(() => {
     canvas.classList.remove("pending");
     window.__configStage = "ready";
