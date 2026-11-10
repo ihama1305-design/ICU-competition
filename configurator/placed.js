@@ -37,6 +37,41 @@ function tabletFace() {
   return t;
 }
 
+/**
+ * A printed leaf scene for the biophilic panel: greenery with no soil, water or living plant. Drawn from a seeded generator,
+ * like every other picture here, so there's nothing to license.
+ */
+function leafScene() {
+  const c = document.createElement("canvas");
+  c.width = 384; c.height = 512;
+  const g = c.getContext("2d");
+  let seed = 41;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const sky = g.createLinearGradient(0, 0, 0, 512);
+  sky.addColorStop(0, "#e9efe3"); sky.addColorStop(1, "#cfdcc8");
+  g.fillStyle = sky; g.fillRect(0, 0, 384, 512);
+  // three layers of leaves on curved stems, paler at the back, so the panel has depth without being busy
+  for (const [layer, n, light] of [[0, 14, 70], [1, 12, 52], [2, 9, 36]]) {
+    for (let i = 0; i < n; i++) {
+      const x0 = rnd() * 384, y0 = 512 + 20, len = 260 + rnd() * 220 - layer * 30, lean = (rnd() - 0.5) * 1.4;
+      const tipX = x0 + Math.sin(lean) * len, tipY = y0 - Math.cos(lean) * len;
+      g.strokeStyle = `hsl(${95 + rnd() * 30}, ${26 + layer * 6}%, ${light - 6}%)`; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x0, (y0 + tipY) / 2, tipX, tipY); g.stroke();
+      const size = 26 + rnd() * 26 - layer * 3, turn = Math.atan2(tipY - y0, tipX - x0) + Math.PI / 2;
+      g.save(); g.translate(tipX, tipY); g.rotate(turn);
+      g.fillStyle = `hsl(${92 + rnd() * 34}, ${30 + layer * 8}%, ${light + rnd() * 8}%)`;
+      g.beginPath(); g.ellipse(0, size * 0.9, size * 0.5, size * 1.1, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = `hsla(${100}, 30%, ${light + 18}%, 0.6)`; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(0, size * 1.9); g.stroke();
+      g.restore();
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 // Each item is built facing +Z. A floor item stands on y = 0; a wall item hangs with its back on the wall at z = 0, centred
 // on y = 0, and is raised to `height` when placed.
 export const ITEMS = [
@@ -71,7 +106,7 @@ export const ITEMS = [
     },
   },
   {
-    id: "rub", code: "c", label: "Hand-rub dispenser", on: "wall", height: 1.2,
+    id: "rub", code: "c", label: "Hand-rub dispenser", on: "wall", height: 1.2, size: [0.11, 0.28],
     description: "An alcohol hand-rub dispenser on the wall, about 1.2 m up, for hand hygiene at the point of care.",
     build() {
       const g = new THREE.Group();
@@ -92,12 +127,27 @@ export const ITEMS = [
     },
   },
   {
-    id: "sharps", code: "e", label: "Sharps box", on: "wall", height: 1.35,
+    id: "sharps", code: "e", label: "Sharps box", on: "wall", height: 1.35, size: [0.27, 0.3],
     description: "A sharps container on a wall bracket, about 1.35 m up, for used needles and blades.",
     build() {
       const g = new THREE.Group();
       g.add(box(0.27, 0.3, 0.012, mat("#b9c0c3", 0.4, { metalness: 0.3 }), 0, 0, 0.006));
       g.add(box(0.24, 0.22, 0.14, mat("#f2c230", 0.5), 0, -0.02, 0.085), box(0.245, 0.04, 0.145, mat("#c8352b", 0.45), 0, 0.11, 0.085));
+      return g;
+    },
+  },
+  {
+    // greenery inside without soil or water; the living plants stay outside the glass. Its card cites the palms note's source
+    id: "leafpanel", code: "g", label: "Biophilic wall panel", on: "wall", height: 1.7, size: [0.92, 1.22], sourcesFrom: "palms",
+    description: "Greenery without soil or water: a printed leaf scene behind a sealed, wipe-clean acrylic face, about 0.9 by 1.2 m and centred 1.7 m up, clear of wall ledges. Living plants stay outside the glass, because CDC guidance says not to allow fresh flowers or potted plants in patient-care areas for immunosuppressed patients.",
+    build() {
+      const g = new THREE.Group(), frame = mat("#c9cfd1", 0.35, { metalness: 0.35 });
+      g.add(box(0.92, 1.22, 0.03, frame, 0, 0, 0.015)); // a slim aluminium frame, sealed to the wall
+      const print = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 1.18), mat("#ffffff", 0.9, { map: leafScene() }));
+      print.position.z = 0.031; g.add(print);
+      // the acrylic face: glossy, so it reads as a surface to wipe rather than a picture to touch
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 1.18), new THREE.MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.08, metalness: 0, transparent: true, opacity: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 }));
+      face.position.z = 0.033; g.add(face);
       return g;
     },
   },
@@ -114,6 +164,11 @@ export const ITEMS = [
   },
 ];
 export const itemById = id => ITEMS.find(i => i.id === id);
+
+/** The room's own walls that an item can hang on: the painted walls and the feature wall, where they're shown. */
+export const wallsOf = room => [...(room.parts.cfg_paint_walls || []), ...(room.parts.cfg_feature_wall || [])].filter(w => w.visible);
+const EDGE = 0.01; // an item's edge may sit this close to the end of a wall, in metres
+const GRID = 0.1; // how far apart a wall item's face is probed, in metres: closer than a wall fixture is wide
 
 const b62 = (n, len) => { let s = ""; for (let i = 0; i < len; i++) { s = ALPHABET[n % 62] + s; n = Math.floor(n / 62); } return s; };
 const un62 = s => [...s].reduce((n, ch) => n * 62 + ALPHABET.indexOf(ch), 0);
@@ -154,7 +209,7 @@ export class Placement {
   build(entry) {
     const item = itemById(entry.type), node = item.build();
     node.name = `placed_${entry.type}`;
-    node.userData.itemInfo = { title: item.label, description: `${item.description} ${CHECK}`, action: `placed:${entry.uid}` };
+    node.userData.itemInfo = { title: item.label, description: `${item.description} ${CHECK}`, action: `placed:${entry.uid}`, ...(item.sourcesFrom ? { sourcesFrom: item.sourcesFrom } : {}) };
     node.userData.placed = entry;
     entry.node = node;
     this.pose(entry);
@@ -212,9 +267,30 @@ export class Placement {
   /** Whether a wall item at x, y facing `rot` would still hang on the room's wall, for a keyboard nudge along it. */
   onWall(room, entry, x, y) {
     const item = itemById(entry.type), t = (entry.rot * Math.PI) / 180, n = new THREE.Vector3(Math.sin(t), 0, Math.cos(t));
-    const walls = [...(room.parts.cfg_paint_walls || []), ...(room.parts.cfg_feature_wall || [])].filter(w => w.visible);
-    const probe = new THREE.Raycaster(W2T(x, y, item.height).addScaledVector(n, 0.05), n.clone().negate(), 0, 0.2);
-    return probe.intersectObjects(walls, false).length > 0;
+    return this.hangs(room, item, W2T(x, y, item.height), n);
+  }
+
+  /** A grid of points across a wall item's face, 5 cm out from the wall: edge to edge, corners included, at most 10 cm apart. */
+  facePoints(item, centre, n) {
+    const [w, h] = item.size, along = new THREE.Vector3(n.z, 0, -n.x), points = [];
+    const cols = Math.max(3, Math.ceil(w / GRID) + 1), rows = Math.max(3, Math.ceil(h / GRID) + 1);
+    for (let i = 0; i < cols; i++) {
+      for (let j = 0; j < rows; j++) {
+        const p = centre.clone().addScaledVector(along, (i / (cols - 1) - 0.5) * (w - 2 * EDGE)).addScaledVector(n, 0.05);
+        p.y += (j / (rows - 1) - 0.5) * (h - 2 * EDGE);
+        points.push(p);
+      }
+    }
+    return points;
+  }
+
+  /**
+   * Whether a wall item centred at `centre`, facing out along `n`, has solid wall behind all of it. A wide item with only
+   * its centre on the wall would hang over a door, the glazed front or the end of the wall.
+   */
+  hangs(room, item, centre, n) {
+    const walls = wallsOf(room), back = n.clone().negate();
+    return this.facePoints(item, centre, n).every(p => new THREE.Raycaster(p, back, 0, 0.2).intersectObjects(walls, false).length > 0);
   }
 
   /**
@@ -232,16 +308,13 @@ export class Placement {
       const rot = Math.round(((Math.atan2(camera.position.x - p.x, camera.position.z - p.z) * 180) / Math.PI) / 15) * 15;
       return { ok: true, x, y, rot: (rot + 360) % 360 };
     }
-    const walls = [...(room.parts.cfg_paint_walls || []), ...(room.parts.cfg_feature_wall || [])].filter(n => n.visible);
-    for (const h of ray.intersectObjects(walls, false)) {
+    for (const h of ray.intersectObjects(wallsOf(room), false)) {
       if (!h.face) continue;
       const n = h.face.normal.clone().transformDirection(h.object.matrixWorld);
       if (Math.abs(n.y) > 0.3) continue;
       if (n.dot(ray.ray.direction) > 0) n.negate(); // the face the camera sees
-      // a wall item hangs at its own height, so the spot has to be on wall there too, not over a door or the window
-      const at = new THREE.Vector3(h.point.x, item.height, h.point.z).addScaledVector(n, 0.05);
-      const probe = new THREE.Raycaster(at, n.clone().negate(), 0, 0.2);
-      if (!probe.intersectObjects(walls, false).length) return { ok: false, why: "wall" };
+      // a wall item hangs at its own height, so all of it has to be on wall there, not over a door, the glazed front or the window
+      if (!this.hangs(room, item, new THREE.Vector3(h.point.x, item.height, h.point.z), n)) return { ok: false, why: "wall" };
       return { ok: true, x: h.point.x, y: -h.point.z, rot: ((Math.atan2(n.x, n.z) * 180) / Math.PI + 360) % 360 };
     }
     return { ok: false, why: "wall" };
