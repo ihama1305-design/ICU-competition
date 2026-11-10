@@ -417,6 +417,24 @@ Object.assign(BUILD, {
     return g;
   },
 
+  /**
+   * A small daylight sensor on the window sill, 0.25 m in from the glass. It's what tells Comfort mode and PACS whether it's
+   * day. Always shown, like the wall comfort control. Its card (main.js) reports the sun's height, which stands in for a reading.
+   */
+  daylightSensor(room) {
+    const g = new THREE.Group(); g.name = "addon_daylightSensor";
+    const { at, normal } = room.meta.facade, inward = [-normal[0], -normal[1]];
+    g.position.copy(W2T(at[0] + inward[0] * 0.25, at[1] + inward[1] * 0.25, 0.73)); // on the sill's top
+    const body = std("#f1f3f2", 0.4), lens = std("#2b3a40", 0.15, { metalness: 0.1 });
+    const puck = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.038, 0.018, 24), body);
+    puck.position.y = 0.009; puck.castShadow = true;
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), lens);
+    eye.position.y = 0.018;
+    g.add(tagItem(puck, "Daylight sensor", ""), tagItem(eye, "Daylight sensor", ""));
+    g.userData.itemInfo = { title: "Daylight sensor", description: "" };
+    return g;
+  },
+
   /** Visible sound-level indicator concept. It never asks for microphone access. */
   soundSensor(room) {
     const g = new THREE.Group(); g.name = "addon_soundSensor";
