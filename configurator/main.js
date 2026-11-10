@@ -14,7 +14,8 @@ import { summaryContent } from "./summary.js";
 import { el, Panel } from "./panel.js";
 import { APIS } from "./apis.js";
 import { PACS } from "./pacs.js";
-import { MODES, RoomModes } from "./modes.js";
+import { RoomModes, modeText } from "./modes.js";
+import { afterDark } from "./solar.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
 import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById } from "./placed.js";
 import { ClinicalView } from "./clinical.js";
@@ -147,6 +148,7 @@ function setTime(h) {
   remember();
   describe();
   pressed($("dayNight"), isNight(h) ? "night" : "day");
+  modes.timeChanged(); // Comfort leaves the blinds alone after dark, so crossing sunset or sunrise changes what it does
   const stop = Object.entries(STOPS).find(([, v]) => Math.abs(v - h) < 0.2)?.[0];
   $("stops").querySelectorAll("button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.value === stop)); });
   invalidate();
@@ -641,7 +643,7 @@ canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 // Room options, profile answers, share codes and original model meshes stay independent.
 const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
 const pacs = new PACS({ stage, lighting, rig, controls, relight, invalidate,
-  stopTour: () => tour.stop(), getState: () => state,
+  stopTour: () => tour.stop(), getState: () => state, isDark: () => afterDark(state.hour, SITE),
   closeApis: () => { endCompare(); endMode(); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
   restoreApisMarkers: on => apis.setEnabled(on),
 });
@@ -651,6 +653,7 @@ pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); de
 // ---------------------------------------------------------------- room modes: scenes over the configured room (modes.js)
 const modeApi = {
   baseLight: () => lighting.base(state.hour),
+  isDark: () => afterDark(state.hour, SITE),
   setLight: (look, task) => { lighting.scene = look; lighting.sceneTask = task; relight(); },
   blindsNow: () => {
     const node = stage.current?.root.getObjectByName("cfg_blinds");
@@ -675,12 +678,16 @@ const modeApi = {
 const modes = new RoomModes(modeApi);
 function syncModes(name) {
   $("modeBar").querySelectorAll("button[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === name)));
-  const note = $("modeNote"), m = MODES[name];
-  note.textContent = name === "emergency" ? "" : m.note;
+  const note = $("modeNote"), text = modeText(name, modes.dark);
+  note.replaceChildren();
+  if (name !== "emergency" && text.note) {
+    note.append(text.note);
+    if (text.why) note.append(Object.assign(document.createElement("span"), { className: "mode-why", textContent: text.why }));
+  }
   note.hidden = !note.textContent;
   $("modeBanner").hidden = name !== "emergency";
   document.body.classList.toggle("emergency-ready", name === "emergency");
-  say(m.say);
+  say(text.say);
   invalidate();
 }
 /** Something is about to change the room's design: a mode would hide that, so it ends first. */

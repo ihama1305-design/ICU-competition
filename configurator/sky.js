@@ -2,17 +2,10 @@
 // the spec's sun (azimuth 250, elevation 32), so at about 15:32 the light comes from where it does in the renders.
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
+import { sunAt } from "./solar.js";
 
+export { sunAt };
 const rad = d => (d * Math.PI) / 180;
-const deg = r => (r * 180) / Math.PI;
-
-/** Solar time in hours -> elevation and azimuth in degrees, azimuth clockwise from the model's north. */
-export function sunAt(hour, site) {
-  const lat = rad(site.latitude_deg), dec = rad(site.declination_deg), h = rad((hour - 12) * 15);
-  const el = Math.asin(Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(h));
-  const az = Math.atan2(-Math.cos(dec) * Math.sin(h), Math.sin(dec) * Math.cos(lat) - Math.cos(dec) * Math.cos(h) * Math.sin(lat));
-  return { elevation: deg(el), azimuth: (deg(az) + site.north_offset_deg + 360) % 360 };
-}
 
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
