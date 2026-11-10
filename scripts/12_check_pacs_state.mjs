@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { PacsSimulation, GUIDE, NIGHT_LINE } from "./site/configurator/pacs-state.js";
 import { afterDark, sunTimes } from "./site/configurator/solar.js";
 import { RoomModes, modeText } from "./site/configurator/modes.js";
+import { STEPS } from "./site/configurator/guide.js";
+import { ATTACHMENTS } from "./site/configurator/apis-data.js";
 const s = new PacsSimulation();
 assert.deepEqual(s.readings(), { hr: 78, sys: 118, dia: 76, rr: 16, spo2: 98, hrv: null });
 s.setScenario("possible"); assert.equal(s.readings(6).hr, 92); assert.equal(s.readings(12).hr, 105);
@@ -41,7 +43,7 @@ night.selection = { lighting: true, blinds: true, audio: false, temperature: fal
 const nightResult = night.approve();
 assert.equal(nightResult.blinds, 0.2); assert.equal(nightResult.light, 0.65); assert.equal(nightResult.kelvin, 3000);
 assert.ok(night.log.some(line => /After sunset/.test(line)) && /no daylight/.test(NIGHT_LINE));
-assert.ok(GUIDE.filter(step => step[4]).every(step => /After sunset/.test(step[4]) && !/blinds move/.test(step[4])));
+assert.ok(GUIDE.filter(step => step[4]).every(step => /after sunset/i.test(step[4]) && /blinds stay/.test(step[4])));
 // Comfort mode: by day the blinds lower; after dark they're left as configured and the note says why
 const fakeRoom = dark => {
   const log = { blinds: [], restored: [], light: null };
@@ -65,3 +67,14 @@ assert.ok(/after sunset/i.test(nightText.why) && /blinds stay/.test(nightText.wh
 modes.set("privacy", { instant: true }); assert.deepEqual(byDay.log.blinds, [0.5]); // Privacy's blinds are for privacy, so they still lower after dark
 assert.equal(modeText("privacy", true).why, "");
 console.log("PASS night-aware comfort: sunrise/sunset from the solar hour, PACS and Comfort leave the blinds alone after dark and say why, Privacy unchanged");
+
+// ---------------------------------------------------------------- plain English: one idea per step, about 20 words, and the safety meanings kept
+const words = text => text.trim().split(/\s+/).length;
+const steps = [...STEPS.map(s => ["tour", s.title, s.text]), ...GUIDE.flatMap(g => [["PACS", g[0], g[1]], ...(g[4] ? [["PACS after dark", g[0], g[4]]] : [])]), ...ATTACHMENTS.map(a => ["APIS", a.title, a.proposed])];
+for (const [where, title, text] of steps) assert.ok(words(text) <= 24, `${where} "${title}" has ${words(text)} words: ${text}`);
+const tourText = STEPS.map(s => s.text).join(" "), pacsText = GUIDE.map(g => g[1]).join(" ");
+assert.ok(/SIMULATED/.test(STEPS[1].text) && /SIMULATED/.test(STEPS[8].text) && /nurse approves/.test(STEPS[8].text), "the tour keeps SIMULATED and nurse approval");
+assert.ok(/not a compliance check/.test(tourText) && /alarms/.test(STEPS[3].text) && /alarms are never changed/.test(STEPS[5].text), "the tour keeps 'not a compliance check' and that alarms don't change");
+assert.ok(/SIMULATED/.test(GUIDE[0][1]) && /SIMULATED/.test(GUIDE[8][1]) && /until a nurse approves/.test(GUIDE[6][1]) && /never touches medical equipment or alarms/.test(GUIDE[9][1]), "PACS keeps SIMULATED, nurse approval and hands-off alarms");
+assert.ok(/doesn't diagnose/.test(pacsText) && /don't prove comfort/.test(GUIDE[3][1]) && /don't prove comfort/.test(GUIDE[3][4]), "PACS still says it doesn't diagnose and stable numbers don't prove comfort");
+console.log(`PASS plain English: ${steps.length} tour, PACS and APIS steps at most 24 words, with SIMULATED, nurse approval and 'not a compliance check' kept`);
