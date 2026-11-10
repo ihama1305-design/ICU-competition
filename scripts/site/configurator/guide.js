@@ -5,51 +5,54 @@
 export const STEPS = [
   {
     title: "An isolation room, as a design proposal",
-    text: "This is room W1. Its walls, door and glass match the hospital's drawing; the furniture and finishes are our proposal.",
+    text: "Room W1. Its walls, door and glass match the hospital's drawing; the furniture and finishes are our proposal.",
     run: async a => { await a.room("W1"); a.theme("calm"); a.time("afternoon"); a.camera("dollhouse"); },
   },
   {
     title: "The equipment stays",
-    text: "The Calm Clinical theme keeps the real equipment: bed, monitor, pumps and ventilator. Every screen is marked SIMULATED.",
+    text: "The Calm Clinical theme keeps the real bed, monitor, pumps and ventilator.",
     run: async a => { a.camera("overview"); },
   },
   {
     title: "What the patient sees",
-    text: "Patient view looks out from the pillow, and turns only as far as a patient lying in bed could turn their head.",
+    text: "Patient view looks out from the pillow, and turns only as far as a patient's head could.",
     run: async a => { a.camera("patient"); },
   },
   {
     title: "Comfort mode",
-    text: "The lights turn warm and dim, and by day the blinds lower. The monitor and alarms don't change.",
+    text: "The lights turn warm and dim, and by day the blinds lower.",
     run: async a => { a.camera("overview"); a.mode("comfort"); },
   },
   {
     title: "Clinical mode and Clinical view",
-    text: "Bright light for care, with labels on the equipment and shaded areas to keep clear. It's a sketch, not a compliance check.",
+    text: "Bright light for care, labels on the equipment and shaded areas to keep clear. A sketch, not a compliance check.",
     run: async a => { a.mode("clinical"); },
   },
   {
     title: "Emergency-ready",
-    text: "Staff start it: full light, screens off and the glass front clear. Medical devices and alarms are never changed.",
+    text: "Staff start it: full light, screens off and the glass front clear.",
     run: async a => { a.mode("emergency"); },
   },
   {
     title: "Placing items",
-    text: "Drag items such as a privacy screen or hand-gel dispenser into the room. Nothing checks staff access or hygiene rules.",
+    text: "Drag items such as a privacy screen or hand-gel dispenser into the room. Nothing checks where they go.",
     run: async a => { a.mode("standard"); a.camera("overview", true); a.place(["screen", "rub"]); },
   },
   {
     title: "Themes and the time of day",
-    text: "Desert Sanctuary at sunset. The sun follows its real path over Abu Dhabi, so the light changes through the day.",
+    text: "Desert Sanctuary at sunset. The sun follows its real path over Abu Dhabi.",
     run: async a => { a.theme("desert"); a.time("sunset"); a.camera("family"); },
   },
   {
     title: "Two deeper demos",
-    text: "PACS uses SIMULATED readings, and a nurse approves every change. APIS shows how tubes and lines attach. Open either below.",
+    text: "PACS links the monitor to the room's comfort, and APIS shows how tubes and lines attach. Open either below.",
     run: async a => { a.camera("overview"); },
     links: [["pacs", "Open the PACS demo"], ["apis", "Explore APIS"]],
   },
 ];
+
+// The safety caveats every step would otherwise repeat, said once in a fixed line under the captions (and under PACS's demo)
+export const CAVEAT = "Simulated demo. A nurse approves every change.";
 
 const HOLD_MS = 9000; // long enough to read a step, at an unhurried pace
 

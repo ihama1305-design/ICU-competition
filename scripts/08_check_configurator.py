@@ -608,6 +608,7 @@ with sync_playwright() as p:
     pg.click("#openGuide")
     g = pg.evaluate("window.__config.guide()")
     check(g["running"] and g["at"] == 0 and pg.is_visible("#guide") and pg.inner_text("#guideCount") == "1 of 9", f"the guided tour starts at its first step {g}")
+    check(pg.inner_text("#guideCaveat") == "Simulated demo. A nurse approves every change.", "one fixed line under the captions carries the caveats")
     check(pg.get_attribute("#guidePrev", "disabled") is not None, "Previous waits until there's somewhere to go back to")
     pg.click("#guidePlay")
     check(not pg.evaluate("window.__config.guide()")["playing"] and pg.inner_text("#guidePlay") == "Play", "Pause stops it moving on by itself")

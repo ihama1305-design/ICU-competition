@@ -11,15 +11,15 @@ export const SOURCES = [
   { title: "CDC: environmental air controls", url: "https://www.cdc.gov/infection-control/hcp/environmental-control/air.html", note: "Ventilation, humidity, temperature and pressure requirements are facility- and area-specific. No hospital-approved PACS temperature limits were supplied; temperature remains review-only." },
 ];
 export const GUIDE = [
-  ["Meet the patient monitor", "This is the bedside monitor. Every reading on it is SIMULATED for this demo.", "stable", "monitor"],
+  ["Meet the patient monitor", "This is the bedside monitor, where PACS starts.", "stable", "monitor"],
   ["Monitoring already matters", "ICUs already track vital signs, and control the lights separately. PACS asks what happens if the two work together.", "stable", "monitor"],
-  ["Connect the environment", "PACS links the monitor, the patient's own preferences and the room's controls, with a nurse in charge.", "stable", "overview"],
+  ["Connect the environment", "PACS links the monitor, the patient's own preferences and the room's controls.", "stable", "overview"],
   ["Maintain a preferred environment", "The patient is stable, and the room matches their chosen light, blinds and quiet. Stable numbers don't prove comfort.", "stable", "overview", "The patient is stable and the room matches their chosen light. After sunset the blinds stay put. Stable numbers don't prove comfort."],
   ["Notice a trend", "In this scripted case, heart rate climbs from 78 to 105. Many things could cause that, and PACS doesn't diagnose.", "possible", "monitor"],
-  ["Assess before recommending", "A nurse checks the patient first. Only after that does PACS suggest any comfort change.", "possible", "overview"],
-  ["Show nurse oversight", "Nothing changes until a nurse approves it. Here, a pretend nurse approves softer light, the blinds and less background noise.", "possible", "overview"],
+  ["Assess before recommending", "A nurse checks the patient first. Only then does PACS suggest a comfort change.", "possible", "overview"],
+  ["Show nurse oversight", "Here the nurse approves softer light, the blinds and less background noise.", "possible", "overview"],
   ["See the room respond", "The lights and blinds change to the patient's choices. Then the nurse asks the patient how they feel.", "possible", "window", "The lights change to the patient's choices, and after sunset the blinds stay put. Then the nurse asks how they feel."],
-  ["Clinical deterioration", "Now a scripted, SIMULATED alert says the patient is getting worse. Comfort changes stop, and the care team is called.", "deterioration", "monitor"],
+  ["Clinical deterioration", "Now a scripted alert says the patient is getting worse. Comfort changes stop, and the care team is called.", "deterioration", "monitor"],
   ["Clinical safety takes priority", "Acknowledging shows the alert was seen, and it stays on. PACS never touches medical equipment or alarms.", "deterioration", "overview"],
   ["The proposed integration", "The idea: a room that responds to each patient's comfort, guided by their own wishes and by their nurse.", "deterioration", "overview"],
 ];
