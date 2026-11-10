@@ -542,6 +542,11 @@ with sync_playwright() as p:
     pg.click("#placeItems button[data-item='leafpanel']")
     pg.mouse.click(w["x"] - 140, w["y"] - 40)
     check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps", "leafpanel"], "the biophilic panel hangs on a wall")
+    # all of a wall item has to be on solid wall. With only its centre checked, the 0.9 m panel used to hang half over the glazed front
+    fits = pg.evaluate("[['leafpanel', 15.5, 28.75, 180], ['rub', 15.5, 28.75, 180], ['leafpanel', 14.6, 28.75, 180]].map(a => window.__config.wallClear(...a))")
+    check(fits == [False, True, True], f"beside the glazed front the panel doesn't fit though the small dispenser does, and further along the wall it fits {fits}")
+    hung = pg.evaluate("window.__config.placed().map(q => window.__config.wallClear(q.type, q.x, q.y, q.rot))")
+    check(len(hung) == 3 and all(hung), f"each wall item placed by clicking has wall behind all of it {hung}")
     cdc = pg.evaluate("window.__config.options().sections.flatMap(s => s.groups).find(g => g.id === 'palms').note.sources[0].url")
     pt = pg.evaluate("window.__config.itemPoint('Biophilic wall panel')")
     pg.evaluate("document.getElementById('objectCard').hidden = true")

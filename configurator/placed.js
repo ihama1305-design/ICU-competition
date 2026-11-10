@@ -106,7 +106,7 @@ export const ITEMS = [
     },
   },
   {
-    id: "rub", code: "c", label: "Hand-rub dispenser", on: "wall", height: 1.2,
+    id: "rub", code: "c", label: "Hand-rub dispenser", on: "wall", height: 1.2, size: [0.11, 0.28],
     description: "An alcohol hand-rub dispenser on the wall, about 1.2 m up, for hand hygiene at the point of care.",
     build() {
       const g = new THREE.Group();
@@ -127,7 +127,7 @@ export const ITEMS = [
     },
   },
   {
-    id: "sharps", code: "e", label: "Sharps box", on: "wall", height: 1.35,
+    id: "sharps", code: "e", label: "Sharps box", on: "wall", height: 1.35, size: [0.27, 0.3],
     description: "A sharps container on a wall bracket, about 1.35 m up, for used needles and blades.",
     build() {
       const g = new THREE.Group();
@@ -138,7 +138,7 @@ export const ITEMS = [
   },
   {
     // greenery inside without soil or water; the living plants stay outside the glass. Its card cites the palms note's source
-    id: "leafpanel", code: "g", label: "Biophilic wall panel", on: "wall", height: 1.7, sourcesFrom: "palms",
+    id: "leafpanel", code: "g", label: "Biophilic wall panel", on: "wall", height: 1.7, size: [0.92, 1.22], sourcesFrom: "palms",
     description: "Greenery without soil or water: a printed leaf scene behind a sealed, wipe-clean acrylic face, about 0.9 by 1.2 m and centred 1.7 m up, clear of wall ledges. Living plants stay outside the glass, because CDC guidance says not to allow fresh flowers or potted plants in patient-care areas for immunosuppressed patients.",
     build() {
       const g = new THREE.Group(), frame = mat("#c9cfd1", 0.35, { metalness: 0.35 });
@@ -164,6 +164,11 @@ export const ITEMS = [
   },
 ];
 export const itemById = id => ITEMS.find(i => i.id === id);
+
+/** The room's own walls that an item can hang on: the painted walls and the feature wall, where they're shown. */
+export const wallsOf = room => [...(room.parts.cfg_paint_walls || []), ...(room.parts.cfg_feature_wall || [])].filter(w => w.visible);
+const EDGE = 0.01; // an item's edge may sit this close to the end of a wall, in metres
+const GRID = 0.1; // how far apart a wall item's face is probed, in metres: closer than a wall fixture is wide
 
 const b62 = (n, len) => { let s = ""; for (let i = 0; i < len; i++) { s = ALPHABET[n % 62] + s; n = Math.floor(n / 62); } return s; };
 const un62 = s => [...s].reduce((n, ch) => n * 62 + ALPHABET.indexOf(ch), 0);
@@ -262,9 +267,30 @@ export class Placement {
   /** Whether a wall item at x, y facing `rot` would still hang on the room's wall, for a keyboard nudge along it. */
   onWall(room, entry, x, y) {
     const item = itemById(entry.type), t = (entry.rot * Math.PI) / 180, n = new THREE.Vector3(Math.sin(t), 0, Math.cos(t));
-    const walls = [...(room.parts.cfg_paint_walls || []), ...(room.parts.cfg_feature_wall || [])].filter(w => w.visible);
-    const probe = new THREE.Raycaster(W2T(x, y, item.height).addScaledVector(n, 0.05), n.clone().negate(), 0, 0.2);
-    return probe.intersectObjects(walls, false).length > 0;
+    return this.hangs(room, item, W2T(x, y, item.height), n);
+  }
+
+  /** A grid of points across a wall item's face, 5 cm out from the wall: edge to edge, corners included, at most 10 cm apart. */
+  facePoints(item, centre, n) {
+    const [w, h] = item.size, along = new THREE.Vector3(n.z, 0, -n.x), points = [];
+    const cols = Math.max(3, Math.ceil(w / GRID) + 1), rows = Math.max(3, Math.ceil(h / GRID) + 1);
+    for (let i = 0; i < cols; i++) {
+      for (let j = 0; j < rows; j++) {
+        const p = centre.clone().addScaledVector(along, (i / (cols - 1) - 0.5) * (w - 2 * EDGE)).addScaledVector(n, 0.05);
+        p.y += (j / (rows - 1) - 0.5) * (h - 2 * EDGE);
+        points.push(p);
+      }
+    }
+    return points;
+  }
+
+  /**
+   * Whether a wall item centred at `centre`, facing out along `n`, has solid wall behind all of it. A wide item with only
+   * its centre on the wall would hang over a door, the glazed front or the end of the wall.
+   */
+  hangs(room, item, centre, n) {
+    const walls = wallsOf(room), back = n.clone().negate();
+    return this.facePoints(item, centre, n).every(p => new THREE.Raycaster(p, back, 0, 0.2).intersectObjects(walls, false).length > 0);
   }
 
   /**
@@ -282,16 +308,13 @@ export class Placement {
       const rot = Math.round(((Math.atan2(camera.position.x - p.x, camera.position.z - p.z) * 180) / Math.PI) / 15) * 15;
       return { ok: true, x, y, rot: (rot + 360) % 360 };
     }
-    const walls = [...(room.parts.cfg_paint_walls || []), ...(room.parts.cfg_feature_wall || [])].filter(n => n.visible);
-    for (const h of ray.intersectObjects(walls, false)) {
+    for (const h of ray.intersectObjects(wallsOf(room), false)) {
       if (!h.face) continue;
       const n = h.face.normal.clone().transformDirection(h.object.matrixWorld);
       if (Math.abs(n.y) > 0.3) continue;
       if (n.dot(ray.ray.direction) > 0) n.negate(); // the face the camera sees
-      // a wall item hangs at its own height, so the spot has to be on wall there too, not over a door or the window
-      const at = new THREE.Vector3(h.point.x, item.height, h.point.z).addScaledVector(n, 0.05);
-      const probe = new THREE.Raycaster(at, n.clone().negate(), 0, 0.2);
-      if (!probe.intersectObjects(walls, false).length) return { ok: false, why: "wall" };
+      // a wall item hangs at its own height, so all of it has to be on wall there, not over a door, the glazed front or the window
+      if (!this.hangs(room, item, new THREE.Vector3(h.point.x, item.height, h.point.z), n)) return { ok: false, why: "wall" };
       return { ok: true, x: h.point.x, y: -h.point.z, rot: ((Math.atan2(n.x, n.z) * 180) / Math.PI + 360) % 360 };
     }
     return { ok: false, why: "wall" };
