@@ -1281,6 +1281,11 @@ window.__config = {
   startTour: () => tour.start(),
 };
 
+// ?stats=1: a readout of the GPU, tier, pixel ratio, canvas size and draw time, for diagnosing a slow device (stats.js)
+if (query.get("stats") === "1") {
+  import("./stats.js").then(m => m.showStats({ page: "Configurator", renderer: stage.renderer, draw: () => stage.draw(), tier: () => (tier === "low" ? "Low" : "High"), ready: () => !!window.__configReady })).catch(fail);
+}
+
 async function boot() {
   window.__configStage = "fetching options";
   const res = await fetch("options.json");
