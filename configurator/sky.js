@@ -55,6 +55,7 @@ export class Daylight {
   /** Returns how far into the day it is, 0 at night to 1 in full daylight. */
   apply(hour) {
     const { elevation: el, azimuth: az } = sunAt(hour, this.site);
+    this.elevation = el; // the sun's height now, which the daylight sensor reports and the comfort rules read
     const e = rad(el), a = rad(az);
     const to = this.W2T(Math.cos(e) * Math.sin(a), Math.cos(e) * Math.cos(a), Math.sin(e)).normalize();
     this.sky.material.uniforms.sunPosition.value.copy(to);

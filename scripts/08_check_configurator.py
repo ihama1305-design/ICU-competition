@@ -436,6 +436,15 @@ with sync_playwright() as p:
     check(pg.evaluate("window.__config.pacs().dark") is False and not pg.is_visible("#pacsNight") and not pg.locator("#pacsChoices [data-choice='blinds']").is_disabled(), "PACS by day: the blinds choice is back and the after-dark line is gone")
     pg.click("#pacsExit")
     pg.wait_for_function("!document.body.classList.contains('pacs-active')", timeout=60000)
+    # the daylight sensor on the window sill, in both rooms: its card reports the sun height the comfort rules read
+    for room in ROOMS:
+        go(pg, room)
+        for stop, dark in (("night", True), ("afternoon", False)):
+            pg.evaluate(f"window.__config.time(window.__config.stops.{stop})")
+            d = pg.evaluate("window.__config.daylightSensor()")
+            check(d["shown"] and d["dark"] is dark and (d["elevation"] < -0.833) is dark and (("so it's after sunset" if dark else "so it's daylight") in d["text"]) and "isn't connected" in d["text"],
+                  f"{room} at {stop}: the daylight sensor is on the sill and says {'after sunset' if dark else 'daylight'} from the sun's height {d['elevation']:.1f}°")
+    go(pg, "W1")
     set_defaults(pg)
     pg.evaluate("window.__config.camera('overview', { instant: true })")
 
