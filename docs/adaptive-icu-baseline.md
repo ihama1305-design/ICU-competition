@@ -49,6 +49,37 @@ What changed:
 - **The configurator downloads 75–110 KB more:** the APIS, PACS, patient, modes, saved rooms, placed items, Clinical view and guided tour modules.
 - **Its ready time** at 1440×900 @2x was about 200 ms slower in both runs. Cold-cache load times vary a lot from run to run (489 to 1203 ms for the same page), so other differences are within noise.
 
+## Before phase 2: draw cost per tier
+
+Measured on 10 November 2026 on `main` at `e92f613`, before any phase 2 change, served from this checkout. Same Apple M5 Mac, Playwright's headless Chromium, one run per row.
+
+**New in the script:** tiers are forced with `?tier=`, and the walkthrough's draw is timed from outside the page. Every animation frame that draws is followed by a one-pixel read, so the time includes the GPU finishing, as the configurator's own `perf()` does. That makes it comparable across both pages and needs no change to either. The worst case uses Chromium's software renderer (`--gpu swiftshader`, which is `--use-angle=swiftshader`), as on a machine whose GPU is blocklisted.
+
+| Page | Viewport | Renderer | Tier | Pixels drawn | Draw, median / p95 (ms) |
+|---|---|---|---|---|---|
+| Walkthrough | 1440×900 @2x | M5 GPU | High | 5.2 M (2x) | 16.0 / 17.8 |
+| Walkthrough | 1440×900 @2x | M5 GPU | Low | 2.9 M (1.5x) | 8.9 / 9.9 |
+| Walkthrough | 2560×1440 @2x | M5 GPU | High | **14.7 M** (2x) | 23.5 / 25.0 |
+| Walkthrough | 2560×1440 @2x | M5 GPU | Low | 8.3 M (1.5x) | 9.0 / 9.5 |
+| Configurator (W1) | 1440×900 @2x | M5 GPU | High | 3.6 M (1.67x) | 20.6 / 21.7 |
+| Configurator (W1) | 1440×900 @2x | M5 GPU | Low | 2.9 M (1.5x) | 13.2 / 14.1 |
+| Configurator (W1) | 2560×1440 @2x | M5 GPU | High | 3.7 M (1x) | 21.5 / 22.3 |
+| Configurator (W1) | 2560×1440 @2x | M5 GPU | Low | 3.7 M (1x) | 15.7 / 16.6 |
+| Walkthrough | 1440×900 @2x | SwiftShader | High | 5.2 M (2x) | about 4,100 (1 frame) |
+| Configurator (W1) | 1440×900 @2x | SwiftShader | High | 3.6 M (1.67x) | about 11,800 (1 frame) |
+| Configurator (W1) | 1440×900 @2x | SwiftShader | Low | 2.9 M (1.5x) | didn't finish loading in 5 minutes |
+
+What this shows:
+- **Laptops got High by default, phones got Low.** The tier was chosen from touch versus mouse, so every laptop paid for High: transmission glass on 41 meshes in the walkthrough; bloom and its multisampled target, transmission glass and 2048 px shadows in the configurator.
+- **The walkthrough had no pixel budget.** At 2560×1440 @2x it drew 14.7 million pixels a frame on High, four times the configurator's 3.6 million cap.
+- **On this GPU, Low costs well under High:** 0.38 to 0.56 of it in the walkthrough, and 0.64 to 0.73 in the configurator.
+  - In the walkthrough, Low's time hardly changes with screen size (8.9 against 9.0 ms), so the transmission glass, not the pixel count, is most of what High adds.
+- **The software renderer** took 4 s and 12 s for one High frame. The configurator on Low didn't even finish loading in 5 minutes there, and the walkthrough's Low row wasn't reached.
+  - These numbers show how bad the worst case is. **No threshold is tuned from them**: Auto's thresholds come from the Mac figures above and in REPORT.md's "Performance", and from real devices' `?stats=1` readouts.
+- **All frame rates read 60**, because the display caps them. The draw times are what to compare.
+
+Raw rows are in `build/perf_p2-before-hw.json` and `build/perf_p2-before-sw-high.json`. To repeat: `.venv/bin/python -I scripts/perf_baseline.py . <label> --viewports 1440x900@2,2560x1440@2 --tiers high,low`, and add `--gpu swiftshader --seconds 4 --timeout 1200` for the worst case.
+
 ## Not measured yet
 
 - **Safari:** it can't be driven here without "Allow Remote Automation", and Playwright's WebKit is not Safari.
