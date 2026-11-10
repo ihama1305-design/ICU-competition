@@ -67,18 +67,67 @@ Measured on 10 November 2026 on `main` at `e92f613`, before any phase 2 change, 
 | Configurator (W1) | 2560×1440 @2x | M5 GPU | Low | 3.7 M (1x) | 15.7 / 16.6 |
 | Walkthrough | 1440×900 @2x | SwiftShader | High | 5.2 M (2x) | about 4,100 (1 frame) |
 | Configurator (W1) | 1440×900 @2x | SwiftShader | High | 3.6 M (1.67x) | about 11,800 (1 frame) |
-| Configurator (W1) | 1440×900 @2x | SwiftShader | Low | 2.9 M (1.5x) | didn't finish loading in 5 minutes |
+| Walkthrough | 1440×900 @2x | SwiftShader | Low | 2.9 M (1.5x) | about 310 (11 frames) |
+| Configurator (W1) | 1440×900 @2x | SwiftShader | Low | 2.9 M (1.5x) | about 8,300 (1 frame) |
+
+**Corrected later on 10 November.** This table first said the configurator on Low "didn't finish loading in 5 minutes" on the software renderer, and had no walkthrough Low row. That was the script, not the page: its local test server queued 5 connections at a time, the configurator asks for about 40 files, many of them at once, and in a test of four cold loads two had one file reset. `06` and `08` already allowed for this, and the script does now. The two Low rows above were measured again on the same `e92f613` with that fixed: the configurator was ready in 5.6 s.
 
 What this shows:
 - **Laptops got High by default, phones got Low.** The tier was chosen from touch versus mouse, so every laptop paid for High: transmission glass on 41 meshes in the walkthrough; bloom and its multisampled target, transmission glass and 2048 px shadows in the configurator.
 - **The walkthrough had no pixel budget.** At 2560×1440 @2x it drew 14.7 million pixels a frame on High, four times the configurator's 3.6 million cap.
 - **On this GPU, Low costs well under High:** 0.38 to 0.56 of it in the walkthrough, and 0.64 to 0.73 in the configurator.
   - In the walkthrough, Low's time hardly changes with screen size (8.9 against 9.0 ms), so the transmission glass, not the pixel count, is most of what High adds.
-- **The software renderer** took 4 s and 12 s for one High frame. The configurator on Low didn't even finish loading in 5 minutes there, and the walkthrough's Low row wasn't reached.
+- **The software renderer** took 4 s and 12 s for one High frame, and 0.3 s and 8 s on Low.
   - These numbers show how bad the worst case is. **No threshold is tuned from them**: Auto's thresholds come from the Mac figures above and in REPORT.md's "Performance", and from real devices' `?stats=1` readouts.
 - **All frame rates read 60**, because the display caps them. The draw times are what to compare.
 
 Raw rows are in `build/perf_p2-before-hw.json` and `build/perf_p2-before-sw-high.json`. To repeat: `.venv/bin/python -I scripts/perf_baseline.py . <label> --viewports 1440x900@2,2560x1440@2 --tiers high,low`, and add `--gpu swiftshader --seconds 4 --timeout 1200` for the worst case.
+
+## After phase 2
+
+Measured on the afternoon of 10 November 2026 on `main` at `f712de8`, served from a checkout, on the same Apple M5 Mac with the same script. It includes everything merged that day: the pixel budget for the walkthrough and the Quality control with Auto (#55), and #45 to #54.
+
+Each row was run twice with nothing else drawing on the machine. A first attempt, made while another window was busy, read up to 58% slower on some rows and doubled some 95th percentiles, so it was thrown away. The old version (`e92f613`) was also measured again the same afternoon at 1440×900, to show how much a figure moves between morning and afternoon: at most 0.8 ms.
+
+### High and Low, forced, as before
+
+| Page | Viewport | Tier | Pixels drawn, before → after | Draw before, median (ms) | Draw after, median, run 1 / 2 (ms) | Draw after, p95 (ms) |
+|---|---|---|---|---|---|---|
+| Walkthrough | 1440×900 @2x | High | 5.2 M → **3.6 M** (1.67x) | 16.0 (16.4 that afternoon) | **14.8 / 14.8** | 15.8 to 16.2 |
+| Walkthrough | 1440×900 @2x | Low | 2.9 M → 2.9 M (1.5x) | 8.9 (9.7 that afternoon) | 8.6 / 9.4 | 9.1 to 10.0 |
+| Walkthrough | 2560×1440 @2x | High | 14.7 M → **3.7 M** (1x) | 23.5 | **14.8 / 14.8** | 15.8 to 16.4 |
+| Walkthrough | 2560×1440 @2x | Low | 8.3 M → 3.7 M (1x) | 9.0 | 10.4 / 10.2 | 10.6 to 10.8 |
+| Configurator (W1) | 1440×900 @2x | High | 3.6 M → 3.6 M (1.67x) | 20.6 (20.6 that afternoon) | 20.7 / 20.7 | 21.6 |
+| Configurator (W1) | 1440×900 @2x | Low | 2.9 M → 2.9 M (1.5x) | 13.2 (13.2 that afternoon) | 13.0 / 13.4 | 13.9 to 14.0 |
+| Configurator (W1) | 2560×1440 @2x | High | 3.7 M → 3.7 M (1x) | 21.5 | 21.5 / 21.5 | 22.0 to 22.7 |
+| Configurator (W1) | 2560×1440 @2x | Low | 3.7 M → 3.7 M (1x) | 15.7 | 15.0 / 15.1 | 15.6 to 15.8 |
+
+### Auto, as a visitor gets it
+
+Auto leaves a browser under automation alone, so the checks test the tier they force. The script's new `--as-visitor` hides that flag, and Auto then times its test draws and picks, as it does for a person.
+
+| Page | Viewport | Renderer | Auto timed (ms) | Auto chose | Draw after, median / p95 (ms) |
+|---|---|---|---|---|---|
+| Walkthrough | 1440×900 @2x | M5 GPU | 15.6 | High | 15.0 / 16.3 |
+| Configurator (W1) | 1440×900 @2x | M5 GPU | 11.8 | High | 20.7 / 21.6 |
+| Walkthrough | 2560×1440 @2x | M5 GPU | 15.4 | High | 14.8 / 15.9 |
+| Configurator (W1) | 2560×1440 @2x | M5 GPU | 11.8 | High | 21.5 / 23.6 |
+| Walkthrough | 1440×900 @2x | SwiftShader | 1,278 | **Low** | about 520 (8 frames); it was about 4,100 on High |
+| Configurator (W1) | 1440×900 @2x | SwiftShader | 1,770 | **Low** | about 5,100 (1 frame); it was about 11,800 on High |
+
+What this shows:
+- **The walkthrough's pixel budget is the gain you can measure on this Mac.** At 2560×1440 @2x on High it draws 3.7 million pixels a frame instead of 14.7 million, and a frame takes 14.8 ms instead of 23.5, about 37% less. At 1440×900 @2x it draws 3.6 million instead of 5.2 million and takes 14.8 ms instead of 16.0 to 16.4, about 8 to 10% less.
+- **The tiers themselves cost what they did.** Every configurator row is within 0.7 ms of its "before", and the walkthrough's Low rows are within the afternoon's 0.8 ms drift or just outside it (9.0 to 10.3 ms at 2560×1440, on fewer pixels: Low's time hardly follows the pixel count).
+- **On a fast machine Auto changes nothing.** It timed 15.6 and 11.8 ms, well under its 35 ms limit, and kept High on both pages at both sizes.
+- **On the worst case Auto steps down by itself.** On the software renderer it timed one frame at 1.3 and 1.8 s, chose Low and remembered it. The walkthrough then drew a frame in about 0.5 s where the old default took 4.1 s, and the configurator in about 5.1 s where it took 11.8 s.
+  - That is still far too slow to use. The software renderer stands for the worst case, not for an ordinary laptop, and no threshold is tuned from it.
+  - The walkthrough's first visit keeps its antialiasing, which can only be set when the page loads. The next visit starts on Low without it; the old version forced to Low drew a frame in about 0.3 s.
+- **The configurator's draw column counts two draws.** Its timer draws once itself, and the page draws once more in the same frame because the view moved: 189 timed draws and 189 of the page's own in one 4-second window. So 20.7 ms is about two frames, and one is nearer the 11.8 ms that Auto times. The column is still like for like with "before", which was measured the same way.
+- **Load and idle are unchanged.** The walkthrough downloads 1.9 MB and the configurator about 0.8 MB (it was 0.79 MB at `e92f613`); both were ready in 0.3 to 1.2 s here; the walkthrough still draws nothing while idle.
+
+**Still not measured:** an ordinary laptop with integrated graphics, which is what this work is for. That needs `?stats=1` readouts from real devices.
+
+Raw rows are in `build/perf_p2-after-hw-1.json`, `-hw-2.json`, `p2-after-auto.json`, `p2-after-sw-auto.json`, and the same-day reruns of the old version in `p2-before-hw-recheck.json` and `p2-before-sw-low-recheck.json`. To repeat: the "before" command above for the forced rows, and `.venv/bin/python -I scripts/perf_baseline.py . <label> --viewports 1440x900@2,2560x1440@2 --as-visitor` for Auto, adding `--gpu swiftshader --seconds 4 --timeout 1200` for the worst case.
 
 ## Not measured yet
 
