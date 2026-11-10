@@ -4,6 +4,8 @@ import { afterDark, sunTimes } from "./site/configurator/solar.js";
 import { RoomModes, modeText } from "./site/configurator/modes.js";
 import { STEPS, CAVEAT } from "./site/configurator/guide.js";
 import { ATTACHMENTS } from "./site/configurator/apis-data.js";
+import { readFileSync } from "node:fs";
+import * as Q from "./site/configurator/quality.js";
 const s = new PacsSimulation();
 assert.deepEqual(s.readings(), { hr: 78, sys: 118, dia: 76, rr: 16, spo2: 98, hrv: null });
 s.setScenario("possible"); assert.equal(s.readings(6).hr, 92); assert.equal(s.readings(12).hr, 105);
@@ -80,3 +82,44 @@ assert.ok(/not a compliance check/.test(tourText), "the tour keeps 'not a compli
 assert.ok(/never touches medical equipment or alarms/.test(GUIDE[9][1]), "PACS keeps hands-off alarms on its clinical-safety step");
 assert.ok(/doesn't diagnose/.test(pacsText) && /don't prove comfort/.test(GUIDE[3][1]) && /don't prove comfort/.test(GUIDE[3][4]), "PACS still says it doesn't diagnose and stable numbers don't prove comfort");
 console.log(`PASS plain English: ${steps.length} tour, PACS and APIS steps at most 24 words, the caveats in one fixed line, 'not a compliance check' and hands-off alarms kept`);
+// ---------------------------------------------------------------- graphics quality: the pixel budget, the starting tier and Auto's choice
+const near = (a, b) => Math.abs(a - b) < 1e-9;
+assert.ok(near(Q.pixelRatio(2, 1440, 900, "high"), Math.sqrt(3.6e6 / (1440 * 900))), "1440 x 900 @2x is capped to 3.6 million pixels");
+assert.equal(Q.pixelRatio(2, 2560, 1440, "high"), 1); // a big laptop screen draws one pixel per CSS pixel, never fewer
+assert.equal(Q.pixelRatio(3, 390, 844, "low"), 1.5); assert.equal(Q.pixelRatio(3, 390, 844, "high"), 2);
+assert.equal(Q.pixelRatio(2, 800, 600, "high", 1.25), 1.25); // a stepped-down limit holds
+assert.equal(Q.startTier("auto", null), "high"); assert.equal(Q.startTier("auto", "low"), "low"); assert.equal(Q.startTier("low", "high"), "low");
+assert.equal(Q.startTier("auto", null, true), "low", "a phone or tablet never starts heavier than before: Low until measured");
+assert.equal(Q.startTier("auto", "high", true), "high"); assert.equal(Q.startTier("high", null, true), "high"); // measured, or chosen
+const inlineStart = new Function(`return ${/startTier: (\(choice[^\n]*\)),\n/.exec(readFileSync(new URL("./viewer_template.html", import.meta.url), "utf8"))[1]}`)();
+for (const c of ["auto", "high", "low"]) for (const m of [null, "high", "low"]) for (const h of [false, true]) assert.equal(inlineStart(c, m, h), Q.startTier(c, m, h), "the walkthrough starts the same way");
+for (const current of ["high", "low"]) {
+  assert.equal(Q.pickTier(4, current), "high", `a device that draws a frame in 4 ms at ${current} gets High`);
+  assert.equal(Q.pickTier(400, current), "low", `a device that takes 400 ms a frame at ${current} gets Low`);
+  let seenLow = false; // slower never picks a higher tier
+  for (let ms = 1; ms <= 600; ms += 0.5) { const t = Q.pickTier(ms, current); assert.ok(t === "high" || t === "low"); if (t === "low") seenLow = true; else assert.ok(!seenLow, `${current}: ${ms} ms went back to High`); }
+}
+// what the M5 laptop measured on 10 November (High, 1440 x 900 @2x: 16 ms walkthrough, 21 ms configurator) keeps High,
+// and so do REPORT.md's figures for it (22 ms by default, 28 ms with the heaviest options); its 13 ms on Low steps back up
+for (const ms of [16, 21, 22, 28]) assert.equal(Q.pickTier(ms, "high"), "high", `${ms} ms on High keeps High`);
+assert.equal(Q.pickTier(13, "low"), "high");
+// no flip-flopping between visits: on the M5, Low cost 0.38 to 0.73 of High. A device that steps up stays up next time, and
+// one that drops stays down
+for (const share of [0.38, 0.5, 0.64, 0.73]) for (let ms = 1; ms <= 600; ms += 0.5) {
+  if (Q.pickTier(ms, "low") === "high") assert.equal(Q.pickTier(ms / share, "high"), "high", `${ms} ms on Low stepped up, so ${ms / share} ms on High must keep it`);
+  if (Q.pickTier(ms, "high") === "low") assert.equal(Q.pickTier(ms * share, "low"), "low", `${ms} ms on High dropped, so ${ms * share} ms on Low must keep it`);
+}
+// a phone or tablet is stepped down, never up, so it never starts heavier than it did before Auto
+for (let ms = 1; ms <= 600; ms += 0.5) assert.equal(Q.pickTier(ms, "low", true), "low", `a phone on Low at ${ms} ms stays Low`);
+assert.equal(Q.pickTier(400, "high", true), "low"); assert.equal(Q.pickTier(16, "high", true), "high"); // chosen High, then Auto: only down
+// the walkthrough's copy: same decisions and the same pixel budget
+const tpl = readFileSync(new URL("./viewer_template.html", import.meta.url), "utf8"), mod = readFileSync(new URL("./site/configurator/quality.js", import.meta.url), "utf8");
+const body = (text, re) => { const m = re.exec(text); assert.ok(m, `found ${re}`); return m[1].split("\n").filter(l => !/^\s*\/\//.test(l)).join("\n"); };
+const inline = new Function("medianMs", "current", "isHandheld = false", body(tpl, /pickTier\(medianMs, current, isHandheld = false\) \{\n([\s\S]*?)\n    \},/));
+assert.equal(body(tpl, /pickTier\(medianMs, current, isHandheld = false\) \{\n([\s\S]*?)\n    \},/).replace(/\s+/g, " ").trim(), body(mod, /export function pickTier\(medianMs, current, isHandheld = false\) \{\n([\s\S]*?)\n\}/).replace(/\s+/g, " ").trim(), "the walkthrough's pickTier is the same code as quality.js's");
+for (const current of ["high", "low"]) for (const h of [false, true]) for (let ms = 1; ms <= 600; ms += 1.5) assert.equal(inline(ms, current, h), Q.pickTier(ms, current, h));
+const budget = Number(/PIXEL_BUDGET = ([\d.e]+)/.exec(tpl)[1]);
+assert.equal(budget, Q.PIXEL_BUDGET, "the same pixel budget");
+const ratioInline = new Function("PIXEL_BUDGET", `return ${/pixelRatio: (\(dpr[^\n]*\)\)),\n/.exec(tpl)[1]}`)(budget);
+for (const [dpr, w, h, t, lim] of [[2, 1440, 900, "high"], [2, 2560, 1440, "high"], [3, 390, 844, "low"], [2, 800, 600, "high", 1.25], [1, 1920, 1080, "high"]]) assert.equal(ratioInline(dpr, w, h, t, lim), Q.pixelRatio(dpr, w, h, t, lim));
+console.log("PASS graphics quality: a 3.6 megapixel budget, Auto starts where it measured last, and its choice is monotonic, keeps a fast laptop on High, doesn't flip-flop, never steps a phone up and is the same in the walkthrough");

@@ -99,6 +99,12 @@
   .stats { position: fixed; z-index: 40; left: calc(var(--g) + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px)); max-width: min(420px, calc(100vw - 2 * var(--g))); padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
   .stats pre { margin: 0 0 6px; font: 11px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
   .stats button { min-height: 32px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--ink); font: 500 12px var(--ui); cursor: pointer; }
+  .quality { margin-top: 10px; display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+  .qseg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .qseg button { min-height: 36px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: 500 12px var(--ui); cursor: pointer; }
+  .qseg button[aria-pressed="true"] { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  .qseg button:disabled { opacity: 0.5; cursor: default; }
+  .quality p { margin: 0; }
   .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
   .dot.high { background: var(--hi); } .dot.med { background: var(--med); } .dot.low { background: var(--low); }
   #list { overflow-y: auto; padding: 6px 6px 12px; min-height: 0; }
@@ -209,6 +215,10 @@
   <header>
     <h2>Rooms and objects</h2>
     <div class="legend"><span><span class="dot high"></span> high</span><span><span class="dot med"></span> medium</span><span><span class="dot low"></span> low confidence</span></div>
+    <div class="quality"><span id="qualityLabel">Graphics quality</span>
+      <div id="quality" class="qseg" role="group" aria-labelledby="qualityLabel"><button type="button" data-value="auto" aria-pressed="true">Auto</button><button type="button" data-value="high" aria-pressed="false">High</button><button type="button" data-value="low" aria-pressed="false">Low</button></div>
+      <p id="qualityStatus" role="status"></p>
+    </div>
   </header>
   <div id="list"></div>
 </aside>
@@ -287,15 +297,57 @@ document.getElementById("status").textContent = VIEW.status;
 const W2T = (x, y, z = 0) => new THREE.Vector3(x, z, -y);
 
 const canvas = document.getElementById("c");
-// Graphics quality. Phones and small screens get the low tier: no antialiasing, at most 1.5 pixels per CSS pixel, and plain
-// see-through glass where the model's glass uses transmission, which costs a whole extra render pass. Every feature stays.
-// ?tier=low or ?tier=high overrides, as on the configurator. Any device steps its resolution down if it can't keep up.
-const tier = new URLSearchParams(location.search).get("tier") || (matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 600 ? "low" : "high");
+// Graphics quality: Auto, High or Low, remembered in this browser, as on the configurator. These functions are a copy of
+// configurator/quality.js, which this single file can't import; check 12 makes sure the two give the same answers.
+// High: antialiasing, glass that bends light (transmission, a whole extra render pass), up to 2 pixels per CSS pixel. Low:
+// neither, plain see-through glass, up to 1.5. Both draw at most 3.6 million pixels a frame. Auto times the first frames and
+// picks from timed test draws; a phone or tablet starts on Low as before, and Auto only ever steps it down. Antialiasing is set
+// when the page loads, so a change to it waits for the
+// next load; the rest changes at once. ?tier=low or ?tier=high forces one. Any device steps its resolution down if it can't keep up.
+const QUALITY = (() => {
+  const CHOICES = ["auto", "high", "low"], PIXEL_BUDGET = 3.6e6;
+  const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
+  const write = (key, value) => { try { localStorage.setItem(key, value); } catch { /* private browsing: not remembered */ } };
+  const median = list => { const s = [...list].sort((a, b) => a - b); return s.length ? s[s.length >> 1] : 0; };
+  return {
+    readChoice: () => (CHOICES.includes(read("icu-quality")) ? read("icu-quality") : "auto"),
+    saveChoice: choice => write("icu-quality", choice),
+    readMeasured: page => (["high", "low"].includes(read(`icu-quality-measured-${page}`)) ? read(`icu-quality-measured-${page}`) : null),
+    saveMeasured: (page, tier) => write(`icu-quality-measured-${page}`, tier),
+    handheld: () => matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 600,
+    startTier: (choice, measured, isHandheld = false) => (choice === "auto" ? measured || (isHandheld ? "low" : "high") : choice),
+    pixelRatio: (dpr, w, h, tier, limit = Infinity) => Math.max(1, Math.min(dpr, tier === "low" ? 1.5 : 2, Math.sqrt(PIXEL_BUDGET / (w * h)), limit)),
+    // kept identical to pickTier in configurator/quality.js, which explains the figures: High while a frame takes at most
+    // 35 ms; from Low, only if High would too at the most it was seen to cost; and a phone or tablet is never stepped up
+    pickTier(medianMs, current, isHandheld = false) {
+      const SLOW_MS = 35, LOW_SHARE = 0.38;
+      if (current === "low" && isHandheld) return "low";
+      const highMs = current === "low" ? medianMs / LOW_SHARE : medianMs;
+      return highMs <= SLOW_MS ? "high" : "low";
+    },
+    async probe(draw, gl, compile, frames = 8, budgetMs = 1500) {
+      const px = new Uint8Array(4), times = [];
+      const timed = () => { const t0 = performance.now(); draw(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return performance.now() - t0; };
+      await compile?.(); // every shader ready first, so compiling is never timed
+      timed(); await new Promise(requestAnimationFrame); timed(); // and two untimed warm-up draws
+      const start = performance.now();
+      while (times.length < frames && !(times.at(-1) > 250) && (times.length < 3 || performance.now() - start < budgetMs)) {
+        await new Promise(requestAnimationFrame);
+        times.push(timed());
+      }
+      return median(times);
+    },
+  };
+})();
+const forcedTier = ["low", "high"].includes(new URLSearchParams(location.search).get("tier")) ? new URLSearchParams(location.search).get("tier") : null;
+const quality = { choice: forcedTier || QUALITY.readChoice(), ms: 0 };
+let tier = forcedTier || QUALITY.startTier(quality.choice, QUALITY.readMeasured("walkthrough"), QUALITY.handheld());
+const loadTier = tier; // antialiasing was set for this one
+let ratioLimit = Infinity; // lowered a step at a time if frames stay slow
 const renderer = (() => {
   // the page checked for WebGL 2 before loading, but a context can still be refused (a blocklisted GPU, too many open tabs)
   try { return new THREE.WebGLRenderer({ canvas, antialias: tier === "high" }); } catch (err) { cantDraw("webgl2"); throw err; }
 })();
-renderer.setPixelRatio(Math.min(devicePixelRatio, tier === "low" ? 1.5 : 2));
 /** Plain see-through glass for the low tier, in place of a transmission material. */
 const cheapGlass = m => new THREE.MeshStandardMaterial({
   name: m.name, color: m.color.clone(), roughness: Math.max(0.05, m.roughness ?? 0.1), metalness: 0,
@@ -336,6 +388,7 @@ new ResizeObserver(syncBarH).observe(bar);  // #cam3 stays in the bar until its 
 function resize() {
   const w = innerWidth, h = innerHeight;
   syncBarH();
+  renderer.setPixelRatio(QUALITY.pixelRatio(devicePixelRatio, w, h, tier, ratioLimit));
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
@@ -356,7 +409,9 @@ const onModel = gltf => {
       if (!n.isMesh) return;
       n.userData.objId = id;
       n.userData.top = top.name;
-      n.material = tier === "low" && (n.material.transmission || 0) > 0 ? cheapGlass(n.material) : n.material.clone();
+      // glass that bends light keeps a plain twin, so the tier can switch while the page runs
+      if ((n.material.transmission || 0) > 0) n.userData.glassBy = { high: n.material.clone(), low: cheapGlass(n.material) };
+      n.material = n.userData.glassBy ? n.userData.glassBy[tier] : n.material.clone();
       n.userData.baseEmissive = n.material.emissive ? n.material.emissive.clone() : null;
       n.userData.glass = (n.material.transmission || 0) > 0 || n.material.opacity < 0.99;
       meshes.push(n);
@@ -372,6 +427,7 @@ const onModel = gltf => {
   // fade in over the matching page background, once the first frame with the model has been drawn
   requestAnimationFrame(() => requestAnimationFrame(() => canvas.classList.remove("pending")));
   window.__viewerReady = true;
+  requestAnimationFrame(() => requestAnimationFrame(() => autoQuality())); // the first frame is up: time a few more and pick
 };
 const onFail = err => {
   document.getElementById("load").textContent = "The model could not be loaded. Check your connection and reload the page.";
@@ -855,12 +911,64 @@ function stepDown(now) {
   const median = gaps[15];
   gaps.length = 0;
   if (median > 40 && renderer.getPixelRatio() > 1) {
-    renderer.setPixelRatio(Math.max(1, renderer.getPixelRatio() - 0.25));
+    ratioLimit = Math.max(1, renderer.getPixelRatio() - 0.25);
+    resize();
     stepped += 1;
+  } else if (median > 40 && quality.choice === "auto" && !forcedTier && tier !== "low") {
+    QUALITY.saveMeasured("walkthrough", "low"); // still too slow at one pixel per CSS pixel: drop to Low
+    applyTier("low");
+    syncQuality();
   }
 }
+/** Switch tier while the page runs: the glass and the resolution. Antialiasing follows on the next load. */
+function applyTier(next) {
+  if (next === tier) return;
+  tier = next;
+  for (const m of meshes) if (m.userData.glassBy) m.material = m.userData.glassBy[next];
+  resize();
+  needDraw = true;
+}
+const tierName = t => (t === "low" ? "Low" : "High");
+function syncQuality(text) {
+  document.querySelectorAll("#quality button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.value === quality.choice)));
+  const later = tier !== loadTier ? " Smoothed edges follow on the next visit." : "";
+  document.getElementById("qualityStatus").textContent = text || (quality.choice !== "auto"
+    ? `${tierName(tier)}, as chosen.${later}`
+    : quality.ms && tier === "low" && QUALITY.handheld() ? `Auto keeps a phone or tablet on Low: a frame took about ${Math.round(quality.ms)} ms to draw here. You can still choose High.`
+    : quality.ms ? `Auto chose ${tierName(tier)}: a frame took about ${Math.round(quality.ms)} ms to draw here.${later}`
+    : `Auto: ${tierName(tier)}, until it has timed a few frames here.`);
+}
+/** Auto: time a few frames and pick. A test passes the time in, since a software renderer is left alone, as above. */
+async function autoQuality(ms) {
+  if (quality.choice !== "auto" || forcedTier) return;
+  if (ms === undefined) {
+    if (!adaptive) return;
+    ms = await QUALITY.probe(() => renderer.render(scene, camera), renderer.getContext(), () => renderer.compileAsync(scene, camera));
+    if (quality.choice !== "auto") return; // the visitor chose meanwhile
+  }
+  quality.ms = ms;
+  const next = QUALITY.pickTier(ms, tier, QUALITY.handheld());
+  QUALITY.saveMeasured("walkthrough", next);
+  applyTier(next);
+  syncQuality();
+}
+document.getElementById("quality").addEventListener("click", e => {
+  const b = e.target.closest("button[data-value]");
+  if (!b || forcedTier) return;
+  quality.choice = b.dataset.value;
+  QUALITY.saveChoice(quality.choice);
+  quality.ms = 0;
+  applyTier(quality.choice === "auto" ? QUALITY.startTier("auto", QUALITY.readMeasured("walkthrough"), QUALITY.handheld()) : quality.choice);
+  syncQuality();
+  autoQuality();
+});
+syncQuality();
+if (forcedTier) document.querySelectorAll("#quality button").forEach(b => { b.disabled = true; });
+window.__viewerAutoQuality = ms => autoQuality(ms);
 window.__viewerQuality = () => ({
-  tier, ratio: renderer.getPixelRatio(), antialias: renderer.getContext().getContextAttributes()?.antialias, stepped,
+  tier, choice: quality.choice, ms: quality.ms, measured: QUALITY.readMeasured("walkthrough"), loadTier,
+  ratio: renderer.getPixelRatio(), antialias: renderer.getContext().getContextAttributes()?.antialias, stepped,
+  pixels: Math.round(innerWidth * innerHeight * renderer.getPixelRatio() ** 2),
   transmission: meshes.filter(m => (m.material.transmission || 0) > 0).length, glass: meshes.filter(m => m.userData.glass).length,
 });
 const lastView = new THREE.Matrix4();
@@ -895,7 +1003,7 @@ if (new URLSearchParams(location.search).get("stats") === "1") (() => {
   const text = () => [
     "Walkthrough · ?stats=1",
     `GPU: ${gpu}`,
-    `Quality: ${tier === "low" ? "Low" : "High"}`,
+    `Quality: ${tier === "low" ? "Low" : "High"} (${quality.choice === "auto" ? (quality.ms ? `Auto, timed ${Math.round(quality.ms)} ms` : "Auto, not yet timed") : forcedTier ? "forced by ?tier=" : "chosen"})`,
     `Pixel ratio: ${renderer.getPixelRatio().toFixed(2)} (device ${devicePixelRatio})`,
     `Canvas: ${canvas.width} × ${canvas.height} = ${(canvas.width * canvas.height / 1e6).toFixed(2)} M pixels`,
     `Window: ${innerWidth} × ${innerHeight}`,

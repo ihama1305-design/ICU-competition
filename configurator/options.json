@@ -1630,7 +1630,7 @@
      "control": "swatches",
      "default": "teal",
      "custom": {"effect":{"do":"color","material":"wardrobe_accent"}},
-     "check": {"view":"overview","time":"afternoon", "rooms": { "W1": { "eye": [14.5, 30.72, 1.45], "look": [13.1, 31.1, 0.4] } } },
+     "check": {"view":"overview","time":"afternoon", "rooms": { "W1": { "eye": [14.5, 30.72, 1.45], "look": [13.1, 31.1, 0.4] }, "W3": { "eye": [8.3, 20.75, 1.3], "look": [7.15, 21.85, 0.45] } } },
      "options": [
       {"id":"teal","label":"Teal","swatch":"#4aaeb2","effects":[{"do":"color","material":"wardrobe_accent","value":"#4aaeb2"}],"code":0},
       {"id":"sand","label":"Sand","swatch":"#c6a77a","effects":[{"do":"color","material":"wardrobe_accent","value":"#c6a77a"}],"code":1},
