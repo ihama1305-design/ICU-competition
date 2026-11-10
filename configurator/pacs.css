@@ -27,6 +27,7 @@
 #pacsTrend { width: 100%; height: 74px; display: block; margin-top: 5px; }
 #pacsTrend text { font: 9px system-ui, sans-serif; fill: #bad0d3; }
 .pacs-message { border-left: 3px solid var(--accent); background: var(--hover); padding: 10px; font-size: 12px; line-height: 1.5; }
+.pacs-night { border-left: 3px solid var(--line); padding: 4px 10px; font-size: 12px; line-height: 1.5; color: var(--ink); margin: 7px 0; }
 .pacs-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .pacs-actions > button { flex: 1 1 40%; }
 #pacsPanel section { display: block; padding: 14px 0; }

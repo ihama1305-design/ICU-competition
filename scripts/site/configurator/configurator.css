@@ -106,6 +106,7 @@ button { font: inherit; color: inherit; }
 .alarm-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--ok-bg); color: var(--ok-ink); font-size: 12px; font-weight: 500; }
 .alarm-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
 .mode-note { margin: 0; max-width: 400px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); font-size: 13px; box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); text-wrap: pretty; }
+.mode-why { display: block; margin-top: 4px; color: var(--muted); }
 .mode-banner { max-width: 440px; padding: 10px 12px; border: 2px solid var(--danger); border-radius: 12px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); }
 .mode-banner p { margin: 0 0 8px; font-size: 13px; text-wrap: pretty; }
 #leaveEmergency { min-height: 40px; padding: 6px 12px; border: 1px solid var(--danger); border-radius: 8px; background: transparent; color: var(--danger); font: 500 13px/1.2 var(--ui); cursor: pointer; }

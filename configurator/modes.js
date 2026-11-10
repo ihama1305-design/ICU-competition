@@ -11,8 +11,14 @@ export const MODES = {
     label: "Comfort",
     light: { kelvin: 2700, level: 0.35 },
     blinds: 1,
+    blindsByDay: true, // between sunset and sunrise there's no glare to block, so only the lighting changes
     note: "Comfort: the room lights warm and dim, and the blinds lower. The task light, the monitor and clinical alarms are unaffected.",
     say: "Comfort mode. The room lights warm and dim, and the blinds lower. Clinical alarms are unaffected.",
+    dark: {
+      note: "Comfort: the room lights warm and dim. The task light, the monitor and clinical alarms are unaffected.",
+      why: "It's after sunset, so the blinds stay as they are: there's no daylight to block, and only the lighting changes.",
+      say: "Comfort mode. It's after sunset, so only the lights change: they warm and dim, and the blinds stay as they are. Clinical alarms are unaffected.",
+    },
   },
   privacy: {
     label: "Privacy",
@@ -46,9 +52,16 @@ const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ease = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 const mix = (a, b, k) => a + (b - a) * k;
 
+/** What a mode says on screen and aloud, by day or after dark. `why` is the extra line, if any. */
+export function modeText(name, dark) {
+  const m = MODES[name], d = dark && m.blindsByDay ? m.dark : null;
+  return { note: d?.note ?? m.note, why: d?.why ?? "", say: d?.say ?? m.say };
+}
+
 /**
  * Runs the modes against the room through `api`, which main.js provides:
  * baseLight() and the room's light as configured, as { kelvin, level }; setLight(look, task) lays a look over it (null for none);
+ * isDark() is true between sunset and sunrise at the room's solar hour;
  * blindsNow(), configuredBlinds() and setBlinds(level); restore(groupIds) re-applies the configured choices;
  * screens(on), glassClear(), glassPrivate(), overlay(on) for Clinical view; beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
  */
@@ -59,6 +72,7 @@ export class RoomModes {
     this.before = "standard"; // where leaving Emergency-ready goes back to
     this.look = null; // the light look laid over the room now, if any
     this.tween = null;
+    this.dark = false; // whether the current mode was set after dark, if that changes what it does
   }
 
   get easing() { return !!this.tween; }
@@ -77,9 +91,11 @@ export class RoomModes {
     if (to.glassClear) api.glassClear();
     if (to.privateFront) api.glassPrivate();
     api.overlay(!!to.overlay); // Clinical view's labels and keep-clear areas
+    this.dark = !!to.blindsByDay && api.isDark();
+    const ownBlinds = to.blinds !== undefined && !this.dark; // after dark, the blinds are left as the room has them
     const fromLight = this.look || api.baseLight(), toLight = to.light || api.baseLight();
-    const fromBlinds = api.blindsNow(), toBlinds = to.blinds ?? api.configuredBlinds();
-    this.tween = { start: performance.now(), fromLight, toLight, fromBlinds, toBlinds, task: !!to.task, keep: !!to.light, ownBlinds: to.blinds !== undefined };
+    const fromBlinds = api.blindsNow(), toBlinds = ownBlinds ? to.blinds : api.configuredBlinds();
+    this.tween = { start: performance.now(), fromLight, toLight, fromBlinds, toBlinds, task: !!to.task, keep: !!to.light, ownBlinds };
     if (instant || reduced()) this.finish();
     else this.step(0);
     api.changed(name);
@@ -94,6 +110,14 @@ export class RoomModes {
 
   /** Out of Emergency-ready, to the mode before it. */
   exitEmergency() { this.set(this.current === "emergency" ? this.before : this.current); }
+
+  /** The time of day changed: a mode that acts differently after dark is set again, at once, if sunset or sunrise was crossed. */
+  timeChanged() {
+    const m = MODES[this.current];
+    if (!m.blindsByDay || this.api.isDark() === this.dark) return false;
+    this.set(this.current, { instant: true });
+    return true;
+  }
 
   step(k) {
     const tw = this.tween;

@@ -1,13 +1,13 @@
 import * as THREE from "three";
-import { PacsSimulation, SCENARIOS, WORKFLOW, SOURCES, GUIDE } from "./pacs-state.js";
+import { PacsSimulation, SCENARIOS, WORKFLOW, SOURCES, GUIDE, NIGHT_LINE } from "./pacs-state.js";
 import { PacsRoom } from "./pacs-scene.js";
 const $ = id => document.getElementById(id);
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const copy = value => ({ ...value });
 const setText = (id, value) => { if ($(id).textContent !== value) $(id).textContent = value; };
 export class PACS {
-  constructor({ stage, lighting, rig, controls, relight, invalidate, stopTour, getState, closeApis, restoreApisMarkers }) {
-    Object.assign(this, { stage, rig, controls, invalidate, stopTour, getState, closeApis, restoreApisMarkers });
+  constructor({ stage, lighting, rig, controls, relight, invalidate, stopTour, getState, isDark = () => false, closeApis, restoreApisMarkers }) {
+    Object.assign(this, { stage, rig, controls, invalidate, stopTour, getState, isDark, closeApis, restoreApisMarkers });
     this.visual = new PacsRoom(stage, lighting, relight, invalidate, () => getState().hour); this.active = false; this.guide = null; this.mount();
   }
   mount() {
@@ -21,7 +21,7 @@ export class PACS {
       <p class="pacs-small">Scenario buttons load a new scripted case and its starting environment. They are not automated physiological triggers; recommendations within a case require approval.</p>
       <div id="pacsAlert" role="alert" hidden><strong>Potential clinical deterioration detected.</strong><p>Clinical assessment takes priority over environmental comfort adjustments.</p><p>Scripted existing clinical alert: ACTIVE. Simulated clinical team notified in this page only.</p><button type="button" id="pacsAcknowledge">ACKNOWLEDGE SIMULATED ALERT</button><p id="pacsAckStatus">Acknowledgment never silences or dismisses a medical alarm.</p></div>
       <section class="pacs-monitor" aria-labelledby="pacsMonitorTitle"><h3 id="pacsMonitorTitle">Patient monitor <span>SIMULATED</span></h3><div class="pacs-vitals"><div>HR <strong id="pacsHr">78</strong><small>bpm</small></div><div>BP <strong id="pacsBp">118/76</strong><small>mmHg</small></div><div>RR <strong id="pacsRr">16</strong><small>breaths/min</small></div><div>SpO₂ <strong id="pacsSpo2">98</strong><small>%</small></div></div><svg id="pacsTrend" viewBox="0 0 320 74" role="img" aria-label="Scripted heart-rate trend, not an ECG waveform"></svg><p class="pacs-small">Illustrative values, not universal targets. HRV: unavailable; not inferred from HR.</p></section>
-      <p id="pacsMessage" class="pacs-message" role="status"></p><p id="pacsObservation" class="pacs-small"></p>
+      <p id="pacsMessage" class="pacs-message" role="status"></p><p id="pacsNight" class="pacs-night" hidden></p><p id="pacsObservation" class="pacs-small"></p>
       <div class="pacs-actions"><button type="button" id="pacsPreferences">PATIENT PREFERENCES</button><button type="button" id="pacsResponse">VIEW SYSTEM RESPONSE</button></div>
       <section aria-labelledby="pacsSettingsTitle"><h3 id="pacsSettingsTitle">Environmental settings <span>VISUAL DEMO</span></h3><dl id="pacsSettings"></dl><div class="pacs-volume" aria-hidden="true"><span id="pacsVolume"></span></div><p class="pacs-small">Audio level is a visual demonstration; no audio plays or is recorded. Clinical alarm volume is never controlled.</p></section>
       <section id="pacsRecommendations" aria-labelledby="pacsRecTitle" hidden><h3 id="pacsRecTitle">Consider a patient comfort assessment.</h3><p id="pacsRecContext" class="pacs-small"></p>
@@ -75,7 +75,7 @@ export class PACS {
     this.apisMarkerState = this.closeApis(); this.stopTour(); this.returnFocus = document.activeElement;
     this.snapshot = { position: this.stage.camera.position.clone(), target: this.controls.target.clone(), view: this.rig.view, hfov: this.rig.hfov, ceiling: this.stage.ceilingOn, interrupted: !!this.rig.tween };
     this.rig.tween = null; this.controls.enabled = true;
-    const baseline = this.visual.enter(this.stage.current); this.sim = new PacsSimulation(baseline);
+    const baseline = this.visual.enter(this.stage.current); this.sim = new PacsSimulation(baseline, { dark: this.isDark() });
     this.active = true; this.lastTick = performance.now(); this.lastDisplay = 0; this.transition = null; this.comparison = "after";
     $("pacsPanel").hidden = false; $("pacsTools").hidden = false; document.body.classList.add("pacs-active");
     $("objectCard").hidden = true; $("pacsConnections").setAttribute("aria-pressed", "true");
@@ -97,7 +97,7 @@ export class PACS {
     this.transition = null; this.unlockCamera(); this.sim.setScenario(id); this.comparison = "after"; this.responseOpen = id === "possible";
     this.visual.apply(this.sim.environment); this.lastTick = performance.now(); this.render();
   }
-  reset() { this.stopGuide(); this.sim = new PacsSimulation(this.sim.baseline); this.scenario("stable"); this.render(); }
+  reset() { this.stopGuide(); this.sim = new PacsSimulation(this.sim.baseline, { dark: this.sim.dark }); this.scenario("stable"); this.render(); }
   cancelAdjustment() {
     if (!this.transition) return;
     this.transition = null;
@@ -162,7 +162,7 @@ export class PACS {
       if (index === 8) this.scenario("deterioration");
     }
     if (index === 9) this.sim.acknowledge();
-    $("pacsGuideTitle").textContent = `${index + 1} / ${GUIDE.length} · ${GUIDE[index][0]}`; $("pacsGuideText").textContent = GUIDE[index][1];
+    $("pacsGuideTitle").textContent = `${index + 1} / ${GUIDE.length} · ${GUIDE[index][0]}`; $("pacsGuideText").textContent = (this.sim.dark && GUIDE[index][4]) || GUIDE[index][1];
     $("pacsPrevious").disabled = index === 0; $("pacsNext").disabled = index === GUIDE.length - 1; $("pacsGuidePause").textContent = this.guide.paused ? "RESUME" : "PAUSE";
     this.view(GUIDE[index][3]); this.render();
   }
@@ -187,6 +187,8 @@ export class PACS {
     $("pacsReviewed").checked = s.reviewed; $("pacsReviewed").disabled = s.warning;
     $("pacsChoices").disabled = s.warning;
     $("pacsChoices").querySelectorAll("input").forEach(input => { input.checked = s.selection[input.dataset.choice]; });
+    $("pacsChoices").querySelector('[data-choice="blinds"]').disabled = s.dark; // after sunset only the lighting changes
+    $("pacsNight").hidden = !s.dark; setText("pacsNight", s.dark ? NIGHT_LINE : "");
     $("pacsApprovalStatus").textContent = s.warning ? "SUSPENDED · clinical warning active" : s.approval === "approved" ? "Simulated nurse approval recorded. Comfort reassessment recommended." : s.approval === "rejected" ? "REJECTED · settings unchanged by this proposal" : s.approval === "pending" ? "Environmental adjustment recommended. Awaiting nurse approval for selected options." : "Clinical review and selected recommendations are required before approval.";
     $("pacsApprove").disabled = s.warning || s.approval !== "pending" || !Object.values(s.selection).some(Boolean); $("pacsReject").disabled = s.warning || s.approval !== "pending";
     $("pacsResponse").disabled = s.warning; $("pacsWarning").checked = s.warning; $("pacsWarning").disabled = s.warning;
@@ -232,6 +234,6 @@ export class PACS {
     return changed;
   }
   inspect() {
-    return { active: this.active, scenario: this.sim?.scenario, readings: this.sim?.readings(), warning: this.sim?.warning, approval: this.sim?.approval, acknowledged: this.sim?.acknowledged, feedback: this.sim?.feedback, environment: this.visual.current, preferences: this.sim?.preferences, transitioning: !!this.transition, comparison: this.comparison, cameraLocked: !!this.compareCamera, guide: this.guide ? { ...this.guide } : null, monitorMaterials: this.visual.materials?.length || 0, connections: Object.keys(this.visual.nodes || {}), patient: !!this.stage.current?.patient, physical: { blindScale: this.visual.blinds?.scale.y, lightLevel: this.visual.lighting.comfort?.level ?? 1, lightIntensity: this.visual.lighting.rects.map(l => l.intensity) } };
+    return { active: this.active, dark: this.sim?.dark, scenario: this.sim?.scenario, readings: this.sim?.readings(), warning: this.sim?.warning, approval: this.sim?.approval, acknowledged: this.sim?.acknowledged, feedback: this.sim?.feedback, environment: this.visual.current, preferences: this.sim?.preferences, transitioning: !!this.transition, comparison: this.comparison, cameraLocked: !!this.compareCamera, guide: this.guide ? { ...this.guide } : null, monitorMaterials: this.visual.materials?.length || 0, connections: Object.keys(this.visual.nodes || {}), patient: !!this.stage.current?.patient, physical: { blindScale: this.visual.blinds?.scale.y, lightLevel: this.visual.lighting.comfort?.level ?? 1, lightIntensity: this.visual.lighting.rects.map(l => l.intensity) } };
   }
 }

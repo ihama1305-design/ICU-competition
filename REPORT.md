@@ -206,7 +206,7 @@ These were added on top of the configurator in one day. Each was checked before 
 | Feature | What it does | What it isn't |
 |---|---|---|
 | Patient view | The camera moves to the pillow and only turns, about 100° each way and up to the ceiling, then returns to the view before | Not a measurement of sightlines. The eye is where the bed view's is |
-| Room modes | Standard, Comfort, Privacy, Clinical and Emergency-ready, laid over the configured room and eased in over about two seconds | They change no choice or link, and Standard puts back exactly what was there. Emergency-ready is started by staff and doesn't touch devices or alarms |
+| Room modes | Standard, Comfort, Privacy, Clinical and Emergency-ready, laid over the configured room and eased in over about two seconds. After sunset (sun below −0.833° at the room's solar hour, about 5:59 pm to 6:01 am on the modelled date), Comfort and PACS change only the lighting, leave the blinds alone and say why | They change no choice or link, and Standard puts back exactly what was there. Emergency-ready is started by staff and doesn't touch devices or alarms |
 | Task light | An examination light over the bed on its own switch, which modes never dim | Not a lux level or a lighting design |
 | Clinical view | Labels on the kit and on placed items, and hatched keep-clear areas beside the bed and at its foot, clipped to the open floor | Illustrative, without dimensions. Not a clearance or compliance check |
 | Placed items | A bedside tablet arm, privacy screen, hand-rub dispenser, waste bins, sharps box and family chair, dragged from the panel onto the floor or a wall wherever the visitor likes | Nothing checks staff access, clearances or infection-control positions, and each card says so |

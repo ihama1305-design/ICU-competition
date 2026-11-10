@@ -14,36 +14,40 @@ export const GUIDE = [
   ["Meet the patient monitor", "The highlighted object is the existing bedside monitor, with clearly labeled simulated readings.", "stable", "monitor"],
   ["Monitoring already matters", "Conventional ICUs monitor physiology and provide environmental controls. This proposal explores their integration.", "stable", "monitor"],
   ["Connect the environment", "Physiological Adaptive Mode links the monitor, patient preferences and environmental controls through clinical oversight.", "stable", "overview"],
-  ["Maintain a preferred environment", "Stable simulated readings accompany the recorded lighting, blinds and quiet preferences. Stable readings do not prove comfort.", "stable", "overview"],
+  ["Maintain a preferred environment", "Stable simulated readings accompany the recorded lighting, blinds and quiet preferences. Stable readings do not prove comfort.", "stable", "overview", "Stable simulated readings accompany the recorded lighting and quiet preferences. After sunset the blinds stay as they are. Stable readings do not prove comfort."],
   ["Notice a trend", "Heart rate rises from 78 toward 105 bpm over this scripted event. Multiple medical explanations remain possible; discomfort is not diagnosed.", "possible", "monitor"],
   ["Assess before recommending", "This demonstration is scripted without warning conditions. A simulated clinical review precedes selected comfort recommendations.", "possible", "overview"],
   ["Show nurse oversight", "The presentation now role-plays a nurse approving lighting, blinds and nonessential-audio changes. Manual mode requires an explicit approval click.", "possible", "overview"],
-  ["See the room respond", "The existing lights and blinds move to the selected preferences. Reassess with the patient; physiology is not proof of benefit.", "possible", "window"],
+  ["See the room respond", "The existing lights and blinds move to the selected preferences. Reassess with the patient; physiology is not proof of benefit.", "possible", "window", "The existing lights move to the selected preferences. After sunset the blinds stay as they are. Reassess with the patient; physiology is not proof of benefit."],
   ["Clinical deterioration", "An independently scripted clinical alert is now active. The simulated team is notified, and pending comfort changes are cancelled.", "deterioration", "monitor"],
   ["Clinical safety takes priority", "Acknowledgment records that this simulated alert was seen. It stays active; equipment settings and medical alarms are never controlled by PACS.", "deterioration", "overview"],
   ["The proposed integration", "Our Adaptive ICU goes beyond monitoring the patient. It explores how physiological information and patient preferences can help the surrounding environment respond to individual comfort needs.", "deterioration", "overview"],
 ];
+// Between sunset and sunrise there's no daylight or glare for the blinds to manage, so PACS adjusts only the lighting.
+export const NIGHT_LINE = "After sunset: the blinds stay as they are, because there's no daylight to block. Only the lighting is adjusted.";
 export const LIGHT_LEVELS = { bright: 1, moderate: 0.65, dim: 0.35 };
 export const BLIND_LEVELS = { open: 0, partial: 0.5, closed: 1 };
 export class PacsSimulation {
-  constructor(baseline = {}) {
+  constructor(baseline = {}, { dark = false } = {}) {
     this.baseline = { light: 1, kelvin: 4000, blinds: 0, audio: 0.35, temperature: 23, ...baseline };
+    this.dark = !!dark; // after sunset at the room's solar hour: the blinds are left as they are
     this.preferences = { lighting: "moderate", color: "warm", audio: "quiet", blinds: "partial", tempMin: 22, tempMax: 24 };
     this.log = []; this.setScenario("stable");
   }
   record(message) { this.log.push(message); this.log = this.log.slice(-16); }
   preferred() {
     const p = this.preferences;
-    return { ...this.baseline, light: LIGHT_LEVELS[p.lighting], kelvin: p.color === "warm" ? 3000 : 4000, blinds: BLIND_LEVELS[p.blinds], audio: p.audio === "quiet" ? 0 : 0.15 };
+    return { ...this.baseline, light: LIGHT_LEVELS[p.lighting], kelvin: p.color === "warm" ? 3000 : 4000, blinds: this.dark ? this.baseline.blinds : BLIND_LEVELS[p.blinds], audio: p.audio === "quiet" ? 0 : 0.15 };
   }
   setScenario(id) {
     if (!SCENARIOS[id]) throw new Error("Unknown PACS scenario");
     this.scenario = id; this.seconds = 0; this.warning = SCENARIOS[id].warning;
     this.acknowledged = false; this.reviewed = false; this.approval = "none"; this.feedback = null;
-    this.selection = { lighting: true, blinds: true, audio: false, temperature: false };
+    this.selection = { lighting: true, blinds: !this.dark, audio: false, temperature: false };
     this.environment = id === "stable" ? this.preferred() : { ...this.baseline };
     this.before = { ...this.environment };
     this.record(`New simulated case: ${SCENARIOS[id].label}.`);
+    if (this.dark) this.record("After sunset: blinds left as they are; only lighting can be adjusted.");
     if (this.warning) this.raiseWarning();
   }
   readings(seconds = this.seconds) {
@@ -68,7 +72,7 @@ export class PacsSimulation {
     if (this.warning || !this.reviewed || this.approval !== "pending" || !Object.values(this.selection).some(Boolean)) return null;
     const target = { ...this.environment }, pref = this.preferred();
     if (this.selection.lighting) { target.light = pref.light; target.kelvin = pref.kelvin; }
-    if (this.selection.blinds) target.blinds = pref.blinds;
+    if (this.selection.blinds && !this.dark) target.blinds = pref.blinds;
     if (this.selection.audio) target.audio = pref.audio;
     // Temperature is a review request only: no approved site envelope or HVAC integration exists.
     this.environment = target; this.approval = "approved";
