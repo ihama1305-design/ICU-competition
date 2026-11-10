@@ -1607,7 +1607,7 @@
       {"id":"on","label":"Add storage","effects":[{"do":"addon","id":"wardrobe","on":true}],"code":0},
       {"id":"off","label":"Remove","effects":[{"do":"addon","id":"wardrobe","on":false}],"code":1}
      ],
-     "note": {"text":"A compact wardrobe sits against the far wall, leaving the entrance route open. Its size and clearances are a design concept for review."},
+     "note": {"text":"A built-in wardrobe fills its spot at the far wall from floor to ceiling, with flush end and filler panels, so it reads as joinery and leaves no top for dust. The entrance route stays open. Its size and clearances are a design concept for review."},
      "code": 25
     },
     {

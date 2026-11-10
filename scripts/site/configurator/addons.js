@@ -267,40 +267,78 @@ function outdoorChair() {
 }
 
 Object.assign(BUILD, {
-  /** Compact sliding-door storage at the far wall, clear of the entrance and bed route. */
+  /**
+   * Built-in sliding-door wardrobe, floor to ceiling, in the same spot at the far wall, clear of the entrance and bed route.
+   * Its edges come from the room's own surfaces, measured from the room models: the back wall, the ceiling, and in W1 the
+   * wing wall. End panels and fillers are flush with the front doors and take the same finish, so it reads as joinery, and
+   * with no top there's nothing for dust to settle on.
+   */
   wardrobe(room) {
     const g = new THREE.Group(), w1 = room.label === "W1";
     g.name = "addon_wardrobe";
-    const at = w1 ? [13.12, 31.295] : [7.15, 22.04];
-    g.position.copy(W2T(at[0], at[1], 0));
-    if (w1) g.scale.x = 1 / 1.355; // W1's niche between the IV pole and the wing wall is 1 m wide; the unit is 1.355 m
+    // x0 and x1 run along the back wall; back and front are the wall and the door faces. In W1 the right end meets the wing
+    // wall, so a filler is scribed to it. W3's left end stands beside the window, clear of the sill's upstand, and its right
+    // end panel is scribed back to where the wall steps back by 8 cm.
+    const site = w1 ? { x0: 12.62, x1: 13.727, back: 31.607, front: 30.97, wallRight: true }
+      : { x0: 6.53, x1: 7.83, back: 22.305, front: 21.68, backRight: 22.387 };
+    const H = room.meta.ceiling - 0.001, W = site.x1 - site.x0, D = site.back - site.front;
+    g.position.copy(W2T((site.x0 + site.x1) / 2, site.back, 0)); // local +z runs out of the wall into the room
     const shell = std("#e9e5dc", 0.65), trim = std("#4aaeb2", 0.5), metal = std("#777f82", 0.38, { metalness: 0.35 });
-    const doorMat = std("#d2bb96", 0.58); doorMat.name = "wardrobe_surface";
+    const finish = std("#d2bb96", 0.58); finish.name = "wardrobe_surface";
     trim.name = "wardrobe_accent";
-    g.add(box(1.25, 1.93, 0.015, std("#756c60", 0.9), 0, 1.03, -0.26));
-    g.add(box(0.035, 1.96, 0.56, shell, -0.66, 1.03, 0), box(0.035, 1.96, 0.56, shell, 0.66, 1.03, 0));
-    g.add(box(1.30, 0.035, 0.56, shell, 0, 2.02, 0), box(1.30, 0.035, 0.56, shell, 0, 0.045, 0));
-    g.add(box(1.30, 0.025, 0.035, metal, 0, 2.07, 0.29), box(1.30, 0.025, 0.035, metal, 0, 0.055, 0.29));
-    const shelf = tagItem(box(0.58, 0.035, 0.43, shell, -0.28, 1.47, -0.02), "Wardrobe shelf", "An interior shelf for folded clothes and personal belongings.");
+    const T = 0.019, PLINTH = 0.1, GAP = 0.003, DOOR_T = 0.022, TRACK = 0.026; // panel, plinth, reveal, door, track offset
+    const SET = 0.016; // the doors sit just behind the frame and the fascia, which laps over their tops and hides the track
+    const L = -W / 2, R = W / 2;
+    const faces = []; // everything that takes the wardrobe finish
+    const panel = (w, h, d, x, y, z, title, text) => { const m = tagItem(box(w, h, d, finish, x, y, z), title, text); faces.push(m); g.add(m); return m; };
+    // end panels, full height and flush with the front doors. W1's right end is the wing wall, so it gets a filler instead
+    const endText = "A full-height end panel in the door finish, floor to ceiling, so the wardrobe reads as built-in joinery.";
+    panel(T, H, D, L + T / 2, H / 2, D / 2, "Wardrobe end panel", endText);
+    let inR = R - T;
+    if (site.wallRight) {
+      const filler = 0.045; // scribed to the wing wall, flush with the doors
+      panel(filler, H, 0.025, R - filler / 2, H / 2, D - 0.0125, "Filler panel", "Scribed to the wing wall and flush with the doors, so there's no gap between the wardrobe and the wall.");
+      g.add(box(T, H, D - 0.03, shell, R - filler - T / 2, H / 2, (D - 0.03) / 2)); // the carcass side behind it
+      inR = R - filler - T;
+    } else {
+      const dR = D + (site.backRight ? site.backRight - site.back : 0); // scribed back to the wall where it steps back
+      panel(T, H, dR, R - T / 2, H / 2, dR / 2 - (dR - D), "Wardrobe end panel", endText);
+    }
+    const inL = L + T, inW = inR - inL, mid = (inL + inR) / 2;
+    // plinth, set back so feet and cleaning machines clear it; the accent colour
+    const plinth = tagItem(box(inW + 2 * T, PLINTH, D - 0.06, trim, (L + R) / 2, PLINTH / 2, (D - 0.06) / 2), "Wardrobe base", "A recessed, easy-clean kick plate at the foot of the wardrobe.");
+    g.add(plinth);
+    // the carcass: back, floor, top, and a shelf and hanging rail inside
+    g.add(box(inW, H - PLINTH, 0.012, std("#756c60", 0.9), mid, PLINTH + (H - PLINTH) / 2, 0.006));
+    g.add(box(inW, T, D - 0.05, shell, mid, PLINTH + T / 2, (D - 0.05) / 2));
+    const doorTop = 2.2, lap = 0.015, upperH = H - doorTop + lap;
+    // the fascia: fixed and flush with the end panels, from just below the door tops to the ceiling. It hides the sliding track,
+    // and with no open top there's nowhere for dust to gather
+    panel(inW, upperH, 0.012, mid, H - upperH / 2, D - 0.006, "Upper fascia panel", "A flush panel from the doors to the ceiling. It hides the sliding track, and with no open top there's nowhere for dust to gather.");
+    g.add(box(inW, T, D - 0.05, shell, mid, doorTop - T / 2, (D - 0.05) / 2)); // inside top
+    const shelf = tagItem(box(inW / 2 - 0.03, 0.035, D - 0.14, shell, inL + inW / 4, 1.47, (D - 0.1) / 2), "Wardrobe shelf", "An interior shelf for folded clothes and personal belongings.");
     g.add(shelf);
-    const rail = tagItem(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.55, 12), metal), "Hanging rail", "A rail for hangers inside the wardrobe.");
-    rail.rotation.z = Math.PI / 2; rail.position.set(0.27, 1.76, -0.05); rail.castShadow = true; g.add(rail);
+    const rail = tagItem(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, inW / 2 - 0.05, 12), metal), "Hanging rail", "A rail for hangers inside the wardrobe.");
+    rail.rotation.z = Math.PI / 2; rail.position.set(inL + inW * 0.75, 1.76, D / 2 - 0.04); rail.castShadow = true; g.add(rail);
     const fabric = std("#91b9b5", 0.95); fabric.name = "wardrobe_clothing";
-    for (const [i, x] of [-0.43, -0.24, -0.05, 0.14].entries()) {
-      const garment = tagItem(box(0.15, 0.47 + (i % 2) * 0.06, 0.025, fabric, x, 1.40, 0.02), "Stored clothing", "Simple clothing shapes show how the sliding wardrobe can hold personal items.");
+    for (const [i, f] of [0.08, 0.3, 0.52, 0.74].entries()) {
+      const garment = tagItem(box(0.15, 0.47 + (i % 2) * 0.06, 0.025, fabric, inL + inW * (0.5 + f / 2), 1.40, D / 2 - 0.02), "Stored clothing", "Simple clothing shapes show how the sliding wardrobe can hold personal items.");
       garment.material = fabric.clone(); garment.material.color.set(["#91b9b5", "#d5a989", "#a4abc5", "#e0d3b8"][i]);
       g.add(garment);
     }
-    const left = tagItem(box(0.67, 1.94, 0.045, doorMat, -0.335, 1.03, 0.30), "Sliding wardrobe door", "This panel slides across the wardrobe opening. Use the button to open or close the doors.", "wardrobe");
-    const right = tagItem(box(0.67, 1.94, 0.045, doorMat, 0.335, 1.03, 0.335), "Sliding wardrobe door", "This panel slides across the wardrobe opening. Use the button to open or close the doors.", "wardrobe");
-    for (const d of [left, right]) {
-      d.add(box(0.025, 0.24, 0.014, trim, 0.24, 0, 0.03));
-      d.castShadow = true;
+    // two sliding doors on two tracks: the left runs behind the right to open. They overlap by 2 cm when closed
+    const doorW = inW / 2 + 0.01, doorH = doorTop - PLINTH - 2 * GAP, doorY = PLINTH + GAP + doorH / 2;
+    const doorText = "This panel slides across the wardrobe opening. Use the button to open or close the doors.";
+    const left = tagItem(box(doorW, doorH, DOOR_T, finish, inL + doorW / 2, doorY, D - SET - TRACK - DOOR_T / 2), "Sliding wardrobe door", doorText, "wardrobe");
+    const right = tagItem(box(doorW, doorH, DOOR_T, finish, inR - doorW / 2, doorY, D - SET - DOOR_T / 2), "Sliding wardrobe door", doorText, "wardrobe");
+    for (const [d, side] of [[left, 1], [right, -1]]) {
+      d.add(box(0.012, 0.32, 0.008, trim, side * (doorW / 2 - 0.05), 0.05, DOOR_T / 2 + 0.002)); // a slim recessed pull
+      faces.push(d); g.add(d);
     }
-    g.add(left, right);
-    const plinth = tagItem(box(1.28, 0.1, 0.52, trim, 0, 0.07, 0), "Wardrobe base", "A recessed, easy-clean kick plate at the foot of the wardrobe.");
-    g.add(plinth);
-    Object.assign(g.userData, { doors: [left, right], open: false, itemInfo: { title: "Sliding wardrobe", description: "A compact patient storage unit for clothes and personal belongings. It is placed against the back wall to keep the entry route clear.", action: "wardrobe" } });
+    Object.assign(g.userData, {
+      doors: [left, right], faces, open: false, slide: { closed: left.position.x, open: inR - doorW / 2 - 0.02 },
+      itemInfo: { title: "Built-in sliding wardrobe", description: "Patient storage for clothes and personal belongings, built in floor to ceiling against the back wall so the entry route stays clear. Flush end and filler panels make it read as joinery, and there's no top for dust to settle on.", action: "wardrobe" },
+    });
     return g;
   },
 
@@ -631,7 +669,8 @@ export function setAddonLook(room, id, look) {
   if (id === "wardrobe") {
     const map = { oak: ["oak", "#ffffff"], walnut: ["wood", "#ffffff"], linen: ["fabric", "#f1ece0"] }[look];
     if (!map) return;
-    for (const door of addon.userData.doors || []) swap(door.material, map[0], [2.5, 2.2], map[1]);
+    // the doors, end panels, fillers and upper panel share one material, so they change together
+    swap((addon.userData.faces || addon.userData.doors)[0].material, map[0], [2.5, 2.2], map[1]);
   } else if (id === "bathroom") {
     const map = { stone: ["slate", "#ffffff"], terrazzo: ["terrazzo", "#ffffff"], sea: ["sand", "#a9cbd0"] }[look];
     if (!map) return;
@@ -643,8 +682,8 @@ export function toggleWardrobe(room) {
   const wardrobe = room.addons?.wardrobe;
   if (!wardrobe) return false;
   wardrobe.userData.open = !wardrobe.userData.open;
-  const [left] = wardrobe.userData.doors;
-  left.position.x = wardrobe.userData.open ? 0.335 : -0.335;
+  const [left] = wardrobe.userData.doors, { slide } = wardrobe.userData;
+  left.position.x = wardrobe.userData.open ? slide.open : slide.closed; // behind the right-hand door
   return wardrobe.userData.open;
 }
 
