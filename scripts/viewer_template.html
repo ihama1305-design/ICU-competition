@@ -137,6 +137,11 @@
   .cant-draw #load { padding: 24px; text-align: center; }
   .cant-draw #load p { max-width: 34em; margin: 0; color: var(--ink); font-size: 16px; line-height: 1.55; text-wrap: pretty; }
   .cant-draw #load a { color: var(--accent); text-underline-offset: 3px; }
+  /* the browser dropped the WebGL context (iOS Safari does under memory pressure): say so, and offer a reload */
+  .gl-lost { position: fixed; inset: 0; z-index: 60; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); text-align: center; }
+  .gl-lost[hidden] { display: none; }
+  .gl-lost p { max-width: 30em; margin: 0; color: var(--ink); font-size: 15px; line-height: 1.5; text-wrap: pretty; }
+  .gl-lost button { min-height: 44px; padding: 10px 18px; border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font: 600 15px var(--ui); cursor: pointer; }
   /* Elements toggled with hidden: display is held through the exit, so it plays in full, and a quick re-open just reverses it. */
   #info, #pad, #load { --t-in: var(--t-enter); --t-out: var(--t-exit); }
   #tip, #ghost { --t-in: var(--t-enter-s); --t-out: var(--t-exit-s); }
@@ -182,6 +187,7 @@
 
 <canvas id="c" tabindex="0" aria-label="3D model of the SSMC 4th-floor ICU"></canvas>
 <div id="load">Loading the ICU model…</div>
+<div id="glLost" class="gl-lost" role="alert" hidden><p>The 3D view stopped drawing. Browsers do this to free memory, most often on a phone or tablet.</p><button type="button" id="glReload">Tap to reload the 3D view</button></div>
 <div id="bar" class="card" role="toolbar" aria-label="View controls">
   <h1 id="title">SSMC ICU, 4th floor</h1>
   <!--HOME_LINK-->
@@ -860,6 +866,16 @@ for (const ev of ["pointerdown", "pointermove", "pointerup", "wheel", "keydown",
 addEventListener("resize", () => { needDraw = true; });
 plan.addEventListener("load", () => { needDraw = true; });
 window.__viewerInvalidate = () => { needDraw = true; };
+// iOS Safari drops a page's WebGL context when memory runs short, which would leave a frozen picture. Say so and offer a
+// reload, which is more reliable than re-uploading the whole model in place
+canvas.addEventListener("webglcontextlost", () => {
+  renderer.setAnimationLoop(null);
+  const reload = document.getElementById("glReload");
+  if (!matchMedia("(pointer: coarse)").matches) reload.textContent = "Reload the 3D view";
+  document.getElementById("glLost").hidden = false;
+  reload.focus({ preventScroll: true });
+});
+document.getElementById("glReload").addEventListener("click", () => location.reload());
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (fly) {

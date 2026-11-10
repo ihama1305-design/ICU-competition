@@ -1098,7 +1098,20 @@ $("guide").addEventListener("keydown", e => { if (e.key === "Escape") { e.preven
 // ---------------------------------------------------------------- drawing: only when something has changed
 let lastMovingDraw = 0;
 const adaptive = !navigator.webdriver; // a software renderer in a test shouldn't talk itself down from what it's testing
+// iOS Safari drops a page's WebGL context when memory runs short, which would leave a frozen picture. Say so and offer a
+// reload: the link already holds the room, and starting again is more reliable than re-uploading every texture in place
+let glLost = false;
+canvas.addEventListener("webglcontextlost", () => {
+  glLost = true;
+  if (optionData && window.__configReady) history.replaceState(null, "", `#c=${specCode()}`);
+  if (!matchMedia("(pointer: coarse)").matches) $("glReload").textContent = "Reload the 3D view";
+  $("glLost").hidden = false;
+  $("glReload").focus({ preventScroll: true });
+});
+$("glReload").addEventListener("click", () => location.reload());
+
 function frame(now) {
+  if (glLost) return; // nothing can be drawn until the page reloads
   requestAnimationFrame(frame);
   if (!rig.meta) return;
   const moving = apis.active ? apis.update(now) : rig.update(now);
