@@ -15,7 +15,7 @@ import { el, Panel } from "./panel.js";
 import { APIS } from "./apis.js";
 import { PACS } from "./pacs.js";
 import { RoomModes, modeText } from "./modes.js";
-import { afterDark } from "./solar.js";
+import { HORIZON_DEG } from "./solar.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
 import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById } from "./placed.js";
 import { ClinicalView } from "./clinical.js";
@@ -128,9 +128,22 @@ const clock = h => {
 };
 const isNight = h => h >= NIGHT_FROM;
 
+/** Between sunset and sunrise, from the sun's height the room's daylight already computed: Comfort and PACS leave the blinds alone. */
+const afterDark = () => daylight.elevation < HORIZON_DEG;
+/** The daylight sensor's card: what it would read, from the same sun height. */
+function daylightCard() {
+  const node = stage.current?.addons?.daylightSensor;
+  if (!node) return "";
+  const el = daylight.elevation, dark = afterDark();
+  const text = `A small light sensor on the window sill. It tells Comfort mode and PACS whether daylight is coming in: after sunset they leave the blinds alone and change only the lighting. In this model the sun's height at the room's solar hour stands in for its reading: ${Math.abs(el).toFixed(0)}° ${el >= 0 ? "above" : "below"} the horizon at ${clock(state.hour)}, so ${dark ? "it's after sunset" : "it's daylight"}. A concept: it isn't connected to anything.`;
+  node.traverse(n => { if (n.userData.itemInfo) n.userData.itemInfo.description = text; });
+  return text;
+}
+
 function relight() {
   if (stage.current) setOrientation(stage.current, state.hour); // the orientation screen tells the room's time
   const day = daylight.apply(state.hour);
+  daylightCard();
   lighting.update(state.hour, day);
   invalidate();
 }
@@ -174,6 +187,7 @@ async function setRoom(label, { keepView = true } = {}) {
   lighting.setRoom(room);
   glass.setRoom(room);
   setAddon(room, "comfortControl", true); // not an option: the wall control is always there
+  setAddon(room, "daylightSensor", true); // nor the daylight sensor the comfort rules read
   applyAll();
   setDemoReadout();
   clinical.set(clinical.on, room);
@@ -643,7 +657,7 @@ canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 // Room options, profile answers, share codes and original model meshes stay independent.
 const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
 const pacs = new PACS({ stage, lighting, rig, controls, relight, invalidate,
-  stopTour: () => tour.stop(), getState: () => state, isDark: () => afterDark(state.hour, SITE),
+  stopTour: () => tour.stop(), getState: () => state, isDark: () => afterDark(),
   closeApis: () => { endCompare(); endMode(); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
   restoreApisMarkers: on => apis.setEnabled(on),
 });
@@ -653,7 +667,7 @@ pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); de
 // ---------------------------------------------------------------- room modes: scenes over the configured room (modes.js)
 const modeApi = {
   baseLight: () => lighting.base(state.hour),
-  isDark: () => afterDark(state.hour, SITE),
+  isDark: () => afterDark(),
   setLight: (look, task) => { lighting.scene = look; lighting.sceneTask = task; relight(); },
   blindsNow: () => {
     const node = stage.current?.root.getObjectByName("cfg_blinds");
@@ -1244,6 +1258,7 @@ window.__config = {
   placedShown: () => placement.list(state.room).filter(p => p.node?.visible).length,
   orientation: () => stage.current.addons?.tv?.userData.orientText,
   addonShown: id => !!stage.current.addons?.[id]?.visible,
+  daylightSensor: () => ({ shown: !!stage.current.addons?.daylightSensor?.visible, text: daylightCard(), elevation: daylight.elevation, dark: afterDark() }),
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
   profile: answers => resolveProfile(optionData, answers),
