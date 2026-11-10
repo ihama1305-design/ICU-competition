@@ -1,6 +1,6 @@
 # Real-device checklist
 
-About 5 minutes per device. Everything so far was tested in headless Chromium on one Mac, so a device only counts as working once it has been through this list.
+About 5 minutes per device, plus one minute on a slow one. Everything so far was tested in headless Chromium on one Mac, so a device only counts as working once it has been through this list.
 
 **Open the site:** scan `docs/qr-live-site.png`, or go to https://ihama1305-design.github.io/ICU-competition/.
 
@@ -53,17 +53,25 @@ Note: Smooth, OK or stuttery? Does walking feel stuck anywhere?
 
 Note: what happened, even if nothing did.
 
+## 6. A slow device: send its readout (1 min)
+
+On any device that feels slow, open both of these and wait about 5 seconds for the **Draw** line:
+- https://ihama1305-design.github.io/ICU-competition/configurator/?stats=1
+- https://ihama1305-design.github.io/ICU-competition/viewer/?stats=1
+
+The box at the bottom left shows the GPU, quality tier, pixel ratio, canvas pixels and the median time to draw a frame. Tap **Copy** and paste it into the notes. The page sends nothing anywhere.
+
 ## What to send back
 
 One line per device, plus a screenshot of anything that looked wrong.
 
-| Device and browser | Tour | Configurator | Quality: Auto chose | PACS | Walkthrough | Memory test | Notes |
-|---|---|---|---|---|---|---|---|
-| iPhone, Safari | | | | | | | |
-| iPad, Safari | | | | | | | |
-| Android, Chrome | | | | | | | |
-| Windows, Chrome | | | | | | n/a | |
-| Windows, Edge | | | | | | n/a | |
-| Mac, Safari | | | | | | n/a | |
+| Device and browser | Tour | Configurator | Quality: Auto chose | PACS | Walkthrough | Memory test | ?stats=1 draw (ms) | Notes |
+|---|---|---|---|---|---|---|---|---|
+| iPhone, Safari | | | | | | | | |
+| iPad, Safari | | | | | | | | |
+| Android, Chrome | | | | | | | | |
+| Windows, Chrome | | | | | | n/a | | |
+| Windows, Edge | | | | | | n/a | | |
+| Mac, Safari | | | | | | n/a | | |
 
 For each cell, use ✓ (works), ~ (works, with a note) or ✗ (broken, with a note).
