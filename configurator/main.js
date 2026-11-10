@@ -760,6 +760,10 @@ function showObjectCard(info, x, y) {
     action2.textContent = "Remove";
     $("objectDescription").textContent = `${info.description} Drag it to move it. With this card focused, the arrow keys move it${onFloor ? ", R turns it" : ""} and Delete removes it.`;
   }
+  // a card that cites a source: the same links as the option note it names, so a source lives in one place, options.json
+  const sources = info.sourcesFrom ? groupById(info.sourcesFrom)?.note?.sources || [] : [];
+  $("objectSources").replaceChildren(...sources.map(s => Object.assign(document.createElement("a"), { href: s.url, textContent: s.label, target: "_blank", rel: "noopener noreferrer" })));
+  $("objectSources").hidden = !sources.length;
   if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
   else if (info.action === "soundAlert") action.textContent = "Preview sound alert";
   else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";

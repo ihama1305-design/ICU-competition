@@ -469,7 +469,7 @@ with sync_playwright() as p:
     go(pg, "W1")
     set_defaults(pg)
     pg.evaluate("window.__config.camera('overview', { instant: true })")
-    check(pg.locator("#placeItems button").count() == 6, "the panel offers the six items to place")
+    check(pg.locator("#placeItems button").count() == 7, "the panel offers the seven items to place")
 
     def drag_to(src, x, y):
         pg.locator(src).scroll_into_view_if_needed()
@@ -538,12 +538,29 @@ with sync_playwright() as p:
     check(pg.locator("#placeItems button[data-item='sharps']").get_attribute("aria-pressed") == "true", "clicking an item waits for a spot")
     pg.mouse.click(w["x"] + 60, w["y"])
     check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps"], "then clicking a wall places it there")
+    # the biophilic panel: greenery on the wall with no soil or water, and a card that says why, citing the palms note's CDC source
+    pg.click("#placeItems button[data-item='leafpanel']")
+    pg.mouse.click(w["x"] - 140, w["y"] - 40)
+    check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps", "leafpanel"], "the biophilic panel hangs on a wall")
+    cdc = pg.evaluate("window.__config.options().sections.flatMap(s => s.groups).find(g => g.id === 'palms').note.sources[0].url")
+    pt = pg.evaluate("window.__config.itemPoint('Biophilic wall panel')")
+    pg.evaluate("document.getElementById('objectCard').hidden = true")
+    pg.mouse.click(pt["x"], pt["y"])
+    pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    card = pg.inner_text("#objectCard")
+    links = pg.evaluate("[...document.querySelectorAll('#objectSources a')].map(a => a.href)")
+    check("Biophilic wall panel" in card and "without soil or water" in card and "outside the glass" in card and links == [cdc], f"its card says why living plants stay outside and links the CDC guidance from options.json {links}")
+    shot(pg, "w1_biophilic_panel")
+    pg.evaluate("document.getElementById('objectCard').hidden = true")
+    pg.mouse.click(w["x"], w["y"] - 200)  # elsewhere: another object's card has no sources
+    check(pg.locator("#objectSources").is_hidden() or not pg.evaluate("document.querySelectorAll('#objectSources a').length"), "other cards carry no source links")
+    pg.evaluate("document.getElementById('objectCard').hidden = true")
     # links, the summary and Reset
     code = pg.evaluate("window.__config.code()")
     pg.goto("about:blank")  # a fresh load: the same page with a new hash would only be a hashchange
     pg.goto(URL + "#c=" + code)
     pg.wait_for_function("window.__configReady === true", timeout=180000)
-    check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps"], "a link restores the placed items")
+    check([q["type"] for q in pg.evaluate("window.__config.placed()")] == ["rub", "sharps", "leafpanel"], "a link restores the placed items")
     pg.click("#openSummary")
     pg.wait_for_selector("#summary[open]")
     try:  # it fills in once its picture is taken, replacing what an earlier summary showed

@@ -37,6 +37,41 @@ function tabletFace() {
   return t;
 }
 
+/**
+ * A printed leaf scene for the biophilic panel: greenery with no soil, water or living plant. Drawn from a seeded generator,
+ * like every other picture here, so there's nothing to license.
+ */
+function leafScene() {
+  const c = document.createElement("canvas");
+  c.width = 384; c.height = 512;
+  const g = c.getContext("2d");
+  let seed = 41;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const sky = g.createLinearGradient(0, 0, 0, 512);
+  sky.addColorStop(0, "#e9efe3"); sky.addColorStop(1, "#cfdcc8");
+  g.fillStyle = sky; g.fillRect(0, 0, 384, 512);
+  // three layers of leaves on curved stems, paler at the back, so the panel has depth without being busy
+  for (const [layer, n, light] of [[0, 14, 70], [1, 12, 52], [2, 9, 36]]) {
+    for (let i = 0; i < n; i++) {
+      const x0 = rnd() * 384, y0 = 512 + 20, len = 260 + rnd() * 220 - layer * 30, lean = (rnd() - 0.5) * 1.4;
+      const tipX = x0 + Math.sin(lean) * len, tipY = y0 - Math.cos(lean) * len;
+      g.strokeStyle = `hsl(${95 + rnd() * 30}, ${26 + layer * 6}%, ${light - 6}%)`; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x0, (y0 + tipY) / 2, tipX, tipY); g.stroke();
+      const size = 26 + rnd() * 26 - layer * 3, turn = Math.atan2(tipY - y0, tipX - x0) + Math.PI / 2;
+      g.save(); g.translate(tipX, tipY); g.rotate(turn);
+      g.fillStyle = `hsl(${92 + rnd() * 34}, ${30 + layer * 8}%, ${light + rnd() * 8}%)`;
+      g.beginPath(); g.ellipse(0, size * 0.9, size * 0.5, size * 1.1, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = `hsla(${100}, 30%, ${light + 18}%, 0.6)`; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(0, size * 1.9); g.stroke();
+      g.restore();
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
 // Each item is built facing +Z. A floor item stands on y = 0; a wall item hangs with its back on the wall at z = 0, centred
 // on y = 0, and is raised to `height` when placed.
 export const ITEMS = [
@@ -102,6 +137,21 @@ export const ITEMS = [
     },
   },
   {
+    // greenery inside without soil or water; the living plants stay outside the glass. Its card cites the palms note's source
+    id: "leafpanel", code: "g", label: "Biophilic wall panel", on: "wall", height: 1.7, sourcesFrom: "palms",
+    description: "Greenery without soil or water: a printed leaf scene behind a sealed, wipe-clean acrylic face, about 0.9 by 1.2 m and centred 1.7 m up, clear of wall ledges. Living plants stay outside the glass, because CDC guidance says not to allow fresh flowers or potted plants in patient-care areas for immunosuppressed patients.",
+    build() {
+      const g = new THREE.Group(), frame = mat("#c9cfd1", 0.35, { metalness: 0.35 });
+      g.add(box(0.92, 1.22, 0.03, frame, 0, 0, 0.015)); // a slim aluminium frame, sealed to the wall
+      const print = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 1.18), mat("#ffffff", 0.9, { map: leafScene() }));
+      print.position.z = 0.031; g.add(print);
+      // the acrylic face: glossy, so it reads as a surface to wipe rather than a picture to touch
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 1.18), new THREE.MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.08, metalness: 0, transparent: true, opacity: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 }));
+      face.position.z = 0.033; g.add(face);
+      return g;
+    },
+  },
+  {
     id: "chair", code: "f", label: "Compact family chair", on: "floor",
     description: "A compact, wipe-clean chair for a visitor, small enough to move aside for care.",
     build() {
@@ -154,7 +204,7 @@ export class Placement {
   build(entry) {
     const item = itemById(entry.type), node = item.build();
     node.name = `placed_${entry.type}`;
-    node.userData.itemInfo = { title: item.label, description: `${item.description} ${CHECK}`, action: `placed:${entry.uid}` };
+    node.userData.itemInfo = { title: item.label, description: `${item.description} ${CHECK}`, action: `placed:${entry.uid}`, ...(item.sourcesFrom ? { sourcesFrom: item.sourcesFrom } : {}) };
     node.userData.placed = entry;
     entry.node = node;
     this.pose(entry);
