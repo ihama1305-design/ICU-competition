@@ -213,7 +213,7 @@ These were added on top of the configurator in one day. Each was checked before 
 | Orientation screen | The TV can show the weekday and date and the room's own time of day, darker at night | It shows no patient details and makes no claim about delirium or sleep |
 | Before and after | Today's room (every default, no placed items) against the visitor's, at the same view and time | The visitor's design and link are untouched while it shows |
 | Saved rooms | Named rooms kept in this browser as share codes; Reset puts every choice back | Never sent anywhere. The form asks for no patient names |
-| Guided tour | Nine captioned steps with Previous, Pause, Next and Exit; Exit restores the room exactly | Not a substitute for exploring: dragging the room pauses it |
+| Guided tour | Nine captioned steps with Previous, Pause, Next, Restart and Exit; Exit restores the room exactly, and Restart does too before playing from the start | Not a substitute for exploring: dragging the room pauses it |
 | SIMULATED screens | The monitor, ventilator and pump screens carry an amber SIMULATED band in their textures | |
 | 3D fallback | A browser without WebGL 2 or import maps is told why and pointed to the pictures | |
 

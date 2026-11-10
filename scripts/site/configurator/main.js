@@ -1072,8 +1072,8 @@ var guide = new GuidedTour({
   snapshot: () => ({ code: specCode(), mode: modes.current, clinical: clinicalByHand }),
   restore: snap => {
     const spec = decodeSpec(optionData, `#c=${snap.code}`);
-    if (!spec) return;
-    applySpec(spec).then(() => {
+    if (!spec) return Promise.resolve();
+    return applySpec(spec).then(() => {
       modes.set(snap.mode, { instant: true });
       clinicalByHand = snap.clinical;
       syncClinical();
@@ -1090,7 +1090,7 @@ var guide = new GuidedTour({
   say, fail,
 }, {
   card: $("guide"), count: $("guideCount"), bar: $("guideBar"), title: $("guideTitle"), text: $("guideText"), links: $("guideLinks"),
-  prev: $("guidePrev"), play: $("guidePlay"), next: $("guideNext"), exit: $("guideExit"),
+  prev: $("guidePrev"), play: $("guidePlay"), next: $("guideNext"), restart: $("guideRestart"), exit: $("guideExit"),
 });
 $("openGuide").addEventListener("click", () => { endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
 $("guide").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); guide.exit(); } });
