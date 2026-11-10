@@ -25,13 +25,20 @@ function slatTexture() {
 
 export class FrontGlass {
   constructor(tier) {
-    this.tier = tier;
     this.mode = "clear"; this.opaque = false; this.k = 0; this.from = 0; this.start = 0; this.fading = false;
     this.room = null;
+    this.materials = {};
+    this.setTier(tier);
+  }
+
+  /** High: glass that bends light (transmission, an extra render pass). Low: plain see-through glass. Switchable at any time. */
+  setTier(tier) {
+    this.tier = tier;
     // transmission is never quite 0: reaching 0 would recompile the material partway through a fade
-    this.material = tier === "low"
+    this.material = this.materials[tier] ||= tier === "low"
       ? new THREE.MeshStandardMaterial({ color: CLEAR.clone(), roughness: 0.05, transparent: true, opacity: 0.14, depthWrite: false })
       : new THREE.MeshPhysicalMaterial({ color: CLEAR.clone(), roughness: 0.03, transmission: 1, thickness: 0.01, ior: 1.5, metalness: 0 });
+    if (this.room) this.sync(true);
   }
 
   partsFor(room) {
@@ -74,6 +81,9 @@ export class FrontGlass {
   sync(instant) {
     if (!this.room) return;
     const f = this.partsFor(this.room);
+    (this.room.parts.cfg_front_glass || []).forEach(n => { n.material = this.material; });
+    // the frosted band bends light on High too; on Low it's plain, and 0 skips the transmission pass entirely
+    if (this.tier === "low") f.frost.forEach(m => { m.transmission = 0; });
     f.sheet.visible = this.mode === "blinds";
     f.plate.visible = this.mode === "smart";
     const target = this.mode === "smart" && this.opaque ? 1 : 0;

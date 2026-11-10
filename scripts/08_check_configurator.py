@@ -1292,7 +1292,7 @@ with sync_playwright() as p:
     # every control can be reached by keyboard, with focus that shows
     pg.evaluate("document.querySelectorAll('details').forEach(d => { d.removeAttribute('name'); d.open = true; })")
     want = pg.evaluate("""[...document.querySelectorAll('#panel button, #panel a, #panel input, #panel summary')]
-      .filter(n => n.offsetParent && !n.closest('[hidden]') && getComputedStyle(n).visibility !== 'hidden')
+      .filter(n => n.offsetParent && !n.disabled && !n.closest('[hidden]') && getComputedStyle(n).visibility !== 'hidden')
       .map((n, i) => { n.dataset.tabCheck = i; return i; })""")
     pg.focus("#c")
     reached, unmarked = set(), []
@@ -1342,6 +1342,51 @@ with sync_playwright() as p:
     st = pg.evaluate("window.__stats()")
     check(all(k in st["text"] for k in ("GPU: ", "Quality: High", "Pixel ratio: ", "Canvas: ", "ms median")) and st["ms"] > 0, f"?stats=1 shows the GPU, tier, pixel ratio, canvas pixels and a timed median draw {st}")
     check(not errs, f"?stats=1: no errors {errs[:3]}")
+    ctx.close()
+
+    # graphics quality: Auto, High or Low, remembered. Until measured, a phone starts on Low, never heavier than before
+    ctx, pg, errs, _, _ = open_page(b, 390, 844, device_scale_factor=2, is_mobile=True, has_touch=True)
+    q = pg.evaluate("window.__config.quality()")
+    check(q["choice"] == "auto" and q["tier"] == "low" and not q["composer"] and q["measured"] is None and "until it has timed" in pg.inner_text("#qualityStatus"),
+          f"a phone starts on Low, as before, until Auto has timed its test draws {q}")
+    pg.evaluate("window.__config.autoQuality(4)")  # as if its test draws were very quick
+    q = pg.evaluate("window.__config.quality()")
+    check(q["tier"] == "low" and not q["composer"] and q["measured"] == "low" and "You can still choose High" in pg.inner_text("#qualityStatus"),
+          f"Auto never steps a phone up, however quick its test draws, and says so {q} {pg.inner_text('#qualityStatus')!r}")
+    check(not errs, f"graphics quality on a phone: no errors {errs[:3]}")
+    ctx.close()
+    # a laptop starts on High; slow test draws step it down without a reload
+    ctx, pg, errs, _, _ = open_page(b, 1100, 700, device_scale_factor=2)
+    q = pg.evaluate("window.__config.quality()")
+    check(q["tier"] == "high" and q["composer"] and q["transmission"] and q["shadow"] == 2048, f"a laptop starts on High until measured {q}")
+    pg.evaluate("window.__config.autoQuality(400)")  # as if its test draws took 400 ms each (a test's software renderer is left alone)
+    q = pg.evaluate("window.__config.quality()")
+    check(q["tier"] == "low" and not q["composer"] and not q["transmission"] and q["shadow"] == 1024 and q["ratio"] <= 1.5 and q["measured"] == "low",
+          f"slow test draws: Auto drops the bloom and its antialiasing, transmission glass and half the shadow size, not only resolution, without a reload {q}")
+    check("Auto chose Low" in pg.inner_text("#qualityStatus") and "400 ms" in pg.inner_text("#qualityStatus"), "the status says what Auto chose and why")
+    drawn(pg)
+    pg.reload(); pg.wait_for_function("window.__configReady === true", timeout=180000)
+    q = pg.evaluate("window.__config.quality()")
+    check(q["tier"] == "low" and q["choice"] == "auto", f"the next load starts in what Auto measured {q}")
+    pg.locator("#quality button[data-value='high']").scroll_into_view_if_needed()
+    pg.click("#quality button[data-value='high']")
+    q = pg.evaluate("window.__config.quality()")
+    check(q["tier"] == "high" and q["choice"] == "high" and q["composer"] and q["transmission"] and q["shadow"] == 2048 and pg.locator("#quality button[data-value='high']").get_attribute("aria-pressed") == "true",
+          f"High brings them all back at once {q}")
+    drawn(pg)
+    pg.reload(); pg.wait_for_function("window.__configReady === true", timeout=180000)
+    check(pg.evaluate("window.__config.quality()")["choice"] == "high", "the choice is remembered")
+    pg.locator("#quality button[data-value='auto']").scroll_into_view_if_needed()
+    pg.click("#quality button[data-value='auto']")
+    q = pg.evaluate("window.__config.quality()")
+    check(q["choice"] == "auto" and q["tier"] == "low", f"back to Auto starts from what it measured {q}")
+    pg.evaluate("localStorage.clear()")
+    check(not errs, f"graphics quality: no errors {errs[:3]}")
+    ctx.close()
+    # a big laptop screen draws no more than the pixel budget; ?tier= forces a tier and the switch says it can't change
+    ctx, pg, errs, _, _ = open_page(b, 2560, 1440, query="?tier=high", device_scale_factor=2)
+    q = pg.evaluate("window.__config.quality()")
+    check(q["pixels"] <= 3.7e6 and pg.locator("#quality button[data-value='low']").is_disabled(), f"2560 x 1440 @2x draws at most about 3.6 million pixels, and a forced tier locks the switch {q}")
     ctx.close()
 
     # the home page, with its carousel and configurator section

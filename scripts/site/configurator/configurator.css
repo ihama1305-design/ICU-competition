@@ -69,6 +69,7 @@ small { font-family: var(--mono); font-size: 0.85em; font-weight: 400; }
 button { font: inherit; color: inherit; }
 .seg, .grid, .stops { display: grid; gap: 6px; }
 .seg { grid-template-columns: 1fr 1fr; }
+.seg3 { grid-template-columns: repeat(3, 1fr); }
 .grid { grid-template-columns: 1fr 1fr; }
 .grid .wide { grid-column: 1 / -1; }
 /* over the room, top left: room modes, then Patient view's Return. Clear of the panel on a desktop and of the sheet on a phone */

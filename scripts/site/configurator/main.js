@@ -20,6 +20,7 @@ import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js
 import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById, wallsOf } from "./placed.js";
 import { ClinicalView } from "./clinical.js";
 import { GuidedTour, CAVEAT } from "./guide.js";
+import { readChoice, saveChoice, readMeasured, saveMeasured, startTier, handheld, pickTier, probe } from "./quality.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -32,8 +33,12 @@ const $ = id => document.getElementById(id);
 
 const canvas = $("c"), panel = $("panel");
 const query = new URLSearchParams(location.search);
-// phones and small screens skip bloom and glass transmission, and get fewer lights
-const tier = query.get("tier") || (matchMedia("(pointer: coarse)").matches || Math.min(screen.width, screen.height) < 600 ? "low" : "high");
+// Graphics quality (quality.js): Auto, High or Low, remembered in this browser. Auto starts in the tier this device measured
+// last time; until it has, a phone or tablet starts on Low as before and anything else on High. Then it times test draws.
+// ?tier=low or ?tier=high forces one, as the checks do.
+const forcedTier = ["low", "high"].includes(query.get("tier")) ? query.get("tier") : null;
+const quality = { choice: forcedTier || readChoice(), ms: 0 };
+let tier = forcedTier || startTier(quality.choice, readMeasured("configurator"), handheld());
 const stage = (() => {
   // the page checked for WebGL 2 before loading, but a context can still be refused (a blocklisted GPU, too many open tabs)
   try { return new Stage(canvas, tier); } catch (err) { window.cantDraw?.("webgl2"); throw err; }
@@ -49,6 +54,8 @@ const invalidate = () => { dirty = true; };
 const rig = new Rig(stage.camera, controls, W2T, invalidate);
 const daylight = new Daylight(stage.scene, SITE, W2T, tier === "low" ? 1024 : 2048);
 stage.onQualityDrop = () => { resize(); };
+// still too slow with the bloom gone, at one pixel per CSS pixel: on Auto, drop to Low
+stage.onTooSlow = () => { if (quality.choice === "auto" && !forcedTier && tier !== "low") { saveMeasured("configurator", "low"); applyTier("low"); syncQuality(); } };
 const lighting = new Lighting(stage, daylight, tier);
 const glass = new FrontGlass(tier);
 controls.addEventListener("change", invalidate);
@@ -1131,6 +1138,55 @@ $("guideCaveat").textContent = CAVEAT;
 $("openGuide").addEventListener("click", () => { endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
 $("guide").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); guide.exit(); } });
 
+// ---------------------------------------------------------------- graphics quality: Auto, High or Low (quality.js)
+/** Switch tier while the page runs: bloom and its antialiasing, transmission glass and the shadow map's size. */
+function applyTier(next) {
+  if (next === tier) return;
+  tier = next;
+  stage.setTier(next);
+  daylight.setShadowSize(next === "low" ? 1024 : 2048);
+  glass.setTier(next);
+  stage.renderer.shadowMap.needsUpdate = true;
+  resize();
+  relight();
+}
+const tierName = t => (t === "low" ? "Low" : "High");
+function syncQuality(text) {
+  pressed($("quality"), quality.choice);
+  $("qualityStatus").textContent = text || (quality.choice !== "auto"
+    ? `${tierName(tier)}, as chosen. Auto would time this device and pick.`
+    : quality.ms && tier === "low" && handheld() ? `Auto keeps a phone or tablet on Low: a frame took about ${Math.round(quality.ms)} ms to draw here. You can still choose High.`
+    : quality.ms ? `Auto chose ${tierName(tier)}: a frame took about ${Math.round(quality.ms)} ms to draw on this device.`
+    : `Auto: ${tierName(tier)}, until it has timed a few frames on this device.`);
+}
+/** Auto: time a few frames and pick. A test passes the time in, since a software renderer is left alone, as below. */
+async function autoQuality(ms) {
+  if (quality.choice !== "auto" || forcedTier) return;
+  if (ms === undefined) {
+    if (navigator.webdriver) return;
+    ms = await probe(() => stage.draw(), stage.renderer.getContext(), () => stage.renderer.compileAsync(stage.scene, stage.camera));
+    if (quality.choice !== "auto") return; // the visitor chose meanwhile
+  }
+  quality.ms = ms;
+  const next = pickTier(ms, tier, handheld());
+  saveMeasured("configurator", next);
+  applyTier(next);
+  syncQuality();
+  invalidate();
+}
+$("quality").addEventListener("click", e => {
+  const b = e.target.closest("button[data-value]");
+  if (!b || forcedTier) return;
+  quality.choice = b.dataset.value;
+  saveChoice(quality.choice);
+  quality.ms = 0;
+  applyTier(quality.choice === "auto" ? startTier("auto", readMeasured("configurator"), handheld()) : quality.choice);
+  syncQuality();
+  say(`Graphics quality: ${b.textContent}.`);
+  autoQuality();
+  invalidate();
+});
+
 // ---------------------------------------------------------------- drawing: only when something has changed
 let lastMovingDraw = 0;
 const adaptive = !navigator.webdriver; // a software renderer in a test shouldn't talk itself down from what it's testing
@@ -1199,7 +1255,12 @@ window.__config = {
   orbit: (yaw, pitch) => rig.orbitBy(yaw, pitch),
   zoomOut: k => rig.dolly(k),
   frames: () => window.__configFrames,
-  quality: () => ({ ratio: stage.renderer.getPixelRatio(), bloomDropped: stage.bloomDropped }),
+  quality: () => ({
+    ratio: stage.renderer.getPixelRatio(), bloomDropped: stage.bloomDropped, tier, choice: quality.choice, ms: quality.ms,
+    measured: readMeasured("configurator"), composer: !!stage.composer, transmission: !!glass.material.isMeshPhysicalMaterial,
+    shadow: daylight.sun.shadow.mapSize.x, pixels: Math.round(innerWidth * innerHeight * stage.renderer.getPixelRatio() ** 2),
+  }),
+  autoQuality: ms => autoQuality(ms),
   noteFrame: ms => stage.noteFrame(ms),
   /** Real cost of drawing while orbiting: the draw is followed by a pixel read, so it times the GPU finishing, not the display's refresh. */
   perf: async (seconds = 4) => {
@@ -1238,7 +1299,7 @@ window.__config = {
   },
   ceiling: () => rig.meta.ceiling,
   anchors: () => Object.fromEntries(Object.entries(stage.current.anchors).map(([k, a]) => { const v = new THREE.Vector3(); a.getWorldPosition(v); return [k, [v.x, -v.z, v.y]]; })),
-  tier,
+  get tier() { return tier; },
   set: setOption,
   selected: () => ({ ...selected }),
   options: () => optionData,
@@ -1322,7 +1383,7 @@ window.__config = {
 
 // ?stats=1: a readout of the GPU, tier, pixel ratio, canvas size and draw time, for diagnosing a slow device (stats.js)
 if (query.get("stats") === "1") {
-  import("./stats.js").then(m => m.showStats({ page: "Configurator", renderer: stage.renderer, draw: () => stage.draw(), tier: () => (tier === "low" ? "Low" : "High"), ready: () => !!window.__configReady })).catch(fail);
+  import("./stats.js").then(m => m.showStats({ page: "Configurator", renderer: stage.renderer, draw: () => stage.draw(), tier: () => `${tier === "low" ? "Low" : "High"} (${quality.choice === "auto" ? (quality.ms ? `Auto, timed ${Math.round(quality.ms)} ms` : "Auto, not yet timed") : forcedTier ? "forced by ?tier=" : "chosen"})`, ready: () => !!window.__configReady })).catch(fail);
 }
 
 async function boot() {
@@ -1353,6 +1414,8 @@ async function boot() {
   if (location.hash && !fromLink) $("roomStatus").textContent = "That link's code couldn't be read, so this is the default room.";
   else if (fromLink?.dropped.length) $("roomStatus").textContent = leftOut(fromLink.dropped);
   $("load").hidden = true;
+  syncQuality();
+  if (forcedTier) $("quality").querySelectorAll("button").forEach(b => { b.disabled = true; });
   requestAnimationFrame(frame);
   // the home page's "Take the guided tour" link
   if (query.get("tour") === "guided") requestAnimationFrame(() => guide.start());
@@ -1361,6 +1424,7 @@ async function boot() {
     window.__configStage = "ready";
     window.__configReady = true;
     remember();
+    autoQuality(); // the first frame is up: time a few more and pick
   }));
 }
 boot().catch(fail);

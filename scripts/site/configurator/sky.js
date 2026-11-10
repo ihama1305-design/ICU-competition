@@ -52,6 +52,14 @@ export class Daylight {
 
   setCentre(x, y) { this.centre.copy(this.W2T(x, y, 1.4)); }
 
+  /** The sun's shadow map, in pixels a side: 2048 on High, 1024 on Low. It's rebuilt on the next shadow update. */
+  setShadowSize(size) {
+    if (this.sun.shadow.mapSize.x === size) return;
+    this.sun.shadow.mapSize.set(size, size);
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null;
+  }
+
   /** Returns how far into the day it is, 0 at night to 1 in full daylight. */
   apply(hour) {
     const { elevation: el, azimuth: az } = sunAt(hour, this.site);
