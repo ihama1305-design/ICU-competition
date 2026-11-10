@@ -1,6 +1,6 @@
 // The guided tour: a few captioned steps through what the configurator does, for someone seeing it for the first time.
-// Each step sets up the room through `api` (main.js); Previous, Pause, Next and Exit are always there, and Exit puts the
-// room back exactly as it was before the tour started.
+// Each step sets up the room through `api` (main.js); Previous, Pause, Next, Restart and Exit are always there. Exit puts the
+// room back exactly as it was before the tour started, and Restart does the same before playing from the first step.
 
 export const STEPS = [
   {
@@ -61,6 +61,7 @@ export class GuidedTour {
     ui.next.addEventListener("click", () => (this.at >= STEPS.length - 1 ? this.exit() : this.go(this.at + 1)));
     ui.play.addEventListener("click", () => this.setPlaying(!this.playing));
     ui.exit.addEventListener("click", () => this.exit());
+    ui.restart.addEventListener("click", () => this.restart());
   }
 
   get running() { return this.at >= 0; }
@@ -108,6 +109,20 @@ export class GuidedTour {
     this.ui.play.textContent = on ? "Pause" : "Play";
     this.ui.play.setAttribute("aria-pressed", String(!on));
     this.schedule();
+  }
+
+  /** Back to the first step from wherever the tour is, with the room as it was before it started, and playing again. */
+  async restart() {
+    if (!this.running) { this.start(); return; }
+    clearTimeout(this.timer);
+    const token = ++this.token; // a step still setting up stops here
+    // the steps lay modes and placed items over the room; put it back first, so step one starts where the tour first did
+    try { await this.api.restore(this.snapshot); } catch (err) { this.api.fail(err); }
+    if (token !== this.token || !this.running) return; // exited, or restarted again, meanwhile
+    this.api.say("Guided tour restarted from the first step.");
+    this.go(0);
+    this.setPlaying(!matchMedia("(prefers-reduced-motion: reduce)").matches);
+    this.ui.next.focus({ preventScroll: true });
   }
 
   /** Someone took the view into their own hands: the tour waits for them. */

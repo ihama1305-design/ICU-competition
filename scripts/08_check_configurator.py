@@ -623,6 +623,16 @@ with sync_playwright() as p:
     check(seen[7]["theme"] == "desert", f"it shows a theme at sunset {seen[7]}")
     check(pg.locator("#guideLinks button").count() == 2 and pg.inner_text("#guideNext") == "Finish", "the last step offers the PACS and APIS demos, and Finish")
     shot(pg, "w1_guide_last")
+    # Restart: back to the first step and playing, with the room as it was before the tour, so no item or mode carries over
+    check(pg.is_visible("#guideRestart"), "the tour has a Restart button")
+    pg.click("#guideRestart")
+    pg.wait_for_function("window.__config.guide().at === 0 && !window.__config.state().moving && !window.__config.mode().easing", timeout=120000)
+    g = pg.evaluate("window.__config.guide()")
+    check(g["running"] and g["playing"] and pg.inner_text("#guideCount") == "1 of 9" and pg.evaluate("window.__config.placed()") == [] and pg.evaluate("window.__config.mode().current") == "standard" and pg.evaluate("window.__config.currentTheme()") == "calm",
+          f"Restart plays again from the first step, with the tour's placed items and modes cleared {g}")
+    pg.click("#guidePlay")
+    pg.evaluate("window.__config.guideGo(8)")
+    pg.wait_for_function("window.__config.guide().at === 8", timeout=60000)
     pg.click("#guideNext")
     pg.wait_for_function("!window.__config.guide().running", timeout=60000)
     pg.wait_for_function(f"window.__config.code() === '{before}'", timeout=120000)
