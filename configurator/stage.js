@@ -7,6 +7,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { pixelRatio } from "./quality.js";
 
 const MODEL = "../assets/model/";
 export const W2T = (x, y, z = 0) => new THREE.Vector3(x, z, -y); // model (x east, y north, z up) -> three (x, y up, -z north)
@@ -33,7 +34,9 @@ const CEILING = /^(cfg_ceiling($|_\d)|ceiling_rooms|ceiling_grid|ceiling_panels|
 export class Stage {
   constructor(canvas, tier) {
     this.tier = tier;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: tier === "low" });
+    // no antialiasing on the canvas itself: High gets it from the post-processing's 4x multisampled target, which can be
+    // dropped while the page runs, and Low goes without, as stepping down should
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
     const r = this.renderer;
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.NeutralToneMapping;
@@ -48,35 +51,48 @@ export class Stage {
     pmrem.dispose();
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.04, 8000);
     this.rooms = new Map(); this.current = null; this.ceilingOn = true;
-    this.frameSamples = []; this.bloomDropped = false; this.ratioLimit = Infinity; this.onQualityDrop = () => {};
+    this.frameSamples = []; this.bloomDropped = false; this.ratioLimit = Infinity; this.onQualityDrop = () => {}; this.bloomStrength = 0;
     this.textures = new THREE.TextureLoader();
     // cheap glass for everything but the room's own front
     this.pane = new THREE.MeshStandardMaterial({ color: "#d9e8ea", roughness: 0.05, metalness: 0, transparent: true, opacity: 0.14, depthWrite: false });
-    if (tier !== "low") {
+    this.size = [1, 1];
+    this.setTier(tier);
+  }
+
+  /** High: bloom through a 4x multisampled HDR target. Low: straight to the canvas, with neither. Built only when needed. */
+  setTier(tier) {
+    this.tier = tier;
+    this.frameSamples = [];
+    if (tier === "low") {
+      this.composer?.dispose(); this.bloom?.dispose();
+      this.composer = null; this.bloom = null;
+    } else if (!this.composer) {
       // bright strips go above 1 in this HDR buffer, so a threshold at 1 blooms the lights and little else
       const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
-      this.composer = new EffectComposer(r, target);
+      this.composer = new EffectComposer(this.renderer, target);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
       this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0, 0.55, 1.25);
       this.composer.addPass(this.bloom);
       this.composer.addPass(new OutputPass());
+      this.bloomDropped = false;
+      this.setBloom(this.bloomStrength);
     }
+    this.resize(...this.size);
   }
 
   /** Sharp on any screen, without paying for more pixels than a person can use. Falls further if noteFrame finds it too slow. */
-  fitResolution(w, h) {
-    const budget = this.tier === "low" ? 1.5 : 2;
-    return Math.min(devicePixelRatio, budget, Math.sqrt(3.6e6 / (w * h)), this.ratioLimit);
-  }
+  fitResolution(w, h) { return pixelRatio(devicePixelRatio, w, h, this.tier, this.ratioLimit); }
 
   resize(w, h) {
-    this.renderer.setPixelRatio(Math.max(1, this.fitResolution(w, h)));
+    this.size = [w, h];
+    this.renderer.setPixelRatio(this.fitResolution(w, h));
     this.renderer.setSize(w, h, false);
     this.composer?.setPixelRatio(this.renderer.getPixelRatio());
     this.composer?.setSize(w, h);
   }
 
   setBloom(strength) {
+    this.bloomStrength = strength;
     if (!this.bloom) return;
     this.bloom.strength = strength;
     this.bloom.enabled = strength > 0.01 && !this.bloomDropped;
@@ -96,6 +112,8 @@ export class Stage {
     } else if (this.bloom && !this.bloomDropped) {
       this.bloomDropped = true;
       this.bloom.enabled = false;
+    } else {
+      this.onTooSlow?.();
     }
   }
 

@@ -179,6 +179,30 @@ with sync_playwright() as pw:
     q = lp.evaluate("window.__viewerQuality()")
     check(q["tier"] == "low" and q["transmission"] == 0 and q["glass"] > 0 and q["ratio"] <= 1.5 and q["antialias"] is False and not lp.evaluate("window.__viewerErrors"), f"?tier=low: plain glass, no antialiasing, at most 1.5x {q}")
     lp.close()
+    # the Quality switch in the Objects panel: Low is remembered, and the next load also goes without antialiasing
+    qp = b.new_page(viewport={"width": 1100, "height": 700}, device_scale_factor=2)
+    qp.goto(url, timeout=120000)
+    qp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
+    qp.evaluate("window.__viewerAutoQuality(400)")  # as if its test draws took 400 ms each (a test's software renderer is left alone)
+    q = qp.evaluate("window.__viewerQuality()")
+    check(q["tier"] == "low" and q["transmission"] == 0 and q["glass"] > 0 and q["ratio"] <= 1.5 and q["measured"] == "low", f"slow test draws drop the transmission glass and the resolution, without a reload {q}")
+    qp.evaluate("localStorage.clear()")
+    if qp.is_visible("#toggleSide"): qp.click("#toggleSide")  # on narrow screens the Objects panel is behind a button
+    qp.click("#quality button[data-value='low']")
+    q = qp.evaluate("window.__viewerQuality()")
+    check(q["tier"] == "low" and q["choice"] == "low" and q["transmission"] == 0 and "next visit" in qp.inner_text("#qualityStatus"), f"Low switches the glass and resolution at once, and says smoothed edges follow next visit {q}")
+    qp.reload(); qp.wait_for_function("window.__viewerReady === true", timeout=180000)
+    q = qp.evaluate("window.__viewerQuality()")
+    check(q["choice"] == "low" and q["loadTier"] == "low" and q["antialias"] is False, f"the choice is remembered, and the next load has no antialiasing {q}")
+    qp.evaluate("localStorage.clear()")
+    qp.close()
+    # a big laptop screen draws no more than the pixel budget, like the configurator
+    bp = b.new_page(viewport={"width": 2560, "height": 1440}, device_scale_factor=2)
+    bp.goto(url, timeout=120000)
+    bp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
+    q = bp.evaluate("window.__viewerQuality()")
+    check(q["pixels"] <= 3.7e6, f"2560 x 1440 @2x draws at most about 3.6 million pixels {q}")
+    bp.close()
 
     # an idle page stops drawing; using it draws again
     # measured in first person: orbit's damping eases a little each frame, and at a software renderer's frame or so a second
@@ -212,7 +236,10 @@ with sync_playwright() as pw:
     bar_h = tp.evaluate("document.getElementById('bar').offsetHeight")
     names = tp.evaluate("[...document.querySelectorAll('#bar button')].filter(b => !b.hidden).map(b => b.textContent.trim())")
     q = tp.evaluate("window.__viewerQuality()")
-    check(q["tier"] == "low" and q["transmission"] == 0, f"phone: a touch screen gets the low tier by itself {q}")
+    check(q["tier"] == "low" and q["choice"] == "auto" and q["measured"] is None and q["transmission"] == 0, f"phone: starts on Low, as before, until Auto has timed its test draws {q}")
+    tp.evaluate("window.__viewerAutoQuality(4)")  # as if its test draws were very quick
+    q = tp.evaluate("window.__viewerQuality()")
+    check(q["tier"] == "low" and q["measured"] == "low" and q["transmission"] == 0 and "You can still choose High" in tp.inner_text("#qualityStatus"), f"phone: Auto never steps it up, however quick its test draws {q}")
     check(bar_h <= 64 and {"Orbit", "First person", "Top", "Place person"} <= set(names), f"phone: the controls fit one slim row, with none left out ({bar_h}px) {names}")
     tp.evaluate("window.__view('first')"); tp.wait_for_timeout(1500)
     check(tp.is_visible("#pad .stick"), "phone: first person shows the walking joystick")
@@ -251,5 +278,5 @@ with sync_playwright() as pw:
         check(pg.locator("#load a").get_attribute("href") == "../", "without WebGL 2 the website links to the pictures on the home page")
     ctx.close()
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, graphics tiers, idle drawing, phone joystick, lost 3D view, stats readout, no-WebGL message)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, graphics tiers, idle drawing, phone joystick, lost 3D view, stats readout, quality switch and pixel budget, no-WebGL message)"))
 sys.exit(1 if fail else 0)
