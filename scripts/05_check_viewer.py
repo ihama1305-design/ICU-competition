@@ -192,6 +192,16 @@ with sync_playwright() as pw:
     pg.mouse.move(300, 400); pg.mouse.move(340, 420); pg.wait_for_timeout(1200)
     check(pg.evaluate("window.__viewerFrames") > f1, "moving the pointer over it draws again")
 
+    # ?stats=1: a readout for diagnosing a slow device, which times real draws
+    sp = b.new_page(viewport={"width": 1100, "height": 700})
+    sp.goto(url + ("&" if "?" in url else "?") + "stats=1", timeout=120000)
+    sp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
+    sp.wait_for_function("window.__stats && window.__stats().ms !== null", timeout=180000)
+    st = sp.evaluate("window.__stats()")
+    check(sp.is_visible("#stats") and all(k in st["text"] for k in ("GPU: ", "Quality: ", "Pixel ratio: ", "Canvas: ", "ms median")) and st["ms"] > 0 and not sp.evaluate("window.__viewerErrors"),
+          f"?stats=1 shows the GPU, tier, pixel ratio, canvas pixels and a timed median draw {st}")
+    sp.close()
+
     # a touch phone: one slim row of controls, and a joystick that walks forward, back and sideways
     # in a browser of its own, like a phone: one that has run the desktop checks can hold up a second page's start
     tb = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
@@ -241,5 +251,5 @@ with sync_playwright() as pw:
         check(pg.locator("#load a").get_attribute("href") == "../", "without WebGL 2 the website links to the pictures on the home page")
     ctx.close()
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, graphics tiers, idle drawing, phone joystick, lost 3D view, no-WebGL message)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, graphics tiers, idle drawing, phone joystick, lost 3D view, stats readout, no-WebGL message)"))
 sys.exit(1 if fail else 0)

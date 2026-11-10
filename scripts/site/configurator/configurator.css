@@ -110,6 +110,10 @@ button { font: inherit; color: inherit; }
 .mode-bar .mode-emergency[aria-pressed="true"] { background: var(--danger); color: var(--danger-ink); }
 .alarm-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--ok-bg); color: var(--ok-ink); font-size: 12px; font-weight: 500; }
 .alarm-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+/* ?stats=1: the diagnostic readout, bottom left, above everything but dialogs */
+.stats { position: fixed; z-index: 40; left: calc(var(--g) + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px)); max-width: min(420px, calc(100vw - 2 * var(--g))); padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); }
+.stats pre { margin: 0 0 6px; font: 11px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.stats button { min-height: 32px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--ink); font: 500 12px var(--ui); cursor: pointer; }
 .mode-note { margin: 0; max-width: 400px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); font-size: 13px; box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); text-wrap: pretty; }
 .mode-why { display: block; margin-top: 4px; color: var(--muted); }
 .mode-banner { max-width: 440px; padding: 10px 12px; border: 2px solid var(--danger); border-radius: 12px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); }

@@ -1303,6 +1303,15 @@ with sync_playwright() as p:
     check(pg.evaluate("window.__config.quality().bloomDropped") is True, "if it's still slow, the bloom goes too")
     ctx.close()
 
+    # ?stats=1: a readout for diagnosing a slow device, which times real draws
+    ctx, pg, errs, _, _ = open_page(b, 1100, 700, query="?stats=1")
+    pg.wait_for_selector("#stats", state="visible", timeout=30000)
+    pg.wait_for_function("window.__stats && window.__stats().ms !== null", timeout=180000)
+    st = pg.evaluate("window.__stats()")
+    check(all(k in st["text"] for k in ("GPU: ", "Quality: High", "Pixel ratio: ", "Canvas: ", "ms median")) and st["ms"] > 0, f"?stats=1 shows the GPU, tier, pixel ratio, canvas pixels and a timed median draw {st}")
+    check(not errs, f"?stats=1: no errors {errs[:3]}")
+    ctx.close()
+
     # the home page, with its carousel and configurator section
     ctx = b.new_context(viewport={"width": 1280, "height": 800})
     pg = ctx.new_page()
@@ -1468,4 +1477,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, accessibility, adaptive quality, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, accessibility, adaptive quality, stats readout, phone)")
