@@ -19,7 +19,7 @@ import { afterDark } from "./solar.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
 import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById } from "./placed.js";
 import { ClinicalView } from "./clinical.js";
-import { GuidedTour } from "./guide.js";
+import { GuidedTour, CAVEAT } from "./guide.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
 addEventListener("unhandledrejection", e => window.__configErrors.push(String(e.reason)));
@@ -1092,6 +1092,7 @@ var guide = new GuidedTour({
   card: $("guide"), count: $("guideCount"), bar: $("guideBar"), title: $("guideTitle"), text: $("guideText"), links: $("guideLinks"),
   prev: $("guidePrev"), play: $("guidePlay"), next: $("guideNext"), restart: $("guideRestart"), exit: $("guideExit"),
 });
+$("guideCaveat").textContent = CAVEAT;
 $("openGuide").addEventListener("click", () => { endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
 $("guide").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); guide.exit(); } });
 

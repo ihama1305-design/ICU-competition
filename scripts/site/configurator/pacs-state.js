@@ -11,17 +11,17 @@ export const SOURCES = [
   { title: "CDC: environmental air controls", url: "https://www.cdc.gov/infection-control/hcp/environmental-control/air.html", note: "Ventilation, humidity, temperature and pressure requirements are facility- and area-specific. No hospital-approved PACS temperature limits were supplied; temperature remains review-only." },
 ];
 export const GUIDE = [
-  ["Meet the patient monitor", "The highlighted object is the existing bedside monitor, with clearly labeled simulated readings.", "stable", "monitor"],
-  ["Monitoring already matters", "Conventional ICUs monitor physiology and provide environmental controls. This proposal explores their integration.", "stable", "monitor"],
-  ["Connect the environment", "Physiological Adaptive Mode links the monitor, patient preferences and environmental controls through clinical oversight.", "stable", "overview"],
-  ["Maintain a preferred environment", "Stable simulated readings accompany the recorded lighting, blinds and quiet preferences. Stable readings do not prove comfort.", "stable", "overview", "Stable simulated readings accompany the recorded lighting and quiet preferences. After sunset the blinds stay as they are. Stable readings do not prove comfort."],
-  ["Notice a trend", "Heart rate rises from 78 toward 105 bpm over this scripted event. Multiple medical explanations remain possible; discomfort is not diagnosed.", "possible", "monitor"],
-  ["Assess before recommending", "This demonstration is scripted without warning conditions. A simulated clinical review precedes selected comfort recommendations.", "possible", "overview"],
-  ["Show nurse oversight", "The presentation now role-plays a nurse approving lighting, blinds and nonessential-audio changes. Manual mode requires an explicit approval click.", "possible", "overview"],
-  ["See the room respond", "The existing lights and blinds move to the selected preferences. Reassess with the patient; physiology is not proof of benefit.", "possible", "window", "The existing lights move to the selected preferences. After sunset the blinds stay as they are. Reassess with the patient; physiology is not proof of benefit."],
-  ["Clinical deterioration", "An independently scripted clinical alert is now active. The simulated team is notified, and pending comfort changes are cancelled.", "deterioration", "monitor"],
-  ["Clinical safety takes priority", "Acknowledgment records that this simulated alert was seen. It stays active; equipment settings and medical alarms are never controlled by PACS.", "deterioration", "overview"],
-  ["The proposed integration", "Our Adaptive ICU goes beyond monitoring the patient. It explores how physiological information and patient preferences can help the surrounding environment respond to individual comfort needs.", "deterioration", "overview"],
+  ["Meet the patient monitor", "This is the bedside monitor, where PACS starts.", "stable", "monitor"],
+  ["Monitoring already matters", "ICUs already track vital signs, and control the lights separately. PACS asks what happens if the two work together.", "stable", "monitor"],
+  ["Connect the environment", "PACS links the monitor, the patient's own preferences and the room's controls.", "stable", "overview"],
+  ["Maintain a preferred environment", "The patient is stable, and the room matches their chosen light, blinds and quiet. Stable numbers don't prove comfort.", "stable", "overview", "The patient is stable and the room matches their chosen light. After sunset the blinds stay put. Stable numbers don't prove comfort."],
+  ["Notice a trend", "In this scripted case, heart rate climbs from 78 to 105. Many things could cause that, and PACS doesn't diagnose.", "possible", "monitor"],
+  ["Assess before recommending", "A nurse checks the patient first. Only then does PACS suggest a comfort change.", "possible", "overview"],
+  ["Show nurse oversight", "Here the nurse approves softer light, the blinds and less background noise.", "possible", "overview"],
+  ["See the room respond", "The lights and blinds change to the patient's choices. Then the nurse asks the patient how they feel.", "possible", "window", "The lights change to the patient's choices, and after sunset the blinds stay put. Then the nurse asks how they feel."],
+  ["Clinical deterioration", "Now a scripted alert says the patient is getting worse. Comfort changes stop, and the care team is called.", "deterioration", "monitor"],
+  ["Clinical safety takes priority", "Acknowledging shows the alert was seen, and it stays on. PACS never touches medical equipment or alarms.", "deterioration", "overview"],
+  ["The proposed integration", "The idea: a room that responds to each patient's comfort, guided by their own wishes and by their nurse.", "deterioration", "overview"],
 ];
 // Between sunset and sunrise there's no daylight or glare for the blinds to manage, so PACS adjusts only the lighting.
 export const NIGHT_LINE = "After sunset: the blinds stay as they are, because there's no daylight to block. Only the lighting is adjusted.";
