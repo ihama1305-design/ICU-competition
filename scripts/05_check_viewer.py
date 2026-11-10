@@ -215,6 +215,16 @@ with sync_playwright() as pw:
         print(f"  joystick {label}: {moved:.2f} m")
         check(moved > 0.1, f"phone: the joystick walks {label} ({moved:.2f} m)")
     tp.screenshot(path=os.path.join(ROOT, "renders", "viewer_phone_walk.png"))
+    # iOS Safari drops the WebGL context under memory pressure: the page says so and offers a reload, instead of freezing
+    tp.evaluate("document.getElementById('c').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()")
+    tp.wait_for_selector("#glLost", state="visible", timeout=10000)
+    f0 = tp.evaluate("window.__viewerFrames")
+    check(tp.inner_text("#glReload") == "Tap to reload the 3D view" and tp.evaluate("document.activeElement.id") == "glReload", "phone: a lost 3D view says so, with a focused Tap to reload button")
+    tp.mouse.move(100, 300); tp.mouse.move(140, 340); tp.wait_for_timeout(800)
+    check(tp.evaluate("window.__viewerFrames") == f0, "phone: a lost 3D view stops drawing")
+    tp.tap("#glReload")
+    tp.wait_for_function("window.__viewerReady === true && document.getElementById('glLost').hidden", timeout=180000)
+    check(not tp.evaluate("window.__viewerErrors"), "phone: Tap to reload brings the 3D view back")
     tb.close()
 
     # a browser without WebGL 2 is told why, instead of seeing "Loading" for ever; the website's copy also links to the pictures
@@ -231,5 +241,5 @@ with sync_playwright() as pw:
         check(pg.locator("#load a").get_attribute("href") == "../", "without WebGL 2 the website links to the pictures on the home page")
     ctx.close()
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, graphics tiers, idle drawing, phone joystick, no-WebGL message)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, graphics tiers, idle drawing, phone joystick, lost 3D view, no-WebGL message)"))
 sys.exit(1 if fail else 0)

@@ -1446,6 +1446,17 @@ with sync_playwright() as p:
     shot(pg, "phone_tune")
     small = pg.evaluate("[...document.querySelectorAll('#profileBar button')].filter(b => b.getBoundingClientRect().height < 36).map(b => b.textContent)")
     check(not small, f"phone: the room idea's buttons are large enough to tap {small[:3]}")
+    # iOS Safari drops the WebGL context under memory pressure: the page says so and offers a reload, instead of freezing
+    pg.evaluate("window.__config.set('wardrobe', 'off')")
+    pg.wait_for_timeout(400)  # the link is written a moment after a change
+    code = pg.evaluate("window.__config.code()")
+    pg.evaluate("document.getElementById('c').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()")
+    pg.wait_for_selector("#glLost", state="visible", timeout=10000)
+    check(pg.inner_text("#glReload") == "Tap to reload the 3D view" and pg.evaluate("document.activeElement.id") == "glReload", "phone: a lost 3D view says so, with a focused Tap to reload button")
+    pg.screenshot(path=os.path.join(SHOTS, "phone_context_lost.png"))  # not shot(): nothing draws once the context is lost
+    pg.tap("#glReload")
+    pg.wait_for_function("window.__configReady === true && document.getElementById('glLost').hidden", timeout=120000)
+    check(pg.evaluate("window.__config.code()") == code, "phone: reloading after a lost 3D view brings back the same room")
     check(not errs, f"phone: no errors {errs[:3]}")
     ctx.close()
     b.close()

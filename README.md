@@ -20,6 +20,7 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 - The plan in the corner shows where you are. Click it to jump.
 - Click anything to name it and see how sure the model is about it. Rooms W1 and W3 are marked **configurable**, and their card links to that room in the configurator.
 - If the browser can't draw 3D (no WebGL 2, or too old for the way the page loads its 3D code), this page and the configurator say so and link to the pictures, instead of loading for ever.
+- If the browser drops the 3D view while the page is open (iOS Safari does when memory runs short), both pages stop drawing and say so, with a **Tap to reload the 3D view** button, instead of leaving a frozen picture. The configurator writes its link first, so the reload brings back the same room.
 
 ## Configure a room
 
