@@ -17,7 +17,7 @@ import { PACS } from "./pacs.js";
 import { RoomModes, modeText } from "./modes.js";
 import { HORIZON_DEG } from "./solar.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
-import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById } from "./placed.js";
+import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById, wallsOf } from "./placed.js";
 import { ClinicalView } from "./clinical.js";
 import { GuidedTour, CAVEAT } from "./guide.js";
 
@@ -774,6 +774,10 @@ function showObjectCard(info, x, y) {
     action2.textContent = "Remove";
     $("objectDescription").textContent = `${info.description} Drag it to move it. With this card focused, the arrow keys move it${onFloor ? ", R turns it" : ""} and Delete removes it.`;
   }
+  // a card that cites a source: the same links as the option note it names, so a source lives in one place, options.json
+  const sources = info.sourcesFrom ? groupById(info.sourcesFrom)?.note?.sources || [] : [];
+  $("objectSources").replaceChildren(...sources.map(s => Object.assign(document.createElement("a"), { href: s.url, textContent: s.label, target: "_blank", rel: "noopener noreferrer" })));
+  $("objectSources").hidden = !sources.length;
   if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
   else if (info.action === "soundAlert") action.textContent = "Preview sound alert";
   else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";
@@ -799,15 +803,8 @@ canvas.addEventListener("pointerup", e => {
   if (!pressAt || Math.hypot(e.clientX - pressAt[0], e.clientY - pressAt[1]) > 6) return;
   pressAt = null;
   if (placing) { placeAtClick(e.clientX, e.clientY); return; }
-  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  ray.setFromCamera(pointer, stage.camera);
   // Only the nearest solid object responds, so clicks don't pass through walls or equipment.
-  const shown = o => { for (let n = o; n; n = n.parent) if (!n.visible) return false; return true; };
-  const hit = ray.intersectObject(stage.current.root, true).find(h => {
-    if (!shown(h.object)) return false;
-    if (glass.isSwitch(h.object)) return true;
-    return [h.object.material].flat().filter(Boolean).every(m => !m.transparent && !m.transmission);
-  });
+  const hit = nearestSolid(rayAt(e.clientX, e.clientY));
   if (!hit) { $("objectCard").hidden = true; return; }
   if (apis.pick(hit.object)) return;
   if (glass.isSwitch(hit.object)) setOption("switch", selected.switch === "opaque" ? "clear" : "opaque");
@@ -833,7 +830,25 @@ function rayAt(x, y) {
   ray.setFromCamera(pointer, stage.camera);
   return ray;
 }
+/** The nearest solid thing shown along a ray: glass and other see-through parts don't count, the smart-glass switch does. */
+function nearestSolid(r) {
+  const shown = o => { for (let n = o; n; n = n.parent) if (!n.visible) return false; return true; };
+  return r.intersectObject(stage.current.root, true).find(h => {
+    if (!shown(h.object)) return false;
+    if (glass.isSwitch(h.object)) return true;
+    return [h.object.material].flat().filter(Boolean).every(m => !m.transparent && !m.transmission);
+  });
+}
 const locateAt = (type, x, y) => placement.locate(rayAt(x, y), stage.current, type, stage.camera);
+/** Whether all of a wall item placed at `at` would be in plain sight: nothing solid between the camera and its face but the wall. */
+function faceInSight(type, at) {
+  const item = itemById(type), t = (at.rot * Math.PI) / 180, n = new THREE.Vector3(Math.sin(t), 0, Math.cos(t));
+  const walls = wallsOf(stage.current), eye = stage.camera.getWorldPosition(new THREE.Vector3());
+  return placement.facePoints(item, W2T(at.x, at.y, item.height), n).every(p => {
+    ray.set(eye, p.sub(eye).normalize());
+    return walls.includes(nearestSolid(ray)?.object);
+  });
+}
 const whyNot = type => (itemById(type).on === "wall"
   ? "That isn't a clear piece of wall at the right height. Try another spot on a wall."
   : "That isn't open floor inside the room. Try another spot.");
@@ -869,16 +884,22 @@ function placeAtClick(x, y) {
 
 /** From the keyboard: straight into the room, somewhere in view, with its card open to move it by key. */
 function placeInView(type) {
-  const w = rig.visible.w, h = innerHeight;
-  for (const [fx, fy] of [[0.5, 0.62], [0.5, 0.5], [0.35, 0.6], [0.65, 0.6], [0.5, 0.75], [0.3, 0.45], [0.7, 0.45], [0.5, 0.35]]) {
-    const at = locateAt(type, w * fx, h * fy);
-    if (!at.ok) continue;
-    const entry = placeItem(type, at);
-    if (entry) showPlacedCard(entry);
-    return;
+  const w = rig.visible.w, h = innerHeight, onWall = itemById(type).on === "wall";
+  // the middle of the view first, then anywhere in it: a wide item fits on fewer stretches of wall
+  const spots = [[0.5, 0.62], [0.5, 0.5], [0.35, 0.6], [0.65, 0.6], [0.5, 0.75], [0.3, 0.45], [0.7, 0.45], [0.5, 0.35]];
+  for (let fy = 0.3; fy < 0.85; fy += 0.1) for (let fx = 0.1; fx < 0.95; fx += 0.1) spots.push([fx, fy]);
+  // a wall item goes first to a spot nothing stands in front of; only if there's none, to one behind the equipment
+  for (const inSight of onWall ? [true, false] : [false]) {
+    for (const [fx, fy] of spots) {
+      const at = locateAt(type, w * fx, h * fy);
+      if (!at.ok || (inSight && !faceInSight(type, at))) continue;
+      const entry = placeItem(type, at);
+      if (entry) showPlacedCard(entry);
+      return;
+    }
   }
   setPlacing(type);
-  placeSay(`There's no ${itemById(type).on === "wall" ? "clear wall" : "open floor"} in the middle of this view. Click or tap where it goes, or choose another view first.`);
+  placeSay(`There's no ${onWall ? "clear wall wide enough" : "open floor"} in this view. Click or tap where it goes, or choose another view first.`);
 }
 
 function showPlacedCard(entry) {
@@ -1240,6 +1261,8 @@ window.__config = {
   guideGo: i => guide.go(i),
   clinical: () => ({ on: clinical.on, labels: clinical.showing(), zones: !!stage.current.clinicalZones?.visible }),
   placed: () => placement.list(state.room).map(({ type, x, y, rot }) => ({ type, x: +x.toFixed(2), y: +y.toFixed(2), rot })),
+  /** Whether a wall item of this type, centred at x, y and facing `rot` degrees, would have wall behind all of it. */
+  wallClear: (type, x, y, rot) => placement.onWall(stage.current, { type, rot }, x, y),
   screenOf: (x, y, z) => { const v = W2T(x, y, z).project(stage.camera); return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight }; },
   /** Stand 2.2 m in front of the room's longest plain wall and return where a point on it, 1.2 m up, is on screen. */
   faceWall: () => {
