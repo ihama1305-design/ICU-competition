@@ -1400,6 +1400,18 @@ with sync_playwright() as p:
     href = pg.locator("#configurator a").first.get_attribute("href")
     check("#c=" in href, "the home page's pictures link to their exact rooms")
     check(pg.locator("#configurator a[href='configurator/?tour=guided']").count() == 1, "the home page offers the guided tour")
+    # the page leads with the proposal: the tour is the first action, and each feature has its own picture that opens its room
+    check(pg.locator(".hero .actions a").first.get_attribute("href") == "configurator/?tour=guided", "the home page's first action is the guided tour")
+    figs = pg.evaluate("[...document.querySelectorAll('#proposal figure')].map(f => ({ href: f.querySelector('a').getAttribute('href'), alt: f.querySelector('img').alt.length, lead: f.querySelector('figcaption b')?.textContent || '' }))")
+    check(len(figs) == 5 and all("configurator/#c=" in f["href"] and f["alt"] > 40 and f["lead"] for f in figs), f"the proposal has five features, each with a described picture that opens its room {[f['lead'] for f in figs]}")
+    words = pg.inner_text("#proposal")
+    check(all(w in words for w in ("Room modes", "PACS", "APIS", "Clinical view", "simulated")), "the proposal names the modes, PACS, APIS and Clinical view, and says the readings are simulated")
+    check(pg.evaluate("[...document.querySelectorAll('#rooms [role=tab]')].map(t => t.textContent.trim().split(/\\s+/)[0])") == ["Proposed", "Today"], "the first picture compares the proposed room with the room today")
+    pg.evaluate("document.querySelectorAll('#proposal img').forEach(i => { i.loading = 'eager'; })")
+    pg.wait_for_function("[...document.querySelectorAll('#proposal img')].every(i => i.complete && i.naturalWidth > 0)", timeout=60000)
+    check(True, "every picture in the proposal loads")
+    pg.set_viewport_size({"width": 390, "height": 844})
+    check(pg.evaluate("document.documentElement.scrollWidth <= innerWidth && document.querySelector('.top').getBoundingClientRect().height < 140"), "on a phone the home page doesn't scroll sideways and its menu stays on one row")
     ctx.close()
     # that link opens the configurator straight into the tour
     ctx = b.new_context(viewport={"width": 1280, "height": 800})

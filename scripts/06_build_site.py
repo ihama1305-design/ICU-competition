@@ -94,26 +94,42 @@ def capture_configurator_shots(tmp):
 
     server = Server(("127.0.0.1", 0), functools.partial(Quiet, directory=SITE_DIR))
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    views = {  # name: room, theme, view, time, whether the panel shows
-        "config-desert": ("W1", "desert", "overview", "night", True),
-        "config-calm": ("W3", "calm", "overview", "afternoon", False),
-        "config-patio": ("W3", "family", "bed_window", "afternoon", False),
+    # name: room, theme, view, time, which of the options panel and the room-mode bar stay in the picture, the steps that
+    # set the scene, and the picture's height. A step is a CSS selector to click, or "js:" and a statement run with
+    # c = window.__config. A shot of the room alone keeps neither the panel nor the bar.
+    views = {
+        "config-desert": ("W1", "desert", "overview", "night", ["panel", "hud"], [], 860),
+        "config-calm": ("W3", "calm", "overview", "afternoon", [], [], 860),
+        "config-patio": ("W3", "family", "bed_window", "afternoon", [], [], 860),
+        # the proposal, at the top of the page: the hero's room at 16:9 like the render beside it, then one picture per feature
+        "proposal-room": ("W1", "desert", "overview", "sunset", [], [], 810),
+        "proposal-modes": ("W1", "calm", "overview", "afternoon", ["hud"], ["#modeBar button[data-mode='comfort']"], 860),
+        "proposal-pacs": ("W1", "calm", "overview", "afternoon", ["panel", "hud"], ["#openPacs"], 860),
+        "proposal-apis": ("W1", "calm", "overview", "afternoon", ["panel", "hud"], ["#openApis"], 860),
+        "proposal-patient": ("W1", "desert", "patient", "afternoon", [], ["js:c.set('tvplay', 'orientation')"], 860),
+        "proposal-clinical": ("W3", "calm", "overview", "afternoon", ["hud"], ["#modeBar button[data-mode='clinical']"], 860),
     }
     codes = {}
     with sync_playwright() as pw:
         b = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
         pg = b.new_page(viewport={"width": 1440, "height": 860})
-        pg.goto(f"http://127.0.0.1:{server.server_address[1]}/configurator/")
-        pg.wait_for_function("window.__configReady === true", timeout=180000)
-        for name, (room, theme, view, when, panel) in views.items():
-            pg.evaluate(f"window.__config.room('{room}')")
-            pg.wait_for_function(f"window.__config.state().room === '{room}'")
+        for name, (room, theme, view, when, keep, steps, height) in views.items():
+            pg.set_viewport_size({"width": 1440, "height": height})
+            # a fresh load for each, so one shot's mode or open panel can't carry into the next
+            pg.goto("about:blank")
+            pg.goto(f"http://127.0.0.1:{server.server_address[1]}/configurator/?room={room}")
+            pg.wait_for_function("window.__configReady === true", timeout=180000)
             pg.evaluate(f"window.__config.theme('{theme}'); window.__config.time(window.__config.stops.{when}); window.__config.camera('{view}', {{ instant: true }})")
-            # a shot without the panel is of the room alone, so the room-mode bar goes too
-            pg.evaluate(f"for (const id of ['panel', 'hud']) document.getElementById(id).style.display = '{'' if panel else 'none'}'; dispatchEvent(new Event('resize'))")
+            codes[name] = pg.evaluate("window.__config.code()")
+            for step in steps:
+                if step.startswith("js:"):
+                    pg.evaluate("(() => { const c = window.__config; " + step[3:] + "; })()")
+                else:
+                    pg.click(step)
+            pg.evaluate(f"for (const id of ['panel', 'hud']) document.getElementById(id).style.display = {json.dumps(keep)}.includes(id) ? '' : 'none'; dispatchEvent(new Event('resize'))")
+            pg.wait_for_function("!window.__config.mode().easing && !window.__config.state().moving", timeout=120000)
             settle(pg)
             pg.screenshot(path=os.path.join(tmp, f"{name}.png"))
-            codes[name] = pg.evaluate("window.__config.code()")
         b.close()
     server.shutdown()
     return codes
@@ -176,8 +192,8 @@ def sub_img(m):
 
 
 def sub_shot(m):
-    name, alt, sizes = (s.strip() for s in m.group(1).split("|"))
-    return img_tag(os.path.join(shots, f"{name}.png"), name, alt, sizes, "lazy")
+    name, alt, sizes, *loading = (s.strip() for s in m.group(1).split("|"))  # lazy unless it says otherwise: the hero's is eager
+    return img_tag(os.path.join(shots, f"{name}.png"), name, alt, sizes, loading[0] if loading else "lazy")
 
 
 page = re.sub(r"<!--IMG (.+?)-->", sub_img, page)
@@ -192,8 +208,8 @@ open(os.path.join(SITE_DIR, "index.html"), "w").write(page)
 shutil.copyfile(os.path.join(SRC, "styles.css"), os.path.join(SITE_DIR, "styles.css"))
 shutil.copyfile(os.path.join(SRC, "favicon.svg"), os.path.join(SITE_DIR, "favicon.svg"))
 
-# link preview image, 1200 x 630
-im = Image.open(os.path.join(ROOT, "renders", "room_entry.png")).convert("RGB")
+# link preview image, 1200 x 630: the proposed room, as at the top of the page
+im = Image.open(os.path.join(shots, "proposal-room.png")).convert("RGB")
 scale = 1200 / im.width
 im = im.resize((1200, round(im.height * scale)), Image.LANCZOS)
 top = (im.height - 630) // 2

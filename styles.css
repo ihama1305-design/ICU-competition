@@ -53,6 +53,13 @@ p { margin: 0; }
 .top nav { display: flex; flex-wrap: wrap; gap: 0 4px; margin-inline: -10px; }
 .top nav a { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding-inline: 10px; border-radius: 4px; font-size: 0.95rem; color: var(--muted); text-decoration: none; }
 .top nav a::after { left: 10px; right: 10px; bottom: 9px; height: 1.5px; }
+/* on a phone nine links would wrap to three rows and push the headline down: one row that scrolls sideways, fading at its end */
+@media (max-width: 720px) {
+  .top nav { flex-wrap: nowrap; width: calc(100% + 20px); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+  .top nav::-webkit-scrollbar { display: none; }
+  .top nav a { flex: none; }
+  .top nav a:last-child { margin-right: 36px; }
+}
 
 /* buttons: a fill wipes up on hover and leaves through the top; a press scales down and springs back */
 .btn { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 20px; border-radius: var(--r-s); font-weight: 600; font-size: 1rem; text-decoration: none; transition: transform var(--t-spring) var(--spring); }
@@ -75,6 +82,7 @@ p { margin: 0; }
 .hero figure { margin: 0; min-width: 0; }
 .hero figure a { display: block; overflow: hidden; border-radius: var(--r-l); border: 1px solid var(--border); background: var(--teal-soft); }
 figcaption { margin-top: 10px; font-size: 0.9rem; line-height: 1.45; color: var(--muted); max-width: 62ch; }
+figcaption b { color: var(--text); font-weight: 600; }
 @media (min-width: 960px) {
   .hero .wrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; }
 }
