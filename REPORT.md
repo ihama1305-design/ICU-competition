@@ -227,6 +227,32 @@ The walkthrough gained a joystick and a single slim toolbar row on phones. It no
 
 PACS (the Physiological Adaptive Comfort System), APIS (the Adaptive Patient Interface System) and the patient figure were built by a teammate. The README describes them, and their own checks (`scripts/11`, `12` and `13`) run alongside `08`.
 
+### Remote care for the isolation room (10 November 2026)
+
+**Fewer unnecessary entries, never fewer checks.** Every entry to an isolation room costs a set of protective clothing and opens the door of a negative-pressure room. So W1 should help staff see, hear and know from outside it. These are concepts and they keep the rules above: the data is simulated, nothing listens, records or stores, no alarm or medical device changes, and a nurse decides.
+
+| | What the room does | Where it is | What it isn't |
+|---|---|---|---|
+| See | The glazed front, with smart glass or a curtain for privacy | In the room since the first version | Not a measured sightline |
+| Hear | A vocal-distress cue. The wall sound sensor would recognise a groan or a call for help; its light changes and a notice asks the nurse to look in through the glass | Configurator: Comfort systems, and the sensor's card | Not a microphone: two buttons play the sounds. Not an alarm, and not an instruction to go in |
+| Clean | Filters and UV-C in the air handling plant, out of sight | The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/#clean-air)'s clean-air table, and the wall comfort control's card | Not SSMC's design. Nothing is fogged, ionised or released into the room |
+| Know | A unit board that ranks patients by their vitals | Not built | |
+
+**The cue.** A closed isolation door keeps the air in, and the patient's voice with it. The sensor gives staff that hearing back without opening the door. A simulated sound changes the sensor's light, with a glow on the wall around it, and puts up a notice marked SIMULATED. The notice names the room and what was heard, asks for a look through the glass, and says "You decide whether to go in". It stays until someone presses Acknowledge and never fades by itself. Leaving the room, hiding the sensor or opening PACS takes it down. A short rule, `cueFor` in `vocal.js`, decides how urgent each sound is: a call for help asks for a look now, a groan for a look when the nurse can, and a third groan within a minute for a look now. A notice asking for a look now is never downgraded by a later groan. The rule is a judgement between false alerts and a missed patient, not a tested threshold.
+
+**Its limits,** which the sensor's card and the option's note both state:
+
+- Ventilated or sedated patients may make no sound, so quiet is never a sign that all is well.
+- Alarms, visitors and a television cause false alerts, so the nurse looks before acting.
+- In a real room, sounds would be classified on the device and never recorded, stored or sent.
+- This model uses no microphone. Check `12` fails if any page or module names an audio or speech API, and `08` counts microphone requests while the cue runs.
+
+**No evidence is claimed for the cue.** No study of sound-based distress detection in intensive care was read for it. It's a design idea about what a closed door takes away, not something shown to work, and it would need clinical and privacy review before anyone built it.
+
+**Clean air** is described under [Ventilation concept](#ventilation-concept): what was read for each row, and what is assumed.
+
+**Know isn't built.** The third idea was a board at the nurse station that ranks patients by their vitals, so staff know who to look at first. An order that looks authoritative and is wrong could delay care, so even a simulated board needs clinical input first. PACS already shows one patient's simulated readings without ranking anyone, and that is as far as this entry goes.
+
 ### Performance
 
 The initial download is about 2.3 MB. The page draws only when something changes, or while the TV or fish are in view. Measured on one fast laptop, an Apple M5 GPU, on 10 November 2026. Each figure is one whole frame as the page draws it while the view turns, timed from outside the page, with a one-pixel read after it so the time includes the GPU finishing and not the display's refresh rate:
@@ -250,7 +276,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 ### Checks
 
-`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, Tune it in's rules for every combination of answers, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
+`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, Tune it in's rules for every combination of answers, the vocal-distress cue in both rooms, the clean-air rows on the plan and on the comfort control's card, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
 
 ### Known limitations
 
@@ -307,7 +333,7 @@ This records the requested redesign work together in one place. These changes ap
 
 - Added low-profile supply grilles and wall comfort controls, varied material texture scale, blinds, daylight and night lighting modes, and clearer ceiling and cable details. The room remains stylized rather than photorealistic.
 - Added visible smoke detection, a sprinkler head, manual alarm point, exit sign, bedside call control, and a corridor fire-hose/standpipe cabinet with extinguisher and riser symbols. External fire hydrants belong on the building site fire-service plan.
-- Added a sound-level sensor and an HVAC comfort-control concept. Neither connects to a microphone, patient vitals, pain assessment or staff alert system; they do not record speech or identify a patient.
+- Added a sound-level sensor and an HVAC comfort-control concept. Neither connects to a microphone, patient vitals, pain assessment or staff alert system; they do not record speech or identify a patient. Since 10 November 2026 the sensor has a simulated vocal-distress cue and the control's card lists a clean-air concept: see [Remote care for the isolation room](#remote-care-for-the-isolation-room-10-november-2026). Both statements still hold.
 - Kept rendering on demand and limited animation to elements in view to avoid unnecessary redraws.
 
 ### Backup and review limits
