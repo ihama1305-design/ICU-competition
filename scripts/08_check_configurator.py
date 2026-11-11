@@ -1559,9 +1559,10 @@ with sync_playwright() as p:
     # the page leads with the proposal: the tour is the first action, and each feature has its own picture that opens its room
     check(pg.locator(".hero .actions a").first.get_attribute("href") == "configurator/?tour=guided", "the home page's first action is the guided tour")
     figs = pg.evaluate("[...document.querySelectorAll('#proposal figure')].map(f => ({ href: f.querySelector('a').getAttribute('href'), alt: f.querySelector('img').alt.length, lead: f.querySelector('figcaption b')?.textContent || '' }))")
-    check(len(figs) == 5 and all("configurator/#c=" in f["href"] and f["alt"] > 40 and f["lead"] for f in figs), f"the proposal has five features, each with a described picture that opens its room {[f['lead'] for f in figs]}")
+    check(len(figs) == 6 and all("configurator/#c=" in f["href"] and f["alt"] > 40 and f["lead"] for f in figs), f"the proposal has six features, each with a described picture that opens its room {[f['lead'] for f in figs]}")
     words = pg.inner_text("#proposal")
-    check(all(w in words for w in ("Room modes", "PACS", "APIS", "Clinical view", "simulated")), "the proposal names the modes, PACS, APIS and Clinical view, and says the readings are simulated")
+    check(all(w in words for w in ("Room modes", "PACS", "APIS", "Clinical view", "Remote care for the isolation room", "simulated")), "the proposal names the modes, PACS, APIS, Clinical view and Remote care, and says the readings are simulated")
+    check("Six things" in words and "Fewer unnecessary entries, never fewer checks" in words and "look in through the glass first" in words, "Remote care's caption carries its pitch: look in first, fewer entries, never fewer checks")
     check(pg.evaluate("[...document.querySelectorAll('#rooms [role=tab]')].map(t => t.textContent.trim().split(/\\s+/)[0])") == ["Proposed", "Today"], "the first picture compares the proposed room with the room today")
     pg.evaluate("document.querySelectorAll('#proposal img').forEach(i => { i.loading = 'eager'; })")
     pg.wait_for_function("[...document.querySelectorAll('#proposal img')].every(i => i.complete && i.naturalWidth > 0)", timeout=60000)

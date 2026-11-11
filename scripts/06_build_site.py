@@ -108,6 +108,8 @@ def capture_configurator_shots(tmp):
         "proposal-apis": ("W1", "calm", "overview", "afternoon", ["panel", "hud"], ["#openApis"], 860),
         "proposal-patient": ("W1", "desert", "patient", "afternoon", [], ["js:c.set('tvplay', 'orientation')"], 860),
         "proposal-clinical": ("W3", "calm", "overview", "afternoon", ["hud"], ["#modeBar button[data-mode='clinical']"], 860),
+        # the vocal-distress cue: the sensor lit and its notice up, seen with the glazed front the nurse looks through
+        "proposal-remote": ("W1", "calm", "family", "afternoon", ["hud"], ["js:document.querySelector(\".demo-sounds button[data-sound='call']\").click()"], 860),
     }
     codes = {}
     with sync_playwright() as pw:
