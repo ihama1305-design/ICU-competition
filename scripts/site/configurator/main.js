@@ -12,6 +12,7 @@ import { decodeSpec, encodeSpec } from "./state.js";
 import { differences, optionLabel, resolveProfile } from "./profile.js";
 import { summaryContent } from "./summary.js";
 import { el, Panel } from "./panel.js";
+import { cueFor, LEVELS, noticeFor, QUIET, SOUNDS } from "./vocal.js";
 import { APIS } from "./apis.js";
 import { PACS } from "./pacs.js";
 import { RoomModes, modeText } from "./modes.js";
@@ -175,6 +176,7 @@ function setTime(h) {
 }
 
 async function setRoom(label, { keepView = true } = {}) {
+  endVocalCue(); // its notice names the room being left
   endCompare();
   if (pacs.active) pacs.exit();
   endMode();
@@ -467,23 +469,78 @@ function setDemoReadout() {
   invalidate();
 }
 
-function previewSoundAlert() {
-  $("systemStatus").textContent = "Demo only: a high sound-level event was simulated. No audio was captured and no staff were contacted.";
+// ---------------------------------------------------------------- the vocal-distress cue (vocal.js)
+// SIMULATED. The sounds are the two demo buttons: nothing here asks for a microphone, records, stores or sends anything, and
+// no alarm or device changes. The sensor's light changes and a notice asks the nurse to look in through the glass; the nurse decides.
+let vocal = null; // the notice on show: { sound, level, room }
+let groans = [];  // when each simulated groan was "heard", for the rule's count over the last minute
+const sensorShown = () => selected.soundSensor === "on" && !!stage.current?.addons?.soundSensor?.visible;
+
+/** The sensor's light and ring, for a level of notice or (with none) back to quiet green. */
+function paintSensor(level) {
+  const hex = level ? LEVELS[level].colour : QUIET;
   for (const mesh of stage.current?.parts.addon_soundSensor || []) {
-    for (const mat of [mesh.material].flat()) if (mat?.name === "sound_indicator") mat.color.set("#e6a342");
+    for (const mat of [mesh.material].flat()) {
+      if (mat?.name === "sound_indicator") { mat.color.set(hex); mat.emissive.set(hex); }
+      if (mat?.name === "sound_ring") { mat.emissive.set(level ? hex : "#000000"); mat.emissiveIntensity = level ? 0.9 : 0; }
+      if (mat?.name === "sound_halo") { mat.color.set(hex); mat.opacity = level ? 0.34 : 0; }
+    }
   }
   invalidate();
-  setTimeout(() => {
-    for (const mesh of stage.current?.parts.addon_soundSensor || []) {
-      for (const mat of [mesh.material].flat()) if (mat?.name === "sound_indicator") mat.color.set("#55b985");
-    }
-    invalidate();
-  }, 2200);
+}
+
+function simulateSound(sound) {
+  if (pacs.active) pacs.exit(); // PACS borrows the same light, and hides the notice's place on the screen
+  const status = $("systemStatus");
+  if (!sensorShown()) {
+    status.textContent = "The sound sensor is hidden, so nothing was heard. Show it under Sound-level indicator to try this.";
+    say(status.textContent);
+    return;
+  }
+  const now = Date.now();
+  groans = groans.filter(t => now - t < 60000);
+  if (sound === "groan") groans.push(now);
+  const level = cueFor(sound, sound === "groan" ? groans.length : 0);
+  if (!LEVELS[level]) {
+    status.textContent = `Simulated: ${SOUNDS[sound]} was heard. The sensor waits to hear more before it tells anyone.`;
+    say(status.textContent);
+    return;
+  }
+  if (vocal?.level === "now" && level !== "now") { // a notice already asking for a look now is never downgraded
+    status.textContent = `Simulated: ${SOUNDS[sound]} was heard too. The notice already asks for a look now.`;
+    say(status.textContent);
+    return;
+  }
+  vocal = { sound, level, room: state.room };
+  const text = noticeFor(sound, level, rig.meta.isolation ? `Isolation room ${state.room}` : `Standard room ${state.room}`, clock(state.hour));
+  $("vocalText").textContent = `${text.heard} ${text.ask}`;
+  $("vocalMeta").textContent = text.meta;
+  $("vocalNotice").dataset.level = level;
+  $("vocalNotice").hidden = false;
+  // the sensor's own card, where the sound may have been started, never covers the notice or its Acknowledge button
+  const card = $("objectCard"), a = card.getBoundingClientRect(), b = $("vocalNotice").getBoundingClientRect();
+  if (!card.hidden && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) card.hidden = true;
+  paintSensor(level);
+  status.textContent = "Simulated: the sensor's light changed and a notice went to the nurse station. No audio was captured, and nothing left this page.";
+  say(`Simulated notice at the nurse station. ${text.heard} ${text.ask}`);
+}
+
+/** Take the notice down and put the sensor's light back: on Acknowledge, and whenever the room or the sensor it names goes away. */
+function endVocalCue(why = "") {
+  if (!vocal) return;
+  vocal = null; groans = [];
+  $("vocalNotice").hidden = true;
+  paintSensor(null);
+  if (why) { $("systemStatus").textContent = why; say(why); }
 }
 
 $("demoTemp").addEventListener("input", setDemoReadout);
 $("demoHumidity").addEventListener("input", setDemoReadout);
-$("previewSoundAlert").addEventListener("click", previewSoundAlert);
+for (const b of document.querySelectorAll(".demo-sounds button[data-sound]")) b.addEventListener("click", () => simulateSound(b.dataset.sound));
+$("vocalAck").addEventListener("click", () => {
+  endVocalCue("Acknowledged. The sensor's light is green again. Nothing was recorded.");
+  canvas.focus({ preventScroll: true });
+});
 $("closeObjectCard").addEventListener("click", () => { $("objectCard").hidden = true; canvas.focus({ preventScroll: true }); });
 $("objectAction").addEventListener("click", e => {
   if (e.currentTarget.dataset.action === "wardrobe") {
@@ -491,8 +548,8 @@ $("objectAction").addEventListener("click", e => {
     e.currentTarget.textContent = open ? "Slide doors closed" : "Slide doors open";
     stage.renderer.shadowMap.needsUpdate = true;
     invalidate();
-  } else if (e.currentTarget.dataset.action === "soundAlert") {
-    previewSoundAlert();
+  } else if (e.currentTarget.dataset.action.startsWith("sound:")) {
+    simulateSound(e.currentTarget.dataset.action.slice(6));
   } else if (e.currentTarget.dataset.action.startsWith("apis:")) {
     apis.open(e.currentTarget.dataset.action.slice(5));
   } else if (e.currentTarget.dataset.action === "pacs") {
@@ -503,11 +560,13 @@ $("objectAction").addEventListener("click", e => {
   }
 });
 $("objectAction2").addEventListener("click", e => {
+  if (e.currentTarget.dataset.action.startsWith("sound:")) { simulateSound(e.currentTarget.dataset.action.slice(6)); return; }
   const found = placement.find(Number(e.currentTarget.dataset.action.slice(7)));
   if (found) removePlaced(found.entry);
 });
 
 function syncUi() {
+  if (vocal && !sensorShown()) endVocalCue("The sound sensor was hidden, so its notice was taken down.");
   panelUi?.sync(selected, state.room);
   const theme = currentTheme();
   $("themes").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.value === theme?.id)));
@@ -665,7 +724,7 @@ canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
 const pacs = new PACS({ stage, lighting, rig, controls, relight, invalidate,
   stopTour: () => tour.stop(), getState: () => state, isDark: () => afterDark(),
-  closeApis: () => { endCompare(); endMode(); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
+  closeApis: () => { endVocalCue(); endCompare(); endMode(); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
   restoreApisMarkers: on => apis.setEnabled(on),
 });
 apis.beforeOpen = () => { if (pacs.active) pacs.exit(); };
@@ -782,17 +841,21 @@ function showObjectCard(info, x, y) {
     $("objectDescription").textContent = `${info.description} Drag it to move it. With this card focused, the arrow keys move it${onFloor ? ", R turns it" : ""} and Delete removes it.`;
   }
   // a card that cites a source: the same links as the option note it names, so a source lives in one place, options.json
-  // a card with a short table: rows from a named block of options.json, in the column for this kind of room. The comfort
-  // control's clean-air rows are the same list as the ventilation plan's, and the block's link leads to the basis there
+  // a card with a short table: rows from a named block of options.json, in the column for this kind of room where the block
+  // has one. The comfort control's clean-air rows are the same list as the ventilation plan's, and the block's link leads to
+  // the basis there; the sound sensor's are the limits of the vocal-distress cue
   const table = info.rowsFrom ? optionData[info.rowsFrom] : null, kind = rig.meta.isolation ? "isolation" : "patient";
-  $("objectRowsTitle").textContent = table ? `${table.titles[kind]} · concept` : "";
-  $("objectRows").replaceChildren(...(table?.rows || []).flatMap(r => [el("dt", { textContent: r.label }), el("dd", { textContent: r[kind] })]));
+  $("objectRowsTitle").textContent = table ? table.titles?.[kind] ?? table.title : "";
+  $("objectRows").replaceChildren(...(table?.rows || []).flatMap(r => [el("dt", { textContent: r.label }), el("dd", { textContent: r[kind] ?? r.text })]));
   $("objectRowsTitle").hidden = $("objectRows").hidden = !table;
   const sources = table?.sources || (info.sourcesFrom ? groupById(info.sourcesFrom)?.note?.sources || [] : []);
   $("objectSources").replaceChildren(...sources.map(s => Object.assign(document.createElement("a"), { href: s.url, textContent: s.label, target: "_blank", rel: "noopener noreferrer" })));
   $("objectSources").hidden = !sources.length;
   if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
-  else if (info.action === "soundAlert") action.textContent = "Preview sound alert";
+  else if (info.action === "soundCue") { // the sensor's two simulated sounds, as in the Comfort systems section
+    action.textContent = "Simulate a call for help"; action.dataset.action = "sound:call";
+    action2.textContent = "Simulate a groan"; action2.dataset.action = "sound:groan"; action2.hidden = false;
+  }
   else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";
   else if (info.action === "pacs") action.textContent = "Physiological Adaptive Mode";
   card.hidden = false;
@@ -1354,6 +1417,12 @@ window.__config = {
   orientation: () => stage.current.addons?.tv?.userData.orientText,
   addonShown: id => !!stage.current.addons?.[id]?.visible,
   daylightSensor: () => ({ shown: !!stage.current.addons?.daylightSensor?.visible, text: daylightCard(), elevation: daylight.elevation, dark: afterDark() }),
+  vocal: () => {
+    const tint = name => { let hex = null; for (const m of stage.current.parts.addon_soundSensor || []) for (const mat of [m.material].flat()) if (mat?.name === name) hex = { colour: mat.color.getHexString(), glow: mat.emissive.getHexString(), strength: mat.emissiveIntensity }; return hex; };
+    let halo = null; for (const m of stage.current.parts.addon_soundSensor || []) if (m.material?.name === "sound_halo") halo = { colour: m.material.color.getHexString(), opacity: m.material.opacity };
+    return { notice: vocal ? { ...vocal } : null, groans: groans.length, light: tint("sound_indicator"), ring: tint("sound_ring"), halo, shown: sensorShown() };
+  },
+  cueFor: (sound, n) => cueFor(sound, n) ?? null,
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
   profile: answers => resolveProfile(optionData, answers),

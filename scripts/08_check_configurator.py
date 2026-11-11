@@ -1033,6 +1033,133 @@ with sync_playwright() as p:
         check(0 <= level <= 1, f"a frame timed before the click keeps the glass fade in range, going {to} (level {level:.2f})")
     ctx.close()
 
+    # ---------------------------------------------------------------- the vocal-distress cue: the sound sensor lights and tells the nurse. SIMULATED
+    ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
+    # the page must never ask for a microphone. Any attempt from here on is counted; check 12 also finds no audio API named in the source
+    pg.evaluate("""() => { window.__mic = 0; const count = () => { window.__mic++; return Promise.reject(new Error('refused by the check')); };
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = count; navigator.getUserMedia = count; }""")
+    level_colour = {"now": "e2574c", "soon": "e6a342"}
+    quiet = lambda v: not v["notice"] and v["light"]["colour"] == "55b985" and v["halo"]["opacity"] == 0 and v["ring"]["strength"] == 0  # noqa: E731
+    call, groan = ".demo-sounds button[data-sound='call']", ".demo-sounds button[data-sound='groan']"
+    for room in ROOMS:
+        go(pg, room)
+        pg.evaluate("window.__config.camera('family', { instant: true }); document.getElementById('systemsSection').open = true; document.getElementById('objectCard').hidden = true")
+        start = pg.evaluate("({ code: window.__config.code(), stored: JSON.stringify([localStorage, sessionStorage]), vocal: window.__config.vocal() })")
+        check(start["vocal"]["shown"] and quiet(start["vocal"]) and pg.is_hidden("#vocalNotice"), f"{room}: the sound sensor starts quiet: a green light, no glow and no notice")
+        at = pg.evaluate("window.__config.itemPoint('Sound-level sensor')")
+        near = (slice(max(0, int(at["y"]) - 50), int(at["y"]) + 50), slice(max(0, int(at["x"]) - 60), int(at["x"]) + 60))
+        calm = frame(pg)
+        # a call for help: a notice at once, with the light and its glow in that level's colour
+        want = pg.evaluate("window.__config.cueFor('call', 0)")
+        pg.click(call)
+        pg.wait_for_selector("#vocalNotice", state="visible", timeout=10000)
+        v, notice = pg.evaluate("window.__config.vocal()"), pg.inner_text("#vocalNotice")
+        check(want in level_colour and v["notice"] == {"sound": "call", "level": want, "room": room}, f"{room}: a simulated call for help raises a notice straight away ({v['notice']})")
+        check(v["light"]["colour"] == v["halo"]["colour"] == level_colour.get(want) and v["halo"]["opacity"] > 0 and v["ring"]["strength"] > 0, f"{room}: the sensor's light, ring and glow take the notice's colour {v['light']}")
+        check(all(w in notice for w in ("SIMULATED", f"room {room}", "a call for help was heard", "Look in through the glass", "You decide whether to go in")), f"{room}: the notice says it's simulated, names the room and what was heard, and leaves going in to the nurse")
+        check(all(w in notice for w in ("No audio was captured or stored", "no alarm or device was changed")) and pg.get_attribute("#vocalNotice", "data-level") == want, f"{room}: it says nothing was captured and no alarm or device changed")
+        pg.evaluate("document.getElementById('vocalNotice').style.visibility = 'hidden'")
+        lit = frame(pg)
+        pg.evaluate("document.getElementById('vocalNotice').style.visibility = ''")
+        changed = int((np.abs(lit - calm).max(axis=2)[near] > 6).sum())
+        check(changed > 40, f"{room}: the lit sensor shows in the picture ({changed} pixels changed around it)")
+        shot(pg, f"{room.lower()}_vocal_call")
+        # it waits for the nurse: only Acknowledge takes it down, and the room looks as it did
+        pg.wait_for_timeout(2600)  # longer than the old preview, which reset itself after 2.2 seconds
+        check(pg.is_visible("#vocalNotice") and not quiet(pg.evaluate("window.__config.vocal()")), f"{room}: the notice and the light stay until someone acknowledges them")
+        pg.click("#vocalAck")
+        v = pg.evaluate("window.__config.vocal()")
+        check(pg.is_hidden("#vocalNotice") and quiet(v) and "Acknowledged" in pg.inner_text("#systemStatus"), f"{room}: Acknowledge takes the notice down and puts the light back to green")
+        back = int((np.abs(frame(pg) - calm).max(axis=2)[near] > 6).sum())
+        check(back < 40, f"{room}: and the picture is as it was ({back} pixels differ)")
+        # groans: the rule in vocal.js says how many it takes and how urgent they are. By the third there is a notice
+        rule = pg.evaluate("[1, 2, 3].map(n => window.__config.cueFor('groan', n))")
+        seen = []
+        for n in (1, 2, 3):
+            pg.click(groan)
+            seen.append(pg.evaluate("(window.__config.vocal().notice || {}).level || null"))
+            if n == 1 and rule[0] is None:
+                check(pg.is_hidden("#vocalNotice") and "waits to hear more" in pg.inner_text("#systemStatus"), f"{room}: one groan the rule doesn't act on says so, and tells nobody")
+        v = pg.evaluate("window.__config.vocal()")
+        check(seen == rule and seen[-1] in level_colour and v["groans"] == 3, f"{room}: groans raise the notice the rule gives, {rule}, counting them over the last minute {seen}")
+        check("groaning was heard" in pg.inner_text("#vocalNotice") and v["light"]["colour"] == level_colour.get(seen[-1]), f"{room}: the groan's notice says what was heard, in its level's colour")
+        shot(pg, f"{room.lower()}_vocal_groan")
+        if seen[-1] != "now":  # a look-now notice replaces a look-when-you-can one, and is never replaced by one
+            pg.click(call)
+        pg.click(groan)
+        check(pg.evaluate("window.__config.vocal().notice.level") == "now", f"{room}: a notice asking for a look now isn't downgraded by a later groan")
+        pg.click("#vocalAck")
+        # the sensor's own card: why it's there, its limits, and the same two sounds
+        pg.mouse.click(at["x"], at["y"])
+        pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+        card = pg.inner_text("#objectCard")
+        limits = pg.evaluate("[...document.querySelectorAll('#objectRows dd')].map(d => d.textContent)")
+        check("Sound-level sensor" in card and ("closed isolation door" if room == "W1" else "closed door keeps a patient's voice in") in card and "hearing back" in card, f"{room}: the sensor's card says what a closed door takes away and what the sensor gives back")
+        check(len(limits) == 4 and all(any(w in t for t in limits) for w in ("Ventilated or sedated patients may make no sound", "Alarms", "classified on the device", "no microphone")) and "stored" in " ".join(limits),
+              f"{room}: it lists the limits: silent patients, false alerts from alarms, on-device and never stored, and no microphone here {limits[:1]}")
+        buttons = pg.evaluate("[...document.querySelectorAll('#objectCard .object-actions button')].filter(b => !b.hidden).map(b => b.textContent)")
+        check(buttons == ["Simulate a call for help", "Simulate a groan"], f"{room}: the card has the two simulated sounds {buttons}")
+        shot(pg, f"{room.lower()}_vocal_card")
+        pg.click("#objectAction")
+        pg.wait_for_selector("#vocalNotice", state="visible", timeout=10000)
+        covered = pg.evaluate("""() => { const c = document.getElementById('objectCard'), a = c.getBoundingClientRect(), n = document.getElementById('vocalNotice').getBoundingClientRect();
+          return !c.hidden && a.left < n.right && a.right > n.left && a.top < n.bottom && a.bottom > n.top; }""")
+        check(pg.evaluate("window.__config.vocal().notice.sound") == "call" and not covered, f"{room}: the card's button raises the notice, and the card never covers it")
+        # hiding the sensor takes its notice down, and with no sensor nothing is heard
+        pg.evaluate("window.__config.set('soundSensor', 'off')")
+        check(pg.is_hidden("#vocalNotice") and not pg.evaluate("window.__config.vocal().notice"), f"{room}: hiding the sensor takes its notice down")
+        pg.evaluate("document.getElementById('objectCard').hidden = true")
+        pg.click(call)
+        check(pg.is_hidden("#vocalNotice") and "sensor is hidden" in pg.inner_text("#systemStatus"), f"{room}: with the sensor hidden a simulated sound raises nothing, and the panel says why")
+        pg.evaluate("window.__config.set('soundSensor', 'on')")
+        check(quiet(pg.evaluate("window.__config.vocal()")), f"{room}: shown again, the sensor is quiet")
+        # none of it touched the room's design, its link or the browser's storage, and no microphone was asked for
+        end = pg.evaluate("({ code: window.__config.code(), stored: JSON.stringify([localStorage, sessionStorage]), mic: window.__mic })")
+        check(end["code"] == start["code"] and end["stored"] == start["stored"] and end["mic"] == 0, f"{room}: the cue changed no choice, link or stored data, and never asked for a microphone ({end['mic']} requests)")
+    # the notice names its room, so leaving the room takes it down; and PACS, which borrows the same light, starts from a quiet sensor
+    pg.click(call)
+    go(pg, ROOMS[0])
+    check(pg.is_hidden("#vocalNotice") and quiet(pg.evaluate("window.__config.vocal()")), "changing room takes the notice down, and the new room's sensor is quiet")
+    pg.evaluate("window.__config.camera('family', { instant: true })")
+    pg.click(call)
+    pg.click("#openPacs")
+    pg.wait_for_function("document.body.classList.contains('pacs-active')", timeout=60000)
+    check(not pg.evaluate("window.__config.vocal().notice") and pg.is_hidden("#vocalNotice"), "opening PACS takes the notice down first")
+    pg.click("#pacsExit")
+    pg.wait_for_function("!document.body.classList.contains('pacs-active')", timeout=60000)
+    check(quiet(pg.evaluate("window.__config.vocal()")), "and after PACS the sensor's light is green again")
+    # by keyboard, and to a screen reader
+    pg.evaluate("document.getElementById('systemsSection').open = true")
+    pg.focus(call)
+    pg.keyboard.press("Enter")
+    check(pg.is_visible("#vocalNotice") and "Simulated notice at the nurse station" in pg.inner_text("#announce"), "Enter on the button raises the notice, and it's announced")
+    pg.focus("#vocalAck")
+    ring = pg.evaluate("(() => { const s = getComputedStyle(document.activeElement); return s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0; })()")
+    pg.keyboard.press("Enter")
+    check(ring and pg.is_hidden("#vocalNotice") and "Acknowledged" in pg.inner_text("#announce"), "Acknowledge works from the keyboard with a visible focus ring, and is announced")
+    pg.click(groan) if pg.evaluate("window.__config.cueFor('groan', 1)") else pg.click(call)
+    pg.add_script_tag(url=AXE)
+    faults = axe_faults(pg, "#vocalNotice") + axe_faults(pg, "#systemsSection")
+    check(not faults, f"axe finds no serious faults in the notice or the Comfort systems section {faults[:4]}")
+    pg.click("#vocalAck")
+    check(not errs, f"the vocal-distress cue: no errors {errs[:3]}")
+    ctx.close()
+    # on a phone the notice fits under the mode bar, and the card that raised it gets out of its way
+    ctx, pg, errs, _, _ = open_page(b, 390, 760, query="?tier=low", has_touch=True, is_mobile=True)
+    pg.evaluate("window.__config.camera('family', { instant: true })")
+    at = pg.evaluate("window.__config.itemPoint('Sound-level sensor')")
+    pg.touchscreen.tap(at["x"], at["y"])
+    pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    pg.click("#objectAction")
+    pg.wait_for_selector("#vocalNotice", state="visible", timeout=10000)
+    fit = pg.evaluate("""() => { const n = document.getElementById('vocalNotice').getBoundingClientRect(), a = document.getElementById('vocalAck').getBoundingClientRect();
+      return { inside: n.left >= 0 && n.right <= innerWidth && a.bottom <= innerHeight, over: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+               onTop: document.elementFromPoint(a.left + a.width / 2, a.top + a.height / 2)?.id, card: !document.getElementById('objectCard').hidden }; }""")
+    check(fit["inside"] and fit["over"] <= 0 and fit["onTop"] == "vocalAck" and not fit["card"], f"phone: the notice fits, nothing scrolls sideways and Acknowledge can be tapped {fit}")
+    shot(pg, "phone_vocal_notice")
+    check(not errs, f"phone, the vocal-distress cue: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- one set of grilles, and the plan that shows them
     ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
     plan_vents = json.load(open(os.path.join(SITE, "assets", "model", "vents.json")))["vents"]
