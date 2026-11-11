@@ -1239,6 +1239,7 @@ with sync_playwright() as p:
     check(over <= 0, f"the plan page has no sideways scroll on a phone ({over})")
     pg.screenshot(path=os.path.join(SHOTS, "ventilation_phone.png"))
     check(not page_errs, f"the plan page has no errors {page_errs[:3]}")
+    check(pg.text_content("main a[href='../']").strip() == "Adaptive ICU" and pg.title().endswith(": Adaptive ICU"), "the plan page calls the site by the proposal's name")
     pg.goto(URL.replace("configurator/", "index.html"))
     check(pg.locator("a[href='ventilation/']").count() > 0, "the home page links to the plan")
     # ---------------------------------------------------------------- Tune it in: answers to a room, from the data in options.json
@@ -1557,6 +1558,7 @@ with sync_playwright() as p:
     check("#c=" in href, "the home page's pictures link to their exact rooms")
     check(pg.locator("#configurator a[href='configurator/?tour=guided']").count() == 1, "the home page offers the guided tour")
     # the page leads with the proposal: the tour is the first action, and each feature has its own picture that opens its room
+    check(pg.text_content(".top .mark").strip() == "Adaptive ICU" and "Walk the" not in pg.inner_text(".top"), "the home page's name is the proposal's, not the walkthrough's")
     check(pg.locator(".hero .actions a").first.get_attribute("href") == "configurator/?tour=guided", "the home page's first action is the guided tour")
     figs = pg.evaluate("[...document.querySelectorAll('#proposal figure')].map(f => ({ href: f.querySelector('a').getAttribute('href'), alt: f.querySelector('img').alt.length, lead: f.querySelector('figcaption b')?.textContent || '' }))")
     check(len(figs) == 6 and all("configurator/#c=" in f["href"] and f["alt"] > 40 and f["lead"] for f in figs), f"the proposal has six features, each with a described picture that opens its room {[f['lead'] for f in figs]}")
@@ -1577,6 +1579,7 @@ with sync_playwright() as p:
     pg.wait_for_function("window.__configReady === true", timeout=180000)
     pg.wait_for_function("window.__config.guide().running", timeout=30000)
     check(pg.is_visible("#guide") and pg.evaluate("window.__config.guide().at") == 0, "?tour=guided starts the guided tour")
+    check(pg.text_content("#panel a.back").strip() == "Adaptive ICU", "the configurator's link back names the site as the home page does")
     ctx.close()
 
     # ---------------------------------------------------------------- a script that can't load says so

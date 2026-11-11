@@ -16,7 +16,7 @@ Close other tabs.
 
 ## 1. Home page and guided tour (1½ min)
 
-1. Tap **Take the guided tour**. Count roughly how many seconds pass before the room appears.
+1. Tap **Take the 90-second tour**. Count roughly how many seconds pass before the room appears.
 2. Let two steps play by themselves, then tap **Pause**, **Next** and **Previous**.
 3. Tap **Restart**. It should go back to step 1 and play again.
 4. Tap **Exit**. The room should look as it did before the tour.
@@ -39,7 +39,7 @@ Tap **Physiological Adaptive Mode**. Does the panel fit the screen, and does **E
 
 ## 4. Walkthrough (1 min)
 
-Open **Walk the ICU**.
+Go back to the home page (**← Adaptive ICU** at the top of the options, or your browser's back button) and tap **Walk today's floor**.
 1. Orbit, then tap **First person**.
 2. On a phone or tablet, walk with the joystick. On a laptop, use W, A, S and D.
 3. Drop the person, then tap the view behind them.
