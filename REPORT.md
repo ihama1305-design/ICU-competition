@@ -223,18 +223,24 @@ PACS (the Physiological Adaptive Comfort System), APIS (the Adaptive Patient Int
 
 ### Performance
 
-The initial download is about 2.3 MB. The page draws only when something changes, or while the TV or fish are in view. Measured on one fast laptop, an Apple M5 GPU, timing the draw and a pixel read so the figure is the GPU's work and not the display's refresh rate:
+The initial download is about 2.3 MB. The page draws only when something changes, or while the TV or fish are in view. Measured on one fast laptop, an Apple M5 GPU, on 10 November 2026. Each figure is one whole frame as the page draws it while the view turns, timed from outside the page, with a one-pixel read after it so the time includes the GPU finishing and not the display's refresh rate:
 
-| Setup | Default, day | Heaviest of six tested |
+| Setup | Default, day | Heaviest of nine states |
 |---|---|---|
-| 1440 × 900 at 1x, full quality | 9 ms | 12 ms |
-| 1440 × 900 at 2x, full quality (capped to about 3.6 megapixels) | 22 ms | 28 ms |
-| 1440 × 900 at 2x, low-power mode | 13 ms | 15 ms |
-| 390 × 844 at 3x, low-power mode, on this laptop's GPU | 8 ms | 8 ms |
+| 1440 × 900 at 1x, full quality (High) | 12 ms | 12 ms |
+| 1440 × 900 at 2x, full quality (capped to about 3.6 megapixels) | 14 ms | 15 ms |
+| 1440 × 900 at 2x, low-power mode (Low) | 13 ms | 13 ms |
+| 390 × 844 at 3x, low-power mode, on this laptop's GPU | 10 ms | 10 ms |
+
+- **The nine states:** the room as it loads; each of the five lighting schemes at night; the Desert Sanctuary and Family Suite themes by day; and the TV and digital aquarium both playing. They differ by less than the 1 ms that the same row moves between two runs.
+- **About 7.5 ms of every figure is the pixel read's own wait, not drawing.** A frame at phone size on Low has almost nothing to draw and still waits that long, and four times the pixels adds 0.6 ms. On High at 2x the drawing adds about 4.4 ms. The page's own work each frame is 1.4 to 3.4 ms.
+- **Every setup held 60 frames a second** while the view turned.
+- **Until 10 November this table read 9, 22, 13 and 8 ms,** and 12, 28, 15 and 8 at the heaviest of six states that weren't recorded. Those came from the page's own timer. It draws once itself while the page draws once more in the same frame, so on High at 2x it reads 21 to 22 ms where a whole frame takes 14. On the lighter setups it read a little under a whole frame, because it leaves out the page's own work. `docs/adaptive-icu-baseline.md` has the working.
+- **Since 10 November the page picks High or Low itself:** it times a few frames after loading (Auto), remembers the answer, and the visitor can overrule it with the Quality control.
 
 **These are a best case, not a promise.** A typical integrated GPU will be several times slower, and no phone GPU was measured. So the page protects itself: if frames stay slower than about 30 a second while the view moves, it lowers the resolution step by step, then drops the bloom. Phones and small screens start in the low-power mode, with no bloom or glass transmission and fewer lights.
 
-Each lighting scheme only turns on the lights it uses. With all 11 kept on at zero brightness, the 2x case took 43 ms. The price is a short recompile the first time a scheme is chosen, typically a fraction of a second.
+Each lighting scheme only turns on the lights it uses. With all 11 kept on at zero brightness, the 2x case took 43 ms against 22 ms, on the page's own timer. The price is a short recompile the first time a scheme is chosen, typically a fraction of a second.
 
 ### Checks
 
