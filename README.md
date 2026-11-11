@@ -1,12 +1,31 @@
-# Walk the SSMC ICU
+# Adaptive ICU
 
-A realistic, walkable 3D model of the existing ICU at Sheikh Shakhbout Medical City (Tower D, 4th floor, Part a), built for the SSMC ICU Interior Design Student Competition. The walls, doors, glazing and joinery are read straight from the vector CAD layers of the as-built record drawing. The 16 patient rooms are furnished with a typical ICU kit, and the scene is rendered with Blender Cycles.
+**A room that adapts to the patient in it.** Adaptive ICU is our proposal for the fourth-floor ICU at Sheikh Shakhbout Medical City (SSMC), made for the SSMC ICU Interior Design Student Competition. It's a patient room that changes its light, blinds and glass with the time of day, the patient's own preferences and the care being given. A nurse approves every change.
 
-**[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Walk through the model](https://ihama1305-design.github.io/ICU-competition/viewer/)** · **[Configure a room](https://ihama1305-design.github.io/ICU-competition/configurator/)** · **[See the ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/)** · **[Read the report](REPORT.md)**
+**[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Take the 90-second tour](https://ihama1305-design.github.io/ICU-competition/configurator/?tour=guided)** · **[Configure a room](https://ihama1305-design.github.io/ICU-competition/configurator/)** · **[Walk today's floor](https://ihama1305-design.github.io/ICU-competition/viewer/)** · **[See the ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/)** · **[Read the report](REPORT.md)**
 
-The model and walkthrough show the floor as built, as a starting point for a redesign. The configurator is a design proposal built on top of it. All of it is independent student work, not made or endorsed by SSMC. Furnishings and finishes are assumed; [REPORT.md](REPORT.md) separates what is measured from what is assumed.
+![Isolation room W1 as proposed, in the Desert Sanctuary theme at sunset](assets/img/proposal-room-1400.webp)
 
-![Patient room](renders/room_entry.png)
+## What the room does
+
+Six things this room does that today's doesn't. Each one runs in the [room configurator](https://ihama1305-design.github.io/ICU-competition/configurator/), on the measured shape of rooms W1 and W3.
+
+- **Room modes.** One tap sets the room for Comfort, Privacy, Clinical work or an emergency. The lights, blinds and glass change together. ([More](#configure-a-room))
+- **PACS, the Physiological Adaptive Comfort System.** The monitor's readings and the patient's own preferences lead to a suggestion, such as softer light. A nurse approves it before the room changes. ([More](#physiological-adaptive-comfort-system-pacs))
+- **APIS, the Adaptive Patient Interface System.** How tubes, lines and sensors sit on the patient: what touches the skin, how each is secured and where it runs, with its clinical limits stated. ([More](#adaptive-patient-interface-system-apis))
+- **Patient view.** The room from the pillow, turning only as far as a head can. The screen opposite the bed can show the day, the date and the time.
+- **Clinical view.** Labels on the equipment, and shaded areas to keep clear for care around the bed. A sketch for discussion, not a compliance check.
+- **Remote care for the isolation room.** A sound sensor hears a groan or a call for help and asks the nurse to look in through the glass first, and the air is cleaned in the plant, out of sight. Fewer unnecessary entries, never fewer checks. ([More](#remote-care-for-the-isolation-room))
+
+Every patient reading is simulated: the figures are made up, no microphone is used, and nothing here changes an alarm or a medical device.
+
+## Built on the floor as it is today
+
+The proposal sits on a realistic, walkable 3D model of the existing ICU (Tower D, 4th floor, Part a). The walls, doors, glazing and joinery are read straight from the vector CAD layers of the as-built record drawing. The 16 patient rooms are furnished with a typical ICU kit, and the scene is rendered with Blender Cycles.
+
+The model and walkthrough show the floor as built, as the starting point for the redesign. The configurator is the design proposal, built on top of it. All of it is independent student work, not made or endorsed by SSMC. Furnishings and finishes are assumed; [REPORT.md](REPORT.md) separates what is measured from what is assumed.
+
+![A patient room in the model of the floor as built](renders/room_entry.png)
 
 ## Walk through it
 
@@ -14,7 +33,7 @@ The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) ru
 
 - <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to walk, <kbd>Shift</kbd> to run, drag or arrow keys to look. Touch screens get a joystick that walks forward, back and sideways, a little or a lot, and you drag the view to turn. On a phone the controls sit in one row that scrolls sideways, so the room keeps most of the screen.
 - The page draws only when something changes, so an idle page costs almost nothing. That matters most for a phone's battery.
-- **Graphics quality.** Phones and small screens get a lighter tier: no antialiasing, at most 1.5 pixels per screen point, and plain see-through glass instead of transmission glass, which costs a whole extra render pass. Any device steps its resolution down if it can't keep up. Every feature stays at either tier, and `?tier=low` or `?tier=high` picks one, as on the configurator.
+- **Graphics quality.** A **Quality** control offers Auto, High and Low, and remembers the choice in this browser. High has smoothed edges, glass that bends light (a whole extra render pass) and up to 2 pixels per screen point. Low has neither, with plain see-through glass and up to 1.5. Auto times a few frames after loading and picks; a phone or tablet starts on Low, and you can still choose High. Any device steps its resolution down if it can't keep up. Every feature stays at either tier, and `?tier=low` or `?tier=high` picks one, as on the configurator.
 - <kbd>V</kbd> shows the person from behind.
 - Walls, counters and the facade stop you. Doors and glass fronts let you through.
 - The plan in the corner shows where you are. Click it to jump.
@@ -29,7 +48,7 @@ The [configurator](https://ihama1305-design.github.io/ICU-competition/configurat
 - **Rooms:** isolation room W1 with its ante room, or standard room W3.
 - **Views:** Overview, Family zone, Entrance, From the bed, Head turned, Window and Dollhouse. Drag to look around, or press <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>+</kbd> <kbd>-</kbd>. There's also a cinematic tour that starts and ends at the Dollhouse.
 - **Patient view:** the camera moves to the pillow and stays there. Drag or use the arrow keys to turn your head, as far as a head can turn, from your own body up to the ceiling. <kbd>+</kbd> <kbd>-</kbd> narrow or widen what you take in. **Return**, or <kbd>Esc</kbd>, goes back to the view you came from.
-- **Guided tour:** a button at the top of the panel starts nine captioned steps, about a minute and a half. They cover the room as a proposal, the as-built kit, Patient view, the Comfort, Clinical and Emergency-ready modes with Clinical view, placing items, and a theme at sunset, and end by pointing to the PACS and APIS demos. Previous, Pause, Next, Restart and Exit are always there; dragging the room pauses it, and with reduced motion it waits for Next. Exit, Finish or Esc puts the room back exactly as it was, and Restart does the same before playing again from the first step. The home page's **Take the guided tour** link opens the configurator straight into it (`configurator/?tour=guided`).
+- **Guided tour:** a button at the top of the panel starts nine captioned steps, about a minute and a half. They cover the room as a proposal, the as-built kit, Patient view, the Comfort, Clinical and Emergency-ready modes with Clinical view, placing items, and a theme at sunset, and end by pointing to the PACS and APIS demos. Previous, Pause, Next, Restart and Exit are always there; dragging the room pauses it, and with reduced motion it waits for Next. Exit, Finish or Esc puts the room back exactly as it was, and Restart does the same before playing again from the first step. The home page's **Take the 90-second tour** button opens the configurator straight into it (`configurator/?tour=guided`).
 - **Before and after:** **Compare with today's room** shows every option at its default, with none of your placed items, at the same view and time. Press it again for your room. Your design and its link don't change while it shows, and any change to the room ends the comparison first.
 - **Orientation screen:** the TV can show the weekday, the date and the room's own time of day, large enough to read from the bed and darker at night. It shows no patient details.
 - **Room modes:** Standard, Comfort, Privacy, Clinical and Emergency-ready, in a bar over the room on every screen size. A mode is a scene laid over the room as configured: it never changes a choice, the link or the summary, and Standard puts back exactly what was there. Comfort warms and dims the lights and lowers the blinds over about two seconds. Between sunset and sunrise, from the sun's height the room already computes, it leaves the blinds as they are, changes only the lighting and says why in one line; PACS does the same with its blinds recommendation. A small daylight sensor on each room's window sill stands for that reading, and its card gives the sun's height now. Privacy still lowers the blinds after dark, since they're for privacy there. Privacy turns smart glass on the glazed front opaque and lowers the blinds halfway, and staff can end it at any moment. Clinical turns the light up and the examination task light on. Emergency-ready, started by staff, sets full light and the task light, turns the TV and aquarium screen off and clears the glazed front, and its Exit goes back to the mode before it. A chip says clinical alarms are unaffected, and none of this touches the monitor or any medical device. Changing the room's design ends a mode, and PACS, which keeps its own scene, closes when a mode starts.
