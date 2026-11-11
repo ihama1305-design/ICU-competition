@@ -52,6 +52,12 @@
     <p><strong>Emergency-ready</strong>, started by staff. Room lights full, task light on, the TV and aquarium screen off, the glazed front clear. The monitor keeps running; clinical alarms and medical devices are not changed.</p>
     <button type="button" id="leaveEmergency">Exit Emergency-ready</button>
   </div>
+  <section id="vocalNotice" class="mode-banner vocal-notice" aria-labelledby="vocalKicker" hidden>
+    <p id="vocalKicker" class="vocal-kicker">Notice at the nurse station · SIMULATED</p>
+    <p id="vocalText"></p>
+    <p id="vocalMeta" class="vocal-meta"></p>
+    <button type="button" id="vocalAck">Acknowledge</button>
+  </section>
   <button type="button" id="leavePatient" class="leave-patient" hidden>Return</button>
 </div>
 <div id="announce" class="sr" aria-live="polite"></div>
@@ -160,8 +166,12 @@
         <input id="demoTemp" type="range" min="18" max="28" value="23" step="1">
         <label class="demo-control" for="demoHumidity"><span>Room humidity</span><output id="demoHumidityValue" for="demoHumidity">45%</output></label>
         <input id="demoHumidity" type="range" min="30" max="70" value="45" step="1">
-        <button type="button" id="previewSoundAlert" class="outline-action">Preview sound alert</button>
-        <p id="systemStatus" class="note" role="status">Sound sensor is a visual concept only. No microphone is used and no alert reaches staff.</p>
+        <div class="demo-sounds" role="group" aria-labelledby="hSounds">
+          <p id="hSounds" class="demo-title">Sound sensor: hear through a closed door</p>
+          <button type="button" class="outline-action" data-sound="call">Simulate a call for help</button>
+          <button type="button" class="outline-action" data-sound="groan">Simulate a groan</button>
+        </div>
+        <p id="systemStatus" class="note" role="status">The sound sensor is a concept. No microphone is used, nothing is recorded, and no notice leaves this page.</p>
       </div>
     </details>
 

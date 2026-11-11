@@ -1698,7 +1698,7 @@
       {"id":"on","label":"Show sensor","effects":[{"do":"addon","id":"soundSensor","on":true}],"code":0},
       {"id":"off","label":"Hide sensor","effects":[{"do":"addon","id":"soundSensor","on":false}],"code":1}
      ],
-     "note": {"text":"Visual mockup only. It does not use a microphone, identify a patient, assess pain, store speech, or send an alert to staff."},
+     "note": {"text":"A concept, simulated here. It would hear a groan or a call for help through a closed door and put a notice in front of the nurse. Ventilated or sedated patients may make no sound, and alarms cause false alerts. Sounds would be classified on the device and never stored. This model uses no microphone."},
      "code": 31
     }
    ]
@@ -1791,7 +1791,7 @@
  ],
  "cleanAir": {
   "_": "The wall comfort control's card: filters and UV-C in the air handling plant. A concept, with nothing drawn in the room. The rows are a copy of ventilation.clean_air in spec/icu_spec.json, which the ventilation plan page is built from; 12_check_pacs_state.mjs fails if they differ.",
-  "titles": {"isolation": "Clean air for this isolation room", "patient": "Clean air for this ICU room"},
+  "titles": {"isolation": "Clean air for this isolation room · concept", "patient": "Clean air for this ICU room · concept"},
   "sources": [{"label": "Ventilation concept plan: the basis for each row", "url": "../ventilation/#clean-air"}],
   "rows": [
    {"id": "supply_filters", "label": "Supply filters", "isolation": "Two stages in the air handling unit: MERV 8 or better, then MERV 14 or better after the cooling coil.", "patient": "Two stages in the air handling unit: MERV 8 or better, then MERV 14 or better after the cooling coil.", "basis": "HFG Part E 2026 (Filtration)"},
@@ -1800,6 +1800,16 @@
    {"id": "uvc_exhaust", "label": "UV-C in the exhaust duct", "isolation": "An extra step with the HEPA filter. It replaces neither the filter nor the air changes.", "patient": "None. Upper-room UV-C is the guidance's option for critical care rooms, and isn't modelled.", "basis": "DHA Part D (Class N exhaust); HFG Part E 2026: an additional measure, not mandatory; CDC 2003: supplemental only"},
    {"id": "not_proposed", "label": "Not proposed", "isolation": "Fogging, ozone, ionisers and photocatalytic cleaners. Nothing is sprayed or released into the room's air.", "patient": "Fogging, ozone, ionisers and photocatalytic cleaners. Nothing is sprayed or released into the room's air.", "basis": "CDC 2003: no disinfectant fogging in patient-care areas. HFG Part E 2026 doesn't encourage electronic or photocatalytic cleaners, because of ozone"},
    {"id": "not_designed", "label": "Not designed", "isolation": "The HEPA grade, lamp output, safe filter changes, and where the plant and ducts go.", "patient": "The HEPA grade, lamp output, safe filter changes, and where the plant and ducts go.", "basis": "Assumed"}
+  ]
+ },
+ "vocalCue": {
+  "_": "The sound sensor's card: the limits of the vocal-distress cue. The cue itself is in vocal.js and main.js. SIMULATED: no microphone, nothing stored.",
+  "title": "Limits",
+  "rows": [
+   {"id": "silent", "label": "Silent patients", "text": "Ventilated or sedated patients may make no sound. Quiet is never a sign that all is well."},
+   {"id": "false_alerts", "label": "False alerts", "text": "Alarms, visitors and a television can set it off. The nurse looks before acting."},
+   {"id": "privacy", "label": "Privacy", "text": "Sounds are classified on the device. Nothing is recorded, stored or sent."},
+   {"id": "model", "label": "This model", "text": "Uses no microphone. The sounds are the two buttons."}
   ]
  }
 }
