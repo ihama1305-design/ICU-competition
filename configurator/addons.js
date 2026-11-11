@@ -410,7 +410,8 @@ Object.assign(BUILD, {
     const light = std("#4aaeb2", 0.35, { emissive: "#4aaeb2", emissiveIntensity: 0.45 });
     light.name = "comfort_status"; // the Comfort systems temperature slider tints it
     const wall = room.label === "W1" ? [17.78, 30.85] : [14.40, 21.4];
-    const control = tagItem(box(0.19, 0.24, 0.035, std("#e6e9e7", 0.48), 0, 0, 0), "Room comfort control", "A wall-mounted temperature and humidity control concept. It is not connected to room equipment or patient measurements.");
+    const control = tagItem(box(0.19, 0.24, 0.035, std("#e6e9e7", 0.48), 0, 0, 0), "Room comfort control", "A wall-mounted temperature and humidity control concept. It is not connected to room equipment or patient measurements. The air behind it is cleaned in the plant room, out of sight:");
+    control.userData.itemInfo.rowsFrom = "cleanAir"; // its card lists the clean-air rows from options.json (main.js showObjectCard)
     control.position.copy(W2T(wall[0], wall[1], 1.55)); control.rotation.y = Math.PI / 2; g.add(control);
     const led = tagItem(ball(0.025, light, 0, 0, 0), "Comfort control status light", "An illustrative status light for the room comfort concept. The Comfort systems temperature demo changes its colour.");
     led.position.copy(W2T(wall[0] - 0.045, wall[1], 1.61)); g.add(led);

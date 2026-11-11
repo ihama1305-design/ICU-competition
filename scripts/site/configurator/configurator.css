@@ -212,6 +212,13 @@ footer p { margin: 0; }
 .object-card h2 { margin: 0 26px 5px 0; color: var(--ink); font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .object-card p:not(.object-kicker) { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
 .object-card .object-sources a { color: var(--accent); text-underline-offset: 3px; }
+/* a card with a short table, such as the comfort control's clean-air rows: it can be taller than a small screen, so it scrolls */
+.object-card { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.object-card:has(.object-rows:not([hidden])) { width: min(340px, calc(100vw - 24px)); }
+.object-card p.object-rows-title { margin: 10px 0 2px; color: var(--ink); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.object-rows { margin: 0 0 8px; font-size: 12px; }
+.object-rows dt { margin-top: 6px; color: var(--ink); font-weight: 600; }
+.object-rows dd { margin: 1px 0 0; color: var(--muted); }
 .object-close { position: absolute; top: 7px; right: 8px; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 22px; cursor: pointer; }
 .object-close:hover { background: var(--hover); }
 @keyframes card-in { from { opacity: 0; transform: translateY(5px) scale(.98); } to { opacity: 1; transform: none; } }

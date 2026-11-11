@@ -106,11 +106,33 @@
   </table>
   </div>
 
+  <h2 id="clean-air">Clean air: filters and UV-C</h2>
+  <p>The air is cleaned in the air handling plant, out of sight. This layer adds no grille and no object to any room, so nothing on the plan above changes, and none of it needs anyone to open an isolation room's door. Like the grilles, it's a concept: no plant, duct or filter housing is designed or drawn.</p>
+  <div class="table-wrap">
+  <table class="basis" id="cleanAir">
+    <thead><tr><th scope="col">Layer</th><th scope="col">Isolation room</th><th scope="col">ICU patient room</th><th scope="col">Basis</th></tr></thead>
+    <tbody>
+<tr data-row="supply_filters"><th scope="row">Supply filters</th><td colspan="2">Two stages in the air handling unit: MERV 8 or better, then MERV 14 or better after the cooling coil.</td><td>HFG Part E 2026 (Filtration)</td></tr>
+<tr data-row="leaving_air"><th scope="row">Air leaving the room</th><td>All exhausted through a HEPA filter, then straight outdoors on its own fans. None is recirculated.</td><td>Return air goes back to the air handling unit and through both filter stages again.</td><td>Isolation: HFG Part E 2026 (Class N); DHA Part D Table 5. ICU room: assumed from where the filters sit</td></tr>
+<tr data-row="uvc_coil"><th scope="row">UV-C on the cooling coil</th><td colspan="2">Lamps just after the coil, to stop mould growing on it. The access door has a safety switch.</td><td>HFG Part E 2026: encouraged for cooling coil surfaces</td></tr>
+<tr data-row="uvc_exhaust"><th scope="row">UV-C in the exhaust duct</th><td>An extra step with the HEPA filter. It replaces neither the filter nor the air changes.</td><td>None. Upper-room UV-C is the guidance&#x27;s option for critical care rooms, and isn&#x27;t modelled.</td><td>DHA Part D (Class N exhaust); HFG Part E 2026: an additional measure, not mandatory; CDC 2003: supplemental only</td></tr>
+<tr data-row="not_proposed"><th scope="row">Not proposed</th><td colspan="2">Fogging, ozone, ionisers and photocatalytic cleaners. Nothing is sprayed or released into the room&#x27;s air.</td><td>CDC 2003: no disinfectant fogging in patient-care areas. HFG Part E 2026 doesn&#x27;t encourage electronic or photocatalytic cleaners, because of ozone</td></tr>
+<tr data-row="not_designed"><th scope="row">Not designed</th><td colspan="2">The HEPA grade, lamp output, safe filter changes, and where the plant and ducts go.</td><td>Assumed</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <ul>
+    <li><strong>Filters do the work.</strong> UV-C is an extra. International guidance calls it an additional measure and "not a mandatory requirement", and CDC treats it as a supplement to filtration.</li>
+    <li><strong>Upper-room UV-C isn't modelled.</strong> The guidance also allows fittings high on the wall of an isolation or critical care room. This concept keeps the lamps in the plant and the duct, so nothing new is on show in the room.</li>
+    <li><strong>No filter grades from ASHRAE.</strong> The copy of ASHRAE 170 read here is Table 7.1 and its notes only. It allows HEPA units as a supplement in an isolation room but holds no filter table, so the grades above come from the international guidelines alone.</li>
+  </ul>
+
   <h2>Sources, and how far they go</h2>
   <ul>
     <li><strong>ASHRAE 170.</strong> Air changes and pressures were read from Table 7.1 of the <a href="https://www.aafthailand.com/wp-content/uploads/2020/05/170-2008with_abdefg_edits.2.pdf">2008 edition with addenda</a>. The current edition is <a href="https://webstore.ansi.org/standards/ashrae/ansiashraeashe1702025">170-2025</a>, which is paywalled and wasn't read, so these values may have changed.</li>
-    <li><strong>International Health Facility Guidelines, Part E</strong> (<a href="https://www.healthfacilityguidelines.com/ViewPDF/ViewIndexPDF/Mechanical_HVAC_Engineering_Design">August 2026</a>). Repeats 6 air changes for intensive care rooms, and 12 for negative-pressure isolation with 10 in the ante room, and places the exhaust.</li>
-    <li><strong>Dubai Health Authority, Part D</strong> (<a href="https://services.dha.gov.ae/tahpi-app/HealthFacilityGuidelines/Guidelines/FileContent/Preview/DHAHFG/Part%20D_4%20-%20Isolation%20Rooms">Isolation Rooms</a>). Gives the −10, −5 and −15 Pa gradient and requires an ante room. These are Dubai's rules, not Abu Dhabi's.</li>
+    <li><strong>International Health Facility Guidelines, Part E</strong> (<a href="https://www.healthfacilityguidelines.com/ViewPDF/ViewIndexPDF/Mechanical_HVAC_Engineering_Design">August 2026</a>). Repeats 6 air changes for intensive care rooms, and 12 for negative-pressure isolation with 10 in the ante room, and places the exhaust. The filter stages, the HEPA-filtered isolation exhaust and the UV-C rows were read from it too. Its Annexure A-3, which lists filtration by room, isn't in the file and <strong>wasn't read</strong>.</li>
+    <li><strong>Dubai Health Authority, Part D</strong> (<a href="https://services.dha.gov.ae/tahpi-app/HealthFacilityGuidelines/Guidelines/FileContent/Preview/DHAHFG/Part%20D_4%20-%20Isolation%20Rooms">Isolation Rooms</a>). Gives the −10, −5 and −15 Pa gradient and requires an ante room. It asks for the isolation exhaust to be HEPA-filtered and given UV. These are Dubai's rules, not Abu Dhabi's.</li>
+    <li><strong>CDC, Guidelines for Environmental Infection Control in Health-Care Facilities</strong> (<a href="https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm">2003</a>). Treats UV as a supplemental control only, and says not to fog disinfectant in patient-care areas. The air and cleaning recommendations were read; the rest of this long report wasn't.</li>
     <li><strong>Abu Dhabi Department of Health.</strong> Its guidance governs this hospital, and <strong>it wasn't found or read</strong>. It has to be checked before any of this could apply.</li>
     <li><strong>FGI Guidelines.</strong> The edition that adopts these figures wasn't read directly.</li>
   </ul>
