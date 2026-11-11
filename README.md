@@ -91,6 +91,8 @@ Verification performed: PACS state/approval rules; W1 and W3 monitor displays, l
 
 The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/) shows supply, return and exhaust grilles for the floor, with the air-change and pressure basis for each kind of room. **It's concept work, not SSMC's mechanical design:** the drawings show no grilles, ducts or air data. The grilles are hidden in the walkthrough, the renders and the configurator for now, so the plan is the only place they show. The model still builds them, hidden, from the same list.
 
+The plan also has a clean-air table: two filter stages on the supply, a HEPA-filtered exhaust from the isolation rooms, and UV-C in the plant as an extra. It's all out of sight, with no new grilles, and it doesn't propose fogging, ozone or ionisers. In the configurator, clicking the wall comfort control shows the same rows for that room.
+
 ## Renders
 
 | | |

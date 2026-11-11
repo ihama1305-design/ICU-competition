@@ -782,7 +782,13 @@ function showObjectCard(info, x, y) {
     $("objectDescription").textContent = `${info.description} Drag it to move it. With this card focused, the arrow keys move it${onFloor ? ", R turns it" : ""} and Delete removes it.`;
   }
   // a card that cites a source: the same links as the option note it names, so a source lives in one place, options.json
-  const sources = info.sourcesFrom ? groupById(info.sourcesFrom)?.note?.sources || [] : [];
+  // a card with a short table: rows from a named block of options.json, in the column for this kind of room. The comfort
+  // control's clean-air rows are the same list as the ventilation plan's, and the block's link leads to the basis there
+  const table = info.rowsFrom ? optionData[info.rowsFrom] : null, kind = rig.meta.isolation ? "isolation" : "patient";
+  $("objectRowsTitle").textContent = table ? `${table.titles[kind]} · concept` : "";
+  $("objectRows").replaceChildren(...(table?.rows || []).flatMap(r => [el("dt", { textContent: r.label }), el("dd", { textContent: r[kind] })]));
+  $("objectRowsTitle").hidden = $("objectRows").hidden = !table;
+  const sources = table?.sources || (info.sourcesFrom ? groupById(info.sourcesFrom)?.note?.sources || [] : []);
   $("objectSources").replaceChildren(...sources.map(s => Object.assign(document.createElement("a"), { href: s.url, textContent: s.label, target: "_blank", rel: "noopener noreferrer" })));
   $("objectSources").hidden = !sources.length;
   if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
