@@ -78,7 +78,7 @@ Clinical references appear beside the examples: the [2025 International Guidelin
 
 Source files: `scripts/site/configurator/apis.js`, `apis-data.js` and `apis.css`, with small integration points in `main.js` and `configurator.template.html`. The existing `06_build_site.py` publishes them. The committed `configurator/` copies are kept in sync so the static site can run without rebuilding Blender. No new runtime package or backend is needed.
 
-The inspected checkout contains patient bed views, general room views, clickable equipment, patient comfort profiles and profile before/after comparison. A dedicated emergency mode or a view explicitly named “clinical” was not present in this checkout; APIS does not remove or replace any existing control.
+The inspected checkout contains patient bed views, general room views, clickable equipment, patient comfort profiles and profile before/after comparison. APIS does not remove or replace any existing control.
 
 The focused browser check is `node scripts/11_check_apis.mjs` (install Playwright with `npm install --prefix build/apis-tools playwright`; uses installed Chrome/Edge when available). It serves the site under a repository subpath and writes review screenshots to `build/shots/`.
 
