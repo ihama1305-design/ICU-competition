@@ -1262,7 +1262,11 @@ window.__config = {
   }),
   autoQuality: ms => autoQuality(ms),
   noteFrame: ms => stage.noteFrame(ms),
-  /** Real cost of drawing while orbiting: the draw is followed by a pixel read, so it times the GPU finishing, not the display's refresh. */
+  /**
+   * Cost of drawing while orbiting: the draw is followed by a pixel read, so it times the GPU finishing, not the display's refresh.
+   * It reads long: orbiting also makes the page draw its own frame, so two draws are queued when the read waits, and the read
+   * itself costs several milliseconds. scripts/perf_baseline.py times one whole frame from outside (docs/adaptive-icu-baseline.md).
+   */
   perf: async (seconds = 4) => {
     const gl = stage.renderer.getContext(), px = new Uint8Array(4), times = [];
     const end = performance.now() + seconds * 1000;

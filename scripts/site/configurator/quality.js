@@ -37,13 +37,14 @@ export function pixelRatio(dpr, w, h, tier, limit = Infinity) {
 /**
  * Auto's decision, from how long this device takes to draw a frame.
  * `medianMs`: the median time to draw one frame and wait for the GPU to finish it, over the first few frames. Waiting makes
- *   it longer than a normal, pipelined frame: a fast laptop that orbits at 60 fps measures 16 to 21 ms on High at 1440 x 900 @2x.
+ *   it longer than a normal, pipelined frame: a fast laptop that orbits at 60 fps measures 12 to 16 ms on High at 1440 x 900 @2x,
+ *   about 7.5 ms of which is the wait itself.
  * `current`: the tier those frames were drawn in, "high" or "low". On the M5, Low frames cost 0.38 to 0.73 of High ones.
  * `isHandheld`: a phone or tablet, which Auto only ever steps down (see below).
  * Returns the tier to use: "high" or "low".
  *
  * High is kept while a frame takes at most 35 ms: about 30 a second once the wait for the GPU is taken off, and clear of the
- * 22 to 28 ms the M5 takes at 1440 x 900 @2x (REPORT.md, "Performance"). No figure here comes from a software renderer.
+ * 14 to 15 ms a whole frame takes on the M5 at 1440 x 900 @2x (REPORT.md, "Performance"). No figure here comes from a software renderer.
  * From Low, a frame on High is assumed to cost the most it was seen to, 1 / 0.38 times as much, so Low steps up only at
  * 13 ms or less. Then a device can't flip between the two on alternate visits: what makes it step up keeps it on High,
  * and what makes it drop keeps it on Low.

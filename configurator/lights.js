@@ -1,6 +1,6 @@
 // Electric lighting. The numbers for each scheme live in options.json; this turns them into lights and glowing fixtures.
 // Each scheme turns on only the lights it uses, because every light costs on every pixel: measured on an M5 at 2x, all of them
-// on at zero brightness took 43 ms a frame. The price is a short recompile the first time a scheme is chosen.
+// on at zero brightness took 43 ms against 22 ms on the page's own timer. The price is a short recompile the first time a scheme is chosen.
 // Real-time lights don't bounce, so a cove's soft glow is drawn: a gradient on the ceiling and wall, and a bright strip for the bloom pass.
 import * as THREE from "three";
 import { W2T } from "./stage.js";

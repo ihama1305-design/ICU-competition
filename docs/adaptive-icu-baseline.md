@@ -10,7 +10,7 @@ Measured on 8 November 2026, before any Adaptive ICU change. Main was at `d6f295
 - **Load:** milliseconds from navigation to the page's own ready flag (`__viewerReady` or `__configReady`). That is when the model is in place and the first frame can draw.
 - **Walkthrough FPS:** frames per second over 8 s while idle. It redraws every frame even when nothing moves.
 - **Configurator FPS:** it draws only when something changes, so it was measured while orbiting a little on every frame for 8 s.
-- **Configurator draw cost:** the configurator's own `perf()` timer, which times one draw plus a pixel read, so it measures the GPU finishing.
+- **Configurator draw cost:** the configurator's own `perf()` timer, which times one draw plus a pixel read, so it measures the GPU finishing. (Later found to cover two draws: see "One configurator frame, taken apart".)
 - **Download:** Resource Timing transfer size. It may undercount cross-origin files that don't send timing headers.
 
 ## Results
@@ -122,8 +122,33 @@ What this shows:
 - **On the worst case Auto steps down by itself.** On the software renderer it timed one frame at 1.3 and 1.8 s, chose Low and remembered it. The walkthrough then drew a frame in about 0.5 s where the old default took 4.1 s, and the configurator in about 5.1 s where it took 11.8 s.
   - That is still far too slow to use. The software renderer stands for the worst case, not for an ordinary laptop, and no threshold is tuned from it.
   - The walkthrough's first visit keeps its antialiasing, which can only be set when the page loads. The next visit starts on Low without it; the old version forced to Low drew a frame in about 0.3 s.
-- **The configurator's draw column counts two draws.** Its timer draws once itself, and the page draws once more in the same frame because the view moved: 189 timed draws and 189 of the page's own in one 4-second window. So 20.7 ms is about two frames, and one is nearer the 11.8 ms that Auto times. The column is still like for like with "before", which was measured the same way.
+- **The configurator's draw column counts two draws.** Its timer draws once itself, and the page draws once more in the same frame because the view moved: 189 timed draws and 189 of the page's own in one 4-second window. The column is still like for like with "before", which was measured the same way. The next section takes one frame apart.
 - **Load and idle are unchanged.** The walkthrough downloads 1.9 MB and the configurator about 0.8 MB (it was 0.79 MB at `e92f613`); both were ready in 0.3 to 1.2 s here; the walkthrough still draws nothing while idle.
+
+### One configurator frame, taken apart
+
+Measured later the same afternoon, on `f712de8`. The script now times one whole configurator frame from outside the page, the way it times the walkthrough: the page's own frame callback, then a one-pixel read. A second pass split each frame into the page's own work and the wait for that read.
+
+| Setup | The page's own work (ms) | Wait for the pixel read (ms) | Whole frame (ms) | Whole frame in the states run, run 1 / 2 (ms) |
+|---|---|---|---|---|
+| 1440×900 @1x, High | 2.5 | 7.7 | 10.2 | 12.2 / 11.7 |
+| 1440×900 @2x, High | 1.4 | 11.9 | 13.4 | 14.1 / 14.0 |
+| 1440×900 @2x, Low | 3.4 | 8.1 | 11.5 | 13.1 / 12.0 |
+| 390×844 @3x, Low | 2.3 | 7.5 | 10.0 | 10.3 / 9.8 |
+
+What this shows:
+- **A pixel read costs about 7.5 ms whatever is drawn.** At phone size on Low there are 0.74 million pixels and almost nothing to draw, and the read still waits 7.5 ms. Four times the pixels, at 1440×900 @2x on Low, adds 0.6 ms. So every figure in this file that ends with a pixel read carries about 7.5 ms that a normal frame doesn't.
+- **On High at 2x, drawing adds about 4.4 ms** to that wait, and a second queued draw adds about as much again. The three timers then agree:
+  - Auto's own timing, one draw with nothing else queued: 11.8 ms.
+  - A whole frame, one draw and the page's own work: 13.4 to 14.1 ms.
+  - The page's `perf()`, two draws: 20.7 to 21.0 ms.
+- **`perf()` isn't simply double.** On the lighter setups it reads a little under a whole frame (10.6 against 11.9 ms at 1x on High, 8.8 against 10.1 ms at phone size), because the second draw is cheap there and `perf()` leaves out the page's own work.
+- **Nine room states barely differ.** Each was loaded fresh and timed at all four setups, twice: the room as it loads, each of the five lighting schemes at night, the Desert Sanctuary and Family Suite themes by day, and the TV and digital aquarium both playing. The heaviest was the cove scheme at night on High at 2x, 14.6 ms against 14.1 ms for the default. Elsewhere no state was above the default, and the same row moves by up to about 1 ms between runs.
+- **Everything held 60 frames a second.**
+
+REPORT.md's "Performance" table was corrected from these: it had 9, 22, 13 and 8 ms from `perf()`, and now has the whole-frame figures.
+
+Raw rows are in `build/perf_report-high-1.json`, `-high-2.json`, `perf_report-low-1.json` and `-low-2.json`. To repeat: `.venv/bin/python -I scripts/perf_baseline.py . <label> --viewports 1440x900@1,1440x900@2 --tiers high --pages configurator --states all`, and the same with `--viewports 1440x900@2,390x844@3 --tiers low`. The states are named in `STATES` in the script.
 
 **Still not measured:** an ordinary laptop with integrated graphics, which is what this work is for. That needs `?stats=1` readouts from real devices.
 

@@ -99,9 +99,10 @@ for (const current of ["high", "low"]) {
   let seenLow = false; // slower never picks a higher tier
   for (let ms = 1; ms <= 600; ms += 0.5) { const t = Q.pickTier(ms, current); assert.ok(t === "high" || t === "low"); if (t === "low") seenLow = true; else assert.ok(!seenLow, `${current}: ${ms} ms went back to High`); }
 }
-// what the M5 laptop measured on 10 November (High, 1440 x 900 @2x: 16 ms walkthrough, 21 ms configurator) keeps High,
-// and so do REPORT.md's figures for it (22 ms by default, 28 ms with the heaviest options); its 13 ms on Low steps back up
-for (const ms of [16, 21, 22, 28]) assert.equal(Q.pickTier(ms, "high"), "high", `${ms} ms on High keeps High`);
+// what the M5 laptop measured on 10 November keeps High (High, 1440 x 900 @2x: Auto's own timing read 16 ms in the walkthrough
+// and 12 ms in the configurator, whose two-draw timer read 21 ms), and so do REPORT.md's whole-frame figures for it (14 ms by
+// default, 15 ms at the heaviest); its 13 ms on Low steps back up
+for (const ms of [12, 14, 15, 16, 21]) assert.equal(Q.pickTier(ms, "high"), "high", `${ms} ms on High keeps High`);
 assert.equal(Q.pickTier(13, "low"), "high");
 // no flip-flopping between visits: on the M5, Low cost 0.38 to 0.73 of High. A device that steps up stays up next time, and
 // one that drops stays down
