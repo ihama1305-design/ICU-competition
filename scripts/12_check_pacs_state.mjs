@@ -124,3 +124,29 @@ assert.equal(budget, Q.PIXEL_BUDGET, "the same pixel budget");
 const ratioInline = new Function("PIXEL_BUDGET", `return ${/pixelRatio: (\(dpr[^\n]*\)\)),\n/.exec(tpl)[1]}`)(budget);
 for (const [dpr, w, h, t, lim] of [[2, 1440, 900, "high"], [2, 2560, 1440, "high"], [3, 390, 844, "low"], [2, 800, 600, "high", 1.25], [1, 1920, 1080, "high"]]) assert.equal(ratioInline(dpr, w, h, t, lim), Q.pixelRatio(dpr, w, h, t, lim));
 console.log("PASS graphics quality: a 3.6 megapixel budget, Auto starts where it measured last, and its choice is monotonic, keeps a fast laptop on High, doesn't flip-flop, never steps a phone up and is the same in the walkthrough");
+// ---------------------------------------------------------------- clean air: one list of rows, on the plan page and on the comfort control's card
+const icuSpec = JSON.parse(readFileSync(new URL("../spec/icu_spec.json", import.meta.url), "utf8"));
+const clean = icuSpec.ventilation.clean_air.rows;
+for (const copy of ["./site/configurator/options.json", "../configurator/options.json"]) {
+  assert.deepEqual(JSON.parse(readFileSync(new URL(copy, import.meta.url), "utf8")).cleanAir.rows, clean, `${copy}: the comfort control card's clean-air rows are the spec's, which the plan page is built from`);
+}
+const htmlEsc = t => t.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#x27;");
+const planPage = readFileSync(new URL("../ventilation/index.html", import.meta.url), "utf8");
+for (const r of clean) {
+  assert.ok(r.label && r.basis, `${r.id} has a label and a basis`);
+  for (const k of ["isolation", "patient"]) assert.ok(words(r[k]) <= 20, `clean air "${r.label}" (${k}) has ${words(r[k])} words: ${r[k]}`);
+  assert.ok(planPage.includes(`data-row="${r.id}"`) && planPage.includes(htmlEsc(r.isolation)) && planPage.includes(htmlEsc(r.patient)) && planPage.includes(htmlEsc(r.basis)), `the published plan page has the "${r.label}" row as the spec words it`);
+}
+const cleanRow = id => clean.find(r => r.id === id);
+// what the layer is: two filter stages, a HEPA-filtered isolation exhaust, and UV-C as an extra that replaces nothing
+assert.ok(/MERV 8\b/.test(cleanRow("supply_filters").isolation) && /MERV 14\b/.test(cleanRow("supply_filters").isolation));
+assert.ok(/HEPA/.test(cleanRow("leaving_air").isolation) && /None is recirculated/.test(cleanRow("leaving_air").isolation) && !/HEPA/.test(cleanRow("leaving_air").patient));
+assert.ok(/replaces neither the filter nor the air changes/.test(cleanRow("uvc_exhaust").isolation), "UV-C is an extra, never instead of the filter or the air changes");
+// what it isn't: nothing is fogged, ionised or released into the room, and those words appear only in the row that rules them out
+const proposed = clean.filter(r => r.id !== "not_proposed").map(r => `${r.label} ${r.isolation} ${r.patient}`).join(" ");
+assert.ok(!/fogg|ozone|ionis|ioniz|photocatal|plasma|peroxide/i.test(proposed), "no row proposes fogging, ozone or ionisers");
+assert.ok(/Fogging, ozone, ionisers/.test(cleanRow("not_proposed").isolation) && /CDC 2003/.test(cleanRow("not_proposed").basis));
+// what wasn't read is marked assumed, and nothing quotes a HEPA efficiency or a lamp dose, which no source read here gives
+assert.equal(cleanRow("not_designed").basis, "Assumed"); assert.ok(/assumed/i.test(cleanRow("leaving_air").basis));
+assert.ok(!/99\.9|mJ|µW|mW\/|W\/m/.test(JSON.stringify(clean)), "no HEPA efficiency or UV dose is quoted");
+console.log(`PASS clean air: ${clean.length} rows, the same on the plan page and the comfort control's card, at most 20 words a cell; filters and a HEPA exhaust with UV-C as an extra; no fogging, ozone or ionisers; the unread marked assumed`);

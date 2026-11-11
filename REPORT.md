@@ -108,11 +108,17 @@ The [plan](https://ihama1305-design.github.io/ICU-competition/ventilation/) has 
 | Pressures: room −10 Pa, ante room −5 Pa, toilet −15 Pa | Dubai DHA Part D, used as an assumption. HFG Part E recommends 10 Pa for the room |
 | Exhaust near the bed head, supply by the door | HFG Part E: "over the patient head or at low level near the head" |
 | Nurse station, offices and staff rooms: 6 air changes | **Assumed.** No row in the table read, and HFG Part E sends them to ASHRAE 62.1, which wasn't read |
+| Supply filters in two stages: MERV 8 or better, then MERV 14 or better after the cooling coil | HFG Part E (2026), Filtration |
+| Isolation exhaust through a HEPA filter, then outdoors, with none recirculated | HFG Part E (Class N). DHA Part D, Table 5 |
+| UV-C on the cooling coil, and in the isolation exhaust duct as an extra | HFG Part E, which calls it an additional measure and "not a mandatory requirement". DHA Part D. CDC 2003 treats UV as supplemental |
+| ICU room return air passes the filters again. HEPA grade, lamp output, filter changes, where the plant goes | **Assumed** |
 | Grille positions, sizes and capacities, corridor spacing, clearances | **Assumed** |
 
-**What wasn't read.** Abu Dhabi's Department of Health governs this hospital, and its guidance wasn't found. ASHRAE 170 was read in its 2008 edition, and the current 170-2025 is paywalled, so its values may differ. The FGI Guidelines weren't read directly. Sources are linked on the plan page.
+**What wasn't read.** Abu Dhabi's Department of Health governs this hospital, and its guidance wasn't found. ASHRAE 170 was read in its 2008 edition, and the current 170-2025 is paywalled, so its values may differ. The copy read is Table 7.1 and its notes only, so it gave no filter grades. HFG Part E's Annexure A-3, which lists filtration by room, isn't in the file read. Of CDC's 2003 guidelines, only the air and cleaning recommendations were read. The FGI Guidelines weren't read directly. Sources are linked on the plan page.
 
 **Isolation rooms.** Exhaust grilles sit 0.4 to 0.5 m from the bed head, as near as the pendant allows, and supply is about 4.3 m away by the door. A low-level exhaust is the guidance's alternative, and it isn't modelled. Air would need to go directly outdoors on its own system with pressure monitoring and an alarm, and none of that is designed or shown. No duct mains are drawn.
+
+**Clean-air layer.** Added on 10 November 2026: filters and UV-C in the air handling plant, as a second table on the plan page and on the card of the configurator's wall comfort control. It adds no grille and no object to any room, and nothing in it needs anyone to enter one. UV-C is an extra that replaces neither the filters nor the air changes. An upper-room UV fitting is the guidance's alternative and isn't modelled. **Fogging, ozone and ionisers aren't proposed:** CDC's 2003 guidelines say not to fog disinfectant in patient-care areas, and HFG Part E doesn't encourage electronic or photocatalytic cleaners, because of ozone. No plant, duct or filter housing is designed. The rows are `ventilation.clean_air` in the spec, `options.json` carries a copy for the card, and check `12` fails if the two differ.
 
 **Hidden for now.** Since 8 November 2026, `ventilation.show_in_model` in the spec is false. `02` still builds the grilles but hides them, `04` leaves them out of the walkthrough, the renders don't show them, and the configurator's `ventilation` group is hidden (its share-link code is kept). Set it to true to bring them back.
 

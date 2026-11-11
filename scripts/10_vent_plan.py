@@ -169,10 +169,18 @@ def basis_row(t):
             f'<td class="n">{t.get("ach_outdoor", "–")}</td><td class="n">{d["supply"]} / {d["return"]} / {d["exhaust"]}</td><td>{esc(t["basis"])}</td></tr>')
 
 
+def clean_row(r):
+    """One layer of the clean-air concept: what it means for an isolation room and for an ICU room, and where that was read."""
+    same = r["isolation"] == r["patient"]
+    cells = f'<td colspan="2">{esc(r["isolation"])}</td>' if same else f'<td>{esc(r["isolation"])}</td><td>{esc(r["patient"])}</td>'
+    return f'<tr data-row="{esc(r["id"])}"><th scope="row">{esc(r["label"])}</th>{cells}<td>{esc(r["basis"])}</td></tr>'
+
+
 values = {
     "PLAN": "\n".join(svg),
     "TOTAL": str(len(vents)), "SUPPLY": str(count["supply"]), "RETURN": str(count["return"]), "EXHAUST": str(count["exhaust"]),
     "ROWS": "\n".join(basis_row(t) for t in V["room_types"]),
+    "CLEAN_ROWS": "\n".join(clean_row(r) for r in V["clean_air"]["rows"]),
     "REPO_URL": spec["site"]["repo"],
     "H": f"{spec['building']['ceiling_height']:.2f}",
 }

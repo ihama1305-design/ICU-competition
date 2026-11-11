@@ -1037,6 +1037,7 @@ with sync_playwright() as p:
     ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
     plan_vents = json.load(open(os.path.join(SITE, "assets", "model", "vents.json")))["vents"]
     by_id = {v["id"]: v for v in plan_vents}
+    clean_rows = spec["ventilation"]["clean_air"]["rows"]
     for room in ROOMS:
         go(pg, room)
         names = pg.evaluate("window.__config.partNames()")
@@ -1049,6 +1050,23 @@ with sync_playwright() as p:
         pg.evaluate("document.getElementById('demoTemp').value = 19; document.getElementById('demoTemp').dispatchEvent(new Event('input'))")
         tint = pg.evaluate("window.__config.comfortTint()")
         check(tint == "63aecd", f"{room}: the temperature demo tints the control's status light ({tint})")
+        # the control's card lists the clean-air concept for this kind of room: the plan page's rows, from options.json. Nothing is added to the room
+        kind = "isolation" if room == "W1" else "patient"
+        pg.evaluate("window.__config.camera('family', { instant: true }); document.getElementById('objectCard').hidden = true")
+        pt = pg.evaluate("window.__config.itemPoint('Room comfort control')")
+        pg.mouse.click(pt["x"], pt["y"])
+        pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+        card = pg.evaluate("""() => { const c = document.getElementById('objectCard'), r = c.getBoundingClientRect(); return {
+          title: document.getElementById('objectTitle').textContent, heading: document.getElementById('objectRowsTitle').textContent,
+          rows: [...document.querySelectorAll('#objectRows dt')].map((dt, i) => [dt.textContent, document.querySelectorAll('#objectRows dd')[i].textContent]),
+          links: [...document.querySelectorAll('#objectSources a')].map(a => a.getAttribute('href')), inView: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth }; }""")
+        check(card["title"] == "Room comfort control" and card["rows"] == [[r["label"], r[kind]] for r in clean_rows], f"{room}: the comfort control's card lists the plan's {len(clean_rows)} clean-air rows for this kind of room {card['rows'][:1]}")
+        said = " ".join(text for _, text in card["rows"])
+        check(("isolation room" in card["heading"] and "HEPA" in said and "None is recirculated" in said) if room == "W1" else ("ICU room" in card["heading"] and "Return air" in said and "HEPA" not in said.replace("The HEPA grade", "")),
+              f"{room}: it says how this room's air leaves: {'through a HEPA filter and outdoors' if room == 'W1' else 'back through the filters'} ({card['heading']})")
+        check("concept" in card["heading"] and card["links"] == ["../ventilation/#clean-air"] and card["inView"], f"{room}: the card calls it a concept, links the plan's basis and fits the window {card['links']}")
+        shot(pg, f"{room.lower()}_clean_air_card")
+        pg.evaluate("document.getElementById('objectCard').hidden = true")
         here = pg.evaluate("window.__config.roomVents()")
         check(len(here) > 0 and all(by_id.get(v["id"], {}).get("at") == v["at"] for v in here), f"{room}: its {len(here)} grilles are the plan's own")
         pg.evaluate("window.__config.set('ventilation', 'on')")
@@ -1071,6 +1089,17 @@ with sync_playwright() as p:
     check(all(w in legend for w in ("Supply", "Return", "Exhaust")), "the plan has a legend for supply, return and exhaust")
     check(all(w in text for w in ("air changes", "Isolation room", "Abu Dhabi", "wasn't found")), "the plan gives its basis, and says what wasn't read")
     check("W1 isolation" in pg.text_content("svg.plan .room-labels") and "Corridor" in pg.text_content("svg.plan .room-labels"), "the plan names the rooms")
+    # the clean-air layer: filters and UV-C in the plant, as rows with a basis each. It adds no grille (the count above) and claims nothing it shouldn't
+    table = pg.evaluate("[...document.querySelectorAll('#cleanAir tbody tr')].map(r => ({ id: r.dataset.row, cells: [...r.cells].map(c => c.innerText.trim()) }))")
+    check([r["id"] for r in table] == [r["id"] for r in clean_rows] and all(r["cells"][0] == w["label"] and r["cells"][-1] == w["basis"] and w["isolation"] in r["cells"] and w["patient"] in r["cells"] for r, w in zip(table, clean_rows)),
+          f"the plan's clean-air table is the spec's {len(clean_rows)} rows, each with its basis {[r['id'] for r in table]}")
+    clean_text = pg.inner_text("#cleanAir")
+    check(all(w in clean_text for w in ("MERV 8", "MERV 14", "HEPA", "UV-C", "Assumed")), "it has the filter stages, the HEPA exhaust and UV-C, and marks what's assumed")
+    proposed = " ".join(" ".join(r["cells"][:-1]) for r in table if r["id"] != "not_proposed").lower()
+    check(not any(w in proposed for w in ("fogg", "ozone", "ionis", "ioniz", "photocatal")) and "Fogging, ozone, ionisers" in clean_text, "fogging, ozone and ionisers appear only in the row that rules them out")
+    check(all(w in text for w in ("not a mandatory requirement", "Table 7.1 and its notes only", "Annexure A-3")), "the page says UV-C is an extra, and which parts of its sources weren't read")
+    pg.locator("#clean-air").scroll_into_view_if_needed()
+    pg.screenshot(path=os.path.join(SHOTS, "ventilation_clean_air.png"))
     faded = pg.evaluate("[...document.querySelectorAll('svg.plan, svg.plan g')].filter(g => getComputedStyle(g).animationName !== 'none').map(g => g.getAttribute('class'))")
     check(not faded, f"nothing on the plan picks up an animation from the site's stylesheet {faded[:3]}")
     check(pg.locator("svg.plan image").count() == 0 and "<image" not in pg.content(), "the plan embeds no picture, so nothing from the drawings")

@@ -639,6 +639,17 @@
    { "type": "corridor", "label": "Corridors and lobbies", "match": ["CORRIDOR", "LOBBY", "LIFT LOBBY", "ALCOVE*", "TUBE STATION"], "pressure": "None required", "ach_total": 2, "air": ["supply", "return"], "basis": "ASHRAE 170-2008 Table 7.1 (patient corridor)" },
    { "type": "none", "label": "No grilles shown", "match": ["STAIR*", "RISER", "ELEC", "FHC", "L4*", "LIFT*"], "air": [], "basis": "Not occupied rooms" }
   ],
+  "clean_air": {
+   "_note": "CONCEPT, not SSMC's mechanical design: filters and UV-C in the air handling plant, for the plan page's clean-air table. Nothing here adds a grille or an object to a room, and nothing is drawn. Each basis was read on 10 Nov 2026 unless it says assumed (see REPORT.md). scripts/site/configurator/options.json carries the same rows for the wall comfort control's card, and 12_check_pacs_state.mjs compares the two, so change both",
+   "rows": [
+    {"id": "supply_filters", "label": "Supply filters", "isolation": "Two stages in the air handling unit: MERV 8 or better, then MERV 14 or better after the cooling coil.", "patient": "Two stages in the air handling unit: MERV 8 or better, then MERV 14 or better after the cooling coil.", "basis": "HFG Part E 2026 (Filtration)"},
+    {"id": "leaving_air", "label": "Air leaving the room", "isolation": "All exhausted through a HEPA filter, then straight outdoors on its own fans. None is recirculated.", "patient": "Return air goes back to the air handling unit and through both filter stages again.", "basis": "Isolation: HFG Part E 2026 (Class N); DHA Part D Table 5. ICU room: assumed from where the filters sit"},
+    {"id": "uvc_coil", "label": "UV-C on the cooling coil", "isolation": "Lamps just after the coil, to stop mould growing on it. The access door has a safety switch.", "patient": "Lamps just after the coil, to stop mould growing on it. The access door has a safety switch.", "basis": "HFG Part E 2026: encouraged for cooling coil surfaces"},
+    {"id": "uvc_exhaust", "label": "UV-C in the exhaust duct", "isolation": "An extra step with the HEPA filter. It replaces neither the filter nor the air changes.", "patient": "None. Upper-room UV-C is the guidance's option for critical care rooms, and isn't modelled.", "basis": "DHA Part D (Class N exhaust); HFG Part E 2026: an additional measure, not mandatory; CDC 2003: supplemental only"},
+    {"id": "not_proposed", "label": "Not proposed", "isolation": "Fogging, ozone, ionisers and photocatalytic cleaners. Nothing is sprayed or released into the room's air.", "patient": "Fogging, ozone, ionisers and photocatalytic cleaners. Nothing is sprayed or released into the room's air.", "basis": "CDC 2003: no disinfectant fogging in patient-care areas. HFG Part E 2026 doesn't encourage electronic or photocatalytic cleaners, because of ozone"},
+    {"id": "not_designed", "label": "Not designed", "isolation": "The HEPA grade, lamp output, safe filter changes, and where the plant and ducts go.", "patient": "The HEPA grade, lamp output, safe filter changes, and where the plant and ducts go.", "basis": "Assumed"}
+   ]
+  },
   "overrides": []
  },
  "lighting": {
