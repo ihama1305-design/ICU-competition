@@ -436,19 +436,28 @@ Object.assign(BUILD, {
     return g;
   },
 
-  /** Visible sound-level indicator concept. It never asks for microphone access. */
+  /**
+   * The sound sensor, and the vocal-distress cue's light (main.js, vocal.js). A concept, simulated: it never asks for microphone access.
+   * Its ring and light are named so the cue can light them; the card comes from one info object whichever part is clicked.
+   */
   soundSensor(room) {
     const g = new THREE.Group(); g.name = "addon_soundSensor";
     const at = room.label === "W1" ? [17.67, 30.1] : [14.3, 20.8];
     g.position.copy(W2T(at[0], at[1], 1.82));
     g.rotation.y = -Math.PI / 2;
-    const shell = std("#e5e9e7", 0.5), ring = std("#7c8d91", 0.38, { metalness: 0.2 });
-    g.add(tagItem(box(0.22, 0.15, 0.055, shell, 0, 0, 0), "Sound-level sensor", "A visible, non-recording sound-level sensor concept. This model does not capture audio or identify a patient."));
+    const shell = std("#e5e9e7", 0.5), ring = std("#7c8d91", 0.38, { metalness: 0.2, emissive: "#000000", emissiveIntensity: 0 });
+    ring.name = "sound_ring";
+    const door = room.label === "W1" ? "A closed isolation door keeps the air in, and the patient's voice with it." : "A closed door keeps a patient's voice in.";
+    const info = { title: "Sound-level sensor", description: `${door} This sensor concept gives that hearing back: it would recognise a groan or a call for help and put a notice in front of the nurse outside, who looks in through the glass before deciding to enter. Simulated here by the two buttons.`, action: "soundCue", rowsFrom: "vocalCue" };
+    const body = box(0.22, 0.15, 0.055, shell, 0, 0, 0); body.userData.itemInfo = info; g.add(body);
     const sensorRing = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.018, 20), ring);
     sensorRing.position.set(0, 0, 0.035); g.add(sensorRing);
-    const led = tagItem(ball(0.018, std("#55b985", 0.35, { emissive: "#55b985", emissiveIntensity: 0.55 }), 0, 0, 0.052), "Sound indicator", "A status light used for the sound-alert demonstration.", "soundAlert");
-    led.material.name = "sound_indicator"; g.add(led);
-    g.userData.itemInfo = { title: "Sound-level sensor", description: "A visual, non-recording sensor concept. Use the preview button to show a simulated alert; it does not listen, assess pain, identify a patient, or contact staff.", action: "soundAlert" };
+    const led = ball(0.018, std("#55b985", 0.35, { emissive: "#55b985", emissiveIntensity: 0.55 }), 0, 0, 0.052);
+    led.material.name = "sound_indicator"; led.userData.itemInfo = info; g.add(led);
+    // the cue's glow on the wall around the sensor, so its light reads from across the room. Clear until a notice is up, and never picked
+    const halo = new THREE.Mesh(new THREE.CircleGeometry(0.17, 40), new THREE.MeshBasicMaterial({ color: "#e6a342", transparent: true, opacity: 0, depthWrite: false }));
+    halo.material.name = "sound_halo"; halo.position.z = 0.003; halo.raycast = () => {}; g.add(halo);
+    g.userData.itemInfo = info;
     return g;
   },
 

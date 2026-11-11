@@ -122,6 +122,15 @@ button { font: inherit; color: inherit; }
 .mode-banner p { margin: 0 0 8px; font-size: 13px; text-wrap: pretty; }
 #leaveEmergency { min-height: 40px; padding: 6px 12px; border: 1px solid var(--danger); border-radius: 8px; background: transparent; color: var(--danger); font: 500 13px/1.2 var(--ui); cursor: pointer; }
 #leaveEmergency:hover { background: var(--hover); }
+/* the vocal-distress cue's notice: amber to look in when you can, the danger colour to look in now. The words say which */
+.vocal-notice { border-color: var(--med); }
+.vocal-notice[data-level="now"] { border-color: var(--danger); }
+.vocal-notice .vocal-kicker { margin-bottom: 4px; color: var(--muted); font: 600 10px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.vocal-notice #vocalText { font-weight: 500; }
+.vocal-notice .vocal-meta { color: var(--muted); font-size: 12px; }
+#vocalAck { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: 500 13px/1.2 var(--ui); cursor: pointer; }
+#vocalAck:hover { background: var(--hover); }
+#vocalAck:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Emergency-ready edges the whole view, so nobody mistakes it for the room's usual look */
 body.emergency-ready::after { content: ""; position: fixed; inset: 0; z-index: 3; border: 3px solid var(--danger); pointer-events: none; }
 .leave-patient { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: 500 14px/1.2 var(--ui); box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in); }
@@ -183,6 +192,8 @@ footer p { margin: 0; }
 .system-demo { display: grid; gap: 8px; padding: 2px 0 14px; animation: section-reveal var(--t-enter) var(--ease-out) both; }
 .demo-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
 .demo-control output { color: var(--ink); font-size: 12px; }
+.demo-sounds { display: grid; gap: 6px; margin-top: 4px; }
+.demo-title { margin: 0; color: var(--ink); font-size: 12px; font-weight: 600; }
 .outline-action { min-height: 38px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; transition: background-color var(--t-enter) var(--ease-out), transform var(--t-spring) var(--spring); }
 .outline-action:hover { background: var(--hover); }
 .outline-action:active { transform: scale(var(--press)); }

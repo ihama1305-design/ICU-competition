@@ -6,6 +6,8 @@ import { STEPS, CAVEAT } from "./site/configurator/guide.js";
 import { ATTACHMENTS } from "./site/configurator/apis-data.js";
 import { readFileSync } from "node:fs";
 import * as Q from "./site/configurator/quality.js";
+import { cueFor, LEVELS, noticeFor, QUIET, SOUNDS } from "./site/configurator/vocal.js";
+import { readdirSync } from "node:fs";
 const s = new PacsSimulation();
 assert.deepEqual(s.readings(), { hr: 78, sys: 118, dia: 76, rr: 16, spo2: 98, hrv: null });
 s.setScenario("possible"); assert.equal(s.readings(6).hr, 92); assert.equal(s.readings(12).hr, 105);
@@ -150,3 +152,40 @@ assert.ok(/Fogging, ozone, ionisers/.test(cleanRow("not_proposed").isolation) &&
 assert.equal(cleanRow("not_designed").basis, "Assumed"); assert.ok(/assumed/i.test(cleanRow("leaving_air").basis));
 assert.ok(!/99\.9|mJ|µW|mW\/|W\/m/.test(JSON.stringify(clean)), "no HEPA efficiency or UV dose is quoted");
 console.log(`PASS clean air: ${clean.length} rows, the same on the plan page and the comfort control's card, at most 20 words a cell; filters and a HEPA exhaust with UV-C as an extra; no fogging, ozone or ionisers; the unread marked assumed`);
+// ---------------------------------------------------------------- the vocal-distress cue: the rule, the notice's words, the limits, and no microphone
+// The rule is a judgement (vocal.js cueFor), so this pins only what any version must keep: a call for help is never ignored,
+// groans can only add urgency, there is a notice by the third, and nothing else raises one.
+const urgency = level => ({ soon: 1, now: 2 })[level] ?? 0;
+assert.ok(urgency(cueFor("call", 0)) > 0, "a call for help raises a notice at once");
+let mostUrgent = 0;
+for (let n = 1; n <= 6; n++) {
+  const level = cueFor("groan", n) ?? null;
+  assert.ok(level === null || Object.hasOwn(LEVELS, level), `cueFor("groan", ${n}) is "now", "soon" or null, not ${JSON.stringify(level)}`);
+  assert.ok(urgency(level) >= mostUrgent, `${n} groans are never less urgent than ${n - 1}`);
+  mostUrgent = urgency(level);
+}
+assert.ok(urgency(cueFor("groan", 3)) > 0, "by the third groan in a minute there is a notice");
+for (const other of ["alarm", "talk", "", undefined]) assert.equal(urgency(cueFor(other, 3)), 0, `only a groan or a call for help raises a notice, not ${JSON.stringify(other)}`);
+// the notice asks for a look through the glass and leaves going in to the nurse, whatever was heard
+for (const sound of Object.keys(SOUNDS)) for (const level of Object.keys(LEVELS)) {
+  const n = noticeFor(sound, level, "Isolation room W1", "3:32 pm");
+  for (const line of Object.values(n)) assert.ok(words(line) <= 24, `the ${sound}/${level} notice has a ${words(line)}-word line: ${line}`);
+  assert.ok(n.heard.startsWith("Isolation room W1: ") && n.heard.includes(SOUNDS[sound]), "it names the room and what was heard");
+  assert.ok(/through the glass/.test(n.ask) && /You decide whether to go in\.$/.test(n.ask) && !/enter|go in now|must/i.test(n.ask.replace("You decide whether to go in.", "")), `it asks for a look, not an entry: ${n.ask}`);
+  assert.ok(/No audio was captured or stored/.test(n.meta) && /no alarm or device was changed/.test(n.meta) && /3:32 pm/.test(n.meta));
+}
+assert.ok(/now\.$/.test(LEVELS.now.ask) && /when you can\.$/.test(LEVELS.soon.ask) && LEVELS.now.colour !== LEVELS.soon.colour && ![LEVELS.now.colour, LEVELS.soon.colour].includes(QUIET), "the two levels differ in words as well as colour");
+// the sensor's card states the limits, and so does the option's note; its share-link codes are untouched
+const cfgOptions = JSON.parse(readFileSync(new URL("./site/configurator/options.json", import.meta.url), "utf8"));
+const limitText = cfgOptions.vocalCue.rows.map(r => r.text).join(" "), soundGroup = cfgOptions.sections.flatMap(sec => sec.groups).find(g => g.id === "soundSensor");
+for (const text of [limitText, soundGroup.note.text]) {
+  assert.ok(/[Vv]entilated or sedated patients may make no sound/.test(text) && /[Aa]larms/.test(text) && /classified on the device/.test(text) && /stored/.test(text) && /no microphone/i.test(text), `the four limits are stated: ${text}`);
+}
+for (const r of cfgOptions.vocalCue.rows) assert.ok(words(r.text) <= 20, `limit "${r.label}" has ${words(r.text)} words`);
+assert.equal(soundGroup.code, 31); assert.deepEqual(soundGroup.options.map(o => [o.id, o.code]), [["on", 0], ["off", 1]]); assert.equal(soundGroup.default, "on");
+// nothing on the site can listen: no audio or speech API is named in any page or module
+const siteDir = new URL("./site/", import.meta.url), listening = /getUserMedia|mediaDevices|MediaRecorder|MediaStream|AudioContext|AudioWorklet|SpeechRecognition|<audio|new Audio\(/;
+const sources = [...readdirSync(new URL("configurator/", siteDir)).filter(f => /\.(js|css)$/.test(f)).map(f => `configurator/${f}`), "configurator.template.html", "index.template.html", "ventilation.template.html"];
+for (const f of sources) assert.ok(!listening.test(readFileSync(new URL(f, siteDir), "utf8")), `${f} names no audio or speech API`);
+assert.ok(!listening.test(readFileSync(new URL("./viewer_template.html", import.meta.url), "utf8")), "nor does the walkthrough");
+console.log(`PASS vocal-distress cue: a call always raises a notice, groans only add urgency (${[1, 2, 3].map(n => cueFor("groan", n) ?? "none").join(", ")}), the notice asks for a look and leaves going in to the nurse, four limits on the card and the option, codes unchanged, and no audio API in ${sources.length + 1} files`);
