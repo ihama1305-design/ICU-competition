@@ -102,6 +102,13 @@ button { font: inherit; color: inherit; }
 .guide-buttons .guide-next, .guide-buttons .guide-next:hover:not(:disabled) { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 .guide-buttons .guide-next:hover:not(:disabled) { filter: brightness(1.08); }
 .guide-buttons button[aria-pressed] { background: transparent; color: var(--ink); border-color: var(--line); }
+/* The look-around hint: one quiet line over the room, centred in the part of the screen the panel leaves free. It arrives
+   after the room has faded in and never takes a click from the room under it. A tour, PACS and placing an item have the
+   room to themselves, so it steps aside for them and comes back if the visitor still hasn't looked around. */
+.look-hint { position: fixed; z-index: 2; left: calc((100vw - var(--panel-w) - 2 * var(--g)) / 2); bottom: calc(2 * var(--g) + env(safe-area-inset-bottom, 0px)); translate: -50% 0; width: max-content; max-width: calc(100vw - var(--panel-w) - 4 * var(--g)); margin: 0; padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font-size: 13px; font-weight: 500; text-align: center; text-wrap: balance; box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); pointer-events: none;
+  transition: opacity var(--t-enter) var(--ease-out) var(--t-reveal), transform var(--t-enter) var(--ease-out) var(--t-reveal), display var(--t-enter) var(--ease-out) allow-discrete; }
+.look-hint[hidden], .guided .look-hint, .pacs-active .look-hint, .placing .look-hint, .dragging-item .look-hint { opacity: 0; transform: translateY(var(--card-shift)); transition: opacity var(--t-exit) var(--ease-in), transform var(--t-exit) var(--ease-in), display var(--t-exit) var(--ease-in) allow-discrete; }
+@starting-style { .look-hint { opacity: 0; transform: translateY(var(--card-shift)); } }
 /* Clinical view's labels, over the room and under the panel and the mode bar */
 .clinical-labels { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
 .clinical-labels span { position: absolute; left: 0; top: 0; padding: 3px 8px; border: 1px solid var(--accent); border-radius: 999px; background: var(--panel-solid); color: var(--ink); font: 500 11px/1.3 var(--ui); white-space: nowrap; box-shadow: 0 2px 8px rgba(16, 44, 54, 0.18); }
@@ -292,6 +299,9 @@ dialog[open]::backdrop { transition: opacity var(--t-enter) var(--ease-out); }
   .mode-title { display: none; }
   .mode-bar button { min-height: 40px; padding: 6px 10px; }
   .mode-note, .mode-banner { max-width: none; }
+  /* on a phone the hint sits above the closed sheet, and an open sheet has the lower half of the screen */
+  .look-hint { left: 50%; bottom: calc(84px + 2 * var(--g) + env(safe-area-inset-bottom, 0px)); max-width: calc(100vw - 2 * var(--g)); }
+  #panel.open ~ .look-hint { opacity: 0; transform: translateY(var(--card-shift)); transition: opacity var(--t-exit) var(--ease-in), transform var(--t-exit) var(--ease-in); }
   .guide { right: calc(var(--g) + env(safe-area-inset-right, 0px)); width: auto; bottom: calc(84px + var(--g) + env(safe-area-inset-bottom, 0px)); padding: 12px; }
   .guide p { font-size: 12px; margin-bottom: 8px; }
   .mode-note, .mode-banner p { font-size: 12px; }
