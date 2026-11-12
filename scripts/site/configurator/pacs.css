@@ -4,6 +4,17 @@
 .pacs-entry button, #pacsPanel button, #pacsTools button, #pacsGuide button, #pacsProfile button { min-height: 38px; border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; color: var(--ink); background: var(--panel-solid); font: 500 11px/1.4 var(--ui); cursor: pointer; }
 .pacs-entry .pacs-primary, #pacsPanel #pacsApprove { background: var(--accent); color: var(--accent-ink); }
 .pacs-active #panel { visibility: hidden; pointer-events: none; }
+/* PACS arrives as a layer over the options panel and lifts off it again. Beside the room, the options stay where they are until
+   the layer has covered them, so the room never shows through in between. */
+@media (min-width: 821px) { .pacs-active #panel { transition: visibility 0s linear var(--t-sheet-in); } }
+#pacsPanel, #pacsGuide { transition: opacity var(--t-sheet-in) var(--ease-out), transform var(--t-sheet-in) var(--ease-out), display var(--t-sheet-in) var(--ease-out) allow-discrete; }
+#pacsPanel[hidden], #pacsGuide[hidden] { opacity: 0; pointer-events: none; transition: opacity var(--t-sheet-out) var(--ease-in), transform var(--t-sheet-out) var(--ease-in), display var(--t-sheet-out) var(--ease-in) allow-discrete; }
+#pacsPanel[hidden] { transform: translateX(var(--layer-shift)); }
+#pacsGuide[hidden] { transform: translateY(var(--card-shift)); }
+@starting-style { #pacsPanel { opacity: 0; transform: translateX(var(--layer-shift)); } #pacsGuide { opacity: 0; transform: translateY(var(--card-shift)); } }
+/* its tools take the mode bar's place, so they fade in and leave at once, as the bar comes back */
+#pacsTools { transition: opacity var(--t-enter) var(--ease-out); }
+@starting-style { #pacsTools { opacity: 0; } }
 #pacsPanel { position: fixed; top: 12px; right: 12px; bottom: 12px; width: 386px; max-width: calc(100vw - 24px); background: var(--panel-solid); border: 1px solid var(--line); box-shadow: var(--shadow); border-radius: 14px; display: flex; flex-direction: column; z-index: 4; overflow: hidden; }
 #pacsPanel header { padding: 16px; border-bottom: 1px solid var(--line); }
 #pacsPanel h2 { color: var(--ink); text-transform: none; letter-spacing: -0.02em; font-size: 19px; margin: 0 0 10px; }
@@ -70,6 +81,9 @@
 #pacsProfile legend { font-size: 12px; }
 #pacsProfileError { color: #b64e3b; }
 @media (max-width: 820px) {
+  /* on a phone the layer is a sheet, so it comes up from the bottom edge and goes back down */
+  #pacsPanel[hidden] { transform: translateY(var(--layer-shift)); }
+  @starting-style { #pacsPanel { transform: translateY(var(--layer-shift)); } }
   #pacsPanel { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-width: none; height: 49dvh; }
   #pacsPanel header { padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; align-items: center; }
   #pacsPanel header .pacs-kicker { grid-column: 1 / -1; margin: 0; }

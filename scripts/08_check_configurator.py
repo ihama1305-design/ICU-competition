@@ -113,8 +113,11 @@ def open_page(browser, width, height, scheme="light", query="", **kw):
 
 
 def drawn(pg):
-    """Wait for interface animations, then for the frame after this change to reach the screen."""
-    pg.wait_for_function("document.getAnimations().every(a => a.playState !== 'running')", timeout=60000)
+    """Wait for interface animations, then for the frame after this change to reach the screen.
+
+    The guided tour's wait fill doesn't count: it is a clock that runs for as long as a step is held, not an entrance.
+    """
+    pg.wait_for_function("document.getAnimations().every(a => a.playState !== 'running' || a.effect?.target?.id === 'guideHold')", timeout=60000)
     pg.evaluate("""() => new Promise((done, stop) => {
       const start = window.__configFrames, t0 = performance.now();
       window.__config.invalidate();
@@ -151,6 +154,15 @@ def axe_faults(pg, selector):
       return r.violations.filter(v => ['serious', 'critical'].includes(v.impact)).map(v => `${v.id}: ${v.nodes.slice(0, 2).map(n => n.target.join(' ')).join(', ')}`);
     }""", selector)
     return found
+
+
+def gone(pg, selector):
+    """True once selector is off the page. A layer that fades out takes a moment to go, so this waits for it, briefly."""
+    try:
+        pg.wait_for_selector(selector, state="hidden", timeout=3000)
+        return True
+    except Exception:
+        return False
 
 
 def shot(pg, name):
@@ -641,8 +653,11 @@ with sync_playwright() as p:
     check(g["running"] and g["at"] == 0 and pg.is_visible("#guide") and pg.inner_text("#guideCount") == "1 of 9", f"the guided tour starts at its first step {g}")
     check(pg.inner_text("#guideCaveat") == "Simulated demo. A nurse approves every change.", "one fixed line under the captions carries the caveats")
     check(pg.get_attribute("#guidePrev", "disabled") is not None, "Previous waits until there's somewhere to go back to")
+    filling = "document.getElementById('guideHold').getAnimations().filter(a => a.playState === 'running').length"
+    wait_ms = pg.evaluate("document.getElementById('guideHold').getAnimations()[0]?.effect.getTiming().duration")
+    check(pg.evaluate(filling) == 1 and wait_ms and wait_ms <= 9000, f"while it plays, the bar's next segment fills over the wait, so a visitor can see it will move on by itself ({wait_ms} ms)")
     pg.click("#guidePlay")
-    check(not pg.evaluate("window.__config.guide()")["playing"] and pg.inner_text("#guidePlay") == "Play", "Pause stops it moving on by itself")
+    check(not pg.evaluate("window.__config.guide()")["playing"] and pg.inner_text("#guidePlay") == "Play" and pg.evaluate(filling) == 0, "Pause stops it moving on by itself, and the bar stops filling")
     seen = {}
     for i in range(1, 9):
         pg.click("#guideNext")
@@ -654,6 +669,9 @@ with sync_playwright() as p:
     check(seen[6]["placed"] == 2 and seen[6]["mode"] == "standard", f"it places two items {seen[6]}")
     check(seen[7]["theme"] == "desert", f"it shows a theme at sunset {seen[7]}")
     check(pg.locator("#guideLinks button").count() == 2 and pg.inner_text("#guideNext") == "Finish", "the last step offers the PACS and APIS demos, and Finish")
+    pg.click("#guidePlay")
+    check(pg.evaluate("window.__config.guide()")["playing"] and pg.evaluate(filling) == 0, "the last step has nothing to move on to, so its bar shows no wait")
+    pg.click("#guidePlay")
     shot(pg, "w1_guide_last")
     # Restart: back to the first step and playing, with the room as it was before the tour, so no item or mode carries over
     check(pg.is_visible("#guideRestart"), "the tour has a Restart button")
@@ -668,7 +686,7 @@ with sync_playwright() as p:
     pg.click("#guideNext")
     pg.wait_for_function("!window.__config.guide().running", timeout=60000)
     pg.wait_for_function(f"window.__config.code() === '{before}'", timeout=120000)
-    check(not pg.is_visible("#guide") and pg.evaluate("window.__config.placed()") == [] and pg.evaluate("window.__config.mode().current") == "standard" and not pg.evaluate("window.__config.clinical()")["on"], "Finish puts the room back exactly as it was: choices, view, time, items, mode")
+    check(gone(pg, "#guide") and pg.evaluate("window.__config.placed()") == [] and pg.evaluate("window.__config.mode().current") == "standard" and not pg.evaluate("window.__config.clinical()")["on"], "Finish puts the room back exactly as it was: choices, view, time, items, mode")
     # Esc from the card leaves it too, and dragging the room pauses rather than ends it
     pg.click("#openGuide")
     pg.mouse.move(400, 400); pg.mouse.down(); pg.mouse.move(460, 410); pg.mouse.up()

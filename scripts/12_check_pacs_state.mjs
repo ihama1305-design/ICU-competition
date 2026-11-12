@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PacsSimulation, GUIDE, NIGHT_LINE } from "./site/configurator/pacs-state.js";
 import { afterDark, sunTimes } from "./site/configurator/solar.js";
 import { RoomModes, modeText } from "./site/configurator/modes.js";
-import { STEPS, CAVEAT } from "./site/configurator/guide.js";
+import { STEPS, CAVEAT, HOLD_MS, RESUME_MIN_MS, holdLeft } from "./site/configurator/guide.js";
 import { ATTACHMENTS } from "./site/configurator/apis-data.js";
 import { readFileSync } from "node:fs";
 import * as Q from "./site/configurator/quality.js";
@@ -84,6 +84,19 @@ assert.ok(/not a compliance check/.test(tourText), "the tour keeps 'not a compli
 assert.ok(/never touches medical equipment or alarms/.test(GUIDE[9][1]), "PACS keeps hands-off alarms on its clinical-safety step");
 assert.ok(/doesn't diagnose/.test(pacsText) && /don't prove comfort/.test(GUIDE[3][1]) && /don't prove comfort/.test(GUIDE[3][4]), "PACS still says it doesn't diagnose and stable numbers don't prove comfort");
 console.log(`PASS plain English: ${steps.length} tour, PACS and APIS steps at most 24 words, the caveats in one fixed line, 'not a compliance check' and hands-off alarms kept`);
+// ---------------------------------------------------------------- the guided tour's wait: what Play gives a step that was paused
+// held so far (ms) -> what it still waits (ms)
+for (const [held, left] of [[0, HOLD_MS], [1, HOLD_MS - 1], [2000, 7000], [HOLD_MS - RESUME_MIN_MS, RESUME_MIN_MS], [8900, RESUME_MIN_MS], [HOLD_MS, RESUME_MIN_MS], [60000, RESUME_MIN_MS]]) {
+  assert.equal(holdLeft(held), left, `a step held for ${held} ms still waits ${left} ms`);
+}
+for (let held = 0, last = Infinity; held <= 2 * HOLD_MS; held += 250) {
+  const left = holdLeft(held);
+  assert.ok(left > 0 && left <= HOLD_MS, `the wait after ${held} ms is within the bar: ${left}`);
+  assert.ok(left <= last, `holding a step longer never makes it wait longer (${held} ms)`);
+  last = left;
+}
+assert.ok(RESUME_MIN_MS > 0 && RESUME_MIN_MS < HOLD_MS, "the least wait after Play is shorter than a full step");
+console.log(`PASS guided tour wait: a new step waits ${HOLD_MS / 1000} s, a paused one carries on from where it stopped, and Play always leaves at least ${RESUME_MIN_MS / 1000} s`);
 // ---------------------------------------------------------------- graphics quality: the pixel budget, the starting tier and Auto's choice
 const near = (a, b) => Math.abs(a - b) < 1e-9;
 assert.ok(near(Q.pixelRatio(2, 1440, 900, "high"), Math.sqrt(3.6e6 / (1440 * 900))), "1440 x 900 @2x is capped to 3.6 million pixels");

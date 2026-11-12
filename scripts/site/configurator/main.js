@@ -77,11 +77,19 @@ rig.onArrive = name => {
 };
 
 // ---------------------------------------------------------------- layout
+/** An element's box where it comes to rest: without the offset of an entrance that is still playing. Not for the phone's
+ *  options sheet, whose closed position is itself a transform. */
+function restingRect(el) {
+  const r = el.getBoundingClientRect(), t = getComputedStyle(el).transform;
+  if (!t || t === "none") return r;
+  const m = new DOMMatrixReadOnly(t);
+  return new DOMRect(r.x - m.e, r.y - m.f, r.width, r.height);
+}
 function resize() {
   const w = innerWidth, h = innerHeight;
   stage.resize(w, h);
   stage.camera.aspect = w / h;
-  const rect = (document.body.classList.contains("pacs-active") ? $("pacsPanel") : panel).getBoundingClientRect();
+  const rect = document.body.classList.contains("pacs-active") ? restingRect($("pacsPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -518,7 +526,7 @@ function simulateSound(sound) {
   $("vocalNotice").dataset.level = level;
   $("vocalNotice").hidden = false;
   // the sensor's own card, where the sound may have been started, never covers the notice or its Acknowledge button
-  const card = $("objectCard"), a = card.getBoundingClientRect(), b = $("vocalNotice").getBoundingClientRect();
+  const card = $("objectCard"), a = card.getBoundingClientRect(), b = restingRect($("vocalNotice"));
   if (!card.hidden && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) card.hidden = true;
   paintSensor(level);
   status.textContent = "Simulated: the sensor's light changed and a notice went to the nurse station. No audio was captured, and nothing left this page.";
@@ -859,7 +867,7 @@ function showObjectCard(info, x, y) {
   else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";
   else if (info.action === "pacs") action.textContent = "Physiological Adaptive Mode";
   card.hidden = false;
-  const rect = card.getBoundingClientRect(), panelRect = (pacs.active ? $("pacsPanel") : panel).getBoundingClientRect();
+  const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : panel.getBoundingClientRect();
   let left = x + 14, top = y + 14;
   if (left + rect.width > panelRect.left && x < panelRect.left) left = Math.max(12, panelRect.left - rect.width - 12);
   if (left + rect.width > innerWidth - 12) left = innerWidth - rect.width - 12;
@@ -1200,7 +1208,7 @@ var guide = new GuidedTour({
   shown: on => { document.body.classList.toggle("guided", on); if (on && isPhone()) setSheet(false); },
   say, fail,
 }, {
-  card: $("guide"), count: $("guideCount"), bar: $("guideBar"), title: $("guideTitle"), text: $("guideText"), links: $("guideLinks"),
+  card: $("guide"), count: $("guideCount"), bar: $("guideBar"), hold: $("guideHold"), title: $("guideTitle"), text: $("guideText"), links: $("guideLinks"),
   prev: $("guidePrev"), play: $("guidePlay"), next: $("guideNext"), restart: $("guideRestart"), exit: $("guideExit"),
 });
 $("guideCaveat").textContent = CAVEAT;
