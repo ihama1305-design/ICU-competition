@@ -89,33 +89,22 @@
       <p id="themeNote" class="note" role="status"></p>
     </section>
 
-    <section aria-labelledby="hPlace">
-      <h2 id="hPlace">Place items</h2>
-      <div id="placeItems" class="place-items" role="group" aria-labelledby="hPlace"></div>
-      <p id="placeStatus" class="note" role="status"></p>
-      <p class="note">Drag an item onto the room, or choose it and then click or tap where it goes. Drag a placed item to move it, and click it to turn or remove it. Where they go is up to you: access, clearances and infection-control positions aren't checked.</p>
-    </section>
-
-    <section aria-labelledby="hSaved">
-      <h2 id="hSaved">Saved rooms</h2>
-      <form id="presetForm" class="preset-form">
-        <label class="sr" for="presetName">Name for this room</label>
-        <input id="presetName" name="presetName" type="text" maxlength="40" autocomplete="off" placeholder="A name, like Evening calm">
-        <button type="submit">Save</button>
-      </form>
-      <ul id="presetList" class="preset-list" aria-label="Saved rooms"></ul>
-      <button type="button" id="resetRoom" class="outline-action">Reset the room</button>
-      <p id="presetStatus" class="note" role="status"></p>
-      <p class="note">Kept in this browser only, never sent anywhere. Don't use a patient's name.</p>
-    </section>
-
-    <section aria-labelledby="hRoom">
-      <h2 id="hRoom">Room</h2>
-      <div id="rooms" class="seg" role="group" aria-labelledby="hRoom">
-        <button type="button" data-value="W1" aria-pressed="true">Isolation <small>W1</small></button>
-        <button type="button" data-value="W3" aria-pressed="false">Standard <small>W3</small></button>
+    <section aria-labelledby="hTime">
+      <h2 id="hTime">Time of day</h2>
+      <div id="dayNight" class="seg" role="group" aria-labelledby="hTime">
+        <button type="button" data-value="day" aria-pressed="true">Day</button>
+        <button type="button" data-value="night" aria-pressed="false">Night</button>
       </div>
-      <p id="roomStatus" class="note" role="status"></p>
+      <label class="slider" for="time"><span>Solar time</span><output id="timeNow" for="time"></output></label>
+      <input id="time" type="range" min="6" max="22" step="0.0833" value="15.53">
+      <div id="stops" class="stops" role="group" aria-label="Times of day">
+        <button type="button" data-value="morning" aria-pressed="false">Morning</button>
+        <button type="button" data-value="midday" aria-pressed="false">Midday</button>
+        <button type="button" data-value="afternoon" aria-pressed="true">Afternoon</button>
+        <button type="button" data-value="sunset" aria-pressed="false">Sunset</button>
+        <button type="button" data-value="night" aria-pressed="false">Night</button>
+      </div>
+      <p class="note">The sun path is for Abu Dhabi's latitude in mid-March or late September. North follows the model, as in the renders.</p>
     </section>
 
     <section aria-labelledby="hView">
@@ -138,22 +127,24 @@
       <p class="note">Patient view stays at the pillow and turns as far as a head can, up to the ceiling. Return, or Esc, goes back.</p>
     </section>
 
-    <section aria-labelledby="hTime">
-      <h2 id="hTime">Time of day</h2>
-      <div id="dayNight" class="seg" role="group" aria-labelledby="hTime">
-        <button type="button" data-value="day" aria-pressed="true">Day</button>
-        <button type="button" data-value="night" aria-pressed="false">Night</button>
+    <section aria-labelledby="hRoom">
+      <h2 id="hRoom">Room</h2>
+      <div id="rooms" class="seg" role="group" aria-labelledby="hRoom">
+        <button type="button" data-value="W1" aria-pressed="true">Isolation <small>W1</small></button>
+        <button type="button" data-value="W3" aria-pressed="false">Standard <small>W3</small></button>
       </div>
-      <label class="slider" for="time"><span>Solar time</span><output id="timeNow" for="time"></output></label>
-      <input id="time" type="range" min="6" max="22" step="0.0833" value="15.53">
-      <div id="stops" class="stops" role="group" aria-label="Times of day">
-        <button type="button" data-value="morning" aria-pressed="false">Morning</button>
-        <button type="button" data-value="midday" aria-pressed="false">Midday</button>
-        <button type="button" data-value="afternoon" aria-pressed="true">Afternoon</button>
-        <button type="button" data-value="sunset" aria-pressed="false">Sunset</button>
-        <button type="button" data-value="night" aria-pressed="false">Night</button>
-      </div>
-      <p class="note">The sun path is for Abu Dhabi's latitude in mid-March or late September. North follows the model, as in the renders.</p>
+      <p id="roomStatus" class="note" role="status"></p>
+    </section>
+
+    <!-- the two deeper demos, PACS and APIS, mount here (pacs.js, apis.js): after the room's own controls, so a first
+         visit starts with the room and not with two systems to choose between -->
+    <div id="demos"></div>
+
+    <section aria-labelledby="hPlace">
+      <h2 id="hPlace">Place items</h2>
+      <div id="placeItems" class="place-items" role="group" aria-labelledby="hPlace"></div>
+      <p id="placeStatus" class="note" role="status"></p>
+      <p class="note">Drag an item onto the room, or choose it and then click or tap where it goes. Drag a placed item to move it, and click it to turn or remove it. Where they go is up to you: access, clearances and infection-control positions aren't checked.</p>
     </section>
 
     <div id="options"></div>
@@ -174,6 +165,19 @@
         <p id="systemStatus" class="note" role="status">The sound sensor is a concept. No microphone is used, nothing is recorded, and no notice leaves this page.</p>
       </div>
     </details>
+
+    <section aria-labelledby="hSaved">
+      <h2 id="hSaved">Saved rooms</h2>
+      <form id="presetForm" class="preset-form">
+        <label class="sr" for="presetName">Name for this room</label>
+        <input id="presetName" name="presetName" type="text" maxlength="40" autocomplete="off" placeholder="A name, like Evening calm">
+        <button type="submit">Save</button>
+      </form>
+      <ul id="presetList" class="preset-list" aria-label="Saved rooms"></ul>
+      <button type="button" id="resetRoom" class="outline-action">Reset the room</button>
+      <p id="presetStatus" class="note" role="status"></p>
+      <p class="note">Kept in this browser only, never sent anywhere. Don't use a patient's name.</p>
+    </section>
 
     <section aria-labelledby="hQuality">
       <h2 id="hQuality">Graphics quality</h2>
@@ -196,6 +200,7 @@
     <button type="button" id="saveImage">Save image</button>
   </div>
 </aside>
+<p id="lookHint" class="look-hint" aria-hidden="true" hidden></p>
 
 <aside id="objectCard" class="object-card" role="dialog" aria-labelledby="objectTitle" aria-describedby="objectDescription" hidden>
   <button type="button" id="closeObjectCard" class="object-close" aria-label="Close object details">×</button>

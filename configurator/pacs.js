@@ -14,7 +14,7 @@ export class PACS {
   mount() {
     const entry = document.createElement("section"); entry.className = "pacs-entry";
     entry.innerHTML = `<p class="pacs-kicker">Adaptive ICU · monitoring + environment</p><h2>Physiological Adaptive Comfort System</h2><button type="button" id="openPacs" class="pacs-primary">PHYSIOLOGICAL ADAPTIVE MODE</button><button type="button" id="startPacsGuide">START PHYSIOLOGICAL ADAPTIVE DEMO</button><p class="note">Three simulated scenarios in this room. Patient preferences and clinical oversight come first.</p>`;
-    $("panelBody").prepend(entry);
+    ($("demos") || $("panelBody")).prepend(entry); // after the room's own controls
     const panel = document.createElement("aside"); panel.id = "pacsPanel"; panel.hidden = true; panel.setAttribute("aria-labelledby", "pacsTitle");
     panel.innerHTML = `<header><p class="pacs-kicker">Nurse dashboard · PACS · simulated data only</p><h2 id="pacsTitle">Physiological Adaptive Mode</h2><button type="button" id="pacsExit">EXIT ADAPTIVE MODE</button></header>
       <div class="pacs-scroll"><p class="pacs-scope">Experimental comfort-support concept. Vital signs alone cannot diagnose pain, anxiety, stress or discomfort.</p>
