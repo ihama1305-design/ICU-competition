@@ -1600,6 +1600,67 @@ with sync_playwright() as p:
     check(pg.text_content("#panel a.back").strip() == "Adaptive ICU", "the configurator's link back names the site as the home page does")
     ctx.close()
 
+    # ---------------------------------------------------------------- a first visit: the room's own controls first, and a line that says it moves
+    def settles(expr, timeout=20000):
+        try:
+            pg.wait_for_function(expr, timeout=timeout)
+            return True
+        except PlaywrightTimeout:
+            return False
+
+    HINT = """(() => { const h = document.getElementById('lookHint'), r = h.getBoundingClientRect(), p = document.getElementById('panel').getBoundingClientRect(), s = getComputedStyle(h);
+      return { text: h.textContent, shown: !h.hidden && s.opacity === '1', left: r.left, right: r.right, bottom: r.bottom, panelLeft: p.left, panelTop: p.top, w: innerWidth, h: innerHeight, clicks: s.pointerEvents }; })()"""
+    faded, back = "getComputedStyle(document.getElementById('lookHint')).opacity === '0'", "getComputedStyle(document.getElementById('lookHint')).opacity === '1'"
+    ctx = b.new_context(viewport={"width": 1280, "height": 800})
+    pg = ctx.new_page()
+    pg.goto(URL)
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    order = pg.evaluate("[...document.querySelectorAll('#panelBody > section:not([hidden]) > h2, #demos h2')].map(h => h.textContent.trim())")
+    check(order[:6] == ["Theme", "Time of day", "Physiological Adaptive Comfort System", "Adaptive Patient Interface System", "View", "Room"],
+          f"the panel opens on the room's look and its time of day, with the two demos next and View after them {order[:7]}")
+    check(pg.is_hidden("#lookHint"), "an automated page isn't given the look-around hint, so screenshots show the room alone")
+    pg.goto(URL + "?hint=1")
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    drawn(pg)
+    hint = pg.evaluate(HINT)
+    check(hint["shown"] and hint["text"] == "Drag to look around. Scroll to move closer.", f"a first visit is told the room can be moved {hint}")
+    check(hint["left"] >= 0 and hint["right"] <= hint["panelLeft"] and hint["bottom"] <= hint["h"] and hint["clicks"] == "none", f"the hint sits over the room, clear of the panel, and takes no clicks from it {hint}")
+    shot(pg, "first_visit")
+    pg.click("#openGuide")
+    check(settles(faded), "the hint steps aside while the guided tour has the room")
+    pg.click("#guideExit")
+    pg.wait_for_function("!window.__config.guide().running", timeout=60000)
+    check(settles(back), "and comes back afterwards, for someone who still hasn't looked around")
+    pg.mouse.move(400, 400); pg.mouse.down(); pg.mouse.move(470, 420, steps=4); pg.mouse.up()
+    check(gone(pg, "#lookHint"), "the hint leaves the first time the room is dragged")
+    pg.goto(URL + "?hint=1&again=1")
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    drawn(pg)
+    check(pg.is_hidden("#lookHint"), "someone who has looked around isn't told again in the same visit")
+    ctx.close()
+    ctx = b.new_context(viewport={"width": 1280, "height": 800})  # a new visit
+    pg = ctx.new_page()
+    pg.goto(URL + "?hint=1")
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    drawn(pg)
+    check(pg.evaluate(HINT)["shown"], "a new visit is told again")
+    pg.keyboard.press("Tab")
+    check(pg.evaluate("document.activeElement.id") == "c" and pg.text_content("#lookHint") == "Arrow keys look around. Plus and minus move closer.", f"from the keyboard, the hint is in keys ({pg.text_content('#lookHint')!r})")
+    pg.keyboard.press("ArrowLeft")
+    check(gone(pg, "#lookHint"), "and looking around with the keys takes it down")
+    ctx.close()
+    ctx = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    pg = ctx.new_page()
+    pg.goto(URL + "?hint=1")
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    drawn(pg)
+    hint = pg.evaluate(HINT)
+    check(hint["shown"] and hint["text"] == "Drag to look around. Pinch to move closer.", f"phone: the hint is in touch terms {hint}")
+    check(hint["left"] >= 0 and hint["right"] <= hint["w"] and hint["bottom"] <= hint["panelTop"], f"phone: it sits above the closed sheet, inside the screen {hint}")
+    pg.tap("#sheet")
+    check(settles(faded), "phone: an open sheet has the lower half of the screen, so the hint goes")
+    ctx.close()
+
     # ---------------------------------------------------------------- a script that can't load says so
     ctx = b.new_context(viewport={"width": 1100, "height": 600})
     pg = ctx.new_page()

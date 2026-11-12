@@ -4,6 +4,7 @@ import { afterDark, sunTimes } from "./site/configurator/solar.js";
 import { RoomModes, modeText } from "./site/configurator/modes.js";
 import { STEPS, CAVEAT, HOLD_MS, RESUME_MIN_MS, holdLeft } from "./site/configurator/guide.js";
 import { ATTACHMENTS } from "./site/configurator/apis-data.js";
+import { HINT_TEXT } from "./site/configurator/hint.js";
 import { readFileSync } from "node:fs";
 import * as Q from "./site/configurator/quality.js";
 import { cueFor, LEVELS, noticeFor, QUIET, SOUNDS } from "./site/configurator/vocal.js";
@@ -84,6 +85,15 @@ assert.ok(/not a compliance check/.test(tourText), "the tour keeps 'not a compli
 assert.ok(/never touches medical equipment or alarms/.test(GUIDE[9][1]), "PACS keeps hands-off alarms on its clinical-safety step");
 assert.ok(/doesn't diagnose/.test(pacsText) && /don't prove comfort/.test(GUIDE[3][1]) && /don't prove comfort/.test(GUIDE[3][4]), "PACS still says it doesn't diagnose and stable numbers don't prove comfort");
 console.log(`PASS plain English: ${steps.length} tour, PACS and APIS steps at most 24 words, the caveats in one fixed line, 'not a compliance check' and hands-off alarms kept`);
+// ---------------------------------------------------------------- the look-around hint: one short line, in the visitor's own terms
+assert.deepEqual(Object.keys(HINT_TEXT), ["mouse", "touch", "keys"], "the hint has a line for a mouse, for touch and for the keyboard");
+for (const [how, line] of Object.entries(HINT_TEXT)) {
+  assert.ok(line.split(/\s+/).length <= 9, `the ${how} hint is at most 9 words: ${line}`);
+  assert.equal(line.split(". ").length, 2, `the ${how} hint says two things: how to look, and how to move closer`);
+  assert.ok(!/orbit|zoom|pan\b|rotate|dolly|camera|3D/i.test(line), `the ${how} hint has no 3D-software words: ${line}`);
+}
+assert.ok(/^Drag/.test(HINT_TEXT.mouse) && /Scroll/.test(HINT_TEXT.mouse) && /^Drag/.test(HINT_TEXT.touch) && /Pinch/.test(HINT_TEXT.touch) && /^Arrow keys/.test(HINT_TEXT.keys), "each hint names the gestures that its kind of visitor has");
+console.log(`PASS look-around hint: ${Object.keys(HINT_TEXT).length} lines of at most 9 words, for a mouse, touch and the keyboard, with no 3D-software words`);
 // ---------------------------------------------------------------- the guided tour's wait: what Play gives a step that was paused
 // held so far (ms) -> what it still waits (ms)
 for (const [held, left] of [[0, HOLD_MS], [1, HOLD_MS - 1], [2000, 7000], [HOLD_MS - RESUME_MIN_MS, RESUME_MIN_MS], [8900, RESUME_MIN_MS], [HOLD_MS, RESUME_MIN_MS], [60000, RESUME_MIN_MS]]) {

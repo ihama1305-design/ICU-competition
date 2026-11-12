@@ -21,6 +21,7 @@ import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js
 import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById, wallsOf } from "./placed.js";
 import { ClinicalView } from "./clinical.js";
 import { GuidedTour, CAVEAT } from "./guide.js";
+import { LookHint } from "./hint.js";
 import { readChoice, saveChoice, readMeasured, saveMeasured, startTier, handheld, pickTier, probe } from "./quality.js";
 
 addEventListener("error", e => window.__configErrors.push(String(e.message)));
@@ -292,6 +293,7 @@ canvas.addEventListener("keydown", e => {
   const zoom = { "+": 0.88, "=": 0.88, "-": 1.14, _: 1.14 }[e.key];
   if (!map && !zoom) return;
   e.preventDefault();
+  lookHint.looked();
   if (map) rig.orbitBy(...map);
   else rig.dolly(zoom);
 });
@@ -883,6 +885,20 @@ function showObjectCard(info, x, y) {
 const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
 let pressAt = null;
 canvas.addEventListener("pointerdown", e => { pressAt = [e.clientX, e.clientY]; });
+
+// ---------------------------------------------------------------- the look-around hint (hint.js)
+// A real drag of the room, a scroll or pinch, or the keys: any of them shows the visitor has found that the room moves.
+// Placing an item or dragging a placed one isn't looking around, so neither counts.
+const lookHint = new LookHint($("lookHint"), matchMedia("(pointer: coarse)").matches);
+let lookFrom = null;
+canvas.addEventListener("pointerdown", e => { lookFrom = placing ? null : [e.clientX, e.clientY]; });
+canvas.addEventListener("pointermove", e => {
+  if (!lookFrom || !e.buttons || document.body.classList.contains("dragging-item")) return;
+  if (Math.hypot(e.clientX - lookFrom[0], e.clientY - lookFrom[1]) > 8) { lookFrom = null; lookHint.looked(); }
+});
+addEventListener("pointerup", () => { lookFrom = null; });
+canvas.addEventListener("wheel", () => lookHint.looked(), { passive: true });
+canvas.addEventListener("focus", () => { if (canvas.matches(":focus-visible")) lookHint.keys(); });
 canvas.addEventListener("pointerup", e => {
   if (!pressAt || Math.hypot(e.clientX - pressAt[0], e.clientY - pressAt[1]) > 6) return;
   pressAt = null;
@@ -1508,6 +1524,9 @@ async function boot() {
   if (query.get("tour") === "guided") requestAnimationFrame(() => guide.start());
   requestAnimationFrame(() => requestAnimationFrame(() => {
     canvas.classList.remove("pending");
+    // a first visit is told the room can be moved. Automated pages don't get the hint, so the checks' and the home page's
+    // screenshots show the room alone; ?hint=1 asks for it, which is how the checks test it
+    if (!navigator.webdriver || query.get("hint") === "1") lookHint.offer();
     window.__configStage = "ready";
     window.__configReady = true;
     remember();
