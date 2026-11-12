@@ -12,10 +12,12 @@
   --spring: cubic-bezier(0.3, 1.65, 0.55, 1);
   --t-press: 110ms; --t-spring: 340ms; --t-enter: 220ms; --t-exit: 130ms; --t-sheet-in: 320ms; --t-sheet-out: 200ms; --t-reveal: 600ms;
   --press: 0.96;
+  /* how far a layer travels as it arrives: a note drops in under the bar, a card rises, a panel slides over, a dialog grows a little */
+  --note-shift: -6px; --card-shift: 8px; --layer-shift: 16px; --dialog-from: 0.97;
   --danger: #a8261b; --danger-ink: #ffffff; --ok: #2f8f5b; --ok-bg: rgba(47, 143, 91, 0.12); --ok-ink: #1d6a40;
 }
 @media (prefers-reduced-motion: reduce) {
-  :root { --spring: var(--ease-out); --t-press: 80ms; --t-spring: 120ms; --t-enter: 120ms; --t-exit: 80ms; --t-sheet-in: 120ms; --t-sheet-out: 80ms; --t-reveal: 160ms; --press: 1; }
+  :root { --spring: var(--ease-out); --t-press: 80ms; --t-spring: 120ms; --t-enter: 120ms; --t-exit: 80ms; --t-sheet-in: 120ms; --t-sheet-out: 80ms; --t-reveal: 160ms; --press: 1; --note-shift: 0px; --card-shift: 0px; --layer-shift: 0px; --dialog-from: 1; }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -79,9 +81,15 @@ button { font: inherit; color: inherit; }
 .guide-launch:hover { background: var(--accent); color: var(--accent-ink); }
 /* the guided tour's card: bottom left, clear of the panel; on a phone, above the closed sheet */
 .guide { position: fixed; z-index: 5; left: calc(var(--g) + env(safe-area-inset-left, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px)); width: min(460px, calc(100vw - var(--panel-w) - 4 * var(--g))); padding: 14px 16px; border: 1px solid var(--accent); border-radius: 14px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); }
+/* the card rises into place when the tour starts and fades out quicker when it ends; display is transitioned too, so the way out is seen */
+.guide { transition: opacity var(--t-sheet-in) var(--ease-out), transform var(--t-sheet-in) var(--ease-out), display var(--t-sheet-in) var(--ease-out) allow-discrete; }
+.guide[hidden] { opacity: 0; transform: translateY(var(--card-shift)); pointer-events: none; transition: opacity var(--t-exit) var(--ease-in), transform var(--t-exit) var(--ease-in), display var(--t-exit) var(--ease-in) allow-discrete; }
+@starting-style { .guide { opacity: 0; transform: translateY(var(--card-shift)); } }
 .guide-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .guide-count { color: var(--muted); font: 500 12px var(--mono); white-space: nowrap; }
-.guide-bar { flex: 1; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) var(--done, 0%), var(--line) var(--done, 0%)); }
+.guide-bar { position: relative; overflow: hidden; flex: 1; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) var(--done, 0%), var(--line) var(--done, 0%)); }
+/* the next step's share of the bar: guide.js fills it over the wait, so a visitor can see the tour is about to move on by itself */
+.guide-hold { position: absolute; top: 0; bottom: 0; left: var(--done, 0%); width: var(--step, 0%); background: var(--accent); opacity: 0.45; transform: scaleX(0); transform-origin: left; }
 .guide h2 { margin: 0 0 4px; color: var(--ink); font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; text-wrap: balance; }
 .guide p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; text-wrap: pretty; }
 .guide .guide-caveat { margin: -4px 0 10px; color: var(--muted); font-size: 12px; }
@@ -131,6 +139,10 @@ button { font: inherit; color: inherit; }
 #vocalAck { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: 500 13px/1.2 var(--ui); cursor: pointer; }
 #vocalAck:hover { background: var(--hover); }
 #vocalAck:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A note or banner drops in under the mode bar it explains, so it never just appears over a room that is still easing into its mode.
+   It leaves at once: the notes stack, and one that lingered while fading would make the next one jump when it went. */
+.mode-note, .mode-banner { transition: opacity var(--t-enter) var(--ease-out), transform var(--t-enter) var(--ease-out); }
+@starting-style { .mode-note, .mode-banner { opacity: 0; transform: translateY(var(--note-shift)); } }
 /* Emergency-ready edges the whole view, so nobody mistakes it for the room's usual look */
 body.emergency-ready::after { content: ""; position: fixed; inset: 0; z-index: 3; border: 3px solid var(--danger); pointer-events: none; }
 .leave-patient { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: 500 14px/1.2 var(--ui); box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in); }
@@ -255,6 +267,10 @@ footer p { margin: 0; }
 
 dialog { width: min(760px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); overflow: hidden; }
 dialog::backdrop { background: rgba(10, 24, 30, 0.45); }
+/* a dialog arrives rather than appears: it and its backdrop fade in as one surface. Closing stays immediate, so the room is back at once */
+dialog[open] { transition: opacity var(--t-enter) var(--ease-out), transform var(--t-enter) var(--ease-out); }
+dialog[open]::backdrop { transition: opacity var(--t-enter) var(--ease-out); }
+@starting-style { dialog[open] { opacity: 0; transform: scale(var(--dialog-from)); } dialog[open]::backdrop { opacity: 0; } }
 .sheet { display: flex; flex-direction: column; max-height: calc(100dvh - 26px); }
 .sheet header { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .sheet h2 { font-size: 17px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink); margin-right: auto; }

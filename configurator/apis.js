@@ -103,7 +103,7 @@ class DetailView {
   }
   draw() {
     if (!this.dirty) return;
-    const { width, height } = this.canvas.getBoundingClientRect(); if (!width || !height) return;
+    const width = this.canvas.clientWidth, height = this.canvas.clientHeight; if (!width || !height) return; // the layout size: the dialog's entrance scales it for a moment
     this.renderer.setSize(width, height, false); this.camera.aspect = width / height; this.camera.updateProjectionMatrix();
     this.renderer.render(this.scene, this.camera); this.dirty = false;
   }
