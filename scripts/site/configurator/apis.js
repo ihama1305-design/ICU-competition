@@ -119,7 +119,7 @@ export class APIS {
   mount() {
     const entry = document.createElement("section"); entry.className = "apis-entry"; entry.setAttribute("aria-labelledby", "apisEntryTitle");
     entry.innerHTML = `<p class="apis-kicker">Adaptive ICU · patient comfort</p><h2 id="apisEntryTitle">Adaptive Patient Interface System</h2><p class="note">Explore skin contact, attachment layers and external line organization.</p><button type="button" id="openApis" class="apis-primary">Explore APIS <span aria-hidden="true">↗</span></button><label class="apis-toggle"><input type="checkbox" id="apisMarkers"> Show attachment markers in the room</label><p class="note">Illustrative attachment positions on the existing bed. Materials are device-specific; APIS hardware is a concept.</p>`;
-    ($("demos") || $("panelBody")).prepend(entry); // after the room's own controls
+    ($("demos") || $("panelBody")).prepend(entry); // its place in the panel is the template's #demos
     const dialog = document.createElement("dialog"); dialog.id = "apisDialog"; dialog.setAttribute("aria-labelledby", "apisTitle");
     dialog.innerHTML = `<div class="apis-shell">
       <header class="apis-header"><div><p class="apis-kicker">Adaptive ICU — The Adaptive Healing Room</p><h2 id="apisTitle">Adaptive Patient Interface System <span>APIS</span></h2></div><button type="button" id="apisClose" aria-label="Close APIS and return to room">Return to room ×</button></header>

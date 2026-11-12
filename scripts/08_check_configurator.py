@@ -1616,8 +1616,8 @@ with sync_playwright() as p:
     pg.goto(URL)
     pg.wait_for_function("window.__configReady === true", timeout=180000)
     order = pg.evaluate("[...document.querySelectorAll('#panelBody > section:not([hidden]) > h2, #demos h2')].map(h => h.textContent.trim())")
-    check(order[:4] == ["Theme", "Time of day", "View", "Room"] and order[4:6] == ["Physiological Adaptive Comfort System", "Adaptive Patient Interface System"],
-          f"the panel opens on the room's own controls, with the two demos after Room {order[:7]}")
+    check(order[:6] == ["Theme", "Time of day", "Physiological Adaptive Comfort System", "Adaptive Patient Interface System", "View", "Room"],
+          f"the panel opens on the room's look and its time of day, with the two demos next and View after them {order[:7]}")
     check(pg.is_hidden("#lookHint"), "an automated page isn't given the look-around hint, so screenshots show the room alone")
     pg.goto(URL + "?hint=1")
     pg.wait_for_function("window.__configReady === true", timeout=180000)
