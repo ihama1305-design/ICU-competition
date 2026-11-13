@@ -1504,12 +1504,17 @@ with sync_playwright() as p:
         inside = r["left"] >= 0 and r["top"] >= 0 and r["right"] <= pg.viewport_size["width"] and r["bottom"] <= pg.viewport_size["height"]
         return c, inside, pg.evaluate(COVERS)
 
-    def run_demo(pg, fid, skip=False, timeout=180000):
-        """Open a feature's card from the Features list, press See it in action, and let it run to the end (or skip each hold)."""
+    def run_demo(pg, fid, skip=False, timeout=180000, menu=None):
+        """Open a feature's card from the Features list, press See it in action (or the menu item named `menu`), and let it run
+        to the end (or skip each hold)."""
         pg.evaluate("document.getElementById('featuresSection').open = true")
         pg.click(f"#featureList button[data-feature='{fid}']")
         pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
-        pg.click("#featureDemo")
+        if menu:
+            pg.click("#featureMenuToggle")
+            pg.click(f"#featureMenuList button:text-is('{menu}')")
+        else:
+            pg.click("#featureDemo")
         pg.wait_for_function("window.__config.demo() !== null", timeout=10000)
         seen = pg.evaluate("({ bar: !document.getElementById('demoBar').hidden, card: !document.getElementById('objectCard').hidden, text: document.getElementById('demoText').textContent })")
         frozen = []
@@ -1545,12 +1550,17 @@ with sync_playwright() as p:
             if f["id"] == "nature":
                 continue  # a feature made of parts: its parts are what's clicked
             pg.evaluate(f"window.__config.set('tvplay', '{'on' if f['id'] == 'tvScene' else 'off'}')")
+            # a wardrobe compartment is there only while its door is open: the clothes are behind the right, the rest the left
+            side = ("right" if f["id"] == "wardrobeClothing" else "left") if f["parent"] == "wardrobe" else None
+            pg.evaluate("s => window.__config.wardrobe(s)", side)
             point = None
             for v in ["overview", *[x for x in views if x not in ("overview", "patient", "bathroom")]]:
                 pg.evaluate(f"window.__config.camera('{v}', {{ instant: true }})")
                 point = pg.evaluate(f"window.__config.featurePoint('{f['id']}')")
                 if point:
                     break
+            if not point and pg.evaluate(f"window.__config.frameFeature('{f['id']}')"):  # no view shows it: stand in front of it, as its demo does
+                point = pg.evaluate(f"window.__config.featurePoint('{f['id']}')")
             if not point:
                 missed.append(f["id"])
                 continue
@@ -1568,6 +1578,7 @@ with sync_playwright() as p:
                 wrong.append((f["id"], "Esc"))
             if f["id"] in ("circadian", "wardrobe"):
                 shot(pg, f"{room.lower()}_feature_{f['id']}")
+        pg.evaluate("window.__config.wardrobe(null)")
         check(not missed, f"{room}: every feature can be clicked in the room, from one of its views {missed}")
         check(not wrong, f"{room}: a click opens that feature's card, with How it works, its benefit and its evidence, and Esc closes it and gives focus back to the room {wrong[:3]}")
         check(not covered, f"{room}: no card covers the mode bar or a notice, and each fits the window {covered[:2]}")
@@ -1590,15 +1601,17 @@ with sync_playwright() as p:
         pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'plain'); c.set('aquarium', 'none'); c.set('tvplay', 'off'); c.camera('overview', { instant: true }); }")
         drawn(pg)
         bad = []
-        for f in [x for x in feats if x["demo"]]:
+        demos = [(x["id"], None) for x in feats if x["demo"]] + [("wardrobe", "View storage compartments"), ("wardrobe", "Compare with the old wardrobe")]
+        for fid, menu in demos:
+            f = next(x for x in feats if x["id"] == fid)
             before = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code(), hash: location.hash.slice(3) })")
-            seen, frozen, ended = run_demo(pg, f["id"], skip=room != ROOMS[0])
+            seen, frozen, ended = run_demo(pg, f["id"], skip=room != ROOMS[0], menu=menu)
             pg.wait_for_function("!window.__config.state().moving", timeout=60000)
             after = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code(), hash: location.hash.slice(3), focus: document.activeElement.dataset.feature })")
             diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k]]
             held = all(x["code"] == before["code"] and x["selected"] == before["fp"]["selected"] for x in frozen)
             if not (ended and seen["bar"] and not seen["card"] and held and not diff and after["code"] == before["code"] and after["focus"] == f["id"]):
-                bad.append((f["id"], ended, seen, held, diff[:4], after["focus"]))
+                bad.append((f["id"], menu, ended, seen, held, diff[:4], after["focus"]))
         check(not bad, f"{room}: every demo runs to its end with its caption up and the card out of the way, changes no choice or link while it runs, and puts the room back exactly, with focus back on its button {bad[:2]}")
     # stopping: Esc, Stop, taking the view, or Emergency-ready
     go(pg, ROOMS[0])
@@ -1731,6 +1744,97 @@ with sync_playwright() as p:
     pg.wait_for_function("document.getElementById('panel').classList.contains('open')", timeout=10000)
     check(pg.evaluate("document.activeElement.dataset.feature") == "wardrobe", "phone: closing it brings the sheet back, with focus on the feature's button")
     check(pg.evaluate("window.__mic || 0") == 0 and not errs, f"phone, feature cards: no errors, and no microphone {errs[:3]}")
+    ctx.close()
+
+    # ---------------------------------------------------------------- the wardrobe explains itself: its doors, its compartments, and the wardrobe it replaced
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    WSTATE = "(() => { const f = window.__config.fingerprint(); return { side: f.wardrobe, old: f.oldWardrobe, moving: window.__config.wardrobeMoving() }; })()"
+    # the two wardrobes' sizes, as their code builds them: the built-in one's ends (addons.js, wardrobe()) and the
+    # freestanding one's boxes before PR #47 (git show eff8931^:scripts/site/configurator/addons.js), 1 m wide in W1's niche
+    SIZES = {"W1": {"now": (13.727 - 12.62, 31.607 - 30.97), "before": (1.0, 0.6375)}, "W3": {"now": (7.83 - 6.53, 22.305 - 21.68), "before": (1.355, 0.6375)}}
+    for room in ROOMS:
+        go(pg, room)
+        set_defaults(pg)
+        pg.evaluate("window.__config.camera('overview', { instant: true })")
+        pg.evaluate("document.getElementById('featuresSection').open = true")
+        pg.click("#featureList button[data-feature='wardrobe']")
+        pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+        pg.click("#featureMenuToggle")
+        menu = pg.evaluate("[...document.querySelectorAll('#featureMenuList button')].map(b => b.textContent)")
+        check(menu == ["Learn about this design", "Open cabinet", "View storage compartments", "Compare with the old wardrobe"] and pg.inner_text("#featureDemo") == "See how it works",
+              f"{room}: the wardrobe's card has See how it works and its four actions in a short menu {menu}")
+        pg.click("#featureMenuList button:text-is('Learn about this design')")
+        check(pg.evaluate("document.getElementById('featureHow').open && document.activeElement === document.querySelector('#featureHow summary')") and "one side opens at a time" in pg.inner_text("#featureHowText"),
+              f"{room}: Learn about this design opens How it works and takes focus there")
+        # Open cabinet: the left door slides behind the right, eased, and stops; the light inside comes on
+        pg.evaluate("window.__config.frameFeature('wardrobe')")
+        pg.click("#featureMenuList button:text-is('Open cabinet')")
+        moving = pg.evaluate(WSTATE)
+        pg.wait_for_function("!window.__config.wardrobeMoving()", timeout=30000)
+        st = pg.evaluate(WSTATE)
+        check(moving["moving"] and st["side"] == "left" and pg.inner_text("#featureMenuList button:nth-child(2)") == "Close cabinet", f"{room}: Open cabinet slides the left door open over a moment, then it stops, and the button says Close cabinet {moving} {st}")
+        present = {f["id"] for f in pg.evaluate("window.__config.features()") if f["present"]}
+        check({"wardrobeEssentials", "wardrobeValuables", "wardrobeBelongings", "wardrobeLighting", "wardrobeDoors"} <= present and "wardrobeClothing" not in present,
+              f"{room}: with the left side open, its compartments are there to click, and the clothes behind the right door aren't {sorted(p for p in present if p.startswith('wardrobe'))}")
+        pg.keyboard.press("Escape")
+        shot(pg, f"{room.lower()}_wardrobe_left")
+        names_ = {f["id"]: f["name"] for f in pg.evaluate("window.__config.features()")}
+        wrong = []
+        for side, parts in (("left", ["wardrobeEssentials", "wardrobeValuables", "wardrobeBelongings", "wardrobeLighting"]), ("right", ["wardrobeClothing", "wardrobeDoors"])):
+            pg.evaluate("s => window.__config.wardrobe(s)", side)
+            for pid in parts:
+                pg.evaluate(f"window.__config.frameFeature('{pid}')")
+                pt = pg.evaluate(f"window.__config.featurePoint('{pid}')")
+                if not pt:
+                    wrong.append((pid, "not clickable"))
+                    continue
+                pg.mouse.click(pt["x"], pt["y"])
+                pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+                c = pg.evaluate("window.__config.card()")
+                if c["feature"] != pid or c["title"] != names_[pid] or c["kicker"] != "Part of Built-in sliding wardrobe":
+                    wrong.append((pid, c["feature"], c["kicker"]))
+                pg.keyboard.press("Escape")
+            if side == "right":
+                shot(pg, f"{room.lower()}_wardrobe_right")
+        check(not wrong, f"{room}: each compartment, the light and the doors open their own card, as a part of the wardrobe {wrong[:3]}")
+        # closed, the doors are the wardrobe: a click on them opens its card, not the doors'
+        pg.evaluate("window.__config.wardrobe(null)")
+        pg.evaluate("window.__config.frameFeature('wardrobe')")
+        pt = pg.evaluate("window.__config.featurePoint('wardrobe')")
+        pg.mouse.click(pt["x"], pt["y"])
+        pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+        check(pg.evaluate("window.__config.card().feature") == "wardrobe" and not ({f["id"] for f in pg.evaluate("window.__config.features()") if f["present"]} & {"wardrobeClothing", "wardrobeEssentials", "wardrobeDoors"}),
+              f"{room}: with the doors closed the compartments aren't there, and a click on the doors opens the wardrobe's card")
+        pg.keyboard.press("Escape")
+        # the comparison: the old wardrobe outlined where it stood, and both floor areas from the models' sizes
+        fig = pg.evaluate("window.__config.wardrobeFigures()")
+        want = SIZES[room]
+        ok_sizes = all(abs(fig[k]["width"] - want[k][0]) < 0.001 and abs(fig[k]["depth"] - want[k][1]) < 0.001 for k in ("now", "before"))
+        check(ok_sizes, f"{room}: the comparison's sizes are the two models' own ({fig['before']['width']:.3f} x {fig['before']['depth']:.3f} m before, {fig['now']['width']:.3f} x {fig['now']['depth']:.3f} m now)")
+        pg.click("#featureList button[data-feature='wardrobe']")
+        pg.click("#featureMenuToggle")
+        pg.click("#featureMenuList button:text-is('Compare with the old wardrobe')")
+        pg.wait_for_function("window.__config.demo() && window.__config.demo().waiting", timeout=60000)
+        said, st = pg.inner_text("#demoText"), pg.evaluate(WSTATE)
+        areas = [f"{fig['before']['area']:.2f} m²", f"{fig['now']['area']:.2f} m²"]
+        more = fig["now"]["area"] > fig["before"]["area"]
+        check(st["old"] and all(a in said for a in areas) and ("more" if more else "less") in said and "models' sizes" in said and not any(w in said.lower() for w in ("saves", "saved", "frees")),
+              f"{room}: Compare outlines the old wardrobe and gives both floor areas from the models, {'more' if more else 'less'} floor now, and no claim of space saved: {said}")
+        shot(pg, f"{room.lower()}_wardrobe_compare")
+        pg.click("#demoStop")
+        check(not pg.evaluate(WSTATE)["old"], f"{room}: and the outline goes when the demo does")
+    pg.add_script_tag(url=AXE)
+    pg.click("#featureList button[data-feature='wardrobe']")
+    pg.click("#featureMenuToggle")
+    faults = axe_faults(pg, "#objectCard")
+    check(not faults, f"axe finds no serious faults in the wardrobe's card with its menu open {faults[:4]}")
+    check(not errs, f"the wardrobe: no errors {errs[:3]}")
+    ctx.close()
+    # with reduced motion the doors don't slide: they're open or closed at once
+    ctx, pg, errs, _, _ = open_page(b, 1100, 700, reduced_motion="reduce")
+    pg.evaluate("window.__config.wardrobe('left', false)")
+    st = pg.evaluate("({ moving: window.__config.wardrobeMoving(), side: window.__config.fingerprint().wardrobe })")
+    check(st == {"moving": False, "side": "left"}, f"with reduced motion the doors open at once {st}")
     ctx.close()
 
     # ---------------------------------------------------------------- reduced motion

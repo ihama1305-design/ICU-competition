@@ -308,35 +308,72 @@ Object.assign(BUILD, {
     // plinth, set back so feet and cleaning machines clear it; the accent colour
     const plinth = tagItem(box(inW + 2 * T, PLINTH, D - 0.06, trim, (L + R) / 2, PLINTH / 2, (D - 0.06) / 2), "Wardrobe base", "A recessed, easy-clean kick plate at the foot of the wardrobe.");
     g.add(plinth);
-    // the carcass: back, floor, top, and a shelf and hanging rail inside
+    // the carcass: back, floor and inside top
     g.add(box(inW, H - PLINTH, 0.012, std("#756c60", 0.9), mid, PLINTH + (H - PLINTH) / 2, 0.006));
     g.add(box(inW, T, D - 0.05, shell, mid, PLINTH + T / 2, (D - 0.05) / 2));
-    const doorTop = 2.2, lap = 0.015, upperH = H - doorTop + lap;
+    const doorTop = 2.2, lap = 0.015, upperH = H - doorTop + lap, floorY = PLINTH + T;
     // the fascia: fixed and flush with the end panels, from just below the door tops to the ceiling. It hides the sliding track,
     // and with no open top there's nowhere for dust to gather
     panel(inW, upperH, 0.012, mid, H - upperH / 2, D - 0.006, "Upper fascia panel", "A flush panel from the doors to the ceiling. It hides the sliding track, and with no open top there's nowhere for dust to gather.");
     g.add(box(inW, T, D - 0.05, shell, mid, doorTop - T / 2, (D - 0.05) / 2)); // inside top
-    const shelf = tagItem(box(inW / 2 - 0.03, 0.035, D - 0.14, shell, inL + inW / 4, 1.47, (D - 0.1) / 2), "Wardrobe shelf", "An interior shelf for folded clothes and personal belongings.");
-    g.add(shelf);
+    // Inside, by compartment. Each is a named group, so its card can name it (features.json), and each says which door
+    // shows it: one side opens at a time. Behind the left door, daily essentials on a shelf at eye level, a lockable box for
+    // valuables below it and a bag on the floor; behind the right, clothes on the rail. They're small and inside the carcass.
+    const part = (name, half) => { const p = new THREE.Group(); p.name = name; p.userData.half = half; g.add(p); return p; };
+    const halfW = inW / 2, leftX = inL + halfW / 2, mat = (c, r = 0.85, x) => std(c, r, x);
+    const essentials = part("wardrobe_part_essentials", "left");
+    essentials.add(tagItem(box(halfW - 0.03, 0.035, D - 0.14, shell, leftX, 1.47, (D - 0.1) / 2), "Wardrobe shelf", "An interior shelf for daily essentials."));
+    const shelfTop = 1.47 + 0.0175;
+    essentials.add(
+      box(0.03, 0.22, 0.16, mat("#4f739a"), leftX - halfW * 0.32, shelfTop + 0.11, 0.26), // two books, standing
+      box(0.026, 0.2, 0.15, mat("#b9805a"), leftX - halfW * 0.32 + 0.032, shelfTop + 0.1, 0.26),
+      box(0.15, 0.045, 0.06, mat("#33414a", 0.5), leftX + halfW * 0.02, shelfTop + 0.0225, 0.3), // a glasses case
+      box(0.19, 0.09, 0.11, mat("#9ec3b9", 0.95), leftX + halfW * 0.28, shelfTop + 0.045, 0.24), // a wash bag
+    );
+    const valuables = part("wardrobe_part_valuables", "left");
+    valuables.add(box(halfW - 0.03, 0.03, D - 0.14, shell, leftX, 0.98, (D - 0.1) / 2)); // its own lower shelf
+    const safeY = 0.98 + 0.015 + 0.1;
+    valuables.add(
+      box(0.3, 0.2, 0.3, mat("#8f989c", 0.42, { metalness: 0.3 }), leftX, safeY, 0.2),
+      box(0.07, 0.09, 0.008, mat("#2a3135", 0.4), leftX + 0.08, safeY, 0.354), // a keypad, drawn on: nothing locks here
+      ball(0.008, mat("#4fb37f", 0.4, { emissive: "#4fb37f", emissiveIntensity: 0.6 }), leftX + 0.08, safeY + 0.06, 0.358),
+    );
+    const belongings = part("wardrobe_part_belongings", "left");
+    belongings.add(
+      box(0.36, 0.26, 0.2, mat("#76658c"), leftX, floorY + 0.13, 0.22), // a holdall on the cabinet floor
+      box(0.2, 0.025, 0.02, mat("#5a4d6c"), leftX, floorY + 0.29, 0.22),
+    );
+    const clothing = part("wardrobe_part_clothing", "right");
     const rail = tagItem(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, inW / 2 - 0.05, 12), metal), "Hanging rail", "A rail for hangers inside the wardrobe.");
-    rail.rotation.z = Math.PI / 2; rail.position.set(inL + inW * 0.75, 1.76, D / 2 - 0.04); rail.castShadow = true; g.add(rail);
+    rail.rotation.z = Math.PI / 2; rail.position.set(inL + inW * 0.75, 1.76, D / 2 - 0.04); rail.castShadow = true; clothing.add(rail);
     const fabric = std("#91b9b5", 0.95); fabric.name = "wardrobe_clothing";
     for (const [i, f] of [0.08, 0.3, 0.52, 0.74].entries()) {
       const garment = tagItem(box(0.15, 0.47 + (i % 2) * 0.06, 0.025, fabric, inL + inW * (0.5 + f / 2), 1.40, D / 2 - 0.02), "Stored clothing", "Simple clothing shapes show how the sliding wardrobe can hold personal items.");
       garment.material = fabric.clone(); garment.material.color.set(["#91b9b5", "#d5a989", "#a4abc5", "#e0d3b8"][i]);
-      g.add(garment);
+      clothing.add(garment);
     }
-    // two sliding doors on two tracks: the left runs behind the right to open. They overlap by 2 cm when closed
+    for (const dx of [-0.05, 0.05]) clothing.add(box(0.09, 0.08, 0.26, mat("#3d3a38", 0.6), inL + inW * 0.75 + dx, floorY + 0.04, 0.22)); // a pair of shoes
+    // the cabinet's light: a warm strip under the inside top, lit while a door is open
+    const ledMat = std("#fff1d6", 0.4, { emissive: "#ffd9a0", emissiveIntensity: 0 });
+    ledMat.name = "wardrobe_led";
+    part("wardrobe_part_lighting", "any").add(box(inW - 0.06, 0.012, 0.025, ledMat, mid, doorTop - T - 0.006, D - 0.09));
+    // two sliding doors on two tracks: the left runs behind the right, so one side opens at a time. They overlap by 2 cm
+    // when closed, hang from a track hidden by the fascia, and run in a guide at the foot
+    const mechanism = part("wardrobe_part_doors", "any");
     const doorW = inW / 2 + 0.01, doorH = doorTop - PLINTH - 2 * GAP, doorY = PLINTH + GAP + doorH / 2;
     const doorText = "This panel slides across the wardrobe opening. Use the button to open or close the doors.";
+    mechanism.add(box(inW, 0.008, TRACK + 2 * DOOR_T, metal, mid, PLINTH + 0.004, D - SET - TRACK / 2 - DOOR_T)); // the guide
     const left = tagItem(box(doorW, doorH, DOOR_T, finish, inL + doorW / 2, doorY, D - SET - TRACK - DOOR_T / 2), "Sliding wardrobe door", doorText, "wardrobe");
     const right = tagItem(box(doorW, doorH, DOOR_T, finish, inR - doorW / 2, doorY, D - SET - DOOR_T / 2), "Sliding wardrobe door", doorText, "wardrobe");
     for (const [d, side] of [[left, 1], [right, -1]]) {
       d.add(box(0.012, 0.32, 0.008, trim, side * (doorW / 2 - 0.05), 0.05, DOOR_T / 2 + 0.002)); // a slim recessed pull
-      faces.push(d); g.add(d);
+      faces.push(d); mechanism.add(d);
     }
+    // the doors' stops: closed, or open with the other door's side covered. side is null (closed), "left" or "right"
+    const slide = { left: { closed: left.position.x, open: inR - doorW / 2 - 0.02 }, right: { closed: right.position.x, open: inL + doorW / 2 + 0.02 } };
+    for (const p of g.children) if (p.userData.half) p.userData.revealed = () => (p.userData.half === "any" ? g.userData.side !== null : g.userData.side === p.userData.half);
     Object.assign(g.userData, {
-      doors: [left, right], faces, open: false, slide: { closed: left.position.x, open: inR - doorW / 2 - 0.02 },
+      doors: [left, right], faces, side: null, open: false, slide, led: ledMat, site: { width: W, depth: D, height: H, storage: doorTop - floorY },
       itemInfo: { title: "Built-in sliding wardrobe", description: "Patient storage for clothes and personal belongings, built in floor to ceiling against the back wall so the entry route stays clear. Flush end and filler panels make it read as joinery, and there's no top for dust to settle on.", action: "wardrobe" },
     });
     return g;
@@ -706,13 +743,83 @@ export function setAddonLook(room, id, look) {
   }
 }
 
+// ---------------------------------------------------------------- the wardrobe's doors, and the one it replaced
+
+const SLIDE_MS = 900;
+const easeDoor = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+
+/**
+ * Slide the wardrobe's doors to show one side, or close them: side is "left", "right" or null. Eased over about a second,
+ * or at once with reduced motion or `instant`. Returns the side, or undefined if there's no wardrobe.
+ */
+export function setWardrobe(room, side, { instant = false } = {}) {
+  const w = room?.addons?.wardrobe;
+  if (!w) return undefined;
+  const u = w.userData, [left, right] = u.doors;
+  u.side = side; u.open = side !== null;
+  const to = { left: side === "left" ? u.slide.left.open : u.slide.left.closed, right: side === "right" ? u.slide.right.open : u.slide.right.closed };
+  if (side) u.led.emissiveIntensity = 1.1; // the light comes on as a door starts to open, and goes off once it has closed
+  if (instant || reduced()) {
+    left.position.x = to.left; right.position.x = to.right; u.tween = null;
+    if (!side) u.led.emissiveIntensity = 0;
+    return side;
+  }
+  u.tween = { start: performance.now(), from: { left: left.position.x, right: right.position.x }, to };
+  return side;
+}
+
+/** The left side open, or closed again: the card's Open cabinet. */
 export function toggleWardrobe(room) {
-  const wardrobe = room.addons?.wardrobe;
-  if (!wardrobe) return false;
-  wardrobe.userData.open = !wardrobe.userData.open;
-  const [left] = wardrobe.userData.doors, { slide } = wardrobe.userData;
-  left.position.x = wardrobe.userData.open ? slide.open : slide.closed; // behind the right-hand door
-  return wardrobe.userData.open;
+  const w = room?.addons?.wardrobe;
+  if (!w) return false;
+  return setWardrobe(room, w.userData.side ? null : "left") !== null;
+}
+
+/** Move the doors on, once a frame. Returns true while they move. */
+export function tickWardrobe(room, now) {
+  const u = room?.addons?.wardrobe?.userData;
+  if (!u?.tween) return false;
+  const tw = u.tween, t = Math.max(0, Math.min(1, (now - tw.start) / SLIDE_MS)), k = easeDoor(t), [left, right] = u.doors;
+  left.position.x = tw.from.left + (tw.to.left - tw.from.left) * k;
+  right.position.x = tw.from.right + (tw.to.right - tw.from.right) * k;
+  if (t >= 1) { u.tween = null; if (!u.side) u.led.emissiveIntensity = 0; }
+  return true;
+}
+
+export const wardrobeMoving = room => !!room?.addons?.wardrobe?.userData.tween;
+
+// The freestanding wardrobe the built-in one replaced, as wardrobe() built it before PR #47
+// (git show eff8931^:scripts/site/configurator/addons.js): a 1.355 m carcass, 0.56 m deep with its sliding doors standing
+// 0.36 m out in front of its middle and 0.28 m behind it, and 2.08 m tall to the top of its track, scaled to 1 m wide in W1's
+// niche. Its sizes here are read from those boxes, not estimated.
+const OLD_WARDROBE = { W1: { at: [13.12, 31.295], width: 1.355 / 1.355 }, W3: { at: [7.15, 22.04], width: 1.355 }, back: -0.28, front: 0.3575, height: 2.0825 };
+
+/** The two wardrobes' sizes, in metres and square metres, from their models: the built-in one's and the one it replaced. */
+export function wardrobeFigures(room) {
+  const u = room?.addons?.wardrobe?.userData, old = OLD_WARDROBE[room?.label];
+  if (!u || !old) return null;
+  const now = { width: u.site.width, depth: u.site.depth, height: u.site.height };
+  const before = { width: old.width, depth: OLD_WARDROBE.front - OLD_WARDROBE.back, height: OLD_WARDROBE.height };
+  now.area = now.width * now.depth; before.area = before.width * before.depth;
+  return { now, before };
+}
+
+/** An outline of the old wardrobe where it stood, seen through the new one: the comparison's picture. Never picked. */
+export function setOldWardrobe(room, on) {
+  const old = OLD_WARDROBE[room?.label];
+  if (!old) return;
+  if (on && !room.oldWardrobe) {
+    const w = old.width, d = OLD_WARDROBE.front - OLD_WARDROBE.back, h = OLD_WARDROBE.height;
+    const geo = new THREE.BoxGeometry(w, h, d), g = new THREE.Group();
+    g.name = "old_wardrobe_outline";
+    const fill = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: "#e6a342", transparent: true, opacity: 0.16, depthTest: false, depthWrite: false, toneMapped: false }));
+    const line = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: "#c77d12", depthTest: false, toneMapped: false }));
+    for (const o of [fill, line]) { o.raycast = () => {}; o.renderOrder = 30; o.position.set(0, h / 2, (OLD_WARDROBE.front + OLD_WARDROBE.back) / 2); g.add(o); }
+    g.position.copy(W2T(old.at[0], old.at[1], 0));
+    room.root.add(g);
+    room.oldWardrobe = g;
+  }
+  if (room.oldWardrobe) room.oldWardrobe.visible = on;
 }
 
 /** TV width in metres, and whether it's playing. Built on first use, and it replaces the exported TV. */
