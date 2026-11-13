@@ -1,6 +1,7 @@
 // The guided tour: a few captioned steps through what the configurator does, for someone seeing it for the first time.
 // Each step sets up the room through `api` (main.js); Previous, Pause, Next, Restart and Exit are always there. Exit puts the
 // room back exactly as it was before the tour started, and Restart does the same before playing from the first step.
+// Finish puts the room back too, and the card stays to say so and to offer what comes next (ENDING).
 
 export const STEPS = [
   {
@@ -15,8 +16,9 @@ export const STEPS = [
   },
   {
     title: "What the patient sees",
-    text: "Patient view looks out from the pillow, and turns only as far as a patient's head could.",
-    run: async a => { a.camera("patient"); },
+    text: "Patient view looks out from the pillow, turning only as far as a head can. The screen shows the day and time.",
+    // the wall ahead is mostly television: on its orientation screen it has something to say, where off it is a black rectangle
+    run: async a => { a.option("tvplay", "orientation"); a.camera("patient"); },
   },
   {
     title: "Comfort mode",
@@ -41,7 +43,8 @@ export const STEPS = [
   {
     title: "Themes and the time of day",
     text: "Desert Sanctuary at sunset. The sun follows its real path over Abu Dhabi.",
-    run: async a => { a.theme("desert"); a.time("sunset"); a.camera("family"); },
+    // from where the last step stood, so the finishes change in place and the low sun comes in through the window
+    run: async a => { a.theme("desert"); a.time("sunset"); a.camera("overview"); },
   },
   {
     title: "Two deeper demos",
@@ -54,7 +57,19 @@ export const STEPS = [
 // The safety caveats every step would otherwise repeat, said once in a fixed line under the captions (and under PACS's demo)
 export const CAVEAT = "Simulated demo. A nurse approves every change.";
 
-export const HOLD_MS = 9000; // long enough to read a step, at an unhurried pace
+// What the card says after Finish, once the room is back as it was. Not a step: it has no number and sets nothing up.
+export const ENDING = {
+  title: "That's the tour",
+  text: "The tour's changes are undone. The room is yours now: pick a theme, a time of day or a room mode.",
+  go: "Try it yourself",
+  again: "Watch again",
+};
+
+// The ending's buttons appear where Finish was pressed, so a double click meant for Finish would land on one of them.
+// They wait this long before they answer.
+export const ENDING_GUARD_MS = 600;
+
+export const HOLD_MS = 9000; // long enough to read a step, at an unhurried pace, counted from when its room has come to rest
 export const RESUME_MIN_MS = 3000; // the least a step waits after Play, so it never moves on the instant it's pressed
 
 /**
@@ -74,9 +89,14 @@ export class GuidedTour {
     this.api = api; this.ui = ui;
     this.at = -1; this.playing = false; this.timer = 0; this.token = 0; this.snapshot = null;
     this.held = 0; this.since = 0; this.fill = null; // how long this step has been held, when it last started waiting, and the bar's fill
+    this.still = false; // whether this step's room has come to rest, which is when its wait starts
+    this.ended = false; this.endedAt = 0; // whether the card is showing the ending, and since when
     ui.bar.style.setProperty("--step", `${100 / STEPS.length}%`);
+    ui.tryIt.textContent = ENDING.go; ui.again.textContent = ENDING.again;
     ui.prev.addEventListener("click", () => this.go(this.at - 1));
-    ui.next.addEventListener("click", () => (this.at >= STEPS.length - 1 ? this.exit() : this.go(this.at + 1)));
+    ui.next.addEventListener("click", () => (this.at >= STEPS.length - 1 ? this.finish() : this.go(this.at + 1)));
+    ui.tryIt.addEventListener("click", () => { if (this.endingReady()) this.close(true); });
+    ui.again.addEventListener("click", () => { if (this.endingReady()) this.start(); });
     ui.play.addEventListener("click", () => this.setPlaying(!this.playing));
     ui.exit.addEventListener("click", () => this.exit());
     ui.restart.addEventListener("click", () => this.restart());
@@ -84,8 +104,16 @@ export class GuidedTour {
 
   get running() { return this.at >= 0; }
 
+  /** The card's two layouts: a step with the tour's controls, or the ending with what comes next. */
+  layout(ending) {
+    this.ui.steps.hidden = ending; this.ui.after.hidden = !ending;
+    this.ui.caveat.hidden = ending; // the ending shows no demo, so it has nothing to caveat
+  }
+
   start() {
     if (this.running) return;
+    this.ended = false;
+    this.layout(false);
     this.snapshot = this.api.snapshot();
     this.ui.card.hidden = false;
     this.api.shown(true);
@@ -111,10 +139,14 @@ export class GuidedTour {
     }));
     this.ui.bar.style.setProperty("--done", `${((i + 1) / STEPS.length) * 100}%`);
     this.api.say(`Step ${i + 1} of ${STEPS.length}: ${step.title}.`);
-    this.held = 0; this.since = 0; // a new step starts its wait from nothing
+    this.held = 0; this.since = 0; this.still = false; // a new step starts its wait from nothing, and not before its room is drawn
     this.schedule();
     // a later step, or Exit, supersedes this one partway through
-    try { await step.run(this.api, () => token !== this.token); } catch (err) { this.api.fail(err); }
+    try { await step.run(this.api, () => token !== this.token); await this.api.still(); } catch (err) { this.api.fail(err); }
+    if (token !== this.token) return;
+    // the camera has arrived and the lights have settled: the time to read the step starts now, not while the room was moving
+    this.still = true;
+    this.schedule();
   }
 
   /** Stop waiting, and stop the bar with it. What the step had already been held is kept. */
@@ -131,7 +163,7 @@ export class GuidedTour {
     // The last step has nothing to move on to, so it shows no wait.
     const from = this.running && !last ? 1 - wait / HOLD_MS : 0;
     this.ui.hold.style.transform = `scaleX(${from})`;
-    if (!this.playing || !this.running) return;
+    if (!this.playing || !this.running || !this.still) return;
     this.since = performance.now();
     this.timer = setTimeout(() => (last ? this.setPlaying(false) : this.go(this.at + 1)), wait);
     // linear, because it shows time passing; it holds at full until the step changes, so it never drops back first
@@ -162,15 +194,51 @@ export class GuidedTour {
   /** Someone took the view into their own hands: the tour waits for them. */
   pause() { if (this.running && this.playing) this.setPlaying(false); }
 
+  /** Put the room back as it was before the tour, then say so: putting it back makes announcements of its own, and this one has to be the last. */
+  async putBack(said) {
+    const token = this.token, snap = this.snapshot;
+    this.snapshot = null;
+    try { await this.api.restore(snap); } catch (err) { this.api.fail(err); }
+    if (token === this.token) this.api.say(said);
+  }
+
+  /** The last step's Finish. The room goes back as it was, and the card stays: it says the tour is over and what to do next. */
+  finish() {
+    if (!this.running) return;
+    this.halt();
+    this.token++;
+    this.at = -1; this.playing = false; this.ended = true; this.endedAt = performance.now();
+    this.layout(true);
+    this.ui.count.textContent = "Finished";
+    this.ui.bar.style.setProperty("--done", "100%");
+    this.ui.hold.style.transform = "scaleX(0)";
+    this.ui.title.textContent = ENDING.title;
+    this.ui.text.textContent = ENDING.text;
+    this.ui.links.replaceChildren();
+    this.ui.tryIt.focus({ preventScroll: true });
+    this.putBack("Guided tour finished. The room is back as it was.");
+  }
+
+  /** Whether the ending has been up long enough for a press on its buttons to be meant for them. */
+  endingReady() { return this.ended && performance.now() - this.endedAt >= ENDING_GUARD_MS; }
+
+  /** Put the ending away. With handOver, the room's options come forward: changing the room is what comes next. */
+  close(handOver = false) {
+    if (!this.ended) return;
+    this.ended = false;
+    this.ui.card.hidden = true; // it keeps the ending's layout while it fades; start() sets the steps' layout again
+    this.api.shown(false);
+    if (handOver) this.api.handOver();
+  }
+
   exit() {
+    if (this.ended) { this.close(); return; }
     if (!this.running) return;
     this.halt();
     this.token++;
     this.at = -1; this.playing = false;
     this.ui.card.hidden = true;
     this.api.shown(false);
-    this.api.restore(this.snapshot);
-    this.snapshot = null;
-    this.api.say("Guided tour ended. The room is back as it was.");
+    this.putBack("Guided tour ended. The room is back as it was.");
   }
 }

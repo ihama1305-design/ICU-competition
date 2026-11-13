@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PacsSimulation, GUIDE, NIGHT_LINE } from "./site/configurator/pacs-state.js";
 import { afterDark, sunTimes } from "./site/configurator/solar.js";
 import { RoomModes, modeText } from "./site/configurator/modes.js";
-import { STEPS, CAVEAT, HOLD_MS, RESUME_MIN_MS, holdLeft } from "./site/configurator/guide.js";
+import { STEPS, CAVEAT, ENDING, ENDING_GUARD_MS, HOLD_MS, RESUME_MIN_MS, holdLeft } from "./site/configurator/guide.js";
 import { ATTACHMENTS } from "./site/configurator/apis-data.js";
 import { HINT_TEXT } from "./site/configurator/hint.js";
 import { readFileSync } from "node:fs";
@@ -107,6 +107,17 @@ for (let held = 0, last = Infinity; held <= 2 * HOLD_MS; held += 250) {
 }
 assert.ok(RESUME_MIN_MS > 0 && RESUME_MIN_MS < HOLD_MS, "the least wait after Play is shorter than a full step");
 console.log(`PASS guided tour wait: a new step waits ${HOLD_MS / 1000} s, a paused one carries on from where it stopped, and Play always leaves at least ${RESUME_MIN_MS / 1000} s`);
+// ---------------------------------------------------------------- the guided tour's ending: what Finish leaves on the card
+assert.ok(words(ENDING.text) <= 24, `the tour's ending is as short as a step: ${words(ENDING.text)} words`);
+assert.ok(/undone/.test(ENDING.text), "the ending says the tour's changes are undone, since Finish puts the room back");
+assert.ok(/theme/.test(ENDING.text) && /time of day/.test(ENDING.text) && /room mode/.test(ENDING.text), "the ending names things to try that are on the screen: a theme, a time of day, a room mode");
+assert.ok(!/simulated|approves every change/i.test(ENDING.text), "the ending repeats no caveat: it shows no demo");
+for (const label of [ENDING.go, ENDING.again]) assert.ok(words(label) <= 3 && !/finish|exit|close/i.test(label), `the ending's button says what happens next, in at most three words: ${label}`);
+assert.ok(ENDING_GUARD_MS >= 500 && ENDING_GUARD_MS <= 1000, "the ending's buttons wait out a double click on Finish, and no longer than a second");
+// the patient's view faces the television, so its step turns the screen on; the theme's step stays where the step before stood
+assert.ok(/a\.option\("tvplay", "orientation"\)/.test(String(STEPS[2].run)) && /screen shows the day and time/.test(STEPS[2].text), "the Patient view step turns on the screen it faces, and says what it shows");
+assert.ok(/a\.camera\("overview"\)/.test(String(STEPS[7].run)) && !/family/.test(String(STEPS[7].run)), "the theme's step faces the window, from Overview");
+console.log(`PASS guided tour ending: "${ENDING.title}" in ${words(ENDING.text)} words, two next steps, a ${ENDING_GUARD_MS} ms guard, and steps 3 and 8 show their subject`);
 // ---------------------------------------------------------------- graphics quality: the pixel budget, the starting tier and Auto's choice
 const near = (a, b) => Math.abs(a - b) < 1e-9;
 assert.ok(near(Q.pixelRatio(2, 1440, 900, "high"), Math.sqrt(3.6e6 / (1440 * 900))), "1440 x 900 @2x is capped to 3.6 million pixels");

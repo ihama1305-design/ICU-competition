@@ -724,8 +724,9 @@ const tour = {
   stop() { clearTimeout(this.timer); this.at = -1; this.mark(false); remember(); },
   mark(on) { const b = $("tour"); b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Stop tour" : "Cinematic tour"; },
 };
-// anything the person does with the view ends the tour, and pauses the guided one
-canvas.addEventListener("pointerdown", () => { if (tour.running) tour.stop(); guide?.pause(); });
+// anything the person does with the view ends the tour, and pauses the guided one. Once the guided tour has finished, taking
+// the room in hand is what its ending asks for, so the ending's card goes
+canvas.addEventListener("pointerdown", () => { if (tour.running) tour.stop(); guide?.pause(); guide?.close(); });
 canvas.addEventListener("wheel", () => { if (tour.running) tour.stop(); }, { passive: true });
 canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 
@@ -1219,13 +1220,26 @@ var guide = new GuidedTour({
   time: stop => setTime(STOPS[stop]),
   camera: (name, instant) => { if (rig.meta.cameras[name]) rig.go(name, { instant: !!instant }); },
   mode: name => modes.set(name),
+  option: (group, id) => { if (selected[group] !== id) setOption(group, id); },
+  // the room has come to rest: the camera has arrived, and any change of mode or of the glass has finished easing
+  still: () => new Promise(done => {
+    const look = () => (rig.tween || modes.easing || glass.fading ? requestAnimationFrame(look) : done());
+    requestAnimationFrame(look);
+  }),
   place: types => { for (const t of types) placeInView(t); $("objectCard").hidden = true; },
   open: id => $(id === "pacs" ? "startPacsGuide" : "openApis")?.click(),
   shown: on => { document.body.classList.toggle("guided", on); if (on && isPhone()) setSheet(false); },
+  // the tour's ending hands the room over: the options come up on a phone, and the keyboard lands on the first of them
+  handOver: () => {
+    if (isPhone()) setSheet(true);
+    $("panelBody").scrollTop = 0;
+    ($("themes").querySelector('[aria-pressed="true"]') || $("themes").querySelector("button"))?.focus({ preventScroll: true });
+  },
   say, fail,
 }, {
-  card: $("guide"), count: $("guideCount"), bar: $("guideBar"), hold: $("guideHold"), title: $("guideTitle"), text: $("guideText"), links: $("guideLinks"),
-  prev: $("guidePrev"), play: $("guidePlay"), next: $("guideNext"), restart: $("guideRestart"), exit: $("guideExit"),
+  card: $("guide"), count: $("guideCount"), bar: $("guideBar"), hold: $("guideHold"), title: $("guideTitle"), text: $("guideText"), caveat: $("guideCaveat"), links: $("guideLinks"),
+  steps: $("guideSteps"), prev: $("guidePrev"), play: $("guidePlay"), next: $("guideNext"), restart: $("guideRestart"), exit: $("guideExit"),
+  after: $("guideAfter"), tryIt: $("guideTry"), again: $("guideAgain"),
 });
 $("guideCaveat").textContent = CAVEAT;
 $("openGuide").addEventListener("click", () => { endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
@@ -1415,7 +1429,7 @@ window.__config = {
   setMode: (name, opts) => modes.set(name, opts),
   presets: () => readPresets(),
   walkable: () => rig.meta.walkable,
-  guide: () => ({ running: guide.running, at: guide.at, playing: guide.playing, title: $("guideTitle").textContent }),
+  guide: () => ({ running: guide.running, at: guide.at, playing: guide.playing, still: guide.still, ended: guide.ended, title: $("guideTitle").textContent }),
   guideGo: i => guide.go(i),
   clinical: () => ({ on: clinical.on, labels: clinical.showing(), zones: !!stage.current.clinicalZones?.visible }),
   placed: () => placement.list(state.room).map(({ type, x, y, rot }) => ({ type, x: +x.toFixed(2), y: +y.toFixed(2), rot })),
