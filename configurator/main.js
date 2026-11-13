@@ -905,7 +905,7 @@ function fillFeature(f) {
   demoButton.dataset.demo = f?.demo || "";
   // a feature with more than two actions lists them in a short menu, so the card stays one row of buttons
   const menu = $("featureMenu"), acts = f?.actions || [];
-  menu.hidden = acts.length <= 2;
+  menu.hidden = $("featureMenuToggle").hidden = acts.length <= 2;
   $("featureMenuToggle").setAttribute("aria-expanded", "false");
   $("featureMenuList").hidden = true;
   $("featureMenuList").replaceChildren(...(acts.length > 2 ? acts : []).map(a => {
