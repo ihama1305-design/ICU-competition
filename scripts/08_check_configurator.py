@@ -148,7 +148,15 @@ def set_defaults(pg):
 
 
 def axe_faults(pg, selector):
-    """Serious and critical accessibility faults inside selector, as short strings."""
+    """Serious and critical accessibility faults inside selector, as short strings.
+
+    Entrances finish first. A dialog that is still fading in is partly transparent, and axe then reads its text as too low
+    in contrast: held under about 0.6 of the way to opaque, the summary's Copy link button fails, and passes once arrived.
+    """
+    try:
+        pg.wait_for_function("document.getAnimations().every(a => a.playState !== 'running' || a.effect?.target?.id === 'guideHold')", timeout=10000)
+    except PlaywrightTimeout:
+        pass  # something on the page animates without end: judge it as it stands
     found = pg.evaluate("""async sel => {
       const r = await axe.run(sel, { resultTypes: ['violations'] });
       return r.violations.filter(v => ['serious', 'critical'].includes(v.impact)).map(v => `${v.id}: ${v.nodes.slice(0, 2).map(n => n.target.join(' ')).join(', ')}`);
