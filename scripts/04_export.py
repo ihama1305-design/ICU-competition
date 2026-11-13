@@ -151,7 +151,7 @@ print(f"  output/viewer/index.html {os.path.getsize(vp) / 1e6:.1f} MB ({len(obje
 
 # website: fetches the compressed model and links back to the overview
 site = (common.replace("__GLB_BASE64__", "").replace("__GLB_URL__", "../assets/model/icu.glb.gz")
-        .replace("<!--HOME_LINK-->", '<a class="v" href="../">Overview</a>'))
+        .replace("<!--HOME_LINK-->", '<a class="v home" href="../" aria-label="Adaptive ICU, the home page"><span aria-hidden="true">←</span><span class="home-name">Adaptive ICU</span></a>'))
 sp = os.path.join(SITE, "viewer", "index.html")
 os.makedirs(os.path.dirname(sp), exist_ok=True)
 open(sp, "w").write(document(site, '<meta name="robots" content="noindex">\n'

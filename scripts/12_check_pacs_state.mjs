@@ -94,6 +94,20 @@ for (const [how, line] of Object.entries(HINT_TEXT)) {
 }
 assert.ok(/^Drag/.test(HINT_TEXT.mouse) && /Scroll/.test(HINT_TEXT.mouse) && /^Drag/.test(HINT_TEXT.touch) && /Pinch/.test(HINT_TEXT.touch) && /^Arrow keys/.test(HINT_TEXT.keys), "each hint names the gestures that its kind of visitor has");
 console.log(`PASS look-around hint: ${Object.keys(HINT_TEXT).length} lines of at most 9 words, for a mouse, touch and the keyboard, with no 3D-software words`);
+// ---------------------------------------------------------------- the walkthrough's line over the model: the same rules as the hint above
+const walkHint = new Function(`return ${/const HINT = (\{[\s\S]*?\n\});/.exec(readFileSync(new URL("./viewer_template.html", import.meta.url), "utf8"))[1]}`)();
+assert.deepEqual(Object.keys(walkHint), ["touch", "mouse"], "the walkthrough's line has words for a finger and for a mouse");
+for (const [how, lines] of Object.entries(walkHint)) {
+  assert.deepEqual(Object.keys(lines), ["orbit", "first", "top", "placing"], `the ${how} lines cover the three views and placing the person`);
+  for (const [view, line] of Object.entries(lines)) {
+    assert.ok(line.split(/\s+/).length <= 9, `the walkthrough's ${how} line for ${view} is at most 9 words: ${line}`);
+    assert.equal(line.split(". ").length, view === "placing" ? 1 : 2, `the ${how} line for ${view} says ${view === "placing" ? "one thing" : "two things: how to turn or walk, and one more"}`);
+    assert.ok(!/orbit|zoom|pan\b|rotate|dolly|camera|3D|first person/i.test(line), `the ${how} line for ${view} has no 3D-software words: ${line}`);
+    assert.ok(how === "touch" ? !/click|scroll|keys?\b/i.test(line) : !/tap|pinch|stick/i.test(line), `the ${how} line for ${view} names only what that visitor has: ${line}`);
+  }
+}
+assert.ok(/stick/.test(walkHint.touch.first) && /Pinch/.test(walkHint.touch.orbit) && /^Tap/.test(walkHint.touch.placing) && /Scroll/.test(walkHint.mouse.orbit) && /^Click/.test(walkHint.mouse.placing), "each line names the gesture its visitor would use");
+console.log(`PASS walkthrough hint: ${Object.values(walkHint).flatMap(Object.values).length} lines of at most 9 words, for a finger and a mouse, in each view and while placing, with no 3D-software words`);
 // ---------------------------------------------------------------- the guided tour's wait: what Play gives a step that was paused
 // held so far (ms) -> what it still waits (ms)
 for (const [held, left] of [[0, HOLD_MS], [1, HOLD_MS - 1], [2000, 7000], [HOLD_MS - RESUME_MIN_MS, RESUME_MIN_MS], [8900, RESUME_MIN_MS], [HOLD_MS, RESUME_MIN_MS], [60000, RESUME_MIN_MS]]) {
