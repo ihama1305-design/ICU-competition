@@ -231,14 +231,15 @@ export class GuidedTour {
     if (handOver) this.api.handOver();
   }
 
+  /** Put the tour away, and the room back. Returns once the room is back, for anything that waits to change it next. */
   exit() {
-    if (this.ended) { this.close(); return; }
-    if (!this.running) return;
+    if (this.ended) { this.close(); return Promise.resolve(); }
+    if (!this.running) return Promise.resolve();
     this.halt();
     this.token++;
     this.at = -1; this.playing = false;
     this.ui.card.hidden = true;
     this.api.shown(false);
-    this.putBack("Guided tour ended. The room is back as it was.");
+    return this.putBack("Guided tour ended. The room is back as it was.");
   }
 }
