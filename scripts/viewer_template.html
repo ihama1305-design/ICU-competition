@@ -55,6 +55,8 @@
   #bar h1 { font-size: 14px; margin: 0 6px 0 2px; font-weight: 600; white-space: nowrap; text-wrap: balance; }
   #bar .status { color: var(--muted); font-size: 12px; width: 100%; margin: 0 2px; }
   #bar .help { color: var(--muted); font-size: 12px; width: 100%; margin: 0 2px; }
+  #bar .brk { display: none; }
+  .home { display: inline-flex; gap: 6px; align-items: center; }
   kbd { font: 11px var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
   .v { font: inherit; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: pointer; text-decoration: none; }
   /* buttons and rows: hover fades a tint in, the pressed or current state springs a fill into place, a press scales down and springs back */
@@ -135,15 +137,19 @@
   #pad .stick { position: relative; width: 124px; height: 124px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); touch-action: none; }
   #pad .knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: var(--accent); opacity: 0.9; transition: transform var(--t-spring) var(--spring); }
   #pad .stick.held .knob { transition: none; }
+  #pad .knob::before, #pad .knob::after { content: none; } /* the Ceiling switch's knob shares the class name, and its thumb isn't wanted here */
   button.v.person { display: inline-flex; gap: 6px; align-items: center; touch-action: none; }
   button.v.person svg { flex: none; transition: transform var(--t-spring) var(--spring); }
   #ghost { position: fixed; pointer-events: none; z-index: 6; transform: translate(-50%, -92%); color: var(--accent);
     filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
   body.placing #c { cursor: crosshair; }
   #help.warn { color: var(--low); }
+  /* how to move, in one line over the model, where the bar has no room for its help line (a phone, a narrow window) */
+  .hint { display: none; position: fixed; z-index: 3; left: 50%; bottom: calc(2 * var(--g) + env(safe-area-inset-bottom, 0px)); translate: -50% 0; width: max-content; max-width: calc(100vw - 2 * var(--g)); margin: 0; padding: 7px 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-size: 13px; font-weight: 500; text-align: center; text-wrap: balance; pointer-events: none; }
+  .hint.warn { color: var(--low); }
   #load { position: fixed; inset: 0; display: grid; place-items: center; color: var(--muted); }
   /* when the browser can't draw the model, the message is the whole page */
-  .cant-draw #c, .cant-draw #bar, .cant-draw #side, .cant-draw #mini, .cant-draw #pad { display: none; }
+  .cant-draw #c, .cant-draw #bar, .cant-draw #side, .cant-draw #mini, .cant-draw #pad, .cant-draw .hint { display: none; }
   .cant-draw #load { padding: 24px; text-align: center; }
   .cant-draw #load p { max-width: 34em; margin: 0; color: var(--ink); font-size: 16px; line-height: 1.55; text-wrap: pretty; }
   .cant-draw #load a { color: var(--accent); text-underline-offset: 3px; }
@@ -162,28 +168,51 @@
   #cam3 { transition: transform var(--t-move) var(--spring), color var(--t-color) var(--e-color), opacity var(--t-enter) var(--ease-out), display var(--t-enter) var(--ease-out) allow-discrete; }
   #cam3[hidden] { opacity: 0; pointer-events: none; transition: transform var(--t-move) var(--spring), color var(--t-color) var(--e-color), opacity var(--t-exit) var(--ease-in), display var(--t-exit) var(--ease-in) allow-discrete; }
   @starting-style {
+    .hint { opacity: 0; transform: translateY(var(--rise-s)); }
     #info, #pad { opacity: 0; transform: translateY(var(--rise)); }
     #tip { opacity: 0; transform: translate(12px, calc(12px + var(--rise-s))); }
     #ghost { opacity: 0; transform: translate(-50%, -92%) scale(var(--pop)); }
     #cam3 { opacity: 0; }
   }
   #toggleSide { display: none; }
+  /* a finger needs more to aim at than a mouse pointer does */
+  @media (pointer: coarse), (max-width: 820px) {
+    .v, label.sw, .qseg button, #info .configure { min-height: 44px; }
+    .v, #info .configure { display: inline-flex; align-items: center; justify-content: center; }
+    .row { min-height: 44px; align-items: center; }
+  }
   @media (max-width: 820px) {
     #bar { max-width: calc(100vw - 2 * var(--g)); right: calc(var(--g) + env(safe-area-inset-right, 0px)); }
     #bar .help { display: none; }
-    /* every control stays, in one row that scrolls sideways, so the room keeps most of the screen */
-    #bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
-    #bar::-webkit-scrollbar { display: none; }
-    #bar > * { flex: none; }
+    /* every control is on screen, in two rows that share the width: where to look from, then what to do. A single row that
+       scrolled sideways kept the room a little taller, and hid half the controls past its edge.
+       No backdrop blur here: it would make the bar the frame that #cam3's fixed position is measured from. */
+    #bar { flex-wrap: wrap; gap: 6px; padding: 8px; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #bar > * { flex: 1 1 auto; }
+    #bar .brk { display: block; flex: 0 0 100%; height: 0; margin: -3px 0; }
+    #bar .home { flex: 0 0 44px; padding: 0; }
+    .home .home-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    label.sw { justify-content: center; border: 1px solid var(--line); border-radius: 8px; }
+    /* the view from behind belongs to walking, so it sits by the joystick, under the other thumb */
+    #cam3 { position: fixed; z-index: 3; right: calc(var(--g) + env(safe-area-inset-right, 0px)); bottom: calc(var(--g) + 8px + env(safe-area-inset-bottom, 0px)); background: var(--panel); box-shadow: var(--shadow); }
+    .hint { display: block; transition: opacity var(--t-enter) var(--ease-out), transform var(--t-enter) var(--ease-out), display var(--t-enter) var(--ease-out) allow-discrete; }
+    .hint[hidden], #side.open ~ .hint, #info:not([hidden]) ~ .hint { opacity: 0; transform: translateY(var(--rise-s)); transition: opacity var(--t-exit) var(--ease-in), transform var(--t-exit) var(--ease-in), display var(--t-exit) var(--ease-in) allow-discrete; }
+    body.walking .hint { bottom: calc(var(--g) + 144px + env(safe-area-inset-bottom, 0px)); }
     #bar .status { display: none; }
     #bar h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
     #side { top: auto; left: var(--g); right: var(--g); width: auto; height: 46vh; bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px));
       transform: translateY(calc(100% + 24px)); transition: transform var(--t-sheet-out) var(--ease-in); z-index: 4; }
     #side.open { transform: none; transition: transform var(--t-sheet-in) var(--ease-out); }
-    #toggleSide { display: inline-block; }
+    #toggleSide { display: inline-flex; }
     #mini { width: 132px; height: 132px; top: calc(var(--g) + var(--bar-h, 150px) + 8px + env(safe-area-inset-top, 0px)); bottom: auto; }
     #info { width: calc(100vw - 2 * var(--g)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px)); }
     body.walking #info { bottom: calc(var(--g) + 130px + env(safe-area-inset-bottom, 0px)); }
+  }
+  /* the narrowest phones: tighter, so the second row still holds its three controls */
+  @media (max-width: 350px) {
+    #bar { gap: 4px; padding: 6px; }
+    .v { padding: 0 6px; }
+    label.sw { gap: 6px; padding: 0 4px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .knob::after { transition: none; }
@@ -204,6 +233,7 @@
   <button class="v" data-view="orbit" aria-pressed="true">Orbit</button>
   <button class="v" data-view="first" aria-pressed="false">First person</button>
   <button class="v" data-view="top" aria-pressed="false">Top</button>
+  <span class="brk" aria-hidden="true"></span>
   <button class="v person" id="drop" aria-pressed="false" title="Drag onto the floor, or click this and then click a spot"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.6" r="2.6" fill="currentColor"/><path d="M8.6 9.2c0-.9.7-1.6 1.6-1.6h3.6c.9 0 1.6.7 1.6 1.6l-.6 6.3h-1.3l-.5 7h-2l-.5-7H9.2z" fill="currentColor"/></svg>Place person</button>
   <button class="v" id="cam3" aria-pressed="false" hidden title="Switch between the person's eyes and a view from behind them (V)">View from behind</button>
   <label class="sw"><input type="checkbox" id="ceil"><span class="knob" aria-hidden="true"></span> Ceiling</label>
@@ -222,8 +252,9 @@
   </header>
   <div id="list"></div>
 </aside>
-<div id="mini" class="card" tabindex="0" role="img" aria-label="Floor plan minimap. Click a spot to go there."><canvas id="miniC" width="440" height="440"></canvas><span class="cap">Plan · click to go there</span></div>
+<div id="mini" class="card" tabindex="0" role="img" aria-label="Floor plan minimap. Click a spot to go there."><canvas id="miniC" width="440" height="440"></canvas><span class="cap" id="miniCap">Plan · click to go there</span></div>
 <div id="info" class="card" aria-live="polite" hidden><h3 id="iTitle"></h3><div class="meta" id="iMeta"></div><p id="iNotes"></p><a id="iConfigure" class="configure" hidden>Configure this room in 3D</a></div>
+<p id="hint" class="hint" aria-hidden="true" hidden></p>
 <div id="tip" hidden></div>
 <div id="ghost" hidden><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.6" r="2.6" fill="currentColor"/><path d="M8.6 9.2c0-.9.7-1.6 1.6-1.6h3.6c.9 0 1.6.7 1.6 1.6l-.6 6.3h-1.3l-.5 7h-2l-.5-7H9.2z" fill="currentColor"/></svg></div>
 <div id="pad" hidden>
@@ -463,8 +494,32 @@ document.getElementById("ceil").addEventListener("change", e => setCeiling(e.tar
 const HELP = {
   orbit: "Drag to orbit · right-drag or two fingers to pan · scroll or pinch to zoom · click anything to name it · drag <b>Place person</b> onto the floor to walk from there, or click the person",
   first: "<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · drag or <kbd>←</kbd><kbd>→</kbd> to look · <kbd>V</kbd> view from behind · doors and glass fronts let you through, walls don't",
-  top: "Drag to pan · scroll or pinch to zoom · click anything to name it · drag <b>Place person</b> onto the floor to walk from there",
+  top: "Drag to turn the plan · right-drag or two fingers to pan · scroll or pinch to zoom · click anything to name it · drag <b>Place person</b> onto the floor to walk from there",
 };
+// The same help as one short line over the model, for a screen too narrow for the bar's help line. Said in the terms of
+// whoever is holding it: a finger, or a mouse in a narrow window. Each view's line leaves once that view has been moved.
+const HINT = {
+  touch: { orbit: "Drag to turn the floor. Pinch to move closer.", first: "Push the stick to walk. Drag to look around.", top: "Drag to turn the plan. Pinch to move closer.", placing: "Tap an open spot on the floor." },
+  mouse: { orbit: "Drag to turn the floor. Scroll to move closer.", first: "Arrow keys to walk. Drag to look around.", top: "Drag to turn the plan. Scroll to move closer.", placing: "Click an open spot on the floor." },
+};
+const coarse = matchMedia("(pointer: coarse)").matches;
+const hintEl = document.getElementById("hint");
+// which views' lines this visit has already acted on, kept for the visit in this tab, as the configurator keeps its own
+const MOVED = "icu-walk-moved";
+const moved = new Set((() => { try { return (sessionStorage.getItem(MOVED) || "").split(",").filter(Boolean); } catch { return []; } })());
+// automated pages don't get the lines, so the checks' and the home page's pictures show the model alone; ?hint=1 asks for them
+const hinting = !navigator.webdriver || new URLSearchParams(location.search).get("hint") === "1";
+if (coarse) {
+  document.getElementById("miniCap").textContent = "Plan · tap to go there";
+  document.getElementById("mini").setAttribute("aria-label", "Floor plan minimap. Tap a spot to go there.");
+}
+/** The visitor has moved this view themselves: its line has done its job. */
+function movedView() {
+  if (moved.has(mode)) return;
+  moved.add(mode);
+  try { sessionStorage.setItem(MOVED, [...moved].join(",")); } catch { /* not remembered */ }
+  showHelp();
+}
 let yaw = 0, pitch = 0;
 const walkPos = W2T(...VIEW.first.eye);
 function lookAtYawPitch(from, to) {
@@ -526,6 +581,7 @@ addEventListener("keydown", e => {
   if (mode !== "first" || e.target.closest("input, button, [role=toolbar] *")) return;
   if (e.code === "KeyV" && !e.repeat) { setThird(!thirdPerson); return; }
   keys.add(e.code);
+  if (/^(Key[WASD]|Arrow)/.test(e.code)) movedView();
   if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
 });
 addEventListener("keyup", e => keys.delete(e.code));
@@ -540,7 +596,7 @@ function pushStick(e) {
   knob.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
   pad.s = dx / reach; pad.f = -dy / reach;
 }
-stickEl.addEventListener("pointerdown", e => { stickEl.setPointerCapture(e.pointerId); stickEl.classList.add("held"); pushStick(e); e.preventDefault(); });
+stickEl.addEventListener("pointerdown", e => { stickEl.setPointerCapture(e.pointerId); stickEl.classList.add("held"); pushStick(e); movedView(); e.preventDefault(); });
 stickEl.addEventListener("pointermove", e => { if (stickEl.hasPointerCapture(e.pointerId)) pushStick(e); });
 for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) stickEl.addEventListener(ev, () => { pad.f = pad.s = 0; stickEl.classList.remove("held"); knob.style.transform = ""; });
 const ray = new THREE.Raycaster();
@@ -708,9 +764,12 @@ canvas.addEventListener("pointermove", e => {
   else tip.hidden = true;
 });
 canvas.addEventListener("pointerleave", () => { hovered = null; paint(); tip.hidden = true; });
+canvas.addEventListener("wheel", () => { if (mode !== "first") movedView(); }, { passive: true });
 canvas.addEventListener("pointerup", e => {
   const wasClick = down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= 5;
+  const dragged = down && !wasClick;
   down = last = null;
+  if (dragged && !placing) movedView();
   if (!wasClick) return;
   if (placing) { tryDrop(e.clientX, e.clientY); return; }
   if ((mode !== "first" || thirdPerson) && hitPerson(e.clientX, e.clientY)) { setThird(false); setView("first", { fly: true }); return; }
@@ -822,10 +881,16 @@ let warnTimer = 0, dragDrop = null;
 function showHelp() {
   if (warnTimer) return;
   helpEl.innerHTML = placing ? "Click an open spot on the floor to drop the person · <kbd>Esc</kbd> cancels" : HELP[mode];
+  // the line over the model: what to do while placing, else how to move this view until the visitor has
+  const line = HINT[coarse ? "touch" : "mouse"][placing ? "placing" : mode];
+  hintEl.hidden = !(placing || (hinting && !moved.has(mode)));
+  if (!hintEl.hidden) hintEl.textContent = line;
 }
 function warn(msg) {
   clearTimeout(warnTimer); helpEl.textContent = msg; helpEl.classList.add("warn");
-  warnTimer = setTimeout(() => { warnTimer = 0; helpEl.classList.remove("warn"); showHelp(); }, 3500);
+  // said over the model too: on a narrow screen the bar's help line isn't shown, and the drop would fail without a word
+  hintEl.textContent = msg; hintEl.classList.add("warn"); hintEl.hidden = false;
+  warnTimer = setTimeout(() => { warnTimer = 0; helpEl.classList.remove("warn"); hintEl.classList.remove("warn"); showHelp(); }, 3500);
 }
 function setPlacing(on) {
   placing = on; dropPreview = null;

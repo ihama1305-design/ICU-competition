@@ -226,23 +226,61 @@ with sync_playwright() as pw:
           f"?stats=1 shows the GPU, tier, pixel ratio, canvas pixels and a timed median draw {st}")
     sp.close()
 
-    # a touch phone: one slim row of controls, and a joystick that walks forward, back and sideways
+    # a touch phone: every control on screen and big enough to tap, a line that says how to move, and a joystick that walks
+    # forward, back and sideways. ?hint=1 asks for the line, which automated pages otherwise don't get.
     # in a browser of its own, like a phone: one that has run the desktop checks can hold up a second page's start
     tb = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
     ctx = tb.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
     tp = ctx.new_page()
-    tp.goto(url, timeout=120000)
+    tp.goto(url + "?hint=1", timeout=120000)
     tp.wait_for_function("window.__viewerReady === true || (window.__viewerErrors || []).length > 0", timeout=180000)
     bar_h = tp.evaluate("document.getElementById('bar').offsetHeight")
     names = tp.evaluate("[...document.querySelectorAll('#bar button')].filter(b => !b.hidden).map(b => b.textContent.trim())")
+    # what the bar shows: each control's text, whether all of it is on screen, and its height
+    on_bar = """(() => { const bar = document.getElementById('bar').getBoundingClientRect();
+      return [...document.querySelectorAll('#bar a.v, #bar button.v, #bar label.sw')].filter(e => !e.hidden && getComputedStyle(e).display !== 'none').map(e => { const r = e.getBoundingClientRect();
+        return { text: e.textContent.trim(), h: Math.round(r.height), w: Math.round(r.width), onScreen: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight,
+                 inBar: r.top >= bar.top - 1 && r.bottom <= bar.bottom + 1, box: [r.left, r.top, r.right, r.bottom].map(Math.round) }; }); })()"""
+    hint = "(() => { const h = document.getElementById('hint'), s = getComputedStyle(h); return { shown: !h.hidden && s.display !== 'none', text: h.textContent, warn: h.classList.contains('warn') }; })()"
+    ctl = tp.evaluate(on_bar)
     q = tp.evaluate("window.__viewerQuality()")
     check(q["tier"] == "low" and q["choice"] == "auto" and q["measured"] is None and q["transmission"] == 0, f"phone: starts on Low, as before, until Auto has timed its test draws {q}")
     tp.evaluate("window.__viewerAutoQuality(4)")  # as if its test draws were very quick
     q = tp.evaluate("window.__viewerQuality()")
     check(q["tier"] == "low" and q["measured"] == "low" and q["transmission"] == 0 and "You can still choose High" in tp.inner_text("#qualityStatus"), f"phone: Auto never steps it up, however quick its test draws {q}")
-    check(bar_h <= 64 and {"Orbit", "First person", "Top", "Place person"} <= set(names), f"phone: the controls fit one slim row, with none left out ({bar_h}px) {names}")
+    # the row that scrolled sideways held 636 px of controls in 366 px, so Place person, Ceiling and Objects were past its edge
+    check({"Orbit", "First person", "Top", "Place person", "Objects"} <= set(names) and "Ceiling" in [c["text"] for c in ctl], f"phone: a control is missing from the bar {names}")
+    check(all(c["onScreen"] and c["inBar"] for c in ctl), f"phone: a control is cut off or off the screen {[c for c in ctl if not (c['onScreen'] and c['inBar'])]}")
+    check(all(c["h"] >= 44 and c["w"] >= 44 for c in ctl), f"phone: a control is smaller than a finger needs, 44 px {[(c['text'], c['w'], c['h']) for c in ctl if c['h'] < 44 or c['w'] < 44]}")
+    check(bar_h <= 130, f"phone: the bar is taller than two rows ({bar_h}px)")
+    check(tp.evaluate("document.documentElement.scrollWidth <= innerWidth") and tp.evaluate("document.getElementById('bar').scrollWidth <= document.getElementById('bar').clientWidth + 1"), "phone: the page or the bar scrolls sideways")
+    if url.startswith("http"):
+        home = tp.evaluate("(a => ({ name: a.getAttribute('aria-label'), href: a.getAttribute('href'), text: a.textContent }))(document.querySelector('#bar a.home'))")
+        check(home["href"] == "../" and home["name"] == "Adaptive ICU, the home page" and "Adaptive ICU" in home["text"], f"phone: the link home doesn't name the site, as the configurator's does {home}")
+    h = tp.evaluate(hint)
+    check(h["shown"] and h["text"] == "Drag to turn the floor. Pinch to move closer.", f"phone: no line says how to move the model {h}")
+    check(tp.inner_text("#miniCap") == "Plan · tap to go there", f"phone: the plan's caption speaks of clicking ({tp.inner_text('#miniCap')!r})")
+    # placing: the line says what to do, and a drop that fails says why, where the bar's help line isn't shown
+    tp.evaluate("window.__view('top')"); tp.wait_for_timeout(800)
+    tp.tap("#drop")
+    h = tp.evaluate(hint)
+    check(h["shown"] and h["text"] == "Tap an open spot on the floor.", f"phone: Place person doesn't say what to do next {h}")
+    tp.tap("#drop")
+    refused = tp.evaluate("window.__drop(10.0, 31.8)")  # the north exterior wall
+    h = tp.evaluate(hint)
+    check(refused is False and h["shown"] and h["warn"] and "inside a wall or off the floor" in h["text"], f"phone: a drop onto a wall fails without a word {refused} {h}")
     tp.evaluate("window.__view('first')"); tp.wait_for_timeout(1500)
     check(tp.is_visible("#pad .stick"), "phone: first person shows the walking joystick")
+    tp.wait_for_function("!document.getElementById('hint').classList.contains('warn')", timeout=10000)
+    h = tp.evaluate(hint)
+    check(h["shown"] and h["text"] == "Push the stick to walk. Drag to look around.", f"phone: no line says how to walk {h}")
+    # the view from behind belongs to walking: by the joystick, under the other thumb, and not a third row on the bar
+    ctl = tp.evaluate(on_bar)
+    behind = next((c for c in ctl if c["text"] == "View from behind"), None)
+    pad_box = tp.locator("#pad .stick").bounding_box()
+    check(behind is not None and behind["onScreen"] and not behind["inBar"] and behind["h"] >= 44 and behind["box"][0] > pad_box["x"] + pad_box["width"] and behind["box"][1] > 844 / 2,
+          f"phone: View from behind isn't beside the joystick {behind}")
+    check(tp.evaluate("document.getElementById('bar').offsetHeight") == bar_h, "phone: the bar changes height when walking starts")
     for label, (dx, dy) in [("forward", (0, -60)), ("sideways", (60, 0))]:
         p0 = tp.evaluate("window.__walker()")
         bb = tp.locator("#pad .stick").bounding_box(); cx, cy = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
@@ -251,6 +289,8 @@ with sync_playwright() as pw:
         moved = ((p1[0] - p0[0]) ** 2 + (p1[1] - p0[1]) ** 2) ** 0.5
         print(f"  joystick {label}: {moved:.2f} m")
         check(moved > 0.1, f"phone: the joystick walks {label} ({moved:.2f} m)")
+    h = tp.evaluate(hint)
+    check(not h["shown"], f"phone: the line about walking stays up after the joystick has been used {h}")
     tp.screenshot(path=os.path.join(ROOT, "renders", "viewer_phone_walk.png"))
     # iOS Safari drops the WebGL context under memory pressure: the page says so and offers a reload, instead of freezing
     tp.evaluate("document.getElementById('c').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()")
@@ -278,5 +318,5 @@ with sync_playwright() as pw:
         check(pg.locator("#load a").get_attribute("href") == "../", "without WebGL 2 the website links to the pictures on the home page")
     ctx.close()
     b.close()
-print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, graphics tiers, idle drawing, phone joystick, lost 3D view, stats readout, quality switch and pixel budget, no-WebGL message)"))
+print("  viewer check: " + ("FAILED " + "; ".join(fail) if fail else "ok (views, list, click-to-name, walking, collisions, person drop, behind view, extinguisher cabinets, minimap, phone width, phone controls and help, graphics tiers, idle drawing, phone joystick, lost 3D view, stats readout, quality switch and pixel budget, no-WebGL message)"))
 sys.exit(1 if fail else 0)
