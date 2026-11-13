@@ -14,6 +14,8 @@
 <meta property="og:image" content="{{SITE_URL}}assets/img/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<!-- before the first paint, so a phone never shows the row of links that the Menu button replaces; without scripts the row stays -->
+<script>document.documentElement.classList.add("has-menu");</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <!-- ontouchstart: iOS Safari only applies :active once the page listens for touches -->
@@ -22,7 +24,8 @@
 <header class="top">
   <div class="wrap">
     <a class="mark" href="./"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M6 7h13l7 9-7 9H6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="12" cy="16" r="2.4" fill="currentColor"/></svg>Adaptive ICU</a>
-    <nav aria-label="Sections">
+    <button type="button" class="menu" id="menu" aria-expanded="false" aria-controls="nav">Menu</button>
+    <nav id="nav" aria-label="Sections">
       <a href="#proposal">Proposal</a>
       <a href="configurator/">Configurator</a>
       <a href="#walk">Walkthrough</a>
@@ -88,15 +91,15 @@
     <div class="plates">
       <figure class="plate full">
         <a href="configurator/#c={{CODE_MODES}}"><!--SHOT proposal-modes | The isolation room in Comfort mode by day: the room-mode bar at the top with Comfort selected, the window blinds lowered, the light warm and dim, and a note saying the task light, monitor and clinical alarms are unaffected. | 100vw--></a>
-        <figcaption><b>Room modes.</b> One tap sets the room for Comfort, Privacy, Clinical work or an emergency. The lights, blinds and glass change together. After sunset, Comfort leaves the blinds alone and changes only the light.</figcaption>
+        <figcaption><b>Room modes.</b> One tap sets the room for Comfort, Privacy, Clinical work or an emergency. The lights, blinds and glass change together. After sunset, Comfort leaves the blinds alone and changes only the light. <span class="opens">Opens room W1. The modes are in the bar at its top.</span></figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_PACS}}"><!--SHOT proposal-pacs | Physiological Adaptive Mode in the isolation room: teal lines link the bedside monitor, the ceiling lights and the blinds, and a nurse dashboard on the right shows simulated heart rate, blood pressure, breathing rate and oxygen saturation with three scripted scenarios. | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption><b>PACS, the Physiological Adaptive Comfort System.</b> The monitor's readings and the patient's own preferences lead to a suggestion, such as softer light. A nurse approves it before the room changes.</figcaption>
+        <figcaption><b>PACS, the Physiological Adaptive Comfort System.</b> The monitor's readings and the patient's own preferences lead to a suggestion, such as softer light. A nurse approves it before the room changes. <span class="opens">Opens room W1. PACS is in its options, under Time of day.</span></figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_APIS}}"><!--SHOT proposal-apis | The Adaptive Patient Interface System: a panel about a nasogastric feeding tube, with a close-up of its attachment layers, the conventional and proposed arrangements side by side, the possible benefit and the clinical limitations. | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption><b>APIS, the Adaptive Patient Interface System.</b> How tubes, lines and sensors sit on the patient: what touches the skin, how each is secured and where it runs, with its clinical limits stated.</figcaption>
+        <figcaption><b>APIS, the Adaptive Patient Interface System.</b> How tubes, lines and sensors sit on the patient: what touches the skin, how each is secured and where it runs, with its clinical limits stated. <span class="opens">Opens room W1. APIS is in its options, under Time of day.</span></figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_PATIENT}}"><!--SHOT proposal-patient | The patient's view from the pillow in the proposed isolation room: a star-patterned feature wall and, on the screen opposite the bed, the weekday, the date, the time and the word Afternoon. | (min-width: 720px) 50vw, 100vw--></a>
@@ -104,16 +107,16 @@
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_CLINICAL}}"><!--SHOT proposal-clinical | The standard room in Clinical view: labels on the bed, ventilator, infusion pumps, IV pole, ceiling pendant and examination light, and hatched keep-clear areas on the floor beside the bed. | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption><b>Clinical view.</b> Labels on the equipment, and shaded areas to keep clear for care around the bed. A sketch for discussion, not a compliance check.</figcaption>
+        <figcaption><b>Clinical view.</b> Labels on the equipment, and shaded areas to keep clear for care around the bed. A sketch for discussion, not a compliance check. <span class="opens">Opens room W3. Press Clinical in the bar at its top.</span></figcaption>
       </figure>
       <figure class="plate full">
         <a href="configurator/#c={{CODE_REMOTE}}"><!--SHOT proposal-remote | The isolation room seen from inside its glazed front: the sound sensor on the wall glows red, and a notice marked simulated says a call for help was heard in isolation room W1, asks the nurse to look in through the glass now and leaves going in to them. | 100vw--></a>
-        <figcaption><b>Remote care for the isolation room.</b> Every entry costs protective clothing and opens a negative-pressure door. So the sound sensor hears a groan or a call for help and asks the nurse to look in through the glass first. The air is cleaned in the plant, out of sight. Fewer unnecessary entries, never fewer checks.</figcaption>
+        <figcaption><b>Remote care for the isolation room.</b> Every entry costs protective clothing and opens a negative-pressure door. So the sound sensor hears a groan or a call for help and asks the nurse to look in through the glass first. The air is cleaned in the plant, out of sight. Fewer unnecessary entries, never fewer checks. <span class="opens">Opens room W1. The sound sensor's two buttons are in its options, under Comfort systems.</span></figcaption>
       </figure>
     </div>
     <div class="section-foot">
       <div class="actions"><a class="btn primary" href="configurator/?tour=guided">Take the 90-second tour</a> <a class="btn quiet" href="{{REPO_URL}}/blob/main/REPORT.md">Read how it was built</a></div>
-      <p class="note">A student design proposal, not a clinical product. Each picture opens that room; the mode bar is at the top of the configurator, PACS and APIS are in its panel under Time of day, and the sound sensor's two buttons are under Comfort systems.</p>
+      <p class="note">A student design proposal, not a clinical product. Each picture opens that room. Where a picture shows something you start yourself, its caption says where to find it.</p>
     </div>
   </div>
 </section>
@@ -313,6 +316,19 @@
   </div>
 </footer>
 <script>
+/* On a phone the nine section links sit behind one Menu button, so the header is one row. Choosing a link, or Esc, closes it. */
+(() => {
+  const top = document.querySelector(".top"), button = document.getElementById("menu"), nav = document.getElementById("nav");
+  const set = open => { top.classList.toggle("open", open); button.setAttribute("aria-expanded", String(open)); };
+  button.addEventListener("click", () => set(button.getAttribute("aria-expanded") !== "true"));
+  nav.addEventListener("click", e => { if (e.target.closest("a")) set(false); });
+  addEventListener("keydown", e => {
+    if (e.key !== "Escape" || button.getAttribute("aria-expanded") !== "true") return;
+    set(false);
+    button.focus();
+  });
+})();
+
 /* Room carousel. The scroller snaps and swipes by itself; this adds the tabs, arrow keys and mouse drag. */
 (() => {
   const root = document.getElementById("rooms");
