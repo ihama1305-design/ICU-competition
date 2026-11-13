@@ -173,7 +173,9 @@ details[open] > summary::after { transform: rotate(-135deg) translate(-2px, -2px
 summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .section-mark { display: grid; place-items: center; width: 24px; height: 24px; margin-right: 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--accent); font-size: 14px; transition: transform var(--t-spring) var(--spring), background-color var(--t-enter) var(--ease-out); }
 .section-title { margin-right: auto; }
-details[open] > summary .section-mark { transform: rotate(-12deg) scale(1.06); background: var(--hover); }
+/* an open section's mark: a lighter tint than --hover, so its accent-coloured number keeps 4.5:1 against it whatever part of
+   the room shows through the panel (at --hover's 10% it measured between 4.5 and 5.1) */
+details[open] > summary .section-mark { transform: rotate(-12deg) scale(1.06); background: var(--hover); background: color-mix(in srgb, var(--accent) 6%, transparent); }
 .section > .group { animation: section-reveal var(--t-enter) var(--ease-out) both; }
 @keyframes section-reveal { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .section > .group { animation: none; } }
