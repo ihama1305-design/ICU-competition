@@ -1902,8 +1902,44 @@ with sync_playwright() as p:
     pg.evaluate("document.querySelectorAll('#proposal img').forEach(i => { i.loading = 'eager'; })")
     pg.wait_for_function("[...document.querySelectorAll('#proposal img')].every(i => i.complete && i.naturalWidth > 0)", timeout=60000)
     check(True, "every picture in the proposal loads")
-    pg.set_viewport_size({"width": 390, "height": 844})
-    check(pg.evaluate("document.documentElement.scrollWidth <= innerWidth && document.querySelector('.top').getBoundingClientRect().height < 140"), "on a phone the home page doesn't scroll sideways and its menu stays on one row")
+    # a link carries a room's choices, view and time, but not its mode, an open demo or a pressed button. A picture that shows
+    # one of those says where to find it, since its link opens the room without it
+    opens = pg.evaluate("[...document.querySelectorAll('#proposal figure')].map(f => ({ lead: f.querySelector('figcaption b').textContent, href: f.querySelector('a').getAttribute('href'), says: f.querySelector('figcaption .opens')?.textContent || '' }))")
+    told = {o["lead"].split(",")[0].rstrip("."): o["says"] for o in opens}
+    check(all(told[k].startswith(f"Opens room {room}.") and where in told[k] for k, room, where in (("Room modes", "W1", "bar at its top"), ("PACS", "W1", "in its options, under Time of day"), ("APIS", "W1", "in its options, under Time of day"),
+                                                                                                    ("Clinical view", "W3", "bar at its top"), ("Remote care for the isolation room", "W1", "in its options, under Comfort systems"))),
+          f"the five pictures that show a mode, a demo or a pressed button each say where to find it in the room they open {told}")
+    check(told["What the patient sees"] == "", f"the picture whose link opens exactly what it shows says nothing extra {told}")
+    shared = [o for o in opens if sum(1 for q in opens if q["href"] == o["href"]) > 1]
+    check(len(shared) == 3 and all(o["says"] for o in shared), f"pictures that open the same room as another each say what they open {[(o['lead'], o['says']) for o in shared]}")
+    # on a phone: one header row with a Menu button, and the room and the first action on the first screen
+    pg.set_viewport_size({"width": 390, "height": 700})
+    home = """(() => { const shown = e => getComputedStyle(e).display !== 'none', box = e => e.getBoundingClientRect(), nav = document.getElementById('nav'), menu = document.getElementById('menu');
+      const links = [...nav.querySelectorAll('a')].map(a => box(a)), img = box(document.querySelector('.hero img')), act = box(document.querySelector('.hero .actions a'));
+      return { header: Math.round(box(document.querySelector('.top')).height), menu: shown(menu), expanded: menu.getAttribute('aria-expanded'), nav: shown(nav), sideways: document.documentElement.scrollWidth > innerWidth,
+               onScreen: shown(nav) ? links.filter(r => r.left >= 0 && r.right <= innerWidth && r.height >= 44).length : 0, columns: shown(nav) ? new Set(links.map(r => Math.round(r.left))).size : 0,
+               picture: [Math.round(img.top), Math.round(img.bottom)], action: [Math.round(act.top), Math.round(act.bottom)], h: innerHeight, focus: document.activeElement.id }; })()"""
+    h = pg.evaluate(home)
+    check(not h["sideways"] and h["header"] <= 70 and h["menu"] and not h["nav"], f"on a phone the home page doesn't scroll sideways, and its header is one row with a Menu button {h}")
+    # the first picture used to start more than a screen down, below the paragraph and three buttons
+    check(0 < h["picture"][0] and h["picture"][1] <= h["h"] and h["picture"][1] <= h["action"][0] and h["action"][1] <= h["h"], f"on a phone the first screen shows the room, then the first action {h}")
+    pg.click("#menu")
+    h = pg.evaluate(home)
+    check(h["expanded"] == "true" and h["onScreen"] == 9 and h["columns"] == 2, f"Menu shows all nine sections on screen, two to a row, each tall enough to tap {h}")
+    pg.keyboard.press("Escape")
+    h = pg.evaluate(home)
+    check(h["expanded"] == "false" and not h["nav"] and h["focus"] == "menu", f"Esc closes the menu and leaves the keyboard on its button {h}")
+    pg.click("#menu")
+    pg.click("#nav a[href='#findings']")
+    h = pg.evaluate(home)
+    check(h["expanded"] == "false" and not h["nav"], f"choosing a section closes the menu {h}")
+    ctx.close()
+    # without scripts there is no Menu button, and the sections are the row that scrolls sideways
+    ctx = b.new_context(viewport={"width": 390, "height": 700}, java_script_enabled=False)
+    pg = ctx.new_page()
+    pg.goto(URL.replace("configurator/", "index.html"))
+    h = pg.evaluate("(() => { const nav = document.getElementById('nav'); return { menu: getComputedStyle(document.getElementById('menu')).display, nav: getComputedStyle(nav).display, links: nav.querySelectorAll('a').length, scrolls: nav.scrollWidth > nav.clientWidth, sideways: document.documentElement.scrollWidth > innerWidth }; })()")
+    check(h["menu"] == "none" and h["nav"] != "none" and h["links"] == 9 and h["scrolls"] and not h["sideways"], f"without scripts the home page keeps its sections on screen, with no Menu button that would do nothing {h}")
     ctx.close()
     # that link opens the configurator straight into the tour
     ctx = b.new_context(viewport={"width": 1280, "height": 800})
