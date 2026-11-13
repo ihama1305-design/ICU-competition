@@ -223,7 +223,7 @@ These were added on top of the configurator in one day. Each was checked before 
 | SIMULATED screens | The monitor, ventilator and pump screens carry an amber SIMULATED band in their textures | |
 | 3D fallback | A browser without WebGL 2 or import maps is told why and pointed to the pictures | |
 
-The walkthrough gained a joystick and a single slim toolbar row on phones. It now draws only when something changes, and it uses a lighter graphics tier on phones and small screens. The figures before and after are in `docs/adaptive-icu-baseline.md`.
+The walkthrough gained a joystick and a single slim toolbar row on phones. That row scrolled sideways and hid half its controls, so it is now two rows with every control on screen, and a line over the model says how to move. It now draws only when something changes, and it uses a lighter graphics tier on phones and small screens. The figures before and after are in `docs/adaptive-icu-baseline.md`.
 
 PACS (the Physiological Adaptive Comfort System), APIS (the Adaptive Patient Interface System) and the patient figure were built by a teammate. The README describes them, and their own checks (`scripts/11`, `12` and `13`) run alongside `08`.
 
