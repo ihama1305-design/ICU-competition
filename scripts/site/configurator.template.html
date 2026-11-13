@@ -24,12 +24,16 @@
   <p id="guideText" aria-live="polite"></p>
   <p id="guideCaveat" class="guide-caveat"></p>
   <div id="guideLinks" class="guide-links"></div>
-  <div class="guide-buttons">
+  <div id="guideSteps" class="guide-buttons">
     <button type="button" id="guidePrev">Previous</button>
     <button type="button" id="guidePlay" aria-pressed="false">Pause</button>
     <button type="button" id="guideNext" class="guide-next">Next</button>
     <button type="button" id="guideRestart">Restart</button>
     <button type="button" id="guideExit">Exit</button>
+  </div>
+  <div id="guideAfter" class="guide-buttons" hidden>
+    <button type="button" id="guideTry" class="guide-next"></button>
+    <button type="button" id="guideAgain"></button>
   </div>
 </section>
 <div id="clinicalLabels" class="clinical-labels" aria-hidden="true" hidden></div>
