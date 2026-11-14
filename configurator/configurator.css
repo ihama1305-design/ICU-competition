@@ -291,6 +291,43 @@ footer p { margin: 0; }
 .feature-parts button { min-height: 38px; font-size: 12px; } /* still a finger's size on a phone */
 @media (hover: hover) { .feature-list button:hover { background: var(--hover); } }
 
+/* Acoustic comfort mode: its panel at the lower left, labels over the room, and the two notices it can raise */
+.acoustic-panel { position: fixed; z-index: 5; top: calc(var(--g) + env(safe-area-inset-top, 0px)); right: calc(var(--g) + env(safe-area-inset-right, 0px)); bottom: calc(var(--g) + env(safe-area-inset-bottom, 0px)); width: var(--panel-w); overflow-y: auto; padding: 14px 16px; border: 1px solid var(--accent); border-radius: 14px; background: var(--panel-solid); color: var(--ink); box-shadow: var(--shadow); animation: card-in var(--t-enter) var(--ease-out) both; }
+.acoustic-panel { display: block; } /* a section, laid out as a card rather than as the panel's sections are */
+/* while the mode is on its panel takes the options panel's place, as PACS's does, so the room stays in view */
+.acoustic-active #panel { visibility: hidden; pointer-events: none; }
+.acoustic-panel h2 { margin: 2px 30px 10px 0; color: var(--ink); font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.acoustic-panel h2:focus { outline: none; }
+.acoustic-panel .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.acoustic-reading { margin: 8px 0 6px; font-size: 13px; }
+.acoustic-legend { display: grid; gap: 2px; margin: 0 0 6px; padding: 0; list-style: none; color: var(--muted); font-size: 12px; }
+.acoustic-legend .swatch-dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; }
+.acoustic-note { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
+.acoustic-sound { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.acoustic-sub { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; }
+.acoustic-sound .mute-sound { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.sound-caption { flex-basis: 100%; margin: 0; font-size: 12px; }
+.sound-on .sound-caption { color: var(--ink); font-weight: 600; }
+.acoustic-notices { border-top: 1px solid var(--line); }
+.acoustic-notices summary { min-height: 40px; font-size: 13px; }
+.notice-kind { padding: 4px 0 8px; }
+.notice-kind h3 { margin: 4px 0 2px; font-size: 13px; }
+.notice-kind ul { margin: 4px 0 6px; padding-left: 18px; font-size: 12px; }
+.notice-kind li { margin: 2px 0; }
+.notice-kind li button { margin-left: 8px; min-height: 32px; font-size: 12px; }
+.notice-critical h3 { color: var(--danger); }
+.acoustic-marks { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.acoustic-mark { position: absolute; left: 0; top: 0; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-solid); color: var(--ink); font: 500 11px/1.3 var(--ui); white-space: nowrap; box-shadow: 0 2px 8px rgba(16, 44, 54, 0.18); }
+.acoustic-mark.loudest { border-color: #c8553d; font-weight: 600; }
+.acoustic-mark.zone, .acoustic-mark.sensor { border-color: var(--accent); }
+.acoustic-mark[hidden] { display: none; }
+/* a source's label flashes once as its sound plays: what's heard is also seen */
+.acoustic-mark.ping { animation: mark-ping 700ms var(--ease-out) 1; }
+@keyframes mark-ping { 0% { box-shadow: 0 0 0 0 rgba(232, 145, 58, 0.75); } 100% { box-shadow: 0 0 0 14px rgba(232, 145, 58, 0); } }
+@media (prefers-reduced-motion: reduce) { .acoustic-mark.ping { animation: none; outline: 2px solid #e8913a; } }
+.critical-example { border-color: var(--danger); }
+#criticalClose, #envAck { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font: 500 13px/1.2 var(--ui); cursor: pointer; }
+
 /* a feature's demo: what it's showing, step by step, and a way to stop */
 .demo-bar { display: block; border: 1px solid var(--accent); } /* a section, but laid out as a note, not as the panel's sections are */
 .demo-bar p { margin: 0 0 4px; }
@@ -366,4 +403,6 @@ dialog[open]::backdrop { transition: opacity var(--t-enter) var(--ease-out); }
   .object-card { width: min(300px, calc(100vw - 24px)); }
   .explore-toggle { min-height: 40px; }
   .explore-filters button { min-height: 36px; }
+  .acoustic-panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; height: min(52dvh, 460px); border-width: 1px 0 0; border-radius: 14px 14px 0 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .notice-kind li button { min-height: 36px; }
 }

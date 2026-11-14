@@ -7,7 +7,10 @@ import { Daylight, sunAt } from "./sky.js";
 import { Lighting } from "./lights.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
-import { setAddon, setAddonLook, setOldWardrobe, setOrientation, setShade, setTv, setWardrobe, syncPalms, tickAddons, tickWardrobe, toggleWardrobe, wardrobeFigures, wardrobeMoving } from "./addons.js";
+import { setAddon, setAddonLook, setOldWardrobe, setOrientation, setShade, setTv, setWardrobe, syncDampers, syncPalms, tickAddons, tickWardrobe, toggleWardrobe, wardrobeFigures, wardrobeMoving } from "./addons.js";
+import { AcousticView } from "./acoustic-view.js";
+import { BANDS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS } from "./acoustic.js";
+import { playSound, soundState, stopSound } from "./sound.js";
 import { decodeSpec, encodeSpec } from "./state.js";
 import { differences, optionLabel, resolveProfile } from "./profile.js";
 import { summaryContent } from "./summary.js";
@@ -93,7 +96,8 @@ function resize() {
   const w = innerWidth, h = innerHeight;
   stage.resize(w, h);
   stage.camera.aspect = w / h;
-  const rect = document.body.classList.contains("pacs-active") ? restingRect($("pacsPanel")) : panel.getBoundingClientRect();
+  const cls = document.body.classList;
+  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -101,7 +105,7 @@ function resize() {
   stage.camera.setViewOffset(w, h, coverX / 2, coverY / 2, w, h);
   rig.visible = { w: w - coverX, h: h };
   if (rig.meta) rig.fit();
-  const closed = phone && !panel.classList.contains("open"); // a closed sheet's controls are off-screen
+  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active"); // off-screen, or covered by Acoustic comfort mode
   $("panelBody").inert = closed;
   panel.querySelector(".actions").inert = closed;
   stage.camera.updateProjectionMatrix();
@@ -188,6 +192,7 @@ function setTime(h) {
 }
 
 async function setRoom(label, { keepView = true } = {}) {
+  setAcoustic(false); // its map and labels are this room's
   endVocalCue(); // its notice names the room being left
   endCompare();
   if (pacs.active) pacs.exit();
@@ -304,9 +309,23 @@ canvas.addEventListener("keydown", e => {
 // ---------------------------------------------------------------- options, from options.json
 let optionData = null, panelUi = null;
 const selected = {};
-// options a feature demo is showing without choosing them (demos.js): the panel, the link and the summary keep `selected`
-const demoShown = {};
-const shownChoice = id => demoShown[id] ?? selected[id];
+// Options shown without being chosen, in layers: a feature demo's on top (demos.js), then Acoustic comfort mode's fittings,
+// then the fittings Explore features shows. The panel, the link and the summary only ever read `selected`.
+const overlays = { demo: {}, acoustic: {}, explore: {} };
+const demoShown = overlays.demo;
+const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.explore[id] ?? selected[id];
+/** Set what one layer shows (null: nothing), and bring the room up to whichever layer is on top for each group it touched. */
+function showLayer(layer, values) {
+  const touched = new Set([...Object.keys(overlays[layer]), ...Object.keys(values || {})]);
+  for (const k of Object.keys(overlays[layer])) delete overlays[layer][k];
+  Object.assign(overlays[layer], values || {});
+  if (!touched.size) return;
+  for (const g of touched) runEffects(groupById(g), shownChoice(g));
+  settle();
+  relight();
+  stage.renderer.shadowMap.needsUpdate = true;
+  invalidate();
+}
 const optionOf = (groupId, optionId) => groupById(groupId).options.find(o => o.id === optionId);
 const groupById = id => optionData.sections.flatMap(s => s.groups).find(g => g.id === id);
 
@@ -351,6 +370,7 @@ const allGroups = () => optionData.sections.flatMap(s => s.groups);
 /** What depends on more than one choice, and colours for add-ons built since they were chosen. */
 function settle() {
   syncPalms(stage.current, selected.palms === "on", selected.patio === "on");
+  syncDampers(stage.current); // the TV's isolators follow its size
   setShade(stage.current, selected.shade);
   for (const g of allGroups()) {
     if (selected[g.id] === "custom" || optionOf(g.id, selected[g.id])?.effects.some(e => e.do === "color" || e.do === "addonLook")) runEffects(g, selected[g.id]);
@@ -365,6 +385,7 @@ function applyAll() {
 }
 
 function setOption(groupId, optionId, custom) {
+  setAcoustic(false);
   endCompare();
   if (pacs.active) pacs.exit();
   endMode();
@@ -393,6 +414,7 @@ function themeSelections(theme) {
 }
 
 function applyTheme(id) {
+  setAcoustic(false);
   endCompare();
   if (pacs.active) pacs.exit();
   endMode();
@@ -527,6 +549,7 @@ function simulateSound(sound) {
     say(status.textContent);
     return;
   }
+  stopDemoSound("Demo sound stopped: a notice is up, and comfort sound never plays over one.");
   vocal = { sound, level, room: state.room };
   const text = noticeFor(sound, level, rig.meta.isolation ? `Isolation room ${state.room}` : `Standard room ${state.room}`, clock(state.hour));
   $("vocalText").textContent = `${text.heard} ${text.ask}`;
@@ -600,6 +623,7 @@ function remember() {
 }
 
 async function applySpec(spec) {
+  setAcoustic(false);
   endCompare();
   if (pacs.active) pacs.exit();
   endMode();
@@ -653,6 +677,7 @@ $("presetForm").addEventListener("submit", e => {
   else presetSay(r.reason === "full" ? `There are already ${MAX_PRESETS} saved rooms. Delete one to save another.` : "This browser won't let the page save rooms, so nothing was saved.");
 });
 $("resetRoom").addEventListener("click", () => {
+  setAcoustic(false);
   endCompare();
   if (pacs.active) pacs.exit();
   endIdea();
@@ -739,10 +764,10 @@ canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
 const pacs = new PACS({ stage, lighting, rig, controls, relight, invalidate,
   stopTour: () => tour.stop(), getState: () => state, isDark: () => afterDark(),
-  closeApis: () => { endVocalCue(); endCompare(); endMode(); setExplore(false); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
+  closeApis: () => { endVocalCue(); setAcoustic(false); endCompare(); endMode(); setExplore(false); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
   restoreApisMarkers: on => apis.setEnabled(on),
 });
-apis.beforeOpen = () => { endDemo(); setExplore(false); if (pacs.active) pacs.exit(); };
+apis.beforeOpen = () => { endDemo(); setAcoustic(false); setExplore(false); if (pacs.active) pacs.exit(); };
 pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); describe(); };
 
 // ---------------------------------------------------------------- room modes: scenes over the configured room (modes.js)
@@ -782,6 +807,7 @@ function syncModes(name) {
   }
   note.hidden = !note.textContent;
   $("modeBanner").hidden = name !== "emergency";
+  if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency-ready is on."); setAcoustic(false); } // comfort yields to care
   document.body.classList.toggle("emergency-ready", name === "emergency");
   say(text.say);
   invalidate();
@@ -855,6 +881,7 @@ const ACTION_HANDLERS = {
     run: () => { const how = $("featureHow"); how.open = true; how.scrollIntoView({ block: "nearest" }); how.querySelector("summary").focus({ preventScroll: true }); },
   },
   "sound:call": { label: () => "Simulate a call for help", run: () => simulateSound("call") },
+  acoustic: { label: () => "Open Acoustic comfort mode", run: () => setAcoustic(true) },
   "sound:groan": { label: () => "Simulate a groan", run: () => simulateSound("groan") },
 };
 // "demo:<id>": another of the feature's demos, such as the wardrobe's compartments, under the label that demo gives
@@ -993,7 +1020,7 @@ let cardAt = { x: 24, y: 24 }; // where the card was opened from, to fit it agai
 function placeCard(card, x, y) {
   cardAt = { x, y };
   card.style.maxHeight = "";
-  const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : panel.getBoundingClientRect();
+  const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : acousticOn ? restingRect($("acousticPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   let left = x + 14, top = y + 14;
   if (left + rect.width > panelRect.left && x < panelRect.left) left = Math.max(12, panelRect.left - rect.width - 12);
@@ -1068,6 +1095,7 @@ function setHover(id) {
 // ---------------------------------------------------------------- Explore features: every registered object marked, by group
 function setExplore(on, filter) {
   if (!features || (on === features.on && filter === undefined)) return;
+  if (on !== features.on) showLayer("explore", on ? fittingsMap(true) : null); // the acoustic fittings are off as the room loads, so Explore shows them
   features.set(on, filter === undefined ? features.filter : filter);
   syncExplore();
   if (on) say(`Explore features on: ${features.marked().length} features marked${features.filter ? `, ${features.groupLabel(features.filter)} only` : ""}. Click a mark for its card.`);
@@ -1167,6 +1195,8 @@ const demoApi = {
     if (w && w.userData.side !== want) { setWardrobe(stage.current, want); invalidate(); if (features.on) refreshExplore(); }
   },
   outline: id => { highlight.show("demo", features.objects(id)); invalidate(); },
+  acoustic: state => { if (!acousticOn) setAcoustic(true, { fromDemo: true }); setAcousticFittings(state === "with"); },
+  notices: open => { $("acousticNotices").open = open; },
   oldWardrobe: on => { setOldWardrobe(stage.current, on); invalidate(); },
   /** The two wardrobes' floor areas and heights, from their models, as a sentence. */
   figures: () => {
@@ -1190,6 +1220,7 @@ async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   if (modes.current === "emergency") { $("featureStatus").textContent = "Not during Emergency-ready: care comes first."; $("featureStatus").hidden = false; say($("featureStatus").textContent); return; }
   const opener = cardOpener;
   endCompare(); // and any demo already running
+  setAcoustic(false);
   tour.stop();
   if (pacs.active) pacs.exit();
   if (guide.running || guide.ended) await guide.exit();
@@ -1233,8 +1264,9 @@ function endDemo(why = "") {
   demo = null;
   const shownGroups = Object.keys(demoShown);
   for (const g of shownGroups) delete demoShown[g];
-  for (const g of shownGroups) runEffects(groupById(g), selected[g]);
+  for (const g of shownGroups) runEffects(groupById(g), shownChoice(g));
   settle();
+  if (acousticOn) setAcoustic(false); // only a demo can have it on now: starting one ends the visitor's
   highlight.clear("demo");
   setOldWardrobe(stage.current, false);
   setWardrobe(stage.current, d.snap.wardrobe, { instant: true });
@@ -1274,6 +1306,173 @@ $("featureMenuList").addEventListener("click", e => {
   const b = e.target.closest("button[data-action]");
   if (b) ACTION_HANDLERS[b.dataset.action]?.run(b);
 });
+
+// ---------------------------------------------------------------- Acoustic comfort mode (acoustic.js, acoustic-view.js, sound.js)
+// An overlay, like Clinical view: the room's simulated sources, a sound map, a quiet zone, the room without and then with
+// the acoustic fittings, and the three kinds of notification. Every level is ILLUSTRATIVE. The fittings are shown, not
+// chosen, so no choice, link or summary changes, and leaving puts the room back. Emergency-ready ends it. Nothing listens.
+const acousticView = new AcousticView({ stage, layer: $("acousticMarks") });
+let acousticOn = false, acousticWith = false;
+const fittingsMap = on => Object.fromEntries(FITTING_GROUPS.map(g => [g, on ? "on" : "off"]));
+const fittingsShown = () => Object.fromEntries(FITTING_GROUPS.map(g => [g, shownChoice(g) === "on"]));
+
+function setAcoustic(on, { fromDemo = false } = {}) {
+  if (on === acousticOn) return;
+  if (on) {
+    if (modes.current === "emergency") { say("Acoustic comfort mode waits: Emergency-ready is on, and care comes first."); return; }
+    if (!fromDemo) { endDemo(); endCompare(); }
+    tour.stop();
+    if (pacs.active) pacs.exit();
+    $("objectCard").hidden = true;
+    acousticOn = true;
+    $("acousticNotices").open = false; // each visit starts with the picture, the notifications folded away
+    $("acousticPanel").hidden = false;
+    document.body.classList.add("acoustic-active"); // its panel takes the options panel's place
+    $("panelBody").inert = true;
+    resize();
+    setAcousticFittings(false);
+    say(`Acoustic comfort mode on. ${$("acousticReading").textContent} Illustrative.`);
+    if (!fromDemo) $("acousticTitle").focus({ preventScroll: true });
+  } else {
+    stopDemoSound("");
+    acousticOn = false;
+    showLayer("acoustic", null);
+    acousticView.set(false, stage.current);
+    highlight.clear("acoustic");
+    $("acousticPanel").hidden = true;
+    document.body.classList.remove("acoustic-active");
+    resize(); // gives the options their place back, and the keyboard with it
+    $("criticalExample").hidden = true;
+    if (features?.on) refreshExplore();
+    say("Acoustic comfort mode off. The room is as it was.");
+  }
+  $("acousticToggle").setAttribute("aria-pressed", String(acousticOn));
+  invalidate();
+}
+
+/** The room without the fittings, or with them all: shown, never chosen. */
+function setAcousticFittings(withThem) {
+  acousticWith = withThem;
+  showLayer("acoustic", fittingsMap(withThem));
+  syncAcoustic();
+}
+
+function syncAcoustic() {
+  if (!acousticOn) return;
+  acousticView.set(true, stage.current, fittingsShown());
+  // with the fittings, they're outlined so they can be found
+  const fitted = FITTING_GROUPS.map(g => stage.current.addons?.[g]).filter(a => a?.visible);
+  if (acousticWith && fitted.length) highlight.show("acoustic", fitted); else highlight.clear("acoustic");
+  $("acousticCompare").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.fittings === "with") === acousticWith)));
+  const now = acousticView.readings(), none = acousticView.readings(stage.current, {});
+  const loud = now.loudest.map(l => l.label.toLowerCase()).join(" and ");
+  $("acousticReading").textContent = acousticWith
+    ? `At the pillow: about ${Math.round(now.pillow)} dBA with the fittings, against ${Math.round(none.pillow)} without. A made-up difference. Loudest there: ${loud}.`
+    : `At the pillow: about ${Math.round(now.pillow)} dBA without the fittings. Loudest there: ${loud}.`;
+  if (features?.on) refreshExplore();
+  invalidate();
+}
+
+$("acousticToggle").addEventListener("click", () => setAcoustic(!acousticOn));
+$("acousticPanel").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); setAcoustic(false); $("acousticToggle").focus({ preventScroll: true }); } });
+$("acousticClose").addEventListener("click", () => { setAcoustic(false); $("acousticToggle").focus({ preventScroll: true }); });
+$("acousticCompare").addEventListener("click", e => {
+  const b = e.target.closest("button[data-fittings]");
+  if (!b) return;
+  stopDemoSound("Demo sound stopped: the room changed."); // the sound would no longer match what's shown
+  setAcousticFittings(b.dataset.fittings === "with");
+  say($("acousticReading").textContent);
+});
+$("acousticLegend").replaceChildren(...BANDS.map((b, i) => {
+  const li = el("li", {}, el("span", { className: "swatch-dot" }), `${i === 0 ? "under 40" : i === BANDS.length - 1 ? `${BANDS[i - 1].upTo} and over` : `${BANDS[i - 1].upTo} to ${b.upTo}`} dBA, ${b.words}`);
+  li.firstChild.style.background = b.colour;
+  return li;
+}));
+$("acousticIllustrative").textContent = `${ILLUSTRATIVE} The map uses the simplest distance rule: 6 dB quieter each time the distance from a source doubles.`;
+
+// the three kinds of notification: critical alarms shown and never touched, routine ones listed, and the environmental
+// notices this system raises itself, which staff acknowledge
+$("acousticNoticeList").replaceChildren(...["critical", "routine", "environmental"].map(kind => {
+  const n = NOTIFICATIONS[kind], box = el("div", { className: `notice-kind notice-${kind}` }, el("h3", { textContent: n.title }), el("p", { className: "note", textContent: n.line }));
+  const list = el("ul", {});
+  for (const x of n.examples) {
+    const text = typeof x === "string" ? x : x.text, li = el("li", {}, el("span", { textContent: text }));
+    if (kind === "environmental") {
+      const raise = el("button", { type: "button", className: "outline-action", textContent: "Raise it" });
+      raise.addEventListener("click", () => raiseEnvNotice(text));
+      li.append(raise);
+    }
+    list.append(li);
+  }
+  box.append(list);
+  if (kind === "critical") {
+    const show = el("button", { type: "button", className: "outline-action", textContent: "Show an example" });
+    show.addEventListener("click", () => {
+      stopDemoSound("Demo sound stopped: an alarm is shown, and comfort sound never plays over one.");
+      $("criticalExample").hidden = false;
+      say("Simulated critical alarm example, shown and not sounded. The comfort system has no control over critical alarms.");
+      $("criticalClose").focus({ preventScroll: true });
+    });
+    box.append(show);
+  }
+  return box;
+}));
+function raiseEnvNotice(text) {
+  stopDemoSound("Demo sound stopped: a notice is up, and comfort sound never plays over one.");
+  $("envText").textContent = text;
+  $("envNotice").hidden = false;
+  say(`Simulated environmental notice. ${text} Staff acknowledge it.`);
+  $("envAck").focus({ preventScroll: true });
+}
+$("envAck").addEventListener("click", () => { $("envNotice").hidden = true; say("Notice acknowledged."); ($("acousticPanel").hidden ? canvas : $("acousticNotices").querySelector("summary")).focus({ preventScroll: true }); });
+$("criticalClose").addEventListener("click", () => { $("criticalExample").hidden = true; ($("acousticPanel").hidden ? canvas : $("acousticNotices").querySelector("summary")).focus({ preventScroll: true }); });
+
+// ---------------------------------------------------------------- demo sound: off until asked, and never over a notice or an alarm
+const SOUND_PARTS = {
+  without: "Demo sound: the room without the fittings. Illustrative.",
+  with: "Demo sound: the same room with the fittings. Illustrative: the difference is made up.",
+  restful: "Demo sound: a restful sound, for a patient it suits. Staff decide when it plays.",
+};
+const noticeUp = () => !$("vocalNotice").hidden || !$("criticalExample").hidden || !$("envNotice").hidden;
+function playDemoSound(name) {
+  if (modes.current === "emergency" || noticeUp()) {
+    $("soundCaption").textContent = "Demo sound waits while a notice, an alarm or Emergency-ready is up.";
+    say($("soundCaption").textContent);
+    return;
+  }
+  playSound(name, {
+    onEvent: id => acousticView.pulse(id),
+    onPart: part => {
+      if (part === "without" || part === "with") setAcousticFittings(part === "with"); // what's heard is also shown
+      $("soundCaption").textContent = SOUND_PARTS[part];
+      say(SOUND_PARTS[part]);
+    },
+    onEnd: () => soundOff("The demo sound has finished."),
+  });
+  document.body.classList.add("sound-on");
+  $("muteSound").hidden = false;
+  $("muteSound").focus({ preventScroll: true });
+}
+/** Stop demo sound if it's playing, and say why. Returns whether it was. */
+function stopDemoSound(why) {
+  if (!stopSound()) return false;
+  soundOff(why);
+  return true;
+}
+function soundOff(why) {
+  document.body.classList.remove("sound-on");
+  const hadFocus = document.activeElement === $("muteSound");
+  $("muteSound").hidden = true;
+  $("soundCaption").textContent = why;
+  if (why) say(why);
+  if (hadFocus) $("playSound").focus({ preventScroll: true });
+}
+$("playSound").addEventListener("click", () => playDemoSound("noisy"));
+$("restfulSound").addEventListener("click", () => playDemoSound("restful"));
+$("muteSound").addEventListener("click", () => stopDemoSound("Demo sound muted."));
+// it stops on Esc, before anything else hears the key, and whenever the tab is hidden
+addEventListener("keydown", e => { if (e.key === "Escape" && soundState().playing) { e.preventDefault(); e.stopPropagation(); stopDemoSound("Demo sound stopped."); } }, true);
+document.addEventListener("visibilitychange", () => { if (document.hidden) stopDemoSound("Demo sound stopped: the tab was hidden."); });
 
 /** The Features list in the panel: every entry by group, parts under their feature, each opening its card. */
 function buildFeatureList() {
@@ -1599,6 +1798,7 @@ function setCompare(on) {
   if (on === !!compare || !stage.current) return;
   if (on) {
     endDemo();
+    setAcoustic(false);
     if (pacs.active) pacs.exit();
     tour.stop();
     compare = { selected: { ...selected }, mode: modes.current, code: specCode() };
@@ -1663,7 +1863,7 @@ var guide = new GuidedTour({
   after: $("guideAfter"), tryIt: $("guideTry"), again: $("guideAgain"),
 });
 $("guideCaveat").textContent = CAVEAT;
-$("openGuide").addEventListener("click", () => { endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
+$("openGuide").addEventListener("click", () => { setAcoustic(false); endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
 $("guide").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); guide.exit(); } });
 
 // ---------------------------------------------------------------- graphics quality: Auto, High or Low (quality.js)
@@ -1756,6 +1956,7 @@ function frame(now) {
     stage.draw();
     clinical.update(stage.camera, rig.visible.w);
     features?.update(stage.camera, rig.visible.w);
+    acousticView.update(stage.camera, rig.visible.w);
     window.__configFrames = (window.__configFrames || 0) + 1;
   }
 }
@@ -1924,13 +2125,15 @@ window.__config = {
   tour: () => ({ running: tour.running, log: tour.log.slice(), order: tour.order.slice() }),
   startTour: () => tour.start(),
   placeInView: type => placeInView(type),
+  acoustic: () => ({ on: acousticOn, with: acousticWith, reading: acousticOn ? acousticView.readings() : null, marks: acousticView.showing(), sound: soundState(), shown: fittingsShown(), map: !!stage.current.acousticMap, zone: !!stage.current.acousticZone }),
+  setAcoustic: on => setAcoustic(on),
   wardrobe: (side, instant = true) => { setWardrobe(stage.current, side, { instant }); invalidate(); if (features.on) refreshExplore(); return stage.current.addons?.wardrobe?.userData.side ?? null; },
   wardrobeMoving: () => wardrobeMoving(stage.current),
   wardrobeFigures: () => wardrobeFigures(stage.current),
   /** Stand in front of a feature, as its demo does, at once. */
   frameFeature: id => { const objs = features.objects(id); if (!objs.length) return false; if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true }); const { eye, target } = framePose(objs); rig.goTo(eye, target, { instant: true }); return true; },
   // feature cards
-  features: () => features.entries.map(f => ({ id: f.id, name: f.name, group: f.group, parent: f.parent || null, demo: f.demo || null, actions: f.actions || [], present: features.present(f.id) })),
+  features: () => features.entries.map(f => ({ id: f.id, name: f.name, group: f.group, parent: f.parent || null, demo: f.demo || null, actions: f.actions || [], present: features.present(f.id), own: f.objects.length })),
   featureAt: (x, y) => { const hit = nearestSolid(rayAt(x, y)); return hit ? features.at(hit.object)?.id ?? null : null; },
   /** A point on screen where a click lands on this feature, from where the camera is now, or null. */
   featurePoint: id => {
@@ -1964,7 +2167,7 @@ window.__config = {
   demo: () => (demo ? { id: demo.id, feature: demo.feature, at: demo.at, steps: demo.steps.length, waiting: !!demo.timer } : null),
   /** Skip the rest of a step's hold, once its room is still: every step still runs, without the reading time. */
   demoAdvance: () => { if (!demo?.timer) return false; const d = demo; clearTimeout(d.timer); d.timer = 0; if (d.at + 1 < d.steps.length) demoStep(d.at + 1); else endDemo("done"); return true; },
-  highlight: () => ({ hover: hoverId, on: ["hover", "card", "explore", "demo"].filter(k => highlight.has(k)) }),
+  highlight: () => ({ hover: hoverId, on: ["hover", "card", "explore", "demo", "acoustic"].filter(k => highlight.has(k)) }),
   explore: () => ({ on: features.on, filter: features.filter, markers: features.showing() }),
   /** The room as it's shown now, for proving a demo put it all back. */
   fingerprint: () => {
@@ -1975,6 +2178,7 @@ window.__config = {
       hour: state.hour, view: state.view, eye: stage.camera.position.toArray().map(r), target: controls.target.toArray().map(r),
       wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque], blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
+      overlays: JSON.stringify(overlays), acoustic: acousticOn, fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
     };
   },
 };
