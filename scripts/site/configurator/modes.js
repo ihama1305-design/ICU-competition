@@ -3,9 +3,9 @@
 
 export const MODES = {
   standard: {
-    label: "Standard",
+    label: "As set",
     note: "",
-    say: "Standard: the room as configured.",
+    say: "As set: the room as you configured it.",
   },
   comfort: {
     label: "Comfort",
@@ -32,7 +32,7 @@ export const MODES = {
     light: { kelvin: 4000, level: 1 },
     task: true,
     overlay: true,
-    note: "Clinical: full, neutral room light, the examination task light on, and Clinical view's labels and keep-clear areas.",
+    note: "Clinical: full, neutral room light, the examination task light on, and the equipment labels and keep-clear areas.",
     say: "Clinical mode. Full, neutral light and the examination task light on.",
   },
   emergency: {
@@ -63,7 +63,7 @@ export function modeText(name, dark) {
  * baseLight() and the room's light as configured, as { kelvin, level }; setLight(look, task) lays a look over it (null for none);
  * isDark() is true between sunset and sunrise at the room's solar hour;
  * blindsNow(), configuredBlinds() and setBlinds(level); restore(groupIds) re-applies the configured choices;
- * screens(on), glassClear(), glassPrivate(), overlay(on) for Clinical view; beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
+ * screens(on), glassClear(), glassPrivate(), overlay(on) for Equipment labels; beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
  */
 export class RoomModes {
   constructor(api) {
@@ -90,7 +90,7 @@ export class RoomModes {
     if (to.screensOff) api.screens(false);
     if (to.glassClear) api.glassClear();
     if (to.privateFront) api.glassPrivate();
-    api.overlay(!!to.overlay); // Clinical view's labels and keep-clear areas
+    api.overlay(!!to.overlay); // Equipment labels and their keep-clear areas
     this.dark = !!to.blindsByDay && api.isDark();
     const ownBlinds = to.blinds !== undefined && !this.dark; // after dark, the blinds are left as the room has them
     const fromLight = this.look || api.baseLight(), toLight = to.light || api.baseLight();
@@ -101,7 +101,7 @@ export class RoomModes {
     api.changed(name);
   }
 
-  /** Back to Standard at once: something else is about to change the room. */
+  /** Back to As set at once: something else is about to change the room. */
   leave() {
     if (this.current === "standard" && !this.tween) return false;
     this.set("standard", { instant: true });
