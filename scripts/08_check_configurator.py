@@ -10,7 +10,7 @@ controls and the Day/Night toggle work; a phone gets a bottom sheet with no side
 Every option in options.json changes the picture, in each room it applies to, seen from where its check entry says. Themes apply and stay editable; a spec code restores the
 exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work. The panel and
 home page have no serious accessibility faults under axe, every control can be reached by keyboard with visible focus, nothing
-draws while the page is idle, and slow frames lower the quality. Tune it in: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage. Feature cards: every registered feature by a real click in both rooms and from the Features list by keyboard, every demo run and the room and link proved unchanged, Esc, Stop and Emergency-ready ending one, Explore features and its filter, a hover costing one draw, Low graphics and a phone.
+draws while the page is idle, and slow frames lower the quality. Suggest a room: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage. Feature cards: every registered feature by a real click in both rooms and from the Features list by keyboard, every demo run and the room and link proved unchanged, Esc, Stop and Emergency-ready ending one, Explore features and its filter, a hover costing one draw, Low graphics and a phone.
 Lighting schemes, smart glass, palms and themes get screenshots to look at. Screenshots -> build/shots/config_*.png. Checks the published site in spec site.dir.
 """
 import functools
@@ -400,9 +400,10 @@ with sync_playwright() as p:
     pg.click("#modeBar button[data-mode='standard']")
     pg.wait_for_function(settled, timeout=60000)
     m = pg.evaluate("window.__config.mode()")
-    check(m["current"] == "standard" and m["look"] is None and not m["task"] and m["blinds"] == 0, f"Standard puts the configured room back {m}")
+    check(m["current"] == "standard" and m["look"] is None and not m["task"] and m["blinds"] == 0, f"As set puts the configured room back {m}")
+    check(pg.inner_text("#modeBar button[data-mode='standard']") == "As set", "the mode that lays nothing over the room is called As set, since Standard is also a kind of room")
     check(pg.evaluate("window.__config.code()") == code0 and pg.evaluate("window.__config.selected()") == chosen0, "no mode changes a choice or the share link")
-    # Privacy: smart glass goes opaque and the blinds lower halfway; Standard clears it again
+    # Privacy: smart glass goes opaque and the blinds lower halfway; As set clears it again
     pg.evaluate("window.__config.set('switch', 'clear')")
     pg.click("#modeBar button[data-mode='privacy']")
     pg.wait_for_function(settled, timeout=60000)
@@ -609,7 +610,7 @@ with sync_playwright() as p:
     check(pg.evaluate("window.__config.placed()") == [], "Reset the room removes placed items")
     set_defaults(pg)
 
-    # ---------------------------------------------------------------- Clinical view: labels on the kit and keep-clear areas, over the room as it is
+    # ---------------------------------------------------------------- Equipment labels: labels on the kit and keep-clear areas, over the room as it is
     go(pg, "W1")
     set_defaults(pg)
     pg.evaluate("window.__config.camera('overview', { instant: true })")
@@ -617,13 +618,14 @@ with sync_playwright() as p:
     pg.click("#clinicalToggle")
     drawn(pg)
     cv = pg.evaluate("window.__config.clinical()")
-    check(cv["on"] and cv["zones"] and {"Bed", "Patient monitor · simulated readings", "Ventilator"} <= set(cv["labels"]), f"Clinical view labels the kit and draws the keep-clear areas {cv}")
-    check(pg.is_visible("#clinicalNote") and "not a clinical or compliance check" in pg.inner_text("#clinicalNote"), "Clinical view says it's illustrative")
+    check(cv["on"] and cv["zones"] and {"Bed", "Patient monitor · simulated readings", "Ventilator"} <= set(cv["labels"]), f"Equipment labels name the kit and draw the keep-clear areas {cv}")
+    check(pg.is_visible("#clinicalNote") and "not a clinical or compliance check" in pg.inner_text("#clinicalNote"), "Equipment labels say they're illustrative")
+    check(pg.inner_text("#clinicalToggle").startswith("Equipment labels") and pg.inner_text("#clinicalNote").startswith("Equipment labels:"), "the labels are called Equipment labels on their button and in their note, since Clinical is also a mode and part of a theme's name")
     boxes = pg.evaluate("[...document.querySelectorAll('#clinicalLabels span')].filter(e => !e.hidden).map(e => e.getBoundingClientRect()).map(r => [r.left, r.top, r.right, r.bottom])")
     panel_left = pg.evaluate("document.getElementById('panel').getBoundingClientRect().left")
     overlaps = [(a, b2) for i, a in enumerate(boxes) for b2 in boxes[i + 1:] if a[0] < b2[2] and b2[0] < a[2] and a[1] < b2[3] and b2[1] < a[3]]
     check(not overlaps and all(r[2] <= panel_left + 1 for r in boxes), f"its labels don't overlap or sit under the panel {overlaps[:2]}")
-    check(pg.evaluate("window.__config.code()") == code0, "Clinical view doesn't change the room or its link")
+    check(pg.evaluate("window.__config.code()") == code0, "Equipment labels don't change the room or its link")
     shot(pg, "w1_clinical_view")
     pg.evaluate("window.__config.camera('dollhouse', { instant: true })")
     drawn(pg)
@@ -631,14 +633,14 @@ with sync_playwright() as p:
     pg.evaluate("window.__config.camera('overview', { instant: true })")
     pg.click("#clinicalToggle")
     check(not pg.evaluate("window.__config.clinical()")["on"] and not pg.is_visible("#clinicalLabels"), "the toggle turns it off again")
-    # the Clinical and Emergency-ready modes turn it on, and Standard puts it back as it was
+    # the Clinical and Emergency-ready modes turn them on, and As set puts them back as they were
     pg.click("#modeBar button[data-mode='clinical']")
-    check(pg.evaluate("window.__config.clinical()")["on"], "Clinical mode turns Clinical view on")
+    check(pg.evaluate("window.__config.clinical()")["on"], "Clinical mode turns the equipment labels on")
     pg.click("#modeBar button[data-mode='standard']")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
-    check(not pg.evaluate("window.__config.clinical()")["on"], "Standard turns it back off")
+    check(not pg.evaluate("window.__config.clinical()")["on"], "As set turns them back off")
     pg.click("#modeBar button[data-mode='emergency']")
-    check(pg.evaluate("window.__config.clinical()")["on"], "Emergency-ready turns Clinical view on")
+    check(pg.evaluate("window.__config.clinical()")["on"], "Emergency-ready turns the equipment labels on")
     pg.click("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
     # a placed item gets its own label
@@ -683,7 +685,7 @@ with sync_playwright() as p:
     check(seen[2]["view"] == "patient", f"it shows Patient view {seen[2]}")
     # the wall Patient view faces is mostly television: it shows the day and the time, where off it was a black rectangle
     check(seen[2]["tv"] == "orientation" and seen[2]["screen"] and len(seen[2]["screen"]) == 4, f"in Patient view the television is on its orientation screen, so the view has something to show {seen[2]}")
-    check(seen[3]["mode"] == "comfort" and seen[4]["mode"] == "clinical" and seen[4]["clinical"] and seen[5]["mode"] == "emergency", f"it shows Comfort, Clinical with Clinical view, and Emergency-ready {seen[3]} {seen[4]} {seen[5]}")
+    check(seen[3]["mode"] == "comfort" and seen[4]["mode"] == "clinical" and seen[4]["clinical"] and seen[5]["mode"] == "emergency", f"it shows Comfort, Clinical with the equipment labels, and Emergency-ready {seen[3]} {seen[4]} {seen[5]}")
     check(seen[6]["placed"] == 2 and seen[6]["mode"] == "standard", f"it places two items {seen[6]}")
     check(seen[7]["theme"] == "desert", f"it shows a theme at sunset {seen[7]}")
     check(seen[7]["view"] == "overview" and seen[6]["view"] == "overview", f"the theme changes in place, from the view the step before it stood at, facing the window and the low sun {seen[7]}")
@@ -1333,7 +1335,7 @@ with sync_playwright() as p:
     check(pg.text_content("main a[href='../']").strip() == "Adaptive ICU" and pg.title().endswith(": Adaptive ICU"), "the plan page calls the site by the proposal's name")
     pg.goto(URL.replace("configurator/", "index.html"))
     check(pg.locator("a[href='ventilation/']").count() > 0, "the home page links to the plan")
-    # ---------------------------------------------------------------- Tune it in: answers to a room, from the data in options.json
+    # ---------------------------------------------------------------- Suggest a room: answers to a room, from the data in options.json
     ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
     plain = {"patientType": "adult", "stay": "short", "sex": "skip", "children": "no", "mobility": "independent", "care": "routine", "sensory": "none"}
     PROFILE_CASES = [  # answers that differ from plain, theme, what has to be set, what a higher tier has to overrule
@@ -1488,7 +1490,7 @@ with sync_playwright() as p:
     pg.reload()
     pg.wait_for_function("window.__configReady === true", timeout=120000)
     check(pg.evaluate("window.__config.code()") == code, "a room idea's link reloads the same room")
-    check(not errs, f"Tune it in: no errors {errs[:3]}")
+    check(not errs, f"Suggest a room: no errors {errs[:3]}")
     ctx.close()
 
     # ---------------------------------------------------------------- feature cards: every feature by a click in the room and from the panel, its demo, and Explore features
@@ -2151,7 +2153,7 @@ with sync_playwright() as p:
     figs = pg.evaluate("[...document.querySelectorAll('#proposal figure')].map(f => ({ href: f.querySelector('a').getAttribute('href'), alt: f.querySelector('img').alt.length, lead: f.querySelector('figcaption b')?.textContent || '' }))")
     check(len(figs) == 6 and all("configurator/#c=" in f["href"] and f["alt"] > 40 and f["lead"] for f in figs), f"the proposal has six features, each with a described picture that opens its room {[f['lead'] for f in figs]}")
     words = pg.inner_text("#proposal")
-    check(all(w in words for w in ("Room modes", "PACS", "APIS", "Clinical view", "Remote care for the isolation room", "simulated")), "the proposal names the modes, PACS, APIS, Clinical view and Remote care, and says the readings are simulated")
+    check(all(w in words for w in ("Room modes", "PACS", "APIS", "Equipment labels", "Remote care for the isolation room", "simulated")), "the proposal names the modes, PACS, APIS, Equipment labels and Remote care, and says the readings are simulated")
     check("Six things" in words and "Fewer unnecessary entries, never fewer checks" in words and "look in through the glass first" in words, "Remote care's caption carries its pitch: look in first, fewer entries, never fewer checks")
     check(pg.evaluate("[...document.querySelectorAll('#rooms [role=tab]')].map(t => t.textContent.trim().split(/\\s+/)[0])") == ["Proposed", "Today"], "the first picture compares the proposed room with the room today")
     pg.evaluate("document.querySelectorAll('#proposal img').forEach(i => { i.loading = 'eager'; })")
@@ -2162,7 +2164,7 @@ with sync_playwright() as p:
     opens = pg.evaluate("[...document.querySelectorAll('#proposal figure')].map(f => ({ lead: f.querySelector('figcaption b').textContent, href: f.querySelector('a').getAttribute('href'), says: f.querySelector('figcaption .opens')?.textContent || '' }))")
     told = {o["lead"].split(",")[0].rstrip("."): o["says"] for o in opens}
     check(all(told[k].startswith(f"Opens room {room}.") and where in told[k] for k, room, where in (("Room modes", "W1", "bar at its top"), ("PACS", "W1", "in its options, under Time of day"), ("APIS", "W1", "in its options, under Time of day"),
-                                                                                                    ("Clinical view", "W3", "bar at its top"), ("Remote care for the isolation room", "W1", "in its options, under Comfort systems"))),
+                                                                                                    ("Equipment labels", "W3", "bar at its top"), ("Remote care for the isolation room", "W1", "in its options, under Comfort systems"))),
           f"the five pictures that show a mode, a demo or a pressed button each say where to find it in the room they open {told}")
     check(told["What the patient sees"] == "", f"the picture whose link opens exactly what it shows says nothing extra {told}")
     shared = [o for o in opens if sum(1 for q in opens if q["href"] == o["href"]) > 1]
@@ -2394,7 +2396,7 @@ with sync_playwright() as p:
     pg.tap("#views button[data-value='bed_window']")
     pg.wait_for_function("window.__config.state().view === 'bed_window' && !window.__config.state().moving", timeout=120000)
     shot(pg, "phone_bed_window")
-    # Tune it in on a phone: the form fits, and the panel opens to show what changed
+    # Suggest a room on a phone: the form fits, and the panel opens to show what changed
     pg.tap("#openProfile")
     pg.wait_for_selector("#profile[open]")
     over = pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")

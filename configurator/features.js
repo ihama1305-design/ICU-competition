@@ -1,5 +1,5 @@
 // The feature registry (features.json) against the room on show: the objects each entry links to, the entry an object in
-// the room belongs to, and the markers Explore features puts over them. Like Clinical view, it moves nothing.
+// the room belongs to, and the markers Explore features puts over them. Like Equipment labels, it moves nothing.
 import * as THREE from "three";
 
 import { parseObject } from "./feature-links.js";

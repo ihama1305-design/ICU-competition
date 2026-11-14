@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { PacsSimulation, GUIDE, NIGHT_LINE } from "./site/configurator/pacs-state.js";
 import { afterDark, sunTimes } from "./site/configurator/solar.js";
-import { RoomModes, modeText } from "./site/configurator/modes.js";
+import { RoomModes, modeText, MODES } from "./site/configurator/modes.js";
 import { STEPS, CAVEAT, ENDING, ENDING_GUARD_MS, HOLD_MS, RESUME_MIN_MS, holdLeft } from "./site/configurator/guide.js";
 import { ATTACHMENTS } from "./site/configurator/apis-data.js";
 import { HINT_TEXT } from "./site/configurator/hint.js";
@@ -81,7 +81,7 @@ const tourText = STEPS.map(s => s.text).join(" "), pacsText = GUIDE.map(g => g[1
 // the caveats every step used to repeat are one fixed line under the captions, on the tour's card and PACS's
 assert.equal(CAVEAT, "Simulated demo. A nurse approves every change.");
 for (const [where, title, text] of steps) assert.ok(!/simulated|approves every change/i.test(text), `${where} "${title}" repeats the fixed caveat: ${text}`);
-assert.ok(/not a compliance check/.test(tourText), "the tour keeps 'not a compliance check' on Clinical view, its own subject");
+assert.ok(/not a compliance check/.test(tourText), "the tour keeps 'not a compliance check' on the equipment labels, its own subject");
 assert.ok(/never touches medical equipment or alarms/.test(GUIDE[9][1]), "PACS keeps hands-off alarms on its clinical-safety step");
 assert.ok(/doesn't diagnose/.test(pacsText) && /don't prove comfort/.test(GUIDE[3][1]) && /don't prove comfort/.test(GUIDE[3][4]), "PACS still says it doesn't diagnose and stable numbers don't prove comfort");
 console.log(`PASS plain English: ${steps.length} tour, PACS and APIS steps at most 24 words, the caveats in one fixed line, 'not a compliance check' and hands-off alarms kept`);
@@ -108,6 +108,27 @@ for (const [how, lines] of Object.entries(walkHint)) {
 }
 assert.ok(/stick/.test(walkHint.touch.first) && /Pinch/.test(walkHint.touch.orbit) && /^Tap/.test(walkHint.touch.placing) && /Scroll/.test(walkHint.mouse.orbit) && /^Click/.test(walkHint.mouse.placing), "each line names the gesture its visitor would use");
 console.log(`PASS walkthrough hint: ${Object.values(walkHint).flatMap(Object.values).length} lines of at most 9 words, for a finger and a mouse, in each view and while placing, with no 3D-software words`);
+// ---------------------------------------------------------------- one name per thing: three names that collided, and don't come back
+// "Standard" was a room mode and a kind of room; "Clinical view" sat beside Clinical mode and the Calm Clinical theme; "Tune it in"
+// didn't say what its form does. The mode is As set, the labels are Equipment labels, the form is Suggest a room. PACS and
+// APIS keep their own names, which are their author's.
+{
+  const dir = new URL("./site/configurator/", import.meta.url);
+  const shown = [...readdirSync(dir).filter(f => /\.(js|json|css)$/.test(f)).map(f => new URL(f, dir)), ...["./site/configurator.template.html", "./site/index.template.html", "./viewer_template.html", "../README.md", "../REPORT.md"].map(f => new URL(f, import.meta.url))];
+  for (const file of shown) {
+    const text = readFileSync(file, "utf8"), name = file.pathname.split("/").slice(-1)[0];
+    for (const [old, now] of [["Clinical view", "Equipment labels"], ["Tune it in", "Suggest a room"], ["Back to Standard", "back to As set"], ["Standard mode", "As set"]]) {
+      assert.ok(!text.includes(old), `${name} still says "${old}"; it is "${now}" now`);
+    }
+  }
+  const page = readFileSync(new URL("./site/configurator.template.html", import.meta.url), "utf8");
+  assert.equal(MODES.standard.label, "As set");
+  assert.ok(/data-mode="standard"[^>]*>As set</.test(page), "the mode bar's first button reads As set");
+  assert.ok(/id="clinicalToggle"[^>]*>Equipment labels/.test(page) && /id="clinicalNote"[^>]*>Equipment labels:/.test(page), "the labels' button and note are called Equipment labels");
+  assert.ok(/id="openProfile"[^>]*>Suggest a room/.test(page) && /id="profileTitle">Suggest a room</.test(page), "the form's button and title read Suggest a room");
+  assert.ok(/W3" aria-pressed="false">Standard </.test(page), "the standard room keeps its word");
+  console.log(`PASS one name per thing: As set, Equipment labels and Suggest a room, with no old name left in ${shown.length} files`);
+}
 // ---------------------------------------------------------------- the guided tour's wait: what Play gives a step that was paused
 // held so far (ms) -> what it still waits (ms)
 for (const [held, left] of [[0, HOLD_MS], [1, HOLD_MS - 1], [2000, 7000], [HOLD_MS - RESUME_MIN_MS, RESUME_MIN_MS], [8900, RESUME_MIN_MS], [HOLD_MS, RESUME_MIN_MS], [60000, RESUME_MIN_MS]]) {

@@ -26,7 +26,7 @@ export const STEPS = [
     run: async a => { a.camera("overview"); a.mode("comfort"); },
   },
   {
-    title: "Clinical mode and Clinical view",
+    title: "Clinical mode and equipment labels",
     text: "Bright light for care, labels on the equipment and shaded areas to keep clear. A sketch, not a compliance check.",
     run: async a => { a.mode("clinical"); },
   },

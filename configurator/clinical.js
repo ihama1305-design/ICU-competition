@@ -1,4 +1,4 @@
-// Clinical view: labels on the room's equipment, and keep-clear areas for care around the bed, laid over the room as it
+// Equipment labels: labels on the room's equipment, and keep-clear areas for care around the bed, laid over the room as it
 // is. It uses the existing kit and whatever the visitor placed, and moves nothing. The areas have no dimensions: they're
 // illustrative, not a clinical or compliance check.
 import * as THREE from "three";
