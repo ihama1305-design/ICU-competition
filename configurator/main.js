@@ -56,7 +56,7 @@ const stage = (() => {
 const controls = new OrbitControls(stage.camera, canvas);
 const placement = new Placement(stage); // items the visitor places, room by room
 const clinical = new ClinicalView({ stage, placement, layer: $("clinicalLabels") });
-let clinicalByHand = false, clinicalByMode = false; // Clinical view is on if either asks for it
+let clinicalByHand = false, clinicalByMode = false; // Equipment labels are on if either asks for them
 const state = { room: "W1", view: "overview", hour: STOPS.afternoon };
 let beforePatient = "overview"; // where Return goes from Patient view
 let dirty = true, lastDayHour = STOPS.afternoon;
@@ -248,7 +248,7 @@ $("views").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.id === "tour") { tour.toggle(); return; }
-  if (!b.dataset.value) return; // not a view, like the Clinical view toggle
+  if (!b.dataset.value) return; // not a view, like the Equipment labels toggle
   tour.stop();
   rig.go(b.dataset.value);
   remember();
@@ -438,7 +438,7 @@ const currentTheme = () => optionData.themes.find(t => {
   return allGroups().every(g => selected[g.id] === want[g.id]);
 });
 
-// ---------------------------------------------------------------- Tune it in: the rules are in options.json, and resolved in profile.js
+// ---------------------------------------------------------------- Suggest a room: the rules are in options.json, and resolved in profile.js
 let idea = null; // the room idea just made, while it can still be compared or undone
 
 function showSelections(next) {
@@ -822,7 +822,7 @@ function syncModes(name) {
 function endMode() {
   resetPatient();
   if (!modes.leave()) return;
-  $("modeNote").textContent = "Back to Standard: the room's design changed, so the mode ended.";
+  $("modeNote").textContent = "The mode ended and the room is back to As set, because its design changed.";
   $("modeNote").hidden = false;
 }
 $("modeBar").addEventListener("click", e => {
@@ -831,14 +831,14 @@ $("modeBar").addEventListener("click", e => {
 });
 $("leaveEmergency").addEventListener("click", () => modes.exitEmergency());
 
-// ---------------------------------------------------------------- Clinical view: labels and keep-clear areas (clinical.js)
+// ---------------------------------------------------------------- Equipment labels and keep-clear areas (clinical.js)
 function syncClinical() {
   const on = clinicalByHand || clinicalByMode, was = clinical.on;
   if (stage.current) clinical.set(on, stage.current);
   $("clinicalToggle").setAttribute("aria-pressed", String(on));
   $("clinicalNote").hidden = !on;
   invalidate();
-  if (on !== was) say(on ? `Clinical view on: ${clinical.fixed.length} pieces of equipment labelled, with keep-clear areas around the bed.` : "Clinical view off.");
+  if (on !== was) say(on ? `Equipment labels on: ${clinical.fixed.length} pieces of equipment labelled, with keep-clear areas around the bed.` : "Equipment labels off.");
 }
 $("clinicalToggle").addEventListener("click", () => {
   // a mode that turned it on is overruled by hand until the mode changes
@@ -1323,7 +1323,7 @@ $("featureMenuList").addEventListener("click", e => {
 });
 
 // ---------------------------------------------------------------- Acoustic comfort mode (acoustic.js, acoustic-view.js, sound.js)
-// An overlay, like Clinical view: the room's simulated sources, a sound map, a quiet zone, the room without and then with
+// An overlay, like Equipment labels: the room's simulated sources, a sound map, a quiet zone, the room without and then with
 // the acoustic fittings, and the three kinds of notification. Every level is ILLUSTRATIVE. The fittings are shown, not
 // chosen, so no choice, link or summary changes, and leaving puts the room back. Emergency-ready ends it. Nothing listens.
 const acousticView = new AcousticView({ stage, layer: $("acousticMarks") });
@@ -1551,7 +1551,7 @@ function syncPatient() {
   invalidate();
 }
 
-/** Something changed the room's design: back to Awake, Quiet now off and family's things off, as a mode goes back to Standard. */
+/** Something changed the room's design: back to Awake, Quiet now off and family's things off, as a mode goes back to As set. */
 function resetPatient() {
   if (patientState === DEFAULT_STATE && !quietOn && !family.scene && !family.lines) return;
   bedside.stopFamily();

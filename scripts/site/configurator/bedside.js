@@ -227,7 +227,7 @@ export class Bedside {
     for (const c of CLINICIAN) clinician.append(el("dt", { textContent: c.label }), el("dd", { textContent: c.value }));
     this.applyTable = el("table", { className: "apply-table" });
     p.append(
-      el("p", { className: "note", textContent: "What the patient would like, recorded with them or their family. It's its own record: Tune it in and PACS keep theirs." }),
+      el("p", { className: "note", textContent: "What the patient would like, recorded with them or their family. It's its own record: Suggest a room and PACS keep theirs." }),
       el("h3", { textContent: "The patient's preferences" }), form,
       el("div", { className: "profile-buttons" }, save, reset), this.passportStatus,
       el("h3", { textContent: "Set by the care team" }), clinician,
