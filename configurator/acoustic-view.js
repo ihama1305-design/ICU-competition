@@ -1,5 +1,5 @@
 // Acoustic comfort mode in the room: a sound map on the floor, a quiet zone round the bed, a label on each simulated source
-// (the two loudest at the pillow marked), and a level at the sound sensor. Like Clinical view it moves nothing, and every
+// (the two loudest at the pillow marked), and a level at the sound sensor. Like Equipment labels it moves nothing, and every
 // number on it is ILLUSTRATIVE (acoustic.js says where they come from). Nothing here listens.
 import * as THREE from "three";
 import { W2T } from "./stage.js";

@@ -342,7 +342,7 @@
    "name": "Personal comfort passport",
    "group": "comfort",
    "purpose": "A sample record of what a patient would like: light, temperature, music or quiet, a nature scene, family photographs, privacy, how they communicate, and entertainment.",
-   "how": "Recorded with the patient or their family. It keeps the patient's preferences apart from the settings the care team controls, and shows how each preference is used or held back in each patient state. Save it in this browser, or restore the sample. It's its own record: Tune it in and PACS keep theirs.",
+   "how": "Recorded with the patient or their family. It keeps the patient's preferences apart from the settings the care team controls, and shows how each preference is used or held back in each patient state. Save it in this browser, or restore the sample. It's its own record: Suggest a room and PACS keep theirs.",
    "benefit": "Staff can see at a glance what the patient likes, even when the patient can't say.",
    "awake": "The patient's preferences are used.",
    "sedated": "Most are held back; staff use some, if they judge them right.",
