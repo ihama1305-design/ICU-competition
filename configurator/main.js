@@ -1325,6 +1325,7 @@ function setAcoustic(on, { fromDemo = false } = {}) {
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
     acousticOn = true;
+    $("acousticNotices").open = false; // each visit starts with the picture, the notifications folded away
     $("acousticPanel").hidden = false;
     document.body.classList.add("acoustic-active"); // its panel takes the options panel's place
     $("panelBody").inert = true;
@@ -2132,7 +2133,7 @@ window.__config = {
   /** Stand in front of a feature, as its demo does, at once. */
   frameFeature: id => { const objs = features.objects(id); if (!objs.length) return false; if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true }); const { eye, target } = framePose(objs); rig.goTo(eye, target, { instant: true }); return true; },
   // feature cards
-  features: () => features.entries.map(f => ({ id: f.id, name: f.name, group: f.group, parent: f.parent || null, demo: f.demo || null, actions: f.actions || [], present: features.present(f.id) })),
+  features: () => features.entries.map(f => ({ id: f.id, name: f.name, group: f.group, parent: f.parent || null, demo: f.demo || null, actions: f.actions || [], present: features.present(f.id), own: f.objects.length })),
   featureAt: (x, y) => { const hit = nearestSolid(rayAt(x, y)); return hit ? features.at(hit.object)?.id ?? null : null; },
   /** A point on screen where a click lands on this feature, from where the camera is now, or null. */
   featurePoint: id => {

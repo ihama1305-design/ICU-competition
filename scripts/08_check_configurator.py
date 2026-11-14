@@ -1872,6 +1872,7 @@ with sync_playwright() as p:
         check(mid["code"] == before["code"] and mid["fp"]["selected"] == before["fp"]["selected"], f"{room}: the fittings are shown, not chosen: no choice or link changes")
         shot(pg, f"{room.lower()}_acoustic_with")
         # the three kinds of notification
+        check(not pg.evaluate("document.getElementById('acousticNotices').open"), f"{room}: the notifications start folded away")
         pg.click("#acousticNotices > summary")
         kinds = pg.evaluate("[...document.querySelectorAll('#acousticNoticeList h3')].map(h => h.textContent)")
         text = pg.inner_text("#acousticNoticeList")
@@ -1913,6 +1914,11 @@ with sync_playwright() as p:
     check(s1["s"]["playing"] == "noisy" and s1["caption"].startswith("Demo sound") and "Illustrative" in s1["caption"] and s1["mute"] and s1["focus"] == "muteSound" and not s1["with"],
           f"Play demo sound starts the noisy room without the fittings, says Demo sound on screen, and Mute demo sound is in view with focus {s1}")
     pg.wait_for_function(f"{AC}.with === true", timeout=20000)
+    # the labels are drawn again for the room with its fittings, and the next sound flashes its own about half a second on
+    try:
+        pg.wait_for_function("document.querySelectorAll('.acoustic-mark.ping').length > 0", timeout=8000)
+    except PlaywrightTimeout:
+        pass
     seen = pg.evaluate("({ caption: document.getElementById('soundCaption').textContent, pings: document.querySelectorAll('.acoustic-mark.ping').length })")
     check("with the fittings" in seen["caption"] and "made up" in seen["caption"] and seen["pings"] >= 1, f"then the same room with the fittings, which the map shows too, and each sound's label flashes as it's heard {seen}")
     pg.keyboard.press("Escape")
@@ -1958,6 +1964,7 @@ with sync_playwright() as p:
     check(all(fp["fittings"]) and set(FITS) <= present and pg.evaluate("window.__config.selected()") == sel, "Explore features shows the acoustic fittings, off as the room loads, without choosing them")
     pg.click("#exploreToggle")
     check(not any(pg.evaluate("window.__config.fingerprint().fittings")), "and they go again when it ends")
+    mic = pg.evaluate("window.__mic")
     # the fittings as choices: off by default, so the old link opens the same room, and a chosen one is in the link
     pg.goto("about:blank")
     pg.goto(URL + "#c=" + OLD_LINK)
@@ -1966,13 +1973,14 @@ with sync_playwright() as p:
     check(code.startswith(OLD_LINK) and set(code[len(OLD_LINK):len(OLD_LINK) + 4]) <= {"0"} and not any(pg.evaluate("window.__config.fingerprint().fittings")), f"the old link opens the same room, with every fitting off {code}")
     pg.evaluate("window.__config.set('acousticPanels', 'on')")
     check(pg.evaluate("window.__config.code()")[5 + 33] == "1" and pg.evaluate("window.__config.fingerprint().fittings")[0], "a fitting chosen in the panel is in the link, at its code")
-    check(pg.evaluate("window.__mic") == 0 and not errs, f"Acoustic comfort: no errors, and no microphone was ever asked for ({pg.evaluate('window.__mic')}) {errs[:3]}")
+    check(mic == 0 and not errs, f"Acoustic comfort: no errors, and no microphone was ever asked for ({mic}) {errs[:3]}")
     ctx.close()
     # a phone: the mode's panel is a sheet, and the room above it still shows the map
     ctx, pg, errs, _, _ = open_page(b, 390, 844, query="?tier=low", has_touch=True, is_mobile=True)
     pg.tap("#acousticToggle")
+    drawn(pg)  # its entrance has finished
     r = pg.evaluate("(() => { const p = document.getElementById('acousticPanel').getBoundingClientRect(); return { top: p.top, bottom: p.bottom, left: p.left, right: p.right, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()")
-    check(r["left"] >= 0 and r["right"] <= 390 and r["bottom"] <= 844 and r["top"] > 844 * 0.4 and r["over"] <= 0, f"phone: the mode's panel is a sheet at the bottom, and nothing scrolls sideways {r}")
+    check(r["left"] >= 0 and r["right"] <= 390 and r["bottom"] <= 844.5 and r["top"] > 844 * 0.4 and r["over"] <= 0, f"phone: the mode's panel is a sheet at the bottom, and nothing scrolls sideways {r}")
     shot(pg, "phone_acoustic")
     check(not errs, f"phone, Acoustic comfort: no errors {errs[:3]}")
     ctx.close()

@@ -1325,6 +1325,7 @@ function setAcoustic(on, { fromDemo = false } = {}) {
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
     acousticOn = true;
+    $("acousticNotices").open = false; // each visit starts with the picture, the notifications folded away
     $("acousticPanel").hidden = false;
     document.body.classList.add("acoustic-active"); // its panel takes the options panel's place
     $("panelBody").inert = true;

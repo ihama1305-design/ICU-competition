@@ -1735,7 +1735,7 @@
      "id": "softClose",
      "label": "Soft-close door and cabinets",
      "default": "off",
-     "check": {"time":"afternoon","eye":[16.2,29.9,1.9],"look":[16.0,28.7,2.25],"rooms":{"W3":{"eye":[13.4,21.4,1.9],"look":[14.85,21.5,2.25]}}},
+     "check": {"time":"afternoon","eye":[16.2,29.9,1.9],"look":[16.0,28.7,2.25],"rooms":{"W3":{"eye":[13.0,21.3,1.8],"look":[14.6,21.55,2.3]}}},
      "options": [
       {"id":"off","label":"Off","effects":[{"do":"addon","id":"softClose","on":false}],"code":0},
       {"id":"on","label":"Soft-close","effects":[{"do":"addon","id":"softClose","on":true}],"code":1}

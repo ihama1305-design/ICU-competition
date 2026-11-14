@@ -417,9 +417,9 @@ Object.assign(BUILD, {
    */
   acousticFront(room) {
     const g = new THREE.Group(), f = room.meta.front, seal = std("#5b6a70", 0.55);
-    const W = f.width, Hf = f.height, t = 0.035;
-    g.position.copy(W2T(f.at[0] + f.inward[0] * 0.07, f.at[1] + f.inward[1] * 0.07, 0));
-    g.rotation.y = Math.atan2(f.axis[1], f.axis[0]); // along the front, as glass.js turns its sheet
+    const W = f.width, Hf = f.height, t = 0.035, out = frontFace(room) + t / 2 + 0.004;
+    g.position.copy(W2T(f.at[0] + f.inward[0] * out, f.at[1] + f.inward[1] * out, 0));
+    g.rotation.y = faceInto(f); // its front faces into the room
     g.add(box(W, t, t, seal, 0, Hf - t / 2, 0), box(W, t, t, seal, 0, t / 2, 0), box(t, Hf, t, seal, -W / 2 + t / 2, Hf / 2, 0), box(t, Hf, t, seal, W / 2 - t / 2, Hf / 2, 0));
     g.userData.itemInfo = { title: "Acoustic partition", description: "The glazed front, sealed all round." };
     g.traverse(n => { if (n.isMesh) n.userData.itemInfo = g.userData.itemInfo; });
@@ -429,9 +429,16 @@ Object.assign(BUILD, {
   /** A soft-close damper at the head of the room's door, which slows the last few centimetres. */
   softClose(room) {
     const g = new THREE.Group(), f = room.meta.front, body = std("#9aa4a8", 0.35, { metalness: 0.4 }), cap = std("#33393c", 0.5);
-    g.position.copy(W2T(f.at[0] + f.inward[0] * 0.12, f.at[1] + f.inward[1] * 0.12, f.height - 0.12));
-    g.rotation.y = Math.atan2(f.axis[1], f.axis[0]); // along the front, as glass.js turns its sheet
-    g.add(box(0.42, 0.07, 0.06, body, f.width / 2 - 0.32, 0, 0), box(0.05, 0.07, 0.065, cap, f.width / 2 - 0.08, 0, 0));
+    const out = frontFace(room) + 0.08; // clear of the wall's face, which runs at a slight slant in W3
+    g.position.copy(W2T(f.at[0] + f.inward[0] * out, f.at[1] + f.inward[1] * out, f.height - 0.1));
+    const th = g.rotation.y = faceInto(f); // its front faces into the room
+    // at the end of the opening away from where the curtain gathers, so the curtain never hides it. Its local x runs
+    // along the front, one way or the other depending on the room
+    const curtain = new THREE.Box3();
+    (room.parts.cfg_curtain || []).forEach(n => curtain.expandByObject(n));
+    const c = curtain.isEmpty() ? null : curtain.getCenter(new THREE.Vector3());
+    const side = c && ((c.x - f.at[0]) * Math.cos(th) + (-c.z - f.at[1]) * Math.sin(th)) > 0 ? -1 : 1;
+    g.add(box(0.42, 0.07, 0.06, body, side * (f.width / 2 - 0.32), 0, 0), box(0.05, 0.07, 0.065, cap, side * (f.width / 2 - 0.08), 0, 0));
     g.userData.itemInfo = { title: "Soft-close door", description: "A damper that slows the door at the end of its travel." };
     g.traverse(n => { if (n.isMesh) n.userData.itemInfo = g.userData.itemInfo; });
     return g;
@@ -815,6 +822,31 @@ export function setAddonLook(room, id, look) {
     if (!map) return;
     addon.traverse(n => { if (n.isMesh && n.material?.name === "bathroom_surface") swap(n.material, map[0], [2.2, 2.5], map[1]); });
   }
+}
+
+/** The turn that makes an object's front (its local +z) face into the room through the glazed front. */
+const faceInto = f => Math.atan2(f.inward[0], -f.inward[1]);
+
+/**
+ * How far the glazed front's frame reaches into the room from the front's own line, in metres, read from the model: the
+ * acoustic seal and the door's damper go just on the room side of it, where they can be seen.
+ */
+function frontFace(room) {
+  const f = room.meta.front, frame = room.parts.cfg_front_frame || [];
+  if (!frame.length) return 0.1;
+  const box = new THREE.Box3();
+  room.root.updateMatrixWorld(true);
+  frame.forEach(n => box.expandByObject(n));
+  let reach = -Infinity;
+  for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) reach = Math.max(reach, (x - f.at[0]) * f.inward[0] + (-z - f.at[1]) * f.inward[1]);
+  // and the wall it stands in: the room-side line of the wall it crosses on the way into the room, if that's further in
+  for (const w of room.meta.wall_runs) {
+    const ex = w.b[0] - w.a[0], ey = w.b[1] - w.a[1], den = f.inward[0] * ey - f.inward[1] * ex;
+    if (Math.abs(den) < 1e-6) continue;
+    const t = ((w.a[0] - f.at[0]) * ey - (w.a[1] - f.at[1]) * ex) / den, u = ((w.a[0] - f.at[0]) * f.inward[1] - (w.a[1] - f.at[1]) * f.inward[0]) / den;
+    if (t > 0 && t < 0.5 && u >= -0.05 && u <= 1.05) reach = Math.max(reach, t);
+  }
+  return Math.max(0.02, Math.min(0.5, reach));
 }
 
 // ---------------------------------------------------------------- the wardrobe's doors, and the one it replaced
