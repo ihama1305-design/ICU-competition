@@ -39,6 +39,8 @@
 <div id="clinicalLabels" class="clinical-labels" aria-hidden="true" hidden></div>
 <!-- Explore features' marks, over the room. The panel's Features list is the way to the same cards by keyboard -->
 <div id="featureMarkers" class="feature-markers" aria-hidden="true" hidden></div>
+<!-- Acoustic comfort mode's labels over the room. Its panel says the same in words -->
+<div id="acousticMarks" class="acoustic-marks" aria-hidden="true" hidden></div>
 <div id="hud" class="hud">
   <div id="modeBar" class="mode-bar" role="group" aria-labelledby="modeTitle">
     <span id="modeTitle" class="mode-title">Room mode</span>
@@ -53,6 +55,7 @@
   </div>
   <div class="explore-row">
     <button type="button" id="exploreToggle" class="explore-toggle" aria-pressed="false">Explore features</button>
+    <button type="button" id="acousticToggle" class="explore-toggle" aria-pressed="false">Acoustic comfort mode</button>
     <div id="exploreFilters" class="explore-filters" role="group" aria-label="Show features of one kind" hidden></div>
   </div>
   <p id="modeNote" class="mode-note" hidden></p>
@@ -67,6 +70,17 @@
     <p id="vocalText"></p>
     <p id="vocalMeta" class="vocal-meta"></p>
     <button type="button" id="vocalAck">Acknowledge</button>
+  </section>
+  <section id="criticalExample" class="mode-banner critical-example" aria-labelledby="criticalKicker" hidden>
+    <p id="criticalKicker" class="vocal-kicker">Critical alarm · SIMULATED example</p>
+    <p>Ventilator: high airway pressure. A real one is always sounding and always visible at the bedside, and the comfort system has no control over it. Here it is shown, never sounded.</p>
+    <button type="button" id="criticalClose">Close the example</button>
+  </section>
+  <section id="envNotice" class="mode-banner vocal-notice env-notice" aria-labelledby="envKicker" hidden>
+    <p id="envKicker" class="vocal-kicker">Environmental notice · SIMULATED</p>
+    <p id="envText"></p>
+    <p class="vocal-meta">Raised by the comfort system. It changes no alarm or device: a member of staff looks and acknowledges.</p>
+    <button type="button" id="envAck">Acknowledge</button>
   </section>
   <section id="demoBar" class="mode-note demo-bar" aria-labelledby="demoKicker" hidden>
     <p id="demoKicker" class="demo-kicker">See it in action · <span id="demoName"></span> · <span id="demoCount"></span></p>
@@ -222,6 +236,26 @@
   </div>
 </aside>
 <p id="lookHint" class="look-hint" aria-hidden="true" hidden></p>
+<section id="acousticPanel" class="acoustic-panel" aria-labelledby="acousticTitle" hidden>
+  <button type="button" id="acousticClose" class="object-close" aria-label="Close Acoustic comfort mode">×</button>
+  <p class="object-kicker">Acoustic comfort mode · SIMULATED</p>
+  <h2 id="acousticTitle" tabindex="-1">The room's sound, as a picture</h2>
+  <div id="acousticCompare" class="seg" role="group" aria-label="The room">
+    <button type="button" data-fittings="without" aria-pressed="true">Without fittings</button>
+    <button type="button" data-fittings="with" aria-pressed="false">With fittings</button>
+  </div>
+  <p id="acousticReading" class="acoustic-reading" aria-live="polite"></p>
+  <ul id="acousticLegend" class="acoustic-legend" aria-label="The sound map's colours"></ul>
+  <p id="acousticIllustrative" class="acoustic-note"></p>
+  <div class="acoustic-sound" role="group" aria-labelledby="hDemoSound">
+    <p id="hDemoSound" class="acoustic-sub">Demo sound</p>
+    <button type="button" id="playSound" class="outline-action">Play demo sound</button>
+    <button type="button" id="restfulSound" class="outline-action">Play restful sound</button>
+    <button type="button" id="muteSound" class="outline-action mute-sound" hidden>Mute demo sound</button>
+    <p id="soundCaption" class="sound-caption" role="status"></p>
+  </div>
+  <details id="acousticNotices" class="acoustic-notices"><summary>Notifications, in three kinds</summary><div id="acousticNoticeList"></div></details>
+</section>
 
 <aside id="objectCard" class="object-card" role="dialog" aria-labelledby="objectTitle" aria-describedby="objectDescription" hidden>
   <button type="button" id="closeObjectCard" class="object-close" aria-label="Close object details">×</button>

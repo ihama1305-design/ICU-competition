@@ -1544,12 +1544,12 @@ with sync_playwright() as p:
         go(pg, room)
         set_defaults(pg)
         # what the default room leaves out, so every card has its object in the room
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); document.getElementById('objectCard').hidden = true; }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
         views = pg.evaluate("window.__config.views()")
         missed, wrong, covered, stray = [], [], [], []
         for f in feats:
-            if f["id"] == "nature":
-                continue  # a feature made of parts: its parts are what's clicked
+            if not f["own"]:
+                continue  # a feature made of parts, like the nature display: its parts are what's clicked
             pg.evaluate(f"window.__config.set('tvplay', '{'on' if f['id'] == 'tvScene' else 'off'}')")
             # a wardrobe compartment is there only while its door is open: the clothes are behind the right, the rest the left
             side = ("right" if f["id"] == "wardrobeClothing" else "left") if f["parent"] == "wardrobe" else None
@@ -1599,7 +1599,7 @@ with sync_playwright() as p:
         check(not keyed, f"{room}: from the Features list, Enter opens each card with focus in it, and Esc gives focus back to the list {keyed[:3]}")
         # every demo puts the room back exactly: its choices, link, mode, time, view, doors and screens. W1 waits through each
         # step as a visitor would; W3 runs every step without the reading time
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'plain'); c.set('aquarium', 'none'); c.set('tvplay', 'off'); c.camera('overview', { instant: true }); }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'plain'); c.set('aquarium', 'none'); c.set('tvplay', 'off'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers']) c.set(g, 'off'); c.camera('overview', { instant: true }); }")
         drawn(pg)
         bad = []
         demos = [(x["id"], None) for x in feats if x["demo"]] + [("wardrobe", "View storage compartments"), ("wardrobe", "Compare with the old wardrobe")]
@@ -1836,6 +1836,145 @@ with sync_playwright() as p:
     pg.evaluate("window.__config.wardrobe('left', false)")
     st = pg.evaluate("({ moving: window.__config.wardrobeMoving(), side: window.__config.fingerprint().wardrobe })")
     check(st == {"moving": False, "side": "left"}, f"with reduced motion the doors open at once {st}")
+    ctx.close()
+
+    # ---------------------------------------------------------------- Acoustic comfort mode: sources, a sound map, the fittings shown not chosen, the three kinds of notice, and demo sound
+    FITS = ["acousticPanels", "acousticFront", "softClose", "dampers"]
+    OLD_LINK = "10030010002000000000000000000000000100"  # a link from before the fittings: it must open the same room
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.evaluate("""() => { window.__mic = 0; const count = () => { window.__mic++; return Promise.reject(new Error('refused by the check')); };
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = count; navigator.getUserMedia = count; }""")
+    AC = "window.__config.acoustic()"
+    check(pg.evaluate(AC)["sound"] == {"playing": None, "made": False, "cap": 0.12}, "nothing makes sound as the page loads: no sound engine is even made")
+    for room in ROOMS:
+        go(pg, room)
+        set_defaults(pg)
+        pg.evaluate("window.__config.camera('dollhouse', { instant: true })")
+        drawn(pg)
+        before = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
+        pg.click("#acousticToggle")
+        drawn(pg)
+        a = pg.evaluate(AC)
+        marks = {m["id"]: m for m in a["marks"]}
+        check(a["on"] and a["map"] and a["zone"] and {"monitor", "pumps", "ventilator", "fans", "door", "corridor", "zone", "sensor"} <= set(marks) and sum(m["loudest"] for m in a["marks"]) == 2,
+              f"{room}: Acoustic comfort mode labels the six sources, marks the two loudest at the pillow, draws the sound map and quiet zone, and shows a level at the sensor {sorted(marks)}")
+        panel = pg.evaluate("({ shown: !document.getElementById('acousticPanel').hidden, options: getComputedStyle(document.getElementById('panel')).visibility, focus: document.activeElement.id, said: document.getElementById('acousticReading').textContent, note: document.getElementById('acousticIllustrative').textContent })")
+        check(panel["shown"] and panel["options"] == "hidden" and panel["focus"] == "acousticTitle" and panel["said"].startswith("At the pillow: about") and "made up" in panel["note"] and "Nothing is measured" in panel["note"],
+              f"{room}: its panel takes the options panel's place, with focus, a reading at the pillow and the line that every level is made up {panel}")
+        check(not any(a["shown"].values()), f"{room}: without fittings, none is shown {a['shown']}")
+        shot(pg, f"{room.lower()}_acoustic_without")
+        pg.click("#acousticCompare button[data-fittings='with']")
+        drawn(pg)
+        w = pg.evaluate(AC)
+        check(all(w["shown"].values()) and w["reading"]["pillow"] < a["reading"]["pillow"] and "made-up difference" in pg.inner_text("#acousticReading") and "acoustic" in pg.evaluate("window.__config.highlight().on"),
+              f"{room}: with fittings, all four are shown and outlined, the pillow is quieter, and the panel says the difference is made up ({a['reading']['pillow']:.1f} -> {w['reading']['pillow']:.1f} dBA)")
+        mid = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
+        check(mid["code"] == before["code"] and mid["fp"]["selected"] == before["fp"]["selected"], f"{room}: the fittings are shown, not chosen: no choice or link changes")
+        shot(pg, f"{room.lower()}_acoustic_with")
+        # the three kinds of notification
+        pg.click("#acousticNotices > summary")
+        kinds = pg.evaluate("[...document.querySelectorAll('#acousticNoticeList h3')].map(h => h.textContent)")
+        text = pg.inner_text("#acousticNoticeList")
+        check(kinds == ["Critical alarms", "Routine notifications", "Environmental notices"] and "no control" in text and "Nothing here changes that" in text and "Staff acknowledge" in text,
+              f"{room}: it lists three kinds of notification: critical alarms out of its control, routine ones as they are, and its own notices for staff {kinds}")
+        pg.click("#acousticNoticeList button:text-is('Show an example')")
+        check(pg.is_visible("#criticalExample") and "never sounded" in pg.inner_text("#criticalExample"), f"{room}: a critical alarm example is shown, and never sounded")
+        pg.click("#criticalClose")
+        pg.click("#acousticNoticeList button:text-is('Raise it') >> nth=0")
+        check(pg.is_visible("#envNotice") and pg.evaluate("document.activeElement.id") == "envAck", f"{room}: an environmental notice is raised, with focus on Acknowledge")
+        pg.click("#envAck")
+        check(pg.is_hidden("#envNotice"), f"{room}: and staff acknowledge it")
+        pg.add_script_tag(url=AXE)
+        faults = axe_faults(pg, "#acousticPanel") + axe_faults(pg, ".explore-row")
+        check(not faults, f"{room}: axe finds no serious faults in the mode's panel {faults[:4]}")
+        # leaving puts the room back exactly
+        pg.click("#acousticClose")
+        drawn(pg)
+        after = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code(), focus: document.activeElement.id, options: getComputedStyle(document.getElementById('panel')).visibility })")
+        diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k]]
+        check(not diff and after["code"] == before["code"] and after["focus"] == "acousticToggle" and after["options"] == "visible" and not pg.evaluate(AC)["marks"],
+              f"{room}: closing it puts the room back exactly, the options come back, and focus returns to its button {diff[:4]}")
+        # idle, it draws nothing
+        pg.click("#acousticToggle")
+        drawn(pg)
+        start = pg.evaluate("window.__config.frames()")
+        pg.wait_for_timeout(2500)
+        check(pg.evaluate("window.__config.frames()") == start, f"{room}: with the mode on and nothing changing, nothing is drawn")
+        pg.keyboard.press("Escape") if pg.evaluate("document.getElementById('acousticPanel').contains(document.activeElement)") else pg.click("#acousticClose")
+        check(not pg.evaluate(AC)["on"], f"{room}: Esc in its panel closes it")
+    # demo sound: off until asked; heard without and then with the fittings, with everything heard also shown; it stops on Esc,
+    # a hidden tab, a notice, an alarm example, the sound sensor's notice and Emergency-ready; never a microphone
+    go(pg, ROOMS[0])
+    pg.evaluate("window.__config.camera('family', { instant: true })")
+    pg.click("#acousticToggle")
+    check(pg.evaluate(AC)["sound"]["made"] is False, "opening the mode makes no sound")
+    pg.click("#playSound")
+    s1 = pg.evaluate(f"({{ s: {AC}.sound, caption: document.getElementById('soundCaption').textContent, mute: !document.getElementById('muteSound').hidden, focus: document.activeElement.id, with: {AC}.with }})")
+    check(s1["s"]["playing"] == "noisy" and s1["caption"].startswith("Demo sound") and "Illustrative" in s1["caption"] and s1["mute"] and s1["focus"] == "muteSound" and not s1["with"],
+          f"Play demo sound starts the noisy room without the fittings, says Demo sound on screen, and Mute demo sound is in view with focus {s1}")
+    pg.wait_for_function(f"{AC}.with === true", timeout=20000)
+    seen = pg.evaluate("({ caption: document.getElementById('soundCaption').textContent, pings: document.querySelectorAll('.acoustic-mark.ping').length })")
+    check("with the fittings" in seen["caption"] and "made up" in seen["caption"] and seen["pings"] >= 1, f"then the same room with the fittings, which the map shows too, and each sound's label flashes as it's heard {seen}")
+    pg.keyboard.press("Escape")
+    check(pg.evaluate(AC)["sound"]["playing"] is None and pg.evaluate(AC)["on"] and pg.is_hidden("#muteSound"), "Esc stops the sound, and the mode stays")
+    stops = {}
+    for name, act in [
+        ("Mute", lambda: pg.click("#muteSound")),
+        ("a hidden tab", lambda: pg.evaluate("() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); delete document.hidden; }")),
+        ("an environmental notice", lambda: (pg.click("#acousticNotices > summary") if not pg.evaluate("document.getElementById('acousticNotices').open") else None, pg.click("#acousticNoticeList button:text-is('Raise it') >> nth=1"))),
+        ("a critical alarm example", lambda: pg.click("#acousticNoticeList button:text-is('Show an example')")),
+    ]:
+        pg.click("#playSound")
+        playing = pg.evaluate(AC)["sound"]["playing"]
+        act()
+        stops[name] = (playing, pg.evaluate(AC)["sound"]["playing"])
+        for b_ in ("#envAck", "#criticalClose"):
+            if pg.is_visible(b_):
+                pg.click(b_)
+    check(all(p0 == "noisy" and p1 is None for p0, p1 in stops.values()), f"the sound stops for Mute, a hidden tab, a notice and an alarm example {stops}")
+    pg.click("#acousticNoticeList button:text-is('Raise it') >> nth=2")
+    pg.click("#playSound")
+    check(pg.evaluate(AC)["sound"]["playing"] is None and "waits" in pg.inner_text("#soundCaption"), "and it won't start while a notice is up")
+    pg.click("#envAck")
+    # the sound sensor's own notice stops it too
+    pg.click("#playSound")
+    pt = pg.evaluate("window.__config.featurePoint('soundSensor')")
+    pg.mouse.click(pt["x"], pt["y"])
+    pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    pg.click("#objectAction")
+    check(pg.is_visible("#vocalNotice") and pg.evaluate(AC)["sound"]["playing"] is None, "the sound sensor's notice stops demo sound: comfort sound never plays over a notice")
+    pg.click("#vocalAck")
+    pg.click("#restfulSound")
+    check(pg.evaluate(AC)["sound"]["playing"] == "restful" and "restful" in pg.inner_text("#soundCaption"), "Play restful sound plays the restful sound through the same module")
+    pg.click(".mode-bar button[data-mode='emergency']")
+    check(pg.evaluate(AC)["sound"]["playing"] is None and not pg.evaluate(AC)["on"], "Emergency-ready stops the sound and ends the mode: comfort yields to care")
+    pg.click("#leaveEmergency")
+    pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+    # Explore features shows the fittings while it runs, without choosing them
+    sel = pg.evaluate("window.__config.selected()")
+    pg.click("#exploreToggle")
+    fp = pg.evaluate("window.__config.fingerprint()")
+    present = {f["id"] for f in pg.evaluate("window.__config.features()") if f["present"]}
+    check(all(fp["fittings"]) and set(FITS) <= present and pg.evaluate("window.__config.selected()") == sel, "Explore features shows the acoustic fittings, off as the room loads, without choosing them")
+    pg.click("#exploreToggle")
+    check(not any(pg.evaluate("window.__config.fingerprint().fittings")), "and they go again when it ends")
+    # the fittings as choices: off by default, so the old link opens the same room, and a chosen one is in the link
+    pg.goto("about:blank")
+    pg.goto(URL + "#c=" + OLD_LINK)
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    code = pg.evaluate("window.__config.code()")
+    check(code.startswith(OLD_LINK) and set(code[len(OLD_LINK):len(OLD_LINK) + 4]) <= {"0"} and not any(pg.evaluate("window.__config.fingerprint().fittings")), f"the old link opens the same room, with every fitting off {code}")
+    pg.evaluate("window.__config.set('acousticPanels', 'on')")
+    check(pg.evaluate("window.__config.code()")[5 + 33] == "1" and pg.evaluate("window.__config.fingerprint().fittings")[0], "a fitting chosen in the panel is in the link, at its code")
+    check(pg.evaluate("window.__mic") == 0 and not errs, f"Acoustic comfort: no errors, and no microphone was ever asked for ({pg.evaluate('window.__mic')}) {errs[:3]}")
+    ctx.close()
+    # a phone: the mode's panel is a sheet, and the room above it still shows the map
+    ctx, pg, errs, _, _ = open_page(b, 390, 844, query="?tier=low", has_touch=True, is_mobile=True)
+    pg.tap("#acousticToggle")
+    r = pg.evaluate("(() => { const p = document.getElementById('acousticPanel').getBoundingClientRect(); return { top: p.top, bottom: p.bottom, left: p.left, right: p.right, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()")
+    check(r["left"] >= 0 and r["right"] <= 390 and r["bottom"] <= 844 and r["top"] > 844 * 0.4 and r["over"] <= 0, f"phone: the mode's panel is a sheet at the bottom, and nothing scrolls sideways {r}")
+    shot(pg, "phone_acoustic")
+    check(not errs, f"phone, Acoustic comfort: no errors {errs[:3]}")
     ctx.close()
 
     # ---------------------------------------------------------------- reduced motion
