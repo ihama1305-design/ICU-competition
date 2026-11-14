@@ -195,9 +195,12 @@ function canvasTexture(w, h) {
  * The orientation screen: the weekday and date from this device's clock, and the time of day from the room's own solar time,
  * so it agrees with the sky outside. Large and calm, darker at night. It shows no patient details.
  */
-function drawOrientation({ g, t, w, h }, hour) {
+function drawOrientation({ g, t, w: W, h: H }, hour, lines = []) {
+  // drawn in a 480 by 270 layout at twice the pixels, so the smaller lines stay sharp from the bed
+  const k = W / 480, w = 480, h = 270;
+  g.setTransform(k, 0, 0, k, 0, 0);
   const night = hour >= 19 || hour < 6.5;
-  const ink = night ? "#b8ccd1" : "#16282e", soft = night ? "#6f8a92" : "#5b6f75";
+  const ink = night ? "#b8ccd1" : "#16282e", soft = night ? "#7d97a0" : "#4f6369";
   g.fillStyle = night ? "#0b1519" : "#f3eee4"; g.fillRect(0, 0, w, h);
   const now = new Date();
   const weekday = now.toLocaleDateString("en-GB", { weekday: "long" });
@@ -205,18 +208,37 @@ function drawOrientation({ g, t, w, h }, hour) {
   const m = Math.round(hour * 60), hh = Math.floor(m / 60) % 24, mm = m % 60;
   const time = `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, "0")} ${hh < 12 ? "am" : "pm"}`;
   const part = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : hour < 19.5 ? "Evening" : "Night";
+  const dayNight = night ? "Night-time" : "Daytime";
+  const left = lines.length ? 24 : 32;
   g.fillStyle = ink; g.textBaseline = "alphabetic";
-  g.font = "600 46px sans-serif"; g.fillText(weekday, 32, 82);
-  g.font = "400 28px sans-serif"; g.fillText(date, 32, 124);
-  g.font = "600 54px sans-serif"; g.fillText(time, 32, 200);
-  g.fillStyle = soft; g.font = "400 24px sans-serif"; g.fillText(part, 32, 238);
-  // the sun by day, a crescent by night, in the corner
+  g.font = "600 40px sans-serif"; g.fillText(weekday, left, 66);
+  g.font = "400 22px sans-serif"; g.fillText(date, left, 100);
+  g.font = "600 50px sans-serif"; g.fillText(time, left, 168);
+  g.fillStyle = soft; g.font = "400 20px sans-serif"; g.fillText(`${part} · ${dayNight}`, left, 200);
+  // the sun by day, a crescent by night
+  const cx = lines.length ? 214 : w - 70;
   g.fillStyle = night ? "#c9d6da" : "#e8a23a";
-  g.beginPath(); g.arc(w - 70, 70, 26, 0, Math.PI * 2); g.fill();
-  if (night) { g.fillStyle = "#0b1519"; g.beginPath(); g.arc(w - 58, 62, 24, 0, Math.PI * 2); g.fill(); }
-  g.fillStyle = soft; g.font = "400 14px sans-serif"; g.fillText("Orientation display · concept", w - 214, h - 16);
+  g.beginPath(); g.arc(cx, 52, lines.length ? 18 : 26, 0, Math.PI * 2); g.fill();
+  if (night) { g.fillStyle = "#0b1519"; g.beginPath(); g.arc(cx + 9, 46, lines.length ? 17 : 24, 0, Math.PI * 2); g.fill(); }
+  // the lines on the right: where the patient is, visiting, plans. Never a name, a diagnosis or care information
+  if (lines.length) {
+    g.fillStyle = night ? "#1a272c" : "#e7e0d2"; g.fillRect(250, 22, 214, 206);
+    let y = 48;
+    const wrap = (text, size, weight, colour) => {
+      g.font = `${weight} ${size}px sans-serif`; g.fillStyle = colour;
+      let row = "";
+      for (const word of text.split(" ")) {
+        const next = row ? `${row} ${word}` : word;
+        if (g.measureText(next).width > 194 && row) { g.fillText(row, 262, y); y += size + 4; row = word; } else row = next;
+      }
+      g.fillText(row, 262, y); y += size + 10;
+    };
+    lines.forEach((line, i) => wrap(line, i === 0 ? 17 : 15, i === 0 ? 600 : 500, ink)); // dark ink throughout: read from the pillow
+  }
+  g.fillStyle = soft; g.font = "400 12px sans-serif"; g.fillText("Orientation display · concept", left, h - 14);
+  g.setTransform(1, 0, 0, 1, 0, 0);
   t.needsUpdate = true;
-  return [weekday, date, time, part];
+  return [weekday, date, time, part, dayNight, ...lines];
 }
 
 /** The TV's placeholder picture: an original loop of dunes drifting past under a slow sun. */
@@ -587,7 +609,7 @@ Object.assign(BUILD, {
     drawTvFrame(pic, 3);
     const off = new THREE.MeshStandardMaterial({ color: "#0b0e10", roughness: 0.18 });
     const on = new THREE.MeshBasicMaterial({ map: pic.t });
-    const orient = canvasTexture(480, 270), orientOn = new THREE.MeshBasicMaterial({ map: orient.t });
+    const orient = canvasTexture(960, 540), orientOn = new THREE.MeshBasicMaterial({ map: orient.t });
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.97, 0.97 * 9 / 16), off);
     screen.position.z = 0.0665;
     const scaler = new THREE.Group();
@@ -939,6 +961,16 @@ export function setTv(room, { width, playing }) {
   else if (playing !== undefined) u.screen.material = playing ? u.on : u.off;
 }
 
+/** The orientation screen's extra lines (patient-states.js): drawn again at once if it's showing. */
+export function setOrientationLines(room, lines) {
+  if (JSON.stringify(room.orientLines || []) === JSON.stringify(lines)) return false;
+  room.orientLines = lines;
+  const u = room.addons?.tv?.userData;
+  if (u) u.orientAt = null;
+  setOrientation(room, room.orientHour ?? 15.5);
+  return true;
+}
+
 /** Keep the orientation screen on the room's time of day; redrawn only when the minute it shows changes. */
 export function setOrientation(room, hour) {
   room.orientHour = hour;
@@ -947,7 +979,7 @@ export function setOrientation(room, hour) {
   const minute = Math.round(hour * 60);
   if (u.orientAt === minute) return;
   u.orientAt = minute;
-  u.orientText = drawOrientation(u.orient, hour);
+  u.orientText = drawOrientation(u.orient, hour, room.orientLines || []);
 }
 
 /** The damping mounts sit at the TV's corners, so they move with its size. */
