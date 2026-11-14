@@ -1308,7 +1308,7 @@ $("featureMenuList").addEventListener("click", e => {
 });
 
 // ---------------------------------------------------------------- Acoustic comfort mode (acoustic.js, acoustic-view.js, sound.js)
-// An overlay, like Clinical view: the room's simulated sources, a sound map, a quiet zone, the room without and then with
+// An overlay, like Equipment labels: the room's simulated sources, a sound map, a quiet zone, the room without and then with
 // the acoustic fittings, and the three kinds of notification. Every level is ILLUSTRATIVE. The fittings are shown, not
 // chosen, so no choice, link or summary changes, and leaving puts the room back. Emergency-ready ends it. Nothing listens.
 const acousticView = new AcousticView({ stage, layer: $("acousticMarks") });

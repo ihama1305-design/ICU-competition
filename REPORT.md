@@ -282,7 +282,7 @@ The old one had sliding doors too. What the built-in one adds is height, easier 
 
 ### Acoustic comfort (13 November 2026)
 
-**A picture of the room's sound.** Acoustic comfort mode is a button above the room, beside Explore features: it's not in the mode bar, which is full on a phone. Like Clinical view it changes nothing in the room's design.
+**A picture of the room's sound.** Acoustic comfort mode is a button above the room, beside Explore features: it's not in the mode bar, which is full on a phone. Like Equipment labels it changes nothing in the room's design.
 
 | Feature | What it does | What it isn't |
 |---|---|---|
