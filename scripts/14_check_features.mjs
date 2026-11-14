@@ -10,6 +10,7 @@ import { ACTIONS, DEMOS, HOLD_MS } from "./site/configurator/demos.js";
 import { MODES } from "./site/configurator/modes.js";
 import { parseObject } from "./site/configurator/feature-links.js";
 import { APPLY, BOARD, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
+import { BANDS as PRESSURE_BANDS, DEFAULT_MINUTES, DEFAULT_POSITION, GRID, LINES, LINES_TEXT, MOVE_CHECK, PLAN, POSITIONS, POSITION_ORDER, PRESSURE_TEXT, SLACK, SLACK_BY, TIMES, peakOf, pressureMap, sustained } from "./site/configurator/bed.js";
 import { BACKGROUND, BANDS, FITTINGS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS, SOURCES, levelAt, sourceLevel } from "./site/configurator/acoustic.js";
 
 const here = p => new URL(p, import.meta.url);
@@ -138,6 +139,9 @@ const api = {
   acoustic: state => { assert.ok(["without", "with"].includes(state), `a demo shows the room without or with the fittings (${state})`); calls.push(["acoustic"]); },
   notices: open => { assert.equal(typeof open, "boolean", "the notifications list opens or closes"); calls.push(["notices"]); },
   patient: name => { assert.ok(STATES[name], `a demo sets a patient state that exists (${name})`); calls.push(["patient"]); },
+  bed: tab => { assert.ok(["pressure", "lines"].includes(tab), `a demo opens the bed panel's ${tab} tab, which exists`); calls.push(["bed"]); },
+  position: (id, minutes) => { assert.ok(POSITIONS[id] && TIMES.some(t => t.minutes === minutes), `a demo shows ${id} for ${minutes} min, a position and time the panel offers`); calls.push(["position"]); },
+  askMove: id => { assert.ok(POSITIONS[id], `a demo asks for the line check before a move to ${id}`); calls.push(["askMove"]); },
 };
 let steps = 0;
 for (const [id, d] of Object.entries(DEMOS)) {
@@ -221,4 +225,44 @@ assert.ok(/does not replace a certified nurse-call system/.test(bedsideSrc) && !
 assert.ok(byId.get("communicationBoard").objects.includes("placed:tablet") && byId.get("comfortPassport").objects.some(o => o.startsWith("part:cfg_bay")) && byId.get("orientation").actions.includes("bedside:family"),
   "the screens open from the tablet arm, the window and the TV, as well as from the panel");
 
-console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification`);
+// ---------------------------------------------------------------- the bed: the pressure map and the lines (bed.js)
+assert.deepEqual(POSITION_ORDER, ["back", "left", "right", "upright"], "four positions: on the back, turned either way, sitting up");
+assert.equal(DEFAULT_POSITION, "back", "the map starts as the figure lies");
+for (const id of POSITION_ORDER) {
+  const m = pressureMap(id), named = POSITIONS[id].regions.filter(r => r.label);
+  assert.ok(m.length === GRID.cols * GRID.rows && m.every(v => v >= 0 && v <= 1), `${id}: a relative load from 0 to 1 in every cell of the grid`);
+  assert.ok(named.length >= 4 && new Set(named.map(r => r.id)).size === named.length, `${id}: its named places, each once`);
+  assert.equal(sustained(id, PLAN.interval - 1).length, 0, `${id}: nothing is marked before the plan's interval`);
+}
+assert.deepEqual(sustained("back", DEFAULT_MINUTES).map(r => r.id), ["sacrum", "heelR", "heelL"], "on the back, past the interval: the sacrum and both heels are marked");
+assert.ok(DEFAULT_MINUTES >= PLAN.interval, "as the room loads, the staff view's reminder is due");
+const sac = id => peakOf(id, POSITIONS[id].regions.find(r => r.id === "sacrum"));
+assert.ok(sac("left") < sac("back") && sac("right") < sac("back") && sac("upright") >= sac("back"), "a 30° turn takes weight off the sacrum, and sitting up puts it on");
+assert.ok(PRESSURE_BANDS.every(b => !/\d|mmHg|kPa|%/.test(b.label)) && PRESSURE_BANDS.length === 3, "three relative bands, in words: no units, because nothing is measured");
+assert.ok(/not a measurement/.test(PRESSURE_TEXT.limits) && /predicts no injury/.test(PRESSURE_TEXT.limits) && /never moves a patient/.test(PRESSURE_TEXT.limits), "the map says it's not a measurement, predicts no injury and never moves a patient");
+assert.ok(/don't move/.test(PRESSURE_TEXT.still) && /SIMULATED/.test(PRESSURE_TEXT.reminder) && /Nothing here moves a patient/.test(PRESSURE_TEXT.reminder), "the bed and figure don't move, and the reminder moves nobody");
+assert.ok(/nursing team sets/.test(PLAN.note) && /Sample/.test(PLAN.note), "the plan is a sample: the nursing team sets the real one");
+const patientSrc = read("./site/configurator/patient.js");
+assert.deepEqual(LINES.map(l => l.id), ["respiratory", "iv", "feeding", "ecg", "urinary"], "five lines round the patient");
+for (const l of LINES) {
+  assert.ok(patientSrc.includes(`"${l.route}"`) && patientSrc.includes(`"${l.colour}"`), `${l.id}: on patient.js's own route, in its colour`);
+  assert.ok(l.clip > 0 && l.clip < 1 && l.holder, `${l.id}: a clip partway along its route, and what holds it`);
+}
+assert.ok(/never on a moving rail/.test(LINES.find(l => l.id === "urinary").holder), "the drainage guide is never on a moving rail");
+assert.deepEqual(Object.keys(SLACK), ["ok", "less", "check"], "slack in three words");
+for (const p of POSITION_ORDER) for (const l of LINES) {
+  const [st, why] = SLACK_BY[p][l.id] || [];
+  assert.ok(SLACK[st] && why && !/\d\s*(N|kg|cm|mm|%)/.test(why), `${p}, ${l.id}: a slack word and a reason, with no force or length`);
+}
+assert.ok(LINES.every(l => SLACK_BY.back[l.id][0] === "ok"), "as the figure lies, every line has slack enough");
+assert.ok(/no tension, force or flow/.test(LINES_TEXT.limits) && /no line or device is monitored/.test(LINES_TEXT.limits) && /Nothing here changes a real line, connector or device/.test(LINES_TEXT.limits), "no force or flow is worked out, and no real line, connector or device is changed");
+assert.ok(/check every line/.test(MOVE_CHECK.text) && /Lines checked/.test(MOVE_CHECK.confirm), "a move asks staff to check the lines first, and a person confirms it");
+const bedSection = options.sections.find(x => x.id === "bed");
+assert.deepEqual(bedSection?.groups.map(g => [g.id, g.code, g.default]), [["lineClips", 37, "off"]], "the line clips are code 37, off by default, so old links open the same room");
+assert.ok(ADDONS.has("lineClips") && bedSection.groups[0].check?.eye && /don't secure a line/.test(bedSection.groups[0].note.text), "the clips are an add-on 08 can see, and they secure no line");
+const bedViewSrc = read("./site/configurator/bed-view.js"), bedSrc = read("./site/configurator/bed.js");
+assert.ok(![bedViewSrc, bedSrc].some(x => /fetch\(|XMLHttpRequest|sendBeacon|WebSocket|setInterval|setTimeout/.test(x)), "the bed panel sends nothing, and never counts time by itself");
+assert.ok(byId.get("pressureBed").objects[0] === "part:cfg_kit_bed" && /not a measurement/.test(byId.get("pressureBed").limits) && /predicts no injury/.test(byId.get("pressureBed").limits) && /never moves a patient/.test(byId.get("pressureBed").limits), "the bed's card: not a measurement, no injury predicted, no patient moved");
+assert.ok(byId.get("lineClips").objects[0] === "addon:lineClips" && /APIS keeps its own tubing tab/.test(byId.get("lineClips").limits), "the clips' card, and APIS's tubing tab left as it is");
+
+console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default`);

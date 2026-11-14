@@ -6,6 +6,8 @@ import { Rig, inside } from "./cameras.js";
 import { Daylight, sunAt } from "./sky.js";
 import { Lighting, autoKelvin, circadianLevel } from "./lights.js";
 import { Bedside } from "./bedside.js";
+import { BedView } from "./bed-view.js";
+import { POSITIONS as BED_POSITIONS } from "./bed.js";
 import { DEFAULT_STATE, ORIENTATION, STATES, STATE_MS } from "./patient-states.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
@@ -99,7 +101,7 @@ function resize() {
   stage.resize(w, h);
   stage.camera.aspect = w / h;
   const cls = document.body.classList;
-  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : panel.getBoundingClientRect();
+  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -107,7 +109,7 @@ function resize() {
   stage.camera.setViewOffset(w, h, coverX / 2, coverY / 2, w, h);
   rig.visible = { w: w - coverX, h: h };
   if (rig.meta) rig.fit();
-  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active"); // off-screen, or covered by a panel in its place
+  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active"); // off-screen, or covered by a panel in its place
   $("panelBody").inert = closed;
   panel.querySelector(".actions").inert = closed;
   stage.camera.updateProjectionMatrix();
@@ -196,6 +198,7 @@ function setTime(h) {
 
 async function setRoom(label, { keepView = true } = {}) {
   setAcoustic(false); // its map and labels are this room's
+  setBed(false); // and the bed panel's
   endVocalCue(); // its notice names the room being left
   endCompare();
   if (pacs.active) pacs.exit();
@@ -314,11 +317,11 @@ canvas.addEventListener("keydown", e => {
 let optionData = null, panelUi = null;
 const selected = {};
 // Options shown without being chosen, in layers: a feature demo's on top (demos.js), then Acoustic comfort mode's fittings,
-// staff's Quiet now, the fittings Explore features shows, and the patient's state (patient-states.js). The panel, the link
-// and the summary only ever read `selected`.
-const overlays = { demo: {}, acoustic: {}, quiet: {}, explore: {}, patient: {} };
+// the bed panel's line clips, staff's Quiet now, the fittings Explore features shows, and the patient's state
+// (patient-states.js). The panel, the link and the summary only ever read `selected`.
+const overlays = { demo: {}, acoustic: {}, bed: {}, quiet: {}, explore: {}, patient: {} };
 const demoShown = overlays.demo;
-const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
+const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
 /** Set what one layer shows (null: nothing), and bring the room up to whichever layer is on top for each group it touched. */
 function showLayer(layer, values) {
   const touched = new Set([...Object.keys(overlays[layer]), ...Object.keys(values || {})]);
@@ -812,7 +815,7 @@ function syncModes(name) {
   }
   note.hidden = !note.textContent;
   $("modeBanner").hidden = name !== "emergency";
-  if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency-ready is on."); setAcoustic(false); } // comfort yields to care
+  if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency-ready is on."); setAcoustic(false); setBed(false); } // comfort yields to care
   if (quietOn) modeApi.screens(false); // a mode turns the screens back on; Quiet now keeps them off
   document.body.classList.toggle("emergency-ready", name === "emergency");
   say(text.say);
@@ -893,6 +896,8 @@ const ACTION_HANDLERS = {
   "bedside:passport": { label: () => "Open the comfort passport", run: () => setBedside(true, "passport") },
   "bedside:family": { label: () => "Open family connection", run: () => setBedside(true, "family") },
   "sound:groan": { label: () => "Simulate a groan", run: () => simulateSound("groan") },
+  "bed:pressure": { label: () => "Open the pressure map", run: () => setBed(true, "pressure") },
+  "bed:lines": { label: () => "Open the lines", run: () => setBed(true, "lines") },
 };
 // "demo:<id>": another of the feature's demos, such as the wardrobe's compartments, under the label that demo gives
 for (const a of ACTIONS) if (a.startsWith("demo:")) ACTION_HANDLERS[a] = { label: () => DEMOS[a.slice(5)].label, run: () => startDemo($("objectCard").dataset.feature, a.slice(5)).catch(err => window.__configErrors.push(String(err))) };
@@ -1108,7 +1113,7 @@ function setHover(id) {
 // ---------------------------------------------------------------- Explore features: every registered object marked, by group
 function setExplore(on, filter) {
   if (!features || (on === features.on && filter === undefined)) return;
-  if (on !== features.on) showLayer("explore", on ? fittingsMap(true) : null); // the acoustic fittings are off as the room loads, so Explore shows them
+  if (on !== features.on) showLayer("explore", on ? { ...fittingsMap(true), lineClips: "on" } : null); // the fittings are off as the room loads, so Explore shows them
   features.set(on, filter === undefined ? features.filter : filter);
   syncExplore();
   if (on) say(`Explore features on: ${features.marked().length} features marked${features.filter ? `, ${features.groupLabel(features.filter)} only` : ""}. Click a mark for its card.`);
@@ -1212,6 +1217,9 @@ const demoApi = {
   notices: open => { $("acousticNotices").open = open; },
   oldWardrobe: on => { setOldWardrobe(stage.current, on); invalidate(); },
   patient: name => setPatientState(name),
+  bed: tab => setBed(true, tab, { fromDemo: true }),
+  position: (id, minutes) => bedView.setPosition(id, minutes),
+  askMove: id => bedView.ask(id, { focus: false }), // the line check, on screen: the demo says it plays the staff member
   /** The two wardrobes' floor areas and heights, from their models, as a sentence. */
   figures: () => {
     const f = wardrobeFigures(stage.current);
@@ -1235,13 +1243,14 @@ async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   const opener = cardOpener;
   endCompare(); // and any demo already running
   setAcoustic(false);
+  setBed(false);
   tour.stop();
   if (pacs.active) pacs.exit();
   if (guide.running || guide.ended) await guide.exit();
   $("objectCard").hidden = true;
   demo = {
     id: demoId, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
-    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState },
+    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot() },
   };
   if (modes.current !== "standard") modes.set("standard", { instant: true }); // a mode would hide what the demo shows
   $("demoName").textContent = f.name;
@@ -1281,6 +1290,8 @@ function endDemo(why = "") {
   for (const g of shownGroups) runEffects(groupById(g), shownChoice(g));
   settle();
   if (acousticOn) setAcoustic(false); // only a demo can have it on now: starting one ends the visitor's
+  if (bedOn) setBed(false); // and the same for the bed panel
+  bedView.restore(d.snap.bed);
   highlight.clear("demo");
   setOldWardrobe(stage.current, false);
   setWardrobe(stage.current, d.snap.wardrobe, { instant: true });
@@ -1337,6 +1348,7 @@ function setAcoustic(on, { fromDemo = false } = {}) {
     if (modes.current === "emergency") { say("Acoustic comfort mode waits: Emergency-ready is on, and care comes first."); return; }
     if (!fromDemo) { endDemo(); endCompare(); }
     setBedside(false); // one panel in the options panel's place at a time
+    setBed(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1522,6 +1534,7 @@ function setPatientState(name, { instant = false, quietly = false } = {}) {
   if (!STATES[name]) return;
   const was = patientState, from = lighting.patient || lighting.base(state.hour);
   patientState = name;
+  if (name === "sedated" && was !== "sedated") bedView.remind(); // a reminder staff dismissed comes back
   bedside.stateChanged(was); // what a sedated patient isn't allowed stops first
   showLayer("patient", patientShows());
   const to = patientLook(name);
@@ -1577,8 +1590,99 @@ function applyQuiet(on) {
   invalidate();
 }
 
+// ---------------------------------------------------------------- the bed: the pressure map and the lines (bed.js, bed-view.js)
+// A staff panel in the options panel's place, as the bedside screens are. The pressure map lies on the mattress, the patient
+// figure faint over it; the Lines tab shows the line clips and each line's slack. A move asks for the line check first, and
+// the bed and the figure never move. It changes no choice, link or summary. SIMULATED throughout.
+var bedOn = false, bedOpener = null, bedFromSheet = false, bedPose = null;
+var bedView = new BedView($("bedPanel"), {
+  layer: $("bedMarks"),
+  api: { say, invalidate, tab: tab => bedTab(tab), staff: () => bedside?.renderStaff() },
+});
+
+/** Where to look from for each tab: over the foot of the bed, higher for the map so it reads from above. */
+function bedLook(tab) {
+  const b = stage.current.meta.bed, f = b.foot, c = [b.head[0] + f[0] * 1.15, b.head[1] + f[1] * 1.15];
+  const back = tab === "lines" ? 1.45 : 1.25, up = tab === "lines" ? 1.7 : 2.1;
+  return { eye: W2T(c[0] + f[0] * back, c[1] + f[1] * back, up), target: W2T(c[0] + f[0] * 0.15, c[1] + f[1] * 0.15, 0.72) };
+}
+
+/** What a tab shows in the room: the map on the mattress, or the line clips with each line's slack by its clip. */
+function bedTab(tab) {
+  if (!bedOn || !stage.current) return;
+  const room = stage.current;
+  if (tab === "lines") {
+    bedView.setMap(false, room);
+    showLayer("bed", { lineClips: "on" });
+    bedView.setMarks(true, room);
+    if (room.addons?.lineClips) highlight.show("bed", [room.addons.lineClips]);
+  } else {
+    bedView.setMarks(false, room);
+    highlight.clear("bed");
+    showLayer("bed", null);
+    bedView.setMap(true, room);
+  }
+  if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
+  const { eye, target } = bedLook(tab);
+  rig.goTo(eye, target);
+  invalidate();
+}
+
+function setBed(on, tab, { fromDemo = false } = {}) {
+  if (on) {
+    if (modes.current === "emergency") { say("The bed panel waits: Emergency-ready is on, and care comes first."); return; }
+    if (!fromDemo) { endDemo(); endCompare(); }
+    setAcoustic(false);
+    setBedside(false);
+    tour.stop();
+    if (pacs.active) pacs.exit();
+    $("objectCard").hidden = true;
+    if (!bedOn) { if (!bedOpener) bedOpener = document.activeElement; bedPose = cameraPose(); }
+    bedOn = true;
+    $("bedPanel").hidden = false;
+    document.body.classList.add("bed-active");
+    resize();
+    bedView.show(tab || bedView.tab);
+    if (!fromDemo) $("bedTitle").focus({ preventScroll: true });
+    say(`The bed, simulated: ${bedView.tab === "lines" ? "each line's slack" : "the pressure map"}. ${BED_POSITIONS[bedView.position].label}. Nothing is measured, and nothing moves the patient.`);
+  } else {
+    if (!bedOn) return;
+    bedOn = false;
+    bedView.cancel();
+    showLayer("bed", null);
+    bedView.setMap(false, stage.current);
+    bedView.setMarks(false);
+    highlight.clear("bed");
+    $("bedPanel").hidden = true;
+    document.body.classList.remove("bed-active");
+    resize();
+    if (bedPose) restorePose(bedPose); // the view it was opened from
+    bedPose = null;
+    if (bedFromSheet && isPhone()) setSheet(true);
+    bedFromSheet = false;
+    const back = bedOpener?.isConnected && !bedOpener.closest("[hidden]") && !bedOpener.closest("[inert]") && bedOpener.offsetParent ? bedOpener : canvas;
+    bedOpener = null;
+    back.focus({ preventScroll: true });
+    if (features?.on) refreshExplore();
+  }
+  invalidate();
+}
+$("bedClose").addEventListener("click", () => setBed(false));
+$("bedPanel").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); setBed(false); } });
+document.querySelector(".bed-launch").addEventListener("click", e => {
+  const b = e.target.closest("button[data-open]");
+  if (!b) return;
+  bedOpener = b;
+  bedFromSheet = isPhone() && panel.classList.contains("open");
+  if (bedFromSheet) setSheet(false);
+  setBed(true, b.dataset.open);
+});
+
 var bedside = new Bedside($("bedside"), {
   state: () => patientState,
+  reminder: () => bedView.reminderState(),
+  dismissReminder: () => bedView.dismiss(),
+  openBed: tab => setBed(true, tab),
   time: () => clock(state.hour),
   say,
   notice: () => stopDemoSound("Demo sound stopped: a request is up, and comfort sound never plays over one."),
@@ -1593,6 +1697,7 @@ var bedside = new Bedside($("bedside"), {
 function setBedside(on, tab) {
   if (on) {
     setAcoustic(false);
+    setBed(false);
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
     if (!bedsideOn && !bedsideOpener) bedsideOpener = document.activeElement;
@@ -2122,6 +2227,7 @@ function frame(now) {
     clinical.update(stage.camera, rig.visible.w);
     features?.update(stage.camera, rig.visible.w);
     acousticView.update(stage.camera, rig.visible.w);
+    bedView.update(stage.camera, rig.visible.w);
     window.__configFrames = (window.__configFrames || 0) + 1;
   }
 }
@@ -2294,6 +2400,12 @@ window.__config = {
   setPatientState: (name, opts) => setPatientState(name, opts),
   bedside: () => ({ open: bedsideOn, ...bedside.inspect() }),
   openBedside: tab => setBedside(true, tab),
+  bed: () => ({ open: bedOn, ...bedView.inspect() }),
+  openBed: tab => setBed(true, tab),
+  setBed: on => setBed(on),
+  bedPosition: (id, minutes) => bedView.setPosition(id, minutes),
+  clipPoints: () => (stage.current.addons?.lineClips?.children || []).map(c => { const v = c.getWorldPosition(new THREE.Vector3()); return { line: c.userData.line, at: [v.x, -v.z, v.y].map(n => Math.round(n * 1000) / 1000) }; }),
+  bedPoint: id => { const v = bedView.pointOf(id); if (!v) return null; v.project(stage.camera); return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight }; },
   acoustic: () => ({ on: acousticOn, with: acousticWith, reading: acousticOn ? acousticView.readings() : null, marks: acousticView.showing(), sound: soundState(), shown: fittingsShown(), map: !!stage.current.acousticMap, zone: !!stage.current.acousticZone }),
   setAcoustic: on => setAcoustic(on),
   wardrobe: (side, instant = true) => { setWardrobe(stage.current, side, { instant }); invalidate(); if (features.on) refreshExplore(); return stage.current.addons?.wardrobe?.userData.side ?? null; },
@@ -2348,6 +2460,7 @@ window.__config = {
       wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque], blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
       overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
+      bed: JSON.stringify([bedOn, bedView.snapshot()]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,
     };
   },
 };

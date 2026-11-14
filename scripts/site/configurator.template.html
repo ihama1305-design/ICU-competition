@@ -41,6 +41,7 @@
 <div id="featureMarkers" class="feature-markers" aria-hidden="true" hidden></div>
 <!-- Acoustic comfort mode's labels over the room. Its panel says the same in words -->
 <div id="acousticMarks" class="acoustic-marks" aria-hidden="true" hidden></div>
+<div id="bedMarks" class="acoustic-marks" aria-hidden="true" hidden></div>
 <div id="hud" class="hud">
   <div id="modeBar" class="mode-bar" role="group" aria-labelledby="modeTitle">
     <span id="modeTitle" class="mode-title">Room mode</span>
@@ -203,6 +204,14 @@
       </div>
       <p class="note">They follow the patient's state, set above the room. Simulated: no request, photograph or voice leaves this page. No item needs to be placed.</p>
     </section>
+    <section aria-labelledby="hBed">
+      <h2 id="hBed">The bed</h2>
+      <div class="grid bed-launch" role="group" aria-labelledby="hBed">
+        <button type="button" class="wide" data-open="pressure">Pressure map</button>
+        <button type="button" class="wide" data-open="lines">Lines</button>
+      </div>
+      <p class="note">For staff: where the patient's weight bears, and each line's slack before a move. Simulated: nothing is measured, and nothing moves the patient.</p>
+    </section>
     <div id="options"></div>
 
     <details class="section" name="options" id="systemsSection">
@@ -273,6 +282,21 @@
   <div id="pane-passport" class="bedside-pane" hidden></div>
   <div id="pane-family" class="bedside-pane" hidden></div>
   <div id="pane-staff" class="bedside-pane" hidden></div>
+</section>
+<section id="bedPanel" class="acoustic-panel bed-panel" aria-labelledby="bedTitle" hidden>
+  <button type="button" id="bedClose" class="object-close" aria-label="Close the bed panel">×</button>
+  <p class="object-kicker">The bed · SIMULATED</p>
+  <h2 id="bedTitle" tabindex="-1">Pressure and lines</h2>
+  <div id="bedTabs" class="seg bed-tabs" role="group" aria-label="Show">
+    <button type="button" data-tab="pressure" aria-pressed="true">Pressure map</button>
+    <button type="button" data-tab="lines" aria-pressed="false">Lines</button>
+  </div>
+  <p id="hBedPosition" class="acoustic-sub">Position · shown, not moved</p>
+  <div id="bedPositions" class="seg bed-positions" role="group" aria-labelledby="hBedPosition"></div>
+  <div id="bedCheck" class="bed-check" role="group" aria-labelledby="bedCheckTitle" hidden></div>
+  <p id="bedWhere" class="bed-where"></p>
+  <div id="pane-pressure" class="bed-pane"></div>
+  <div id="pane-lines" class="bed-pane" hidden></div>
 </section>
 <section id="acousticPanel" class="acoustic-panel" aria-labelledby="acousticTitle" hidden>
   <button type="button" id="acousticClose" class="object-close" aria-label="Close Acoustic comfort mode">×</button>
