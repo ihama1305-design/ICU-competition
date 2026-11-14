@@ -1170,7 +1170,7 @@ const demoApi = {
   figures: () => {
     const f = wardrobeFigures(stage.current);
     if (!f) return "";
-    const m = n => n.toFixed(2), diff = f.now.area - f.before.area;
+    const m = n => (n + 1e-9).toFixed(2), diff = f.now.area - f.before.area; // 1.355 is stored just under itself, and should read 1.36
     const size = x => `${m(x.width)} by ${m(x.depth)} m`;
     return `It took ${m(f.before.area)} m² of floor (${size(f.before)}), and this one takes ${m(f.now.area)} m² (${size(f.now)}): ${Math.abs(diff) < 0.005 ? "the same" : `${m(Math.abs(diff))} m² ${diff > 0 ? "more" : "less"}`}. It was ${m(f.before.height)} m tall; this one reaches the ceiling, at ${m(f.now.height)} m. Both from the models' sizes.`;
   },

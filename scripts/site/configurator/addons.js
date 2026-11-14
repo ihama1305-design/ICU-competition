@@ -812,7 +812,7 @@ export function setOldWardrobe(room, on) {
     const w = old.width, d = OLD_WARDROBE.front - OLD_WARDROBE.back, h = OLD_WARDROBE.height;
     const geo = new THREE.BoxGeometry(w, h, d), g = new THREE.Group();
     g.name = "old_wardrobe_outline";
-    const fill = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: "#e6a342", transparent: true, opacity: 0.16, depthTest: false, depthWrite: false, toneMapped: false }));
+    const fill = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: "#e6a342", transparent: true, opacity: 0.22, depthTest: false, depthWrite: false, toneMapped: false }));
     const line = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: "#c77d12", depthTest: false, toneMapped: false }));
     for (const o of [fill, line]) { o.raycast = () => {}; o.renderOrder = 30; o.position.set(0, h / 2, (OLD_WARDROBE.front + OLD_WARDROBE.back) / 2); g.add(o); }
     g.position.copy(W2T(old.at[0], old.at[1], 0));
