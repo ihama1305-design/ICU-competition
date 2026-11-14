@@ -253,6 +253,21 @@ PACS (the Physiological Adaptive Comfort System), APIS (the Adaptive Patient Int
 
 **Know isn't built.** The third idea was a board at the nurse station that ranks patients by their vitals, so staff know who to look at first. An order that looks authoritative and is wrong could delay care, so even a simulated board needs clinical input first. PACS already shows one patient's simulated readings without ranking anyone, and that is as far as this entry goes.
 
+### Feature cards (13 November 2026)
+
+**A card for every feature.** A visitor, or a judge, can click a feature in the room or choose it from the panel and read what it is in under a minute. The cards are data, in `features.json`, one entry per feature and one per part of a feature. They extend the object card the room already had: there is still only one popup.
+
+| Feature | What it does | What it isn't |
+|---|---|---|
+| Feature cards | Each card says what the feature is, then How it works (opened on request), its benefit, how it differs for an awake and a sedated patient where that applies, its limits and an evidence line. Esc or the close button puts the card away and gives focus back to whatever opened it. A card never covers the room-mode bar or a notice | Not a clinical claim. Each evidence line either says "Expected, not shown." or cites a source already in `options.json`, with its strength |
+| Features list | The same cards from the panel, grouped by kind, so nobody has to click in 3D | |
+| Explore features | A button above the room marks every feature in view, with a soft outline and a filter by kind. On a desktop, the feature under the pointer is outlined | Changes nothing in the room. The outline is drawn the same way on High and Low |
+| See it in action | A short captioned demo on the cards that have one: circadian lighting through the day, Privacy mode on smart glass, the orientation screen from the pillow, the nature display, the wardrobe's doors and the daylight sensor's rule | An overlay. It shows options without choosing them, so no choice, link or summary changes, and the room goes back exactly when it ends or is stopped. It never runs during Emergency-ready, which ends it at once |
+
+Twelve entries are registered so far: adaptive circadian lighting, the privacy system, the patient orientation display, the nature and environmental display with its four parts (the TV scene, the sky ceiling, the digital aquarium and the biophilic panel), the built-in wardrobe, the sound sensor, the comfort control and the daylight sensor. None needed new 3D.
+
+`node scripts/14_check_features.mjs` checks the registry without a browser: every entry has its fields, links to objects that exist in both rooms, cites only sources `options.json` holds, makes no outcome claim, and names a demo or action that exists. Each demo is run against a stand-in for the page, so a step that names a missing option, time, mode or view fails there. Check `08` opens every card in both rooms by a real click and by keyboard, runs every demo, and proves the room and its link are back as they were.
+
 ### Performance
 
 The initial download is about 2.3 MB. The page draws only when something changes, or while the TV or fish are in view. Measured on one fast laptop, an Apple M5 GPU, on 10 November 2026. Each figure is one whole frame as the page draws it while the view turns, timed from outside the page, with a one-pixel read after it so the time includes the GPU finishing and not the display's refresh rate:
@@ -276,7 +291,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 ### Checks
 
-`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, Tune it in's rules for every combination of answers, the vocal-distress cue in both rooms, the clean-air rows on the plan and on the comfort control's card, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
+`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, Tune it in's rules for every combination of answers, the vocal-distress cue in both rooms, the clean-air rows on the plan and on the comfort control's card, every feature card by click and by keyboard with every demo put back, Explore features on High, Low and a phone, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
 
 ### Known limitations
 

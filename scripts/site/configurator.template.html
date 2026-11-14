@@ -37,6 +37,8 @@
   </div>
 </section>
 <div id="clinicalLabels" class="clinical-labels" aria-hidden="true" hidden></div>
+<!-- Explore features' marks, over the room. The panel's Features list is the way to the same cards by keyboard -->
+<div id="featureMarkers" class="feature-markers" aria-hidden="true" hidden></div>
 <div id="hud" class="hud">
   <div id="modeBar" class="mode-bar" role="group" aria-labelledby="modeTitle">
     <span id="modeTitle" class="mode-title">Room mode</span>
@@ -48,6 +50,10 @@
     </div>
     <button type="button" data-mode="emergency" class="mode-emergency" aria-pressed="false">Emergency-ready</button>
     <span class="alarm-chip"><span class="dot" aria-hidden="true"></span>Clinical alarms unaffected</span>
+  </div>
+  <div class="explore-row">
+    <button type="button" id="exploreToggle" class="explore-toggle" aria-pressed="false">Explore features</button>
+    <div id="exploreFilters" class="explore-filters" role="group" aria-label="Show features of one kind" hidden></div>
   </div>
   <p id="modeNote" class="mode-note" hidden></p>
   <p id="compareNote" class="mode-note" hidden>Before: today's room, with every option at its default and none of the added items, at the same view and time. Press Compare again for yours; your design and its link are unchanged.</p>
@@ -61,6 +67,12 @@
     <p id="vocalText"></p>
     <p id="vocalMeta" class="vocal-meta"></p>
     <button type="button" id="vocalAck">Acknowledge</button>
+  </section>
+  <section id="demoBar" class="mode-note demo-bar" aria-labelledby="demoKicker" hidden>
+    <p id="demoKicker" class="demo-kicker">See it in action · <span id="demoName"></span> · <span id="demoCount"></span></p>
+    <p id="demoText"></p>
+    <p class="demo-caveat">A demo: nothing you chose changes, and the room goes back when it ends.</p>
+    <button type="button" id="demoStop">Stop</button>
   </section>
   <button type="button" id="leavePatient" class="leave-patient" hidden>Return</button>
 </div>
@@ -151,12 +163,17 @@
       <p class="note">Drag an item onto the room, or choose it and then click or tap where it goes. Drag a placed item to move it, and click it to turn or remove it. Where they go is up to you: access, clearances and infection-control positions aren't checked.</p>
     </section>
 
+    <details class="section" name="options" id="featuresSection">
+      <summary><span class="section-mark" aria-hidden="true">✦</span><span class="section-title">Features</span></summary>
+      <p class="note">Every feature has a card: what it is, how it works, and its limits. Choose one to open it, or press Explore features above the room to see where they are.</p>
+      <div id="featureList" class="feature-groups"></div>
+    </details>
     <div id="options"></div>
 
     <details class="section" name="options" id="systemsSection">
       <summary><span class="section-mark">✳</span><span class="section-title">Comfort systems</span></summary>
       <div class="system-demo">
-        <p class="note">Illustrative controls for the room concept. These do not read patient vitals or control building equipment.</p>
+        <p class="note">SIMULATED. Illustrative controls for the room concept. These do not read patient vitals or control building equipment.</p>
         <label class="demo-control" for="demoTemp"><span>Room temperature</span><output id="demoTempValue" for="demoTemp">23 °C</output></label>
         <input id="demoTemp" type="range" min="18" max="28" value="23" step="1">
         <label class="demo-control" for="demoHumidity"><span>Room humidity</span><output id="demoHumidityValue" for="demoHumidity">45%</output></label>
@@ -208,15 +225,24 @@
 
 <aside id="objectCard" class="object-card" role="dialog" aria-labelledby="objectTitle" aria-describedby="objectDescription" hidden>
   <button type="button" id="closeObjectCard" class="object-close" aria-label="Close object details">×</button>
-  <p class="object-kicker">Selected object</p>
+  <p id="objectKicker" class="object-kicker">Selected object</p>
   <h2 id="objectTitle"></h2>
   <p id="objectDescription"></p>
+  <p id="featureStatus" class="feature-status" hidden></p>
+  <details id="featureHow" class="feature-how" hidden><summary>How it works</summary><p id="featureHowText"></p></details>
+  <dl id="featureFacts" class="object-rows feature-facts" hidden></dl>
   <p id="objectRowsTitle" class="object-rows-title" hidden></p>
   <dl id="objectRows" class="object-rows" hidden></dl>
+  <p id="featureEvidence" class="feature-evidence" hidden></p>
   <p id="objectSources" class="object-sources" hidden></p>
   <div class="object-actions">
+    <button type="button" id="featureDemo" class="outline-action feature-demo" hidden>See it in action</button>
     <button type="button" id="objectAction" class="outline-action" hidden></button>
     <button type="button" id="objectAction2" class="outline-action" hidden></button>
+    <div id="featureMenu" class="feature-menu" hidden>
+      <button type="button" id="featureMenuToggle" class="outline-action" aria-expanded="false" aria-controls="featureMenuList">More actions</button>
+      <div id="featureMenuList" class="feature-menu-list" role="group" aria-label="More actions" hidden></div>
+    </div>
   </div>
 </aside>
 

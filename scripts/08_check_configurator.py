@@ -10,7 +10,7 @@ controls and the Day/Night toggle work; a phone gets a bottom sheet with no side
 Every option in options.json changes the picture, in each room it applies to, seen from where its check entry says. Themes apply and stay editable; a spec code restores the
 exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work. The panel and
 home page have no serious accessibility faults under axe, every control can be reached by keyboard with visible focus, nothing
-draws while the page is idle, and slow frames lower the quality. Tune it in: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage.
+draws while the page is idle, and slow frames lower the quality. Tune it in: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage. Feature cards: every registered feature by a real click in both rooms and from the Features list by keyboard, every demo run and the room and link proved unchanged, Esc, Stop and Emergency-ready ending one, Explore features and its filter, a hover costing one draw, Low graphics and a phone.
 Lighting schemes, smart glass, palms and themes get screenshots to look at. Screenshots -> build/shots/config_*.png. Checks the published site in spec site.dir.
 """
 import functools
@@ -1488,6 +1488,249 @@ with sync_playwright() as p:
     pg.wait_for_function("window.__configReady === true", timeout=120000)
     check(pg.evaluate("window.__config.code()") == code, "a room idea's link reloads the same room")
     check(not errs, f"Tune it in: no errors {errs[:3]}")
+    ctx.close()
+
+    # ---------------------------------------------------------------- feature cards: every feature by a click in the room and from the panel, its demo, and Explore features
+    OLD_LINK = "10030010002000000000000000000000000100"  # a link from before the cards: it must open the same room
+    MOVING = "document.body.classList.contains('placing') || document.body.classList.contains('dragging-item')"
+    COVERS = """() => { const c = document.getElementById('objectCard').getBoundingClientRect();
+      return [...document.getElementById('hud').children].filter(n => !n.hidden && n.offsetParent).map(n => [n.id || n.className, n.getBoundingClientRect()])
+        .filter(([, r]) => c.left < r.right && c.right > r.left && c.top < r.bottom && c.bottom > r.top).map(([n]) => n); }"""
+
+    def card_on_top(pg):
+        """The card is open, in the window, and covers neither the mode bar nor any notice."""
+        c = pg.evaluate("window.__config.card()")
+        r = c["rect"]
+        inside = r["left"] >= 0 and r["top"] >= 0 and r["right"] <= pg.viewport_size["width"] and r["bottom"] <= pg.viewport_size["height"]
+        return c, inside, pg.evaluate(COVERS)
+
+    def run_demo(pg, fid, skip=False, timeout=180000):
+        """Open a feature's card from the Features list, press See it in action, and let it run to the end (or skip each hold)."""
+        pg.evaluate("document.getElementById('featuresSection').open = true")
+        pg.click(f"#featureList button[data-feature='{fid}']")
+        pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+        pg.click("#featureDemo")
+        pg.wait_for_function("window.__config.demo() !== null", timeout=10000)
+        seen = pg.evaluate("({ bar: !document.getElementById('demoBar').hidden, card: !document.getElementById('objectCard').hidden, text: document.getElementById('demoText').textContent })")
+        frozen = []
+        while True:
+            try:
+                pg.wait_for_function("!window.__config.demo() || window.__config.demo().waiting", timeout=timeout)
+            except PlaywrightTimeout:
+                return seen, frozen, False
+            d = pg.evaluate("window.__config.demo()")
+            if not d:
+                return seen, frozen, True
+            frozen.append(pg.evaluate("({ code: window.__config.code(), hash: location.hash.slice(3), selected: window.__config.fingerprint().selected })"))
+            if skip:
+                pg.evaluate("window.__config.demoAdvance()")
+            else:
+                pg.wait_for_function(f"!window.__config.demo() || window.__config.demo().at !== {d['at']}", timeout=timeout)
+
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.evaluate("""() => { window.__mic = 0; const count = () => { window.__mic++; return Promise.reject(new Error('refused by the check')); };
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = count; navigator.getUserMedia = count; }""")
+    feats = pg.evaluate("window.__config.features()")
+    names = {f["id"]: f["name"] for f in feats}
+    check(len(feats) >= 12 and {"circadian", "privacy", "orientation", "nature", "wardrobe", "soundSensor", "comfortControl", "daylightSensor"} <= set(names),
+          f"the registry has the eight features that were here before the cards, and the nature display's parts ({len(feats)} entries)")
+    for room in ROOMS:
+        go(pg, room)
+        set_defaults(pg)
+        # what the default room leaves out, so every card has its object in the room
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); document.getElementById('objectCard').hidden = true; }")
+        views = pg.evaluate("window.__config.views()")
+        missed, wrong, covered, stray = [], [], [], []
+        for f in feats:
+            if f["id"] == "nature":
+                continue  # a feature made of parts: its parts are what's clicked
+            pg.evaluate(f"window.__config.set('tvplay', '{'on' if f['id'] == 'tvScene' else 'off'}')")
+            point = None
+            for v in ["overview", *[x for x in views if x not in ("overview", "patient", "bathroom")]]:
+                pg.evaluate(f"window.__config.camera('{v}', {{ instant: true }})")
+                point = pg.evaluate(f"window.__config.featurePoint('{f['id']}')")
+                if point:
+                    break
+            if not point:
+                missed.append(f["id"])
+                continue
+            pg.mouse.click(point["x"], point["y"])
+            pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+            c, inside, over = card_on_top(pg)
+            if c["feature"] != f["id"] or c["title"] != f["name"] or not c["evidence"].startswith("Evidence") or (not c["how"]) or "Benefit" not in c["facts"]:
+                wrong.append((f["id"], c["feature"], c["title"]))
+            if over or not inside:
+                covered.append((f["id"], over, c["rect"]))
+            if pg.evaluate(MOVING):
+                stray.append(f["id"])
+            pg.keyboard.press("Escape")
+            if not gone(pg, "#objectCard") or pg.evaluate("document.activeElement.id") != "c":
+                wrong.append((f["id"], "Esc"))
+            if f["id"] in ("circadian", "wardrobe"):
+                shot(pg, f"{room.lower()}_feature_{f['id']}")
+        check(not missed, f"{room}: every feature can be clicked in the room, from one of its views {missed}")
+        check(not wrong, f"{room}: a click opens that feature's card, with How it works, its benefit and its evidence, and Esc closes it and gives focus back to the room {wrong[:3]}")
+        check(not covered, f"{room}: no card covers the mode bar or a notice, and each fits the window {covered[:2]}")
+        check(not stray, f"{room}: opening a card starts no placing or dragging {stray}")
+        # the same cards by keyboard, from the panel's Features list
+        pg.evaluate("document.getElementById('featuresSection').open = true")
+        keyed = []
+        for f in feats:
+            pg.focus(f"#featureList button[data-feature='{f['id']}']")
+            pg.keyboard.press("Enter")
+            pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+            got = pg.evaluate("({ feature: window.__config.card().feature, focus: document.activeElement.id })")
+            pg.keyboard.press("Escape")
+            back = pg.evaluate("document.activeElement.dataset.feature")
+            if got["feature"] != f["id"] or got["focus"] != "objectCard" or back != f["id"] or not gone(pg, "#objectCard"):
+                keyed.append((f["id"], got, back))
+        check(not keyed, f"{room}: from the Features list, Enter opens each card with focus in it, and Esc gives focus back to the list {keyed[:3]}")
+        # every demo puts the room back exactly: its choices, link, mode, time, view, doors and screens. W1 waits through each
+        # step as a visitor would; W3 runs every step without the reading time
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'plain'); c.set('aquarium', 'none'); c.set('tvplay', 'off'); c.camera('overview', { instant: true }); }")
+        drawn(pg)
+        bad = []
+        for f in [x for x in feats if x["demo"]]:
+            before = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code(), hash: location.hash.slice(3) })")
+            seen, frozen, ended = run_demo(pg, f["id"], skip=room != ROOMS[0])
+            pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+            after = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code(), hash: location.hash.slice(3), focus: document.activeElement.dataset.feature })")
+            diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k]]
+            held = all(x["code"] == before["code"] and x["selected"] == before["fp"]["selected"] for x in frozen)
+            if not (ended and seen["bar"] and not seen["card"] and held and not diff and after["code"] == before["code"] and after["focus"] == f["id"]):
+                bad.append((f["id"], ended, seen, held, diff[:4], after["focus"]))
+        check(not bad, f"{room}: every demo runs to its end with its caption up and the card out of the way, changes no choice or link while it runs, and puts the room back exactly, with focus back on its button {bad[:2]}")
+    # stopping: Esc, Stop, taking the view, or Emergency-ready
+    go(pg, ROOMS[0])
+    pg.evaluate("window.__config.camera('overview', { instant: true })")
+    before = pg.evaluate("window.__config.fingerprint()")
+    pg.evaluate("document.getElementById('featuresSection').open = true")
+    pg.click("#featureList button[data-feature='circadian']")
+    pg.click("#featureDemo")
+    pg.wait_for_function("window.__config.demo() && window.__config.demo().waiting", timeout=60000)
+    pg.keyboard.press("Escape")
+    after = pg.evaluate("window.__config.fingerprint()")
+    check(not pg.evaluate("window.__config.demo()") and after == before and "Demo stopped" in pg.inner_text("#announce") and pg.is_hidden("#demoBar"),
+          "Esc stops a demo partway, says so, and the room is back exactly")
+    pg.click("#featureList button[data-feature='privacy']")
+    pg.click("#featureDemo")
+    pg.wait_for_function("window.__config.demo() && window.__config.demo().at >= 1", timeout=60000)
+    pg.click("#demoStop")
+    pg.wait_for_function("!window.__config.state().moving && !window.__config.mode().easing", timeout=60000)
+    check(not pg.evaluate("window.__config.demo()") and pg.evaluate("window.__config.fingerprint()") == before and pg.evaluate("document.activeElement.dataset.feature") == "privacy",
+          "Stop does the same from its button, Privacy mode and smart glass included, and focus goes back to the feature's button")
+    pg.click("#featureList button[data-feature='orientation']")
+    pg.click("#featureDemo")
+    pg.wait_for_function("window.__config.demo() && window.__config.demo().waiting", timeout=60000)
+    pg.mouse.move(500, 420); pg.mouse.down(); pg.mouse.up()  # a press on the room, without a drag: the camera stays put
+    after = pg.evaluate("window.__config.fingerprint()")
+    # the link holds the view too (its third character), and the visitor keeps the view they took
+    keep = lambda fp: {**{k: v for k, v in fp.items() if k not in ("eye", "target", "view", "live")}, "live": fp["live"][:2] + fp["live"][3:]}  # noqa: E731
+    check(not pg.evaluate("window.__config.demo()") and keep(after) == keep(before), f"taking the view in hand ends a demo: the room goes back and the camera stays with the visitor {[(k, before[k], after.get(k)) for k in keep(before) if before[k] != after.get(k)][:3]}")
+    pg.evaluate("window.__config.camera('overview', { instant: true })")
+    pg.click("#featureList button[data-feature='daylightSensor']")
+    pg.click("#featureDemo")
+    pg.wait_for_function("window.__config.demo() !== null", timeout=10000)
+    pg.click(".mode-bar button[data-mode='emergency']")
+    m = pg.evaluate("window.__config.mode()")
+    check(not pg.evaluate("window.__config.demo()") and m["current"] == "emergency" and pg.evaluate("window.__config.fingerprint().selected") == before["selected"],
+          "Emergency-ready ends a demo at once, and the room's choices are as they were")
+    pg.click("#featureList button[data-feature='wardrobe']")
+    pg.click("#featureDemo")
+    check(not pg.evaluate("window.__config.demo()") and "Not during Emergency-ready" in pg.inner_text("#featureStatus"), "no demo starts during Emergency-ready, and the card says why")
+    pg.keyboard.press("Escape")
+    pg.click("#leaveEmergency")
+    pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+    # Explore features: a mark on everything registered, by group, and each mark opens its card
+    pg.evaluate("window.__config.camera('dollhouse', { instant: true })")
+    pg.click("#exploreToggle")
+    drawn(pg)
+    ex = pg.evaluate("window.__config.explore()")
+    present = {f["id"] for f in pg.evaluate("window.__config.features()") if f["present"] and f["id"] != "nature"}
+    marked = {m_["id"] for m_ in ex["markers"]}
+    check(ex["on"] and len(marked) >= 5 and marked <= present and "explore" in pg.evaluate("window.__config.highlight().on"),
+          f"Explore features marks the registered objects in view and outlines them {sorted(marked)}")
+    shot(pg, "w1_explore_features")
+    pg.click("#exploreFilters button[data-group='light']")
+    drawn(pg)
+    light = {m_["id"] for m_ in pg.evaluate("window.__config.explore().markers")}
+    check(light and all(names[i] and next(f for f in feats if f["id"] == i)["group"] == "light" for i in light), f"its Light filter marks only light features {sorted(light)}")
+    pg.click("#exploreFilters button[data-group='']")
+    drawn(pg)
+    mk = next(m_ for m_ in pg.evaluate("window.__config.explore().markers") if m_["id"] == "wardrobe")
+    pg.mouse.click(mk["x"], mk["y"])
+    pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    check(pg.evaluate("window.__config.card().feature") == "wardrobe" and not pg.evaluate(MOVING), "a mark opens its feature's card, and starts nothing under it")
+    pg.add_script_tag(url=AXE)
+    faults = axe_faults(pg, "#objectCard") + axe_faults(pg, ".explore-row")
+    check(not faults, f"axe finds no serious faults in a feature card or Explore's controls {faults[:4]}")
+    pg.keyboard.press("Escape")
+    pg.click("#exploreToggle")
+    check(not pg.evaluate("window.__config.explore().markers") and pg.is_hidden("#featureMarkers") and "explore" not in pg.evaluate("window.__config.highlight().on"), "Explore features off: the marks and outlines go")
+    # hover: the feature under the pointer is outlined, for one draw, and moving within it draws nothing
+    pg.evaluate("window.__config.camera('bed', { instant: true })")
+    pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+    drawn(pg)
+    pt = pg.evaluate("window.__config.featurePoint('orientation')")
+    # a second point on the same feature, a few pixels away, to move to without leaving it
+    pt2 = pg.evaluate("""p => { for (const [dx, dy] of [[3, 0], [-3, 0], [0, 3], [0, -3], [3, 3], [-3, -3]]) if (window.__config.featureAt(p.x + dx, p.y + dy) === 'orientation') return { x: p.x + dx, y: p.y + dy }; return null; }""", pt)
+    start = pg.evaluate("window.__config.frames()")
+    pg.mouse.move(pt["x"], pt["y"])
+    pg.wait_for_function("window.__config.highlight().hover === 'orientation'", timeout=10000)
+    drawn(pg)
+    one = pg.evaluate("window.__config.frames()") - start
+    check(pt2 is not None, "the TV has a second point a few pixels from the first")
+    pg.mouse.move(pt2["x"], pt2["y"])
+    pg.wait_for_timeout(1500)
+    two = pg.evaluate("window.__config.frames()") - start
+    check(1 <= one <= 2 and two == one and pg.evaluate("document.getElementById('c').classList.contains('over-feature')"), f"hovering a feature outlines it for one draw, and moving within it draws nothing more ({one}, {two})")
+    pg.mouse.move(5, 790)
+    pg.wait_for_function("window.__config.highlight().hover === null", timeout=10000)
+    # the old link opens the same room as before the cards, and nothing asked for a microphone
+    pg.goto("about:blank")
+    pg.goto(URL + "#c=" + OLD_LINK)
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    check(pg.evaluate("window.__config.code()").startswith(OLD_LINK), "the link from before the cards opens the same room")
+    check(not errs, f"feature cards: no errors {errs[:3]}")
+    ctx.close()
+    # Low graphics keeps every part of it: the outline, the marks and the cards
+    ctx, pg, errs, _, _ = open_page(b, 1100, 720, query="?tier=low")
+    pg.evaluate("window.__config.camera('dollhouse', { instant: true })")
+    pg.click("#exploreToggle")
+    drawn(pg)
+    ex = pg.evaluate("window.__config.explore()")
+    check(pg.evaluate("window.__config.quality().tier") == "low" and len(ex["markers"]) >= 5 and "explore" in pg.evaluate("window.__config.highlight().on"), f"on Low the marks and outlines are all there ({len(ex['markers'])})")
+    shot(pg, "w1_explore_low")
+    check(not errs, f"feature cards on Low: no errors {errs[:3]}")
+    ctx.close()
+    # a phone: Explore is on screen, a mark opens a card that fits, and a card from the Features list gives the sheet back
+    ctx, pg, errs, _, _ = open_page(b, 390, 844, query="?tier=low", has_touch=True, is_mobile=True)
+    r = pg.evaluate("(() => { const r = document.getElementById('exploreToggle').getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, h: r.height }; })()")
+    check(r["l"] >= 0 and r["r"] <= 390 and r["b"] <= 844 and r["h"] >= 40, f"phone: Explore features is on screen and a finger's size {r}")
+    pg.tap("#exploreToggle")
+    pg.evaluate("window.__config.camera('dollhouse', { instant: true })")
+    drawn(pg)
+    mk = pg.evaluate("window.__config.explore().markers")
+    check(len(mk) >= 3, f"phone: the marks show ({len(mk)})")
+    pg.touchscreen.tap(mk[0]["x"], mk[0]["y"])
+    pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    c, inside, over = card_on_top(pg)
+    over_x = pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    check(inside and not over and over_x <= 0, f"phone: a card fits the screen and covers neither the mode bar nor a notice {c['rect']} {over}")
+    shot(pg, "phone_feature_card")
+    pg.tap("#closeObjectCard")
+    pg.tap("#sheet")
+    pg.wait_for_function("document.getElementById('panel').classList.contains('open')")
+    pg.evaluate("document.getElementById('featuresSection').open = true")
+    pg.locator("#featureList button[data-feature='wardrobe']").scroll_into_view_if_needed()
+    pg.tap("#featureList button[data-feature='wardrobe']")
+    pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    c, inside, over = card_on_top(pg)
+    check(inside and not pg.evaluate("document.getElementById('panel').classList.contains('open')"), "phone: a card from the Features list closes the sheet, so it has room")
+    pg.tap("#closeObjectCard")
+    pg.wait_for_function("document.getElementById('panel').classList.contains('open')", timeout=10000)
+    check(pg.evaluate("document.activeElement.dataset.feature") == "wardrobe", "phone: closing it brings the sheet back, with focus on the feature's button")
+    check(pg.evaluate("window.__mic || 0") == 0 and not errs, f"phone, feature cards: no errors, and no microphone {errs[:3]}")
     ctx.close()
 
     # ---------------------------------------------------------------- reduced motion

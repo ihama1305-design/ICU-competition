@@ -135,6 +135,27 @@ export class Rig {
   }
 
   /**
+   * Move to a pose that isn't a named view, keeping the view's name and limits: a feature demo stands in front of an
+   * object this way. Eased like go(), or a cut with reduced motion. Not for the dollhouse or Patient view.
+   */
+  goTo(eye, target, { instant = false } = {}) {
+    if (instant || reduced()) {
+      this.tween = null;
+      this.controls.enabled = true;
+      this.camera.position.copy(eye);
+      this.controls.target.copy(target);
+      this.camera.lookAt(target);
+      this.controls.update();
+      this.onArrive?.(this.view);
+      this.onChange();
+      return;
+    }
+    this.controls.enabled = false;
+    this.tween = { start: performance.now(), at: this.route(eye, false), fromT: this.controls.target.clone(), toT: target.clone(), fromH: this.hfov, toH: this.hfov, name: this.view };
+    this.onChange();
+  }
+
+  /**
    * Orbit limits for a view, by name. APIS and PACS restore a view with limits(true) for the dollhouse and limits(false)
    * for any other, after setting rig.view, so a boolean still works.
    */

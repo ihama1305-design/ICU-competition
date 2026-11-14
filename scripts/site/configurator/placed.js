@@ -7,7 +7,7 @@ import { inside } from "./cameras.js";
 
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export const MAX_PLACED = 16;
-const CHECK = "Placed where you chose: staff access, clearances and infection-control positions haven't been checked.";
+export const CHECK = "Placed where you chose: staff access, clearances and infection-control positions haven't been checked.";
 
 const mat = (color, roughness = 0.6, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, ...extra });
 function part(geometry, material, x = 0, y = 0, z = 0) {
