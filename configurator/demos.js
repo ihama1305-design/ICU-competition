@@ -4,7 +4,8 @@
 //
 // api: option(group, id) shows an option without choosing it; time(stop); mode(name); camera(view); frame(featureId) stands
 // in front of a feature's object; wardrobe(side) slides its doors ("left", "right" or null for closed); outline(featureId)
-// marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced. A step's caption can be worked out
+// marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced; acoustic("without" | "with") shows
+// Acoustic comfort mode; notices(open) opens its list of notifications. A step's caption can be worked out
 // from the room: say(api), where api.figures() gives the two wardrobes' sizes as a sentence.
 
 export const DEMOS = {
@@ -76,6 +77,16 @@ export const DEMOS = {
       { say: "What changed is height, cleaning and a tidier look: it reaches the ceiling, so there's no top for dust, and its end panels are flush with its doors.", run: a => a.outline("wardrobe") },
     ],
   },
+  // Acoustic comfort mode, in four steps: the sources and the map, the loudest and the quiet zone, the fittings, and the
+  // alarms it never touches. Silent: demo sound plays only from its own button
+  acoustic: {
+    steps: [
+      { say: "Acoustic comfort mode: six simulated sources, and a sound map on the floor. Every level is illustrative.", run: a => { a.camera("dollhouse"); a.acoustic("without"); } },
+      { say: "The two loudest at the pillow are marked, and the ring is a quiet zone round the bed.", run: a => a.acoustic("without") },
+      { say: "With the acoustic fittings the map calms. The difference is made up, for the picture.", run: a => a.acoustic("with") },
+      { say: "Critical alarms stay as they are: always sounding, always visible, and out of the comfort system's reach.", run: a => a.notices(true) },
+    ],
+  },
   daylight: {
     steps: [
       { say: "Afternoon: the sensor sees daylight, so Comfort mode lowers the blinds against glare.", run: a => { a.time("afternoon"); a.camera("bed_window"); a.mode("comfort"); } },
@@ -88,6 +99,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest

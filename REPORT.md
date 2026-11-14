@@ -180,6 +180,7 @@ Notes flag concerns and don't block any choice. Each was checked against its sou
 | Circadian lighting | Bright dynamic light alone didn't reduce delirium: 38% against 33%, 734 patients, p = 0.16 | [Simons et al. 2016](https://pubmed.ncbi.nlm.nih.gov/26895652/) | Randomised trial, stopped early for futility |
 | Sealed tank | Avoid fish tanks in patient-care areas, and restrict fish from isolation areas. So the themes use the digital screen | [CDC 2003 guidelines](https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm) | Guidance, Category IB and II |
 | Palms and planting | No fresh flowers or potted plants in patient-care areas for immunosuppressed patients. So planting stays outside the glass | [CDC 2003 guidelines](https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm) | Guidance, Category II |
+| Acoustic comfort | Five UK ICUs were all louder than WHO's hospital guideline; one empty side room read 34.1 dBA with everything off and 43.5 dBA with a ventilator running | [Darbyshire and Young 2013](https://ccforum.biomedcentral.com/articles/10.1186/cc12870) | Observational study, five units. No fitting was tested |
 | Patio on W1 | An outside door works against the pressure regime. No structural or fall-safety design has been done | None: reasoned from how isolation rooms work | Should go to infection control and structural review |
 
 ### Tune it in
@@ -245,7 +246,7 @@ PACS (the Physiological Adaptive Comfort System), APIS (the Adaptive Patient Int
 - Ventilated or sedated patients may make no sound, so quiet is never a sign that all is well.
 - Alarms, visitors and a television cause false alerts, so the nurse looks before acting.
 - In a real room, sounds would be classified on the device and never recorded, stored or sent.
-- This model uses no microphone. Check `12` fails if any page or module names an audio or speech API, and `08` counts microphone requests while the cue runs.
+- This model uses no microphone, and nothing on the site listens. Check `12` fails if any page or module names a capture, speech-recognition or speech-synthesis API. Since 13 November one module, `sound.js`, may play sound, and only sound it makes in the page (see Acoustic comfort below). The cue itself stays silent. `08` counts microphone requests while the cue runs.
 
 **No evidence is claimed for the cue.** No study of sound-based distress detection in intensive care was read for it. It's a design idea about what a closed door takes away, not something shown to work, and it would need clinical and privacy review before anyone built it.
 
@@ -278,6 +279,21 @@ Eighteen entries are registered so far: adaptive circadian lighting, the privacy
 The old one had sliding doors too. What the built-in one adds is height, easier cleaning and a tidier look: it reaches the ceiling, so there's no top for dust, and its end panels sit flush with its doors. So the brief's lines about preserving floor space and saving the space a door swings into were left out, and its name stays the one it already had. No inventory display or electronic lock is modelled: the valuables box has a keypad drawn on, and nothing locks.
 
 `node scripts/14_check_features.mjs` checks the registry without a browser: every entry has its fields, links to objects that exist in both rooms, cites only sources `options.json` holds, makes no outcome claim, and names a demo or action that exists. Each demo is run against a stand-in for the page, so a step that names a missing option, time, mode or view fails there. Check `08` opens every card in both rooms by a real click and by keyboard, runs every demo, and proves the room and its link are back as they were.
+
+### Acoustic comfort (13 November 2026)
+
+**A picture of the room's sound.** Acoustic comfort mode is a button above the room, beside Explore features: it's not in the mode bar, which is full on a phone. Like Clinical view it changes nothing in the room's design.
+
+| Feature | What it does | What it isn't |
+|---|---|---|
+| Sources | Labels on six simulated sources (monitor tones, infusion pumps, the ventilator, equipment fans, the door closing, talk in the corridor), each with a level at 1 m. The two loudest at the pillow are marked | Not measured. The levels are made up, set near readings from one ICU side room |
+| Sound map and quiet zone | The floor coloured from quiet to very loud, with words for each colour, and a ring round the head of the bed with the level at the pillow. The sound sensor shows the level where it is | The simplest distance rule: a source is 6 dB quieter each time the distance doubles, and sources add as energy. A real room reflects sound, so it's louder far from a source than this says |
+| Without and with the fittings | Shows the room with every fitting off, then with every fitting on, and outlines the fittings | The difference is made up, and the screen says so. Nothing touches the patient's equipment: the panels absorb sound in the room, and damping mounts go on non-critical kit only |
+| Acoustic fittings | Four option groups, off by default (codes 33 to 36): wipe-clean wall and ceiling panels, an acoustic partition (the glazed front in laminated acoustic glass, sealed round), a soft-close door and cabinets, and damping mounts on the TV. Shown while their demo, the mode or Explore features runs | Each card says a real one needs infection-control and manufacturer sign-off. None blocks access, the view in, a vent or cleaning |
+| Notifications | Three kinds. Critical alarms: always sounding and always visible, out of the comfort system's control (an example can be shown, never sounded). Routine notifications: listed, with a line that a hospital might review some at the nurse station where the device and its policy allow, and that nothing here changes that. Environmental notices (too loud, a door left open, kit vibrating): the only ones this system raises, and staff acknowledge them | No alarm, threshold, volume or route is changed, even as a demo |
+| Demo sound | Off until **Play demo sound** is pressed. The noisy room for about nine seconds, then the same room with the fittings, while the map follows and each source's label flashes as it's heard. **Play restful sound** plays a slow, low chord for a patient it suits. **Mute demo sound** is in view whenever it plays | Playback only, synthesized in the page by one module, `sound.js`: no audio files and no speech. The level is capped low, and no tone imitates an alarm: every note is a single soft one under 600 Hz, where monitor and pump alarms sit at 800 Hz to 3.15 kHz. It stops on Esc, when the tab is hidden, for Emergency-ready, and whenever a notice or an alarm example appears. Nothing listens |
+
+**Where the numbers come from.** Darbyshire and Young measured five UK ICUs for 24 hours (Crit Care 2013). Every unit was louder than WHO's hospital guideline, which they quote as 35 dBA on average and 40 dBA at most where patients are treated, and which they judged out of reach in an ICU. In one empty side room, with the meter where the patient's head would be, they read 34.1 dBA with everything off and 43.5 dBA with a ventilator running. This model's quiet room is 34 dBA and its ventilator 44 dBA at 1 m, from those readings, and talk in the corridor 55 dBA, the level their discussion gives for normal conversation. The monitor's tones, the pumps, the fans and the door are made up for the picture, and so is the fittings' effect. The WHO document itself couldn't be downloaded, so its values are cited as the paper quotes them.
 
 ### Performance
 

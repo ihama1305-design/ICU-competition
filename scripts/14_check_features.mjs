@@ -9,6 +9,7 @@ import { gunzipSync } from "node:zlib";
 import { ACTIONS, DEMOS, HOLD_MS } from "./site/configurator/demos.js";
 import { MODES } from "./site/configurator/modes.js";
 import { parseObject } from "./site/configurator/feature-links.js";
+import { BACKGROUND, BANDS, FITTINGS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS, SOURCES, levelAt, sourceLevel } from "./site/configurator/acoustic.js";
 
 const here = p => new URL(p, import.meta.url);
 const read = p => readFileSync(here(p), "utf8");
@@ -131,6 +132,8 @@ const api = {
   outline: id => { assert.ok(byId.has(id), `a demo outlines ${id}, a registered feature`); calls.push(["outline"]); },
   oldWardrobe: on => { assert.equal(typeof on, "boolean", "the old wardrobe's outline shows or goes"); calls.push(["oldWardrobe"]); },
   figures: () => "It took 0.64 m² of floor (1.00 by 0.64 m), and this one takes 0.71 m² (1.11 by 0.64 m): 0.07 m² more.",
+  acoustic: state => { assert.ok(["without", "with"].includes(state), `a demo shows the room without or with the fittings (${state})`); calls.push(["acoustic"]); },
+  notices: open => { assert.equal(typeof open, "boolean", "the notifications list opens or closes"); calls.push(["notices"]); },
 };
 let steps = 0;
 for (const [id, d] of Object.entries(DEMOS)) {
@@ -146,4 +149,41 @@ for (const [id, d] of Object.entries(DEMOS)) {
 assert.ok(HOLD_MS >= 2500 && HOLD_MS <= 6000, "each step holds long enough to read, and no longer");
 assert.ok(calls.length >= steps, "every step sets something up");
 
-console.log(`PASS feature registry: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has`);
+// ---------------------------------------------------------------- Acoustic comfort mode's model (acoustic.js)
+// the six sources the brief names, each with a level that looks like what it is: illustrative, near the side-room readings
+assert.deepEqual(SOURCES.map(x => x.id), ["monitor", "pumps", "ventilator", "fans", "door", "corridor"], "the six simulated sources");
+assert.ok(SOURCES.every(x => x.level >= 35 && x.level <= 65 && ["medical", "room", "door", "corridor"].includes(x.kind)), "each has a level in a plausible range and a kind");
+assert.ok(BACKGROUND === 34, "the quiet room is the side room's reading, everything off");
+// fittings: four groups in options.json, codes from 33, off by default, each needing sign-off; none makes anything louder
+const acousticSection = options.sections.find(x => x.id === "acoustic");
+assert.deepEqual(acousticSection?.groups.map(g => g.id), FITTING_GROUPS, "the fittings are option groups, in their own section");
+for (const [i, g] of acousticSection.groups.entries()) {
+  assert.equal(g.code, 33 + i, `${g.id} takes code ${33 + i}`);
+  assert.ok(g.default === "off" && g.options.map(o => o.id).join() === "off,on", `${g.id} is off by default, so old links open the same room`);
+  assert.ok(g.options.find(o => o.id === "on").effects.some(e => e.do === "addon" && e.id === g.id && e.on) && ADDONS.has(g.id), `${g.id} shows its own add-on`);
+  assert.ok(/infection-control and manufacturer sign-off/.test(g.note.text) && /made up/.test(g.note.text), `${g.id}'s note says its effect is made up and a real one needs sign-off`);
+  assert.ok(g.check && (g.check.view || g.check.eye), `${g.id} says where 08 can see it`);
+}
+const codes = groups.map(g => g.code).sort((a, b) => a - b);
+assert.deepEqual(codes, codes.map((_, i) => i), "option codes run from 0 with none missing or repeated");
+for (const [id, cuts] of Object.entries(FITTINGS)) {
+  assert.ok(Object.values(cuts).every(c => c < 0), `${id} only ever takes sound away`);
+  if (cuts.medical) assert.equal(id, "acousticPanels", "only the panels act on the medical kit's sound, by absorbing it in the room, not by changing the device");
+}
+assert.deepEqual(Object.keys(FITTINGS.dampers), ["room"], "damping mounts act only on non-critical kit");
+for (const f of data.features.filter(x => x.parent === "acousticComfort")) assert.ok(/infection-control and manufacturer sign-off/.test(f.limits) && /made up/.test(f.limits) && f.objects[0] === `addon:${f.id}`, `${f.id}'s card says a real one needs sign-off, and its effect is made up`);
+assert.deepEqual(data.features.filter(x => x.parent === "acousticComfort").map(f => f.id), FITTING_GROUPS, "each fitting has its card");
+// the distance rule: farther is quieter, the fittings never add, and the quiet room is the floor
+const pts = { monitor: [0, 0, 1.2], pumps: [0.4, 0, 1], ventilator: [-0.5, 0.3, 0.8], fans: [3, 2, 1.6], door: [5, 0, 2], corridor: [6.6, 0, 1.6] };
+const near = levelAt([1, 0, 1.2], pts), far = levelAt([1, 3, 1.2], pts), allOn = Object.fromEntries(FITTING_GROUPS.map(g => [g, true]));
+assert.ok(near > far && far > BACKGROUND, `nearer the kit is louder (${near.toFixed(1)} against ${far.toFixed(1)} dBA), and anywhere is above the quiet room`);
+for (const p of [[1, 0, 1.2], [3, 2, 1.2], [5.5, 0.5, 1.6]]) assert.ok(levelAt(p, pts, allOn) <= levelAt(p, pts) + 1e-9, "the fittings never make a spot louder");
+assert.ok(SOURCES.every(x => sourceLevel(x, allOn) <= x.level), "nor any source");
+assert.ok(BANDS.every((b, i) => i === 0 || b.upTo > BANDS[i - 1].upTo) && BANDS.length === 5 && BANDS.every(b => b.words), "the map's colours go quiet to loud, each with words");
+// the three kinds of notification, in the brief's terms
+assert.ok(/always sounding and always visible/i.test(NOTIFICATIONS.critical.line) && /no control/.test(NOTIFICATIONS.critical.line), "critical alarms: always sounding and visible, out of the comfort system's control");
+assert.ok(/might review some/.test(NOTIFICATIONS.routine.line) && /Nothing here changes that/.test(NOTIFICATIONS.routine.line), "routine notifications: a hospital might review some, and nothing here changes that");
+assert.ok(/only notices this system raises itself/.test(NOTIFICATIONS.environmental.line) && /Staff acknowledge/.test(NOTIFICATIONS.environmental.line) && NOTIFICATIONS.environmental.examples.length === 3, "environmental notices: the only ones it raises, acknowledged by staff");
+assert.ok(/made up/.test(ILLUSTRATIVE) && /Nothing is measured/.test(ILLUSTRATIVE), "the screen says the levels and the difference are made up");
+
+console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification`);
