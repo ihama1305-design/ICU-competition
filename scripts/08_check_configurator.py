@@ -10,7 +10,7 @@ controls and the Day/Night toggle work; a phone gets a bottom sheet with no side
 Every option in options.json changes the picture, in each room it applies to, seen from where its check entry says. Themes apply and stay editable; a spec code restores the
 exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work. The panel and
 home page have no serious accessibility faults under axe, every control can be reached by keyboard with visible focus, nothing
-draws while the page is idle, and slow frames lower the quality. Tune it in: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage. Feature cards: every registered feature by a real click in both rooms and from the Features list by keyboard, every demo run and the room and link proved unchanged, Esc, Stop and Emergency-ready ending one, Explore features and its filter, a hover costing one draw, Low graphics and a phone.
+draws while the page is idle, and slow frames lower the quality. Tune it in: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage. Feature cards: every registered feature by a real click in both rooms and from the Features list by keyboard, every demo run and the room and link proved unchanged, Esc, Stop and Emergency-ready ending one, Explore features and its filter, a hover costing one draw, Low graphics and a phone. Patient states: each state's light and screens, the modes winning, the board's three inputs and its nurse-side list, the passport saved in this browser, family connection, Quiet now, the staff view, and a phone.
 Lighting schemes, smart glass, palms and themes get screenshots to look at. Screenshots -> build/shots/config_*.png. Checks the published site in spec site.dir.
 """
 import functools
@@ -682,7 +682,7 @@ with sync_playwright() as p:
                    "tv": pg.evaluate("window.__config.selected().tvplay"), "screen": pg.evaluate("window.__config.orientation()")}
     check(seen[2]["view"] == "patient", f"it shows Patient view {seen[2]}")
     # the wall Patient view faces is mostly television: it shows the day and the time, where off it was a black rectangle
-    check(seen[2]["tv"] == "orientation" and seen[2]["screen"] and len(seen[2]["screen"]) == 4, f"in Patient view the television is on its orientation screen, so the view has something to show {seen[2]}")
+    check(seen[2]["tv"] == "orientation" and seen[2]["screen"] and len(seen[2]["screen"]) >= 5, f"in Patient view the television is on its orientation screen, so the view has something to show {seen[2]}")
     check(seen[3]["mode"] == "comfort" and seen[4]["mode"] == "clinical" and seen[4]["clinical"] and seen[5]["mode"] == "emergency", f"it shows Comfort, Clinical with Clinical view, and Emergency-ready {seen[3]} {seen[4]} {seen[5]}")
     check(seen[6]["placed"] == 2 and seen[6]["mode"] == "standard", f"it places two items {seen[6]}")
     check(seen[7]["theme"] == "desert", f"it shows a theme at sunset {seen[7]}")
@@ -780,7 +780,9 @@ with sync_playwright() as p:
     check(o and o[:2] == today and o[2] == pg.inner_text("#timeNow") and o[3] == "Afternoon", f"the orientation screen shows today and the room's own time {o} {today}")
     pg.evaluate("window.__config.time(window.__config.stops.night)")
     o = pg.evaluate("window.__config.orientation()")
-    check(o and o[2] == pg.inner_text("#timeNow") and o[3] == "Night", f"it follows the time of day into the night {o}")
+    check(o and o[2] == pg.inner_text("#timeNow") and o[3] == "Night" and o[4] == "Night-time", f"it follows the time of day into the night, and says it's night-time {o}")
+    check(o[5:] == ["You are in hospital, in the intensive care unit.", "Visiting today: 4 to 8 pm · confirmed by staff", "Later: a wash, then a rest"],
+          f"beside the time: where the patient is, visiting marked as confirmed by staff, and a plan; never a name or a diagnosis {o[5:]}")
     pg.click("#modeBar button[data-mode='emergency']")
     check(not pg.evaluate("window.__config.mode()")["tvPlaying"] and pg.evaluate("window.__config.orientation()") is not None, "Emergency-ready turns it off like any screen")
     pg.click("#leaveEmergency")
@@ -1544,7 +1546,7 @@ with sync_playwright() as p:
         go(pg, room)
         set_defaults(pg)
         # what the default room leaves out, so every card has its object in the room
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
         views = pg.evaluate("window.__config.views()")
         missed, wrong, covered, stray = [], [], [], []
         for f in feats:
@@ -1726,7 +1728,10 @@ with sync_playwright() as p:
     drawn(pg)
     mk = pg.evaluate("window.__config.explore().markers")
     check(len(mk) >= 3, f"phone: the marks show ({len(mk)})")
-    pg.touchscreen.tap(mk[0]["x"], mk[0]["y"])
+    # a mark the bars above the room don't cover: the one a finger would reach
+    free = pg.evaluate("ms => ms.filter(m => document.elementFromPoint(m.x, m.y)?.dataset?.feature === m.id)", mk)
+    check(len(free) >= 2, f"phone: most marks are clear of the bars above the room ({len(free)} of {len(mk)})")
+    pg.touchscreen.tap(free[0]["x"], free[0]["y"])
     pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
     c, inside, over = card_on_top(pg)
     over_x = pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
@@ -1986,6 +1991,164 @@ with sync_playwright() as p:
     check(r["left"] >= 0 and r["right"] <= 390 and r["bottom"] <= 844.5 and r["top"] > 844 * 0.4 and r["over"] <= 0, f"phone: the mode's panel is a sheet at the bottom, and nothing scrolls sideways {r}")
     shot(pg, "phone_acoustic")
     check(not errs, f"phone, Acoustic comfort: no errors {errs[:3]}")
+    ctx.close()
+
+    # ---------------------------------------------------------------- patient states and the bedside screens: sedated, awake, recovering; the board, the passport, family and staff's view
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.evaluate("""() => { window.__mic = 0; const count = () => { window.__mic++; return Promise.reject(new Error('refused by the check')); };
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = count; navigator.getUserMedia = count; }""")
+    PS = "window.__config.patientState()"
+    for room in ROOMS:
+        go(pg, room)
+        set_defaults(pg)
+        pg.evaluate("window.__config.set('tvplay', 'on'); window.__config.camera('overview', { instant: true })")
+        drawn(pg)
+        before = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
+        check(pg.evaluate(PS)["state"] == "awake" and pg.evaluate("document.querySelector('#patientBar button[aria-pressed=\"true\"]').dataset.state") == "awake" and pg.is_hidden("#patientNote"),
+              f"{room}: the patient starts awake, which is the room as configured")
+        pg.click("#patientBar button[data-state='sedated']")
+        easing = pg.evaluate(PS)["easing"]
+        pg.wait_for_function(f"!{PS}.easing", timeout=60000)
+        sed = pg.evaluate(f"({{ ps: {PS}, fp: window.__config.fingerprint(), code: window.__config.code(), note: document.getElementById('patientNote').textContent }})")
+        check(easing and sed["ps"]["look"] and sed["fp"]["tv"] == "off" and "positioning reminder" in sed["note"], f"{room}: Sedated eases to steady light by the time of day and turns the TV's entertainment off {sed['ps']['look']}")
+        check(sed["code"] == before["code"] and sed["fp"]["selected"] == before["fp"]["selected"], f"{room}: a patient state changes no choice or link")
+        shot(pg, f"{room.lower()}_patient_sedated")
+        pg.click("#modeBar button[data-mode='clinical']")
+        pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+        m = pg.evaluate("window.__config.mode()")
+        check(m["look"] and m["look"]["level"] == 1 and m["look"]["kelvin"] == 4000, f"{room}: Clinical mode is the staff override: full neutral light over the sedated state {m['look']}")
+        pg.click("#modeBar button[data-mode='standard']")
+        pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+        check(pg.evaluate(PS)["state"] == "sedated" and pg.evaluate("window.__config.mode().look") is None, f"{room}: and back in Standard, the patient is still sedated")
+        pg.click("#patientBar button[data-state='recovering']")
+        pg.wait_for_function(f"!{PS}.easing", timeout=60000)
+        rec = pg.evaluate("({ fp: window.__config.fingerprint(), o: window.__config.orientation() })")
+        check(rec["fp"]["tv"] == "orientation" and rec["o"] and "Today's goal: sit in the chair for a while" in rec["o"], f"{room}: Recovering puts the orientation screen first, with a recovery note {rec['o'][5:] if rec['o'] else None}")
+        pg.click("#patientBar button[data-state='awake']")
+        pg.wait_for_function(f"!{PS}.easing", timeout=60000)
+        drawn(pg)
+        after = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
+        diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k]]
+        check(not diff and after["code"] == before["code"], f"{room}: back to Awake, the room is exactly as configured {diff[:4]}")
+        # a design change puts the patient back to Awake, as it puts a mode back to Standard
+        pg.click("#patientBar button[data-state='sedated']")
+        pg.evaluate("window.__config.set('tvplay', 'off')")
+        check(pg.evaluate(PS)["state"] == "awake", f"{room}: changing the room's design puts the patient back to Awake")
+        set_defaults(pg)
+    # the communication board: touch, a switch that steps, and gaze by dwell; each request listed with the time until acknowledged
+    pg.click("#openBedside")
+    bs = pg.evaluate("({ b: window.__config.bedside(), focus: document.activeElement.id, options: getComputedStyle(document.getElementById('panel')).visibility })")
+    check(bs["b"]["open"] and bs["focus"] == "bedsideTitle" and bs["options"] == "hidden" and bs["b"]["board"] == ["I need help", "I am in pain", "I feel cold", "I feel hot", "I need repositioning", "I want to contact my family", "I need a nurse"],
+          f"Bedside screens open in the options panel's place, with focus, on the board's seven requests {bs['b']['board']}")
+    pg.click(".board-button[data-request='pain']")
+    req = pg.evaluate("window.__config.bedside().requests")
+    now = pg.evaluate("document.getElementById('timeNow').textContent")
+    check(len(req) == 1 and req[0]["label"] == "I am in pain" and req[0]["time"] == now, f"touch: a request goes to the nurse-side list with the room's time {req} {now!r}")
+    pg.click(".board-inputs button[data-input='switch']")
+    check(pg.is_visible(".switch-press") and pg.evaluate("window.__config.bedside().scanning"), "a single switch: the highlight steps through the requests")
+    pg.wait_for_function("document.querySelector('.board-button.scan')?.dataset.request === 'cold'", timeout=30000)
+    pg.click(".switch-press")
+    check([r["id"] for r in pg.evaluate("window.__config.bedside().requests")] == ["pain", "cold"] and not pg.evaluate("window.__config.bedside().scanning"), "pressing the switch chooses the lit request")
+    pg.click(".switch-press")
+    pg.wait_for_function("!window.__config.bedside().scanning", timeout=60000)
+    check("paused" in pg.inner_text("#pane-board"), "and with no press, scanning pauses after two rounds: nothing runs for ever")
+    pg.click(".board-inputs button[data-input='gaze']")
+    pg.hover(".board-button[data-request='nurse']")
+    pg.wait_for_function("window.__config.bedside().requests.some(r => r.id === 'nurse')", timeout=10000)
+    check(True, "gaze: a look held on a request chooses it")
+    for _ in range(3):
+        pg.click(".requests li button")
+    check(not pg.evaluate("window.__config.bedside().requests") and "No requests waiting" in pg.inner_text("#pane-board"), "each request stays until a nurse acknowledges it")
+    check("does not replace a certified nurse-call system" in pg.inner_text("#pane-board"), "the board says it doesn't replace a certified nurse-call system")
+    pg.add_script_tag(url=AXE)
+    faults = axe_faults(pg, "#bedside") + axe_faults(pg, "#patientBar")
+    # the passport: preferences and the care team's settings apart, how each is used in each state, saved in this browser
+    pg.click("#bedsideTabs button[data-tab='passport']")
+    table = pg.evaluate("[...document.querySelectorAll('.apply-table tbody tr')].map(r => [r.cells[0].textContent, ...[...r.cells].slice(1).map(c => c.dataset.apply)])")
+    temp = next(r for r in table if r[0] == "Temperature")
+    check(len(table) == 8 and temp[1:] == ["held", "held", "held"] and "Set by the care team" in pg.inner_text("#pane-passport") and "Alarm limits" in pg.inner_text("#pane-passport"),
+          f"the passport shows eight preferences, the care team's settings apart, and temperature held back in every state {temp}")
+    pg.select_option("#pp-light", "bright")
+    pg.click("#pane-passport button:text-is('Save in this browser')")
+    stored = pg.evaluate("localStorage.getItem('adaptiveIcu.passport')")
+    check(stored and json.loads(stored)["light"] == "bright" and "this browser only" in pg.inner_text("#pane-passport"), "Save keeps it in this browser only")
+    mic_before = pg.evaluate("window.__mic")
+    pg.reload()
+    pg.wait_for_function("window.__configReady === true", timeout=180000)
+    pg.add_script_tag(url=AXE)  # the reload took it away, and the microphone counter with it
+    pg.evaluate("""() => { window.__mic = 0; const count = () => { window.__mic++; return Promise.reject(new Error('refused by the check')); };
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = count; navigator.getUserMedia = count; }""")
+    pg.evaluate("window.__config.openBedside('passport')")
+    check(pg.eval_on_selector("#pp-light", "s => s.value") == "bright", "and it's there after a reload")
+    pg.click("#pane-passport button:text-is('Restore the sample')")
+    check(pg.eval_on_selector("#pp-light", "s => s.value") == "warm" and pg.evaluate("localStorage.getItem('adaptiveIcu.passport')") is None, "Restore the sample puts the sample back and removes what was saved")
+    faults += axe_faults(pg, "#bedside")
+    # family connection: for a sedated patient only what staff allow; music as demo sound, off until pressed; Quiet now
+    pg.evaluate("window.__config.setPatientState('sedated', { instant: true })")
+    pg.click("#bedsideTabs button[data-tab='family']")
+    disabled = pg.evaluate("[...document.querySelectorAll('#pane-family .family-list li')].map(li => [li.querySelector('strong').textContent, li.querySelector('button')?.disabled ?? null])")
+    check(dict(disabled)["Video call"] and dict(disabled)["Familiar music"] and dict(disabled)["Voice message"] is False, f"sedated: the call and music wait until staff allow them; the message is allowed {disabled}")
+    pg.check("#allow-music")
+    check(pg.evaluate("window.__config.acoustic().sound.made") is False, "allowing music plays nothing")
+    pg.click("#familyMusic")
+    s1 = pg.evaluate("({ s: window.__config.acoustic().sound, label: document.getElementById('familyMusic').textContent, cap: document.querySelector('#pane-family [role=status]').textContent })")
+    check(s1["s"]["playing"] == "music" and s1["label"] == "Mute demo sound" and "Demo sound" in s1["cap"] and "not a recording" in s1["cap"], f"Play familiar music plays it as demo sound, with Mute where Play was and words on screen {s1['label']}")
+    pg.check("#allow-scene")
+    pg.click("#pane-family button:text-is('Show on the TV')")
+    check(pg.evaluate("window.__config.fingerprint().tv") == "on", "the personal scene goes on the TV")
+    pg.check("#quietNow")
+    q = pg.evaluate("({ ps: window.__config.patientState(), tv: window.__config.fingerprint().tv, sound: window.__config.acoustic().sound.playing, any: [...document.querySelectorAll('#pane-family .family-list button')].some(b => !b.disabled) })")
+    check(q["ps"]["quiet"] and q["tv"] == "off" and q["sound"] is None and not q["any"], f"Quiet now turns everything off, sound included, until staff turn it off {q}")
+    pg.uncheck("#quietNow")
+    pg.click("#bedsideTabs button[data-tab='staff']")
+    staff = pg.inner_text("#pane-staff")
+    check("Positioning assessment due" in staff and "Nothing here moves a patient" in staff and "dBA" in staff and "illustrative" in staff, "staff see the positioning reminder, line status and noise, all simulated")
+    pg.click("#pane-staff button:text-is('Dismiss')")
+    check("dismissed" in pg.inner_text("#pane-staff"), "and staff dismiss the reminder")
+    faults += axe_faults(pg, "#bedside")
+    check(not faults, f"axe finds no serious faults in the bedside screens or the Patient bar {faults[:4]}")
+    pg.keyboard.press("Escape")
+    check(not pg.evaluate("window.__config.bedside().open") and pg.evaluate("getComputedStyle(document.getElementById('panel')).visibility") == "visible", "Esc closes the bedside screens and gives the options back")
+    # they open from the tablet arm, the TV and the window, as well as the panel, and never need an item placed
+    pg.evaluate("window.__config.setPatientState('awake', { instant: true })")
+    for fid, tab in (("communicationBoard", "board"), ("comfortPassport", "passport"), ("orientation", "family")):
+        pg.evaluate("document.getElementById('featuresSection').open = true")
+        pg.click(f"#featureList button[data-feature='{fid}']")
+        pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+        btn = pg.evaluate("[...document.querySelectorAll('#objectCard .object-actions button, #featureMenuList button')].filter(b => b.offsetParent && /^Open (the communication board|the comfort passport|family connection)$/.test(b.textContent)).map(b => b.textContent)")
+        if not btn:
+            pg.click("#featureMenuToggle")
+            btn = pg.evaluate("[...document.querySelectorAll('#featureMenuList button')].filter(b => b.offsetParent).map(b => b.textContent)")
+        pg.click(f"#objectCard button:text-is('{btn[0]}')")
+        check(pg.evaluate("window.__config.bedside()")["open"] and pg.evaluate("window.__config.bedside().tab") == tab, f"{fid}'s card opens the {tab} screen, with nothing placed ({btn[0]})")
+        pg.keyboard.press("Escape")
+    pg.evaluate("window.__config.placeInView('tablet')")
+    pg.keyboard.press("Escape")
+    pt = pg.evaluate("window.__config.featurePoint('communicationBoard')")
+    if pt:
+        pg.mouse.click(pt["x"], pt["y"])
+        pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    c = pg.evaluate("window.__config.card()")
+    check(pt and c["feature"] == "communicationBoard" and "Turn 45°" in c["buttons"] and "Remove" in c["buttons"], f"a placed tablet arm opens the board's card and keeps Turn and Remove {c['buttons']}")
+    mic = mic_before + pg.evaluate("window.__mic")
+    check(mic == 0 and not errs, f"patient states: no errors, and no microphone ({mic}) {errs[:3]}")
+    ctx.close()
+    # a phone: the Patient bar fits, and the bedside screens are a sheet
+    ctx, pg, errs, _, _ = open_page(b, 390, 844, query="?tier=low", has_touch=True, is_mobile=True)
+    r = pg.evaluate("(() => { const b = document.getElementById('patientBar').getBoundingClientRect(); return { l: b.left, r: b.right, small: [...document.querySelectorAll('#patientBar button')].filter(x => x.offsetParent && x.getBoundingClientRect().height < 36).length, rows: Math.round(b.height), over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()")
+    check(r["l"] >= 0 and r["r"] <= 390 and not r["small"] and r["over"] <= 0 and r["rows"] < 64, f"phone: the Patient bar fits on one row, with targets a finger can hit {r}")
+    pg.tap("#sheet")
+    pg.wait_for_function("document.getElementById('panel').classList.contains('open')")
+    pg.locator(".bedside-launch button[data-open='board']").scroll_into_view_if_needed()
+    pg.tap(".bedside-launch button[data-open='board']")
+    drawn(pg)
+    sheet = pg.evaluate("(() => { const p = document.getElementById('bedside').getBoundingClientRect(); return { top: p.top, bottom: p.bottom, l: p.left, r: p.right }; })()")
+    check(sheet["l"] >= 0 and sheet["r"] <= 390 and sheet["bottom"] <= 844.5 and sheet["top"] > 300, f"phone: the bedside screens are a sheet at the bottom {sheet}")
+    shot(pg, "phone_bedside")
+    pg.tap("#bedsideClose")
+    pg.wait_for_function("document.getElementById('panel').classList.contains('open')", timeout=10000)
+    check(pg.evaluate("document.activeElement.dataset.open") == "board", "phone: closing the screens brings the sheet back, with focus where it was")
+    check(not errs, f"phone, patient states: no errors {errs[:3]}")
     ctx.close()
 
     # ---------------------------------------------------------------- reduced motion

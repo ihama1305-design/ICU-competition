@@ -4,10 +4,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Stage, W2T } from "./stage.js";
 import { Rig, inside } from "./cameras.js";
 import { Daylight, sunAt } from "./sky.js";
-import { Lighting } from "./lights.js";
+import { Lighting, autoKelvin, circadianLevel } from "./lights.js";
+import { Bedside } from "./bedside.js";
+import { DEFAULT_STATE, ORIENTATION, STATES, STATE_MS } from "./patient-states.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
-import { setAddon, setAddonLook, setOldWardrobe, setOrientation, setShade, setTv, setWardrobe, syncDampers, syncPalms, tickAddons, tickWardrobe, toggleWardrobe, wardrobeFigures, wardrobeMoving } from "./addons.js";
+import { setAddon, setAddonLook, setOldWardrobe, setOrientation, setShade, setTv, setWardrobe, setOrientationLines, syncDampers, syncPalms, tickAddons, tickWardrobe, toggleWardrobe, wardrobeFigures, wardrobeMoving } from "./addons.js";
 import { AcousticView } from "./acoustic-view.js";
 import { BANDS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS } from "./acoustic.js";
 import { playSound, soundState, stopSound } from "./sound.js";
@@ -97,7 +99,7 @@ function resize() {
   stage.resize(w, h);
   stage.camera.aspect = w / h;
   const cls = document.body.classList;
-  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : panel.getBoundingClientRect();
+  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -105,7 +107,7 @@ function resize() {
   stage.camera.setViewOffset(w, h, coverX / 2, coverY / 2, w, h);
   rig.visible = { w: w - coverX, h: h };
   if (rig.meta) rig.fit();
-  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active"); // off-screen, or covered by Acoustic comfort mode
+  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active"); // off-screen, or covered by a panel in its place
   $("panelBody").inert = closed;
   panel.querySelector(".actions").inert = closed;
   stage.camera.updateProjectionMatrix();
@@ -165,6 +167,7 @@ function daylightCard() {
 }
 
 function relight() {
+  if (!patientTween && STATES[patientState]?.light && lighting) lighting.patient = patientLook(patientState); // it follows the time of day
   if (stage.current) setOrientation(stage.current, state.hour); // the orientation screen tells the room's time
   const day = daylight.apply(state.hour);
   daylightCard();
@@ -215,6 +218,7 @@ async function setRoom(label, { keepView = true } = {}) {
   setAddon(room, "comfortControl", true); // not an option: the wall control is always there
   setAddon(room, "daylightSensor", true); // nor the daylight sensor the comfort rules read
   applyAll();
+  orientationLines();
   setDemoReadout();
   clinical.set(clinical.on, room);
   relight();
@@ -310,10 +314,11 @@ canvas.addEventListener("keydown", e => {
 let optionData = null, panelUi = null;
 const selected = {};
 // Options shown without being chosen, in layers: a feature demo's on top (demos.js), then Acoustic comfort mode's fittings,
-// then the fittings Explore features shows. The panel, the link and the summary only ever read `selected`.
-const overlays = { demo: {}, acoustic: {}, explore: {} };
+// staff's Quiet now, the fittings Explore features shows, and the patient's state (patient-states.js). The panel, the link
+// and the summary only ever read `selected`.
+const overlays = { demo: {}, acoustic: {}, quiet: {}, explore: {}, patient: {} };
 const demoShown = overlays.demo;
-const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.explore[id] ?? selected[id];
+const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
 /** Set what one layer shows (null: nothing), and bring the room up to whichever layer is on top for each group it touched. */
 function showLayer(layer, values) {
   const touched = new Set([...Object.keys(overlays[layer]), ...Object.keys(values || {})]);
@@ -772,7 +777,7 @@ pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); de
 
 // ---------------------------------------------------------------- room modes: scenes over the configured room (modes.js)
 const modeApi = {
-  baseLight: () => lighting.base(state.hour),
+  baseLight: () => lighting.patient || lighting.base(state.hour), // a patient's state's light, under the modes
   isDark: () => afterDark(),
   setLight: (look, task) => { lighting.scene = look; lighting.sceneTask = task; relight(); },
   blindsNow: () => {
@@ -808,12 +813,14 @@ function syncModes(name) {
   note.hidden = !note.textContent;
   $("modeBanner").hidden = name !== "emergency";
   if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency-ready is on."); setAcoustic(false); } // comfort yields to care
+  if (quietOn) modeApi.screens(false); // a mode turns the screens back on; Quiet now keeps them off
   document.body.classList.toggle("emergency-ready", name === "emergency");
   say(text.say);
   invalidate();
 }
 /** Something is about to change the room's design: a mode would hide that, so it ends first. */
 function endMode() {
+  resetPatient();
   if (!modes.leave()) return;
   $("modeNote").textContent = "Back to Standard: the room's design changed, so the mode ended.";
   $("modeNote").hidden = false;
@@ -882,6 +889,9 @@ const ACTION_HANDLERS = {
   },
   "sound:call": { label: () => "Simulate a call for help", run: () => simulateSound("call") },
   acoustic: { label: () => "Open Acoustic comfort mode", run: () => setAcoustic(true) },
+  "bedside:board": { label: () => "Open the communication board", run: () => setBedside(true, "board") },
+  "bedside:passport": { label: () => "Open the comfort passport", run: () => setBedside(true, "passport") },
+  "bedside:family": { label: () => "Open family connection", run: () => setBedside(true, "family") },
   "sound:groan": { label: () => "Simulate a groan", run: () => simulateSound("groan") },
 };
 // "demo:<id>": another of the feature's demos, such as the wardrobe's compartments, under the label that demo gives
@@ -901,6 +911,9 @@ const FEATURE_STATUS = {
   wardrobe: () => { const side = stage.current?.addons?.wardrobe?.userData.side; return selected.wardrobe === "on" ? `In this room: ${side ? `the ${side} side is open` : "doors closed"}.` : "In this room: off. Turn it on under Furniture and bathroom."; },
   soundSensor: () => (selected.soundSensor === "on" ? "" : "In this room: hidden. Show it under Sound-level indicator."),
   comfortControl: () => `SIMULATED readout: ${$("demoTempValue").textContent}, ${$("demoHumidityValue").textContent}.`,
+  patientStates: () => `Now: ${STATES[patientState].long}${quietOn ? ", with Quiet now on" : ""}.`,
+  communicationBoard: () => (bedside.requests.length ? `SIMULATED: ${bedside.requests.length} request${bedside.requests.length > 1 ? "s" : ""} waiting at the nurse station.` : "No requests waiting."),
+  familyConnection: () => (quietOn ? "Quiet now is on: staff have turned stimulation off." : `Patient: ${STATES[patientState].long}.`),
   daylightSensor: () => { const e = daylight.elevation; return `Now: the sun is ${Math.abs(e).toFixed(0)}° ${e >= 0 ? "above" : "below"} the horizon at ${clock(state.hour)}, so ${afterDark() ? "it's after sunset" : "it's daylight"}.`; },
 };
 
@@ -913,7 +926,7 @@ function sourcesOf(ref) {
 }
 
 /** Fill the card's feature parts, or hide them for an object that isn't a feature. */
-function fillFeature(f) {
+function fillFeature(f, placed = false) {
   const facts = $("featureFacts"), how = $("featureHow");
   $("objectKicker").textContent = !f ? "Selected object" : f.parent ? `Part of ${features.get(f.parent).name}` : `Feature · ${features.groupLabel(f.group)}`;
   const status = f ? FEATURE_STATUS[f.id]?.() || "" : "";
@@ -939,11 +952,11 @@ function fillFeature(f) {
   demoButton.textContent = f?.demoLabel || "See it in action";
   demoButton.dataset.demo = f?.demo || "";
   // a feature with more than two actions lists them in a short menu, so the card stays one row of buttons
-  const menu = $("featureMenu"), acts = f?.actions || [];
-  menu.hidden = $("featureMenuToggle").hidden = acts.length <= 2;
+  const menu = $("featureMenu"), acts = f?.actions || [], inMenu = acts.length > 2 || (placed && acts.length) ? acts : [];
+  menu.hidden = $("featureMenuToggle").hidden = !inMenu.length;
   $("featureMenuToggle").setAttribute("aria-expanded", "false");
   $("featureMenuList").hidden = true;
-  $("featureMenuList").replaceChildren(...(acts.length > 2 ? acts : []).map(a => {
+  $("featureMenuList").replaceChildren(...inMenu.map(a => {
     const b = el("button", { type: "button", className: "outline-action", textContent: ACTION_HANDLERS[a].label() });
     b.dataset.action = a;
     return b;
@@ -956,7 +969,7 @@ function showObjectCard(info, x, y, opener = document.activeElement) {
   const f = info.feature ? features.get(info.feature) : null;
   if (!card.contains(opener)) cardOpener = opener;
   card.dataset.feature = f?.id || "";
-  fillFeature(f);
+  fillFeature(f, !!info.action?.startsWith("placed:"));
   $("objectTitle").textContent = f ? f.name : info.title;
   const text = f ? features.text(f, "purpose") : info.description;
   $("objectDescription").textContent = text;
@@ -1020,7 +1033,7 @@ let cardAt = { x: 24, y: 24 }; // where the card was opened from, to fit it agai
 function placeCard(card, x, y) {
   cardAt = { x, y };
   card.style.maxHeight = "";
-  const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : acousticOn ? restingRect($("acousticPanel")) : panel.getBoundingClientRect();
+  const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : acousticOn ? restingRect($("acousticPanel")) : bedsideOn ? restingRect($("bedside")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   let left = x + 14, top = y + 14;
   if (left + rect.width > panelRect.left && x < panelRect.left) left = Math.max(12, panelRect.left - rect.width - 12);
@@ -1198,6 +1211,7 @@ const demoApi = {
   acoustic: state => { if (!acousticOn) setAcoustic(true, { fromDemo: true }); setAcousticFittings(state === "with"); },
   notices: open => { $("acousticNotices").open = open; },
   oldWardrobe: on => { setOldWardrobe(stage.current, on); invalidate(); },
+  patient: name => setPatientState(name),
   /** The two wardrobes' floor areas and heights, from their models, as a sentence. */
   figures: () => {
     const f = wardrobeFigures(stage.current);
@@ -1209,7 +1223,7 @@ const demoApi = {
 };
 /** The room has come to rest: the camera has arrived, and any change of mode or of the glass has finished easing. */
 const roomStill = () => new Promise(done => {
-  const look = () => (rig.tween || modes.easing || glass.fading || wardrobeMoving(stage.current) ? requestAnimationFrame(look) : done());
+  const look = () => (rig.tween || modes.easing || glass.fading || patientTween || wardrobeMoving(stage.current) ? requestAnimationFrame(look) : done());
   requestAnimationFrame(look);
 });
 
@@ -1227,7 +1241,7 @@ async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   $("objectCard").hidden = true;
   demo = {
     id: demoId, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
-    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose() },
+    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState },
   };
   if (modes.current !== "standard") modes.set("standard", { instant: true }); // a mode would hide what the demo shows
   $("demoName").textContent = f.name;
@@ -1270,6 +1284,7 @@ function endDemo(why = "") {
   highlight.clear("demo");
   setOldWardrobe(stage.current, false);
   setWardrobe(stage.current, d.snap.wardrobe, { instant: true });
+  if (patientState !== d.snap.patient || patientTween) setPatientState(d.snap.patient, { instant: true, quietly: true });
   if (modes.current !== d.snap.mode || modes.easing) modes.set(d.snap.mode, { instant: true });
   if (state.hour !== d.snap.hour) setTime(d.snap.hour);
   if (why !== "view") restorePose(d.snap.pose);
@@ -1321,6 +1336,7 @@ function setAcoustic(on, { fromDemo = false } = {}) {
   if (on) {
     if (modes.current === "emergency") { say("Acoustic comfort mode waits: Emergency-ready is on, and care comes first."); return; }
     if (!fromDemo) { endDemo(); endCompare(); }
+    setBedside(false); // one panel in the options panel's place at a time
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1432,26 +1448,35 @@ const SOUND_PARTS = {
   without: "Demo sound: the room without the fittings. Illustrative.",
   with: "Demo sound: the same room with the fittings. Illustrative: the difference is made up.",
   restful: "Demo sound: a restful sound, for a patient it suits. Staff decide when it plays.",
+  music: "Demo sound: familiar music, quietly. An original tune made in this page, not a recording.",
 };
-const noticeUp = () => !$("vocalNotice").hidden || !$("criticalExample").hidden || !$("envNotice").hidden;
-function playDemoSound(name) {
-  if (modes.current === "emergency" || noticeUp()) {
-    $("soundCaption").textContent = "Demo sound waits while a notice, an alarm or Emergency-ready is up.";
-    say($("soundCaption").textContent);
-    return;
+// where a sound's words go: Acoustic comfort mode's panel, or family connection's. Each has its own Mute in view
+const ACOUSTIC_SOUND_UI = { caption: () => $("soundCaption"), mute: () => $("muteSound"), play: () => $("playSound") };
+let soundUi = ACOUSTIC_SOUND_UI;
+var quietOn = false; // staff's Quiet now (bedside.js)
+const noticeUp = () => !$("vocalNotice").hidden || !$("criticalExample").hidden || !$("envNotice").hidden || !!bedside?.requests.length;
+/** Play a demo sound, only ever from a press. `ui` says where its words and its Mute are. */
+function playDemoSound(name, ui = ACOUSTIC_SOUND_UI) {
+  if (modes.current === "emergency" || noticeUp() || quietOn) {
+    ui.caption().textContent = quietOn ? "Demo sound waits: staff have turned on Quiet now." : "Demo sound waits while a notice, a request, an alarm or Emergency-ready is up.";
+    say(ui.caption().textContent);
+    ui.done?.();
+    return false;
   }
+  stopDemoSound("");
+  soundUi = ui;
   playSound(name, {
     onEvent: id => acousticView.pulse(id),
     onPart: part => {
       if (part === "without" || part === "with") setAcousticFittings(part === "with"); // what's heard is also shown
-      $("soundCaption").textContent = SOUND_PARTS[part];
+      ui.caption().textContent = SOUND_PARTS[part];
       say(SOUND_PARTS[part]);
     },
     onEnd: () => soundOff("The demo sound has finished."),
   });
   document.body.classList.add("sound-on");
-  $("muteSound").hidden = false;
-  $("muteSound").focus({ preventScroll: true });
+  if (ui.mute) { ui.mute().hidden = false; ui.mute().focus({ preventScroll: true }); }
+  return true;
 }
 /** Stop demo sound if it's playing, and say why. Returns whether it was. */
 function stopDemoSound(why) {
@@ -1460,12 +1485,15 @@ function stopDemoSound(why) {
   return true;
 }
 function soundOff(why) {
+  const ui = soundUi;
+  soundUi = ACOUSTIC_SOUND_UI;
   document.body.classList.remove("sound-on");
-  const hadFocus = document.activeElement === $("muteSound");
-  $("muteSound").hidden = true;
-  $("soundCaption").textContent = why;
+  const hadFocus = ui.mute && document.activeElement === ui.mute();
+  if (ui.mute) ui.mute().hidden = true;
+  ui.caption().textContent = why;
   if (why) say(why);
-  if (hadFocus) $("playSound").focus({ preventScroll: true });
+  if (hadFocus) ui.play().focus({ preventScroll: true });
+  ui.done?.();
 }
 $("playSound").addEventListener("click", () => playDemoSound("noisy"));
 $("restfulSound").addEventListener("click", () => playDemoSound("restful"));
@@ -1473,6 +1501,142 @@ $("muteSound").addEventListener("click", () => stopDemoSound("Demo sound muted."
 // it stops on Esc, before anything else hears the key, and whenever the tab is hidden
 addEventListener("keydown", e => { if (e.key === "Escape" && soundState().playing) { e.preventDefault(); e.stopPropagation(); stopDemoSound("Demo sound stopped."); } }, true);
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopDemoSound("Demo sound stopped: the tab was hidden."); });
+
+// ---------------------------------------------------------------- the patient's state and the bedside screens (patient-states.js, bedside.js)
+// A state is an overlay under the room modes: Sedated, Awake (the room as configured) or Recovering. It eases the light by
+// the time of day and changes what the patient's screens offer. It changes no choice, link or summary, and the modes stay
+// the staff override: Clinical and Emergency-ready always win. SIMULATED throughout: nothing leaves this page.
+var patientState = DEFAULT_STATE, patientTween = null, bedsideOn = false, bedsideOpener = null, bedsideFromSheet = false;
+const family = { scene: false, lines: false }; // what family connection has on the TV and the orientation screen
+const easeState = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+
+/** The light a state asks for at an hour: by the time of day, a little lower when sedated. null: the room as configured. */
+function patientLook(name, h = state.hour) {
+  const rule = STATES[name]?.light;
+  return rule ? { kelvin: autoKelvin(h), level: circadianLevel(h) * (rule === "steady" ? 0.8 : 1) } : null;
+}
+const patientShows = () => ({ ...STATES[patientState].shows, ...(family.scene ? { tvplay: "on" } : {}) });
+
+/** Step to a state. The light eases over a couple of seconds (at once with reduced motion), never abruptly. */
+function setPatientState(name, { instant = false, quietly = false } = {}) {
+  if (!STATES[name]) return;
+  const was = patientState, from = lighting.patient || lighting.base(state.hour);
+  patientState = name;
+  bedside.stateChanged(was); // what a sedated patient isn't allowed stops first
+  showLayer("patient", patientShows());
+  const to = patientLook(name);
+  if (instant || matchMedia("(prefers-reduced-motion: reduce)").matches || was === name) { patientTween = null; lighting.patient = to; relight(); }
+  else patientTween = { start: performance.now(), from: { ...from }, to };
+  orientationLines();
+  syncPatient();
+  if (!quietly) say(STATES[name].say);
+}
+
+/** Once a frame while a state's light eases. Returns true while it moves. */
+function updatePatient(now) {
+  const tw = patientTween;
+  if (!tw) return false;
+  const t = Math.max(0, Math.min(1, (now - tw.start) / STATE_MS)), k = easeState(t), to = tw.to || lighting.base(state.hour);
+  lighting.patient = { kelvin: tw.from.kelvin + (to.kelvin - tw.from.kelvin) * k, level: tw.from.level + (to.level - tw.from.level) * k };
+  if (t >= 1) { patientTween = null; lighting.patient = tw.to; }
+  relight();
+  return true;
+}
+
+function syncPatient() {
+  $("patientBar").querySelectorAll("button[data-state]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.state === patientState)));
+  $("patientNote").textContent = STATES[patientState].note;
+  $("patientNote").hidden = !STATES[patientState].note;
+  document.body.dataset.patient = patientState;
+  invalidate();
+}
+
+/** Something changed the room's design: back to Awake, Quiet now off and family's things off, as a mode goes back to Standard. */
+function resetPatient() {
+  if (patientState === DEFAULT_STATE && !quietOn && !family.scene && !family.lines) return;
+  bedside.stopFamily();
+  if (quietOn) bedside.setQuiet(false);
+  setPatientState(DEFAULT_STATE, { instant: true, quietly: true });
+}
+
+/** The orientation screen's lines: where the patient is, visiting confirmed by staff, plans, and recovery notes when recovering. */
+function orientationLines() {
+  if (!stage.current) return;
+  const lines = [ORIENTATION.where, ORIENTATION.visiting, patientState === "recovering" ? ORIENTATION.recovering : ORIENTATION.planned];
+  if (family.lines) lines.push(ORIENTATION.family);
+  if (setOrientationLines(stage.current, lines)) invalidate();
+}
+
+/** Staff's Quiet now: the TV and the aquarium screen off and demo sound stopped, until staff turn it off. */
+function applyQuiet(on) {
+  quietOn = on;
+  if (on) stopDemoSound("Demo sound stopped: Quiet now is on.");
+  showLayer("quiet", on ? { tvplay: "off" } : null);
+  modeApi.screens(!on && modes.current !== "emergency");
+  document.body.classList.toggle("quiet-now", on);
+  invalidate();
+}
+
+var bedside = new Bedside($("bedside"), {
+  state: () => patientState,
+  time: () => clock(state.hour),
+  say,
+  notice: () => stopDemoSound("Demo sound stopped: a request is up, and comfort sound never plays over one."),
+  music: (on, ui) => (on ? playDemoSound("music", { caption: () => ui.caption, done: ui.done }) : stopDemoSound("Demo sound muted.")),
+  scene: on => { family.scene = on; showLayer("patient", patientShows()); say(on ? "The personal scene is on the TV." : "The personal scene is off the TV."); },
+  familyLines: on => { family.lines = on; orientationLines(); say(on ? "Family's line is on the orientation screen." : "Family's line is off the orientation screen."); },
+  quiet: on => applyQuiet(on),
+  noise: () => (stage.current ? `Noise at the pillow: about ${Math.round(acousticView.readings(stage.current, fittingsShown()).pillow)} dBA, illustrative. Acoustic comfort mode shows where it comes from.` : "Noise at the pillow: see Acoustic comfort mode. Illustrative."),
+});
+
+/** The bedside screens take the options panel's place, as Acoustic comfort mode's panel does. */
+function setBedside(on, tab) {
+  if (on) {
+    setAcoustic(false);
+    if (pacs.active) pacs.exit();
+    $("objectCard").hidden = true;
+    if (!bedsideOn && !bedsideOpener) bedsideOpener = document.activeElement;
+    bedsideOn = true;
+    $("bedside").hidden = false;
+    document.body.classList.add("bedside-active");
+    resize();
+    bedside.refresh();
+    bedside.show(tab || bedside.tab);
+    $("bedsideTitle").focus({ preventScroll: true });
+    say(`Bedside screens, simulated. Patient: ${STATES[patientState].long}.`);
+  } else {
+    if (!bedsideOn) return;
+    if (soundUi !== ACOUSTIC_SOUND_UI) stopDemoSound("Demo sound stopped: the bedside screens closed."); // its Mute goes with them
+    bedsideOn = false;
+    bedside.closed();
+    $("bedside").hidden = true;
+    document.body.classList.remove("bedside-active");
+    resize();
+    if (bedsideFromSheet && isPhone()) setSheet(true); // back to the sheet the screens were opened from
+    bedsideFromSheet = false;
+    const back = bedsideOpener?.isConnected && !bedsideOpener.closest("[hidden]") && !bedsideOpener.closest("[inert]") && bedsideOpener.offsetParent ? bedsideOpener : $("openBedside").offsetParent ? $("openBedside") : canvas;
+    bedsideOpener = null;
+    back.focus({ preventScroll: true });
+  }
+  $("openBedside").setAttribute("aria-pressed", String(bedsideOn));
+  invalidate();
+}
+
+$("patientBar").addEventListener("click", e => {
+  const b = e.target.closest("button[data-state]");
+  if (b) setPatientState(b.dataset.state);
+});
+$("openBedside").addEventListener("click", () => setBedside(!bedsideOn));
+$("bedsideClose").addEventListener("click", () => setBedside(false));
+$("bedside").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); setBedside(false); } });
+document.querySelector(".bedside-launch").addEventListener("click", e => {
+  const b = e.target.closest("button[data-open]");
+  if (!b) return;
+  bedsideOpener = b;
+  bedsideFromSheet = isPhone() && panel.classList.contains("open");
+  if (bedsideFromSheet) setSheet(false);
+  setBedside(true, b.dataset.open);
+});
 
 /** The Features list in the panel: every entry by group, parts under their feature, each opening its card. */
 function buildFeatureList() {
@@ -1950,6 +2114,7 @@ function frame(now) {
     if (!wardrobeMoving(stage.current) && features?.on) refreshExplore(); // its compartments' marks, now the doors have stopped
   }
   if (modes.update(now)) dirty = true;
+  if (updatePatient(now)) dirty = true;
   if (pacs.update(now)) dirty = true;
   if (dirty) {
     dirty = false;
@@ -2125,6 +2290,10 @@ window.__config = {
   tour: () => ({ running: tour.running, log: tour.log.slice(), order: tour.order.slice() }),
   startTour: () => tour.start(),
   placeInView: type => placeInView(type),
+  patientState: () => ({ state: patientState, easing: !!patientTween, look: lighting.patient && { ...lighting.patient }, quiet: quietOn, family: { ...family } }),
+  setPatientState: (name, opts) => setPatientState(name, opts),
+  bedside: () => ({ open: bedsideOn, ...bedside.inspect() }),
+  openBedside: tab => setBedside(true, tab),
   acoustic: () => ({ on: acousticOn, with: acousticWith, reading: acousticOn ? acousticView.readings() : null, marks: acousticView.showing(), sound: soundState(), shown: fittingsShown(), map: !!stage.current.acousticMap, zone: !!stage.current.acousticZone }),
   setAcoustic: on => setAcoustic(on),
   wardrobe: (side, instant = true) => { setWardrobe(stage.current, side, { instant }); invalidate(); if (features.on) refreshExplore(); return stage.current.addons?.wardrobe?.userData.side ?? null; },
@@ -2178,7 +2347,7 @@ window.__config = {
       hour: state.hour, view: state.view, eye: stage.camera.position.toArray().map(r), target: controls.target.toArray().map(r),
       wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque], blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
-      overlays: JSON.stringify(overlays), acoustic: acousticOn, fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
+      overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
     };
   },
 };
