@@ -388,8 +388,8 @@ Object.assign(BUILD, {
    */
   acousticPanels(room) {
     const g = new THREE.Group(), w1 = room.label === "W1", H = room.meta.ceiling;
-    const face = std("#d9ddd7", 0.96); face.map = drawn("fabric", 1.2, 1); face.name = "acoustic_face";
-    const edge = std("#b9bfb9", 0.6);
+    const face = std("#d6dad4", 0.97); face.name = "acoustic_face"; // a sealed, matt, light face: wiped like the walls round it
+    const edge = std("#c3c9c4", 0.6);
     const info = { title: "Acoustic panels", description: "Wipe-clean acoustic panels on the wall and ceiling." };
     // on the wall: x along it, the wall's y, and the way into the room
     const wall = w1 ? { xs: [15.25, 16.55], y: 31.61, into: -1 } : { xs: [12.6, 13.85], y: 22.385, into: -1 };
