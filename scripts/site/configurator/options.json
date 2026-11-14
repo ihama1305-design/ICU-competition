@@ -1720,7 +1720,7 @@
   "patient"
  ],
  "profile": {
-   "_": "Tune it in: answers pick a theme, then rules adjust it. Rules use `sets`, the group-to-option map themes use, because `effects` only change the scene and never reach the share code, comparison or undo. A rule with no `when` always applies. `when` is one set of conditions, or a list where any one will do. A higher tier locks what it sets against lower tiers. `because` is shown to the person, so it talks about the room and never about the patient. Every answer has to be used by a `when` or listed in `noEffect`: 08_check_configurator.py fails otherwise. This never changes the room and doesn't recommend care.",
+   "_": "Suggest a room: answers pick a theme, then rules adjust it. Rules use `sets`, the group-to-option map themes use, because `effects` only change the scene and never reach the share code, comparison or undo. A rule with no `when` always applies. `when` is one set of conditions, or a list where any one will do. A higher tier locks what it sets against lower tiers. `because` is shown to the person, so it talks about the room and never about the patient. Every answer has to be used by a `when` or listed in `noEffect`: 08_check_configurator.py fails otherwise. This never changes the room and doesn't recommend care.",
    "tiers": ["access", "comfort"],
    "themes": [
      { "when": [{ "children": ["yes", "sometimes"] }, { "sensory": ["company"] }], "theme": "family", "because": "Family Suite is the starting look when family stay close." },

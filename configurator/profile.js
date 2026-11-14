@@ -1,4 +1,4 @@
-// Tune it in: from answers to a room, using only the data in options.json. No 3D here, so every answer can be tested quickly.
+// Suggest a room: from answers to a room, using only the data in options.json. No 3D here, so every answer can be tested quickly.
 // The result is a set of option selections, the same as a theme's, so it reaches the share code and can be compared and undone.
 
 const matches = (when, answers) => !when || [when].flat().some(alt => Object.entries(alt).every(([k, values]) => values.includes(answers[k])));

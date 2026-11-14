@@ -43,7 +43,7 @@
   <div id="modeBar" class="mode-bar" role="group" aria-labelledby="modeTitle">
     <span id="modeTitle" class="mode-title">Room mode</span>
     <div class="mode-seg">
-      <button type="button" data-mode="standard" aria-pressed="true">Standard</button>
+      <button type="button" data-mode="standard" aria-pressed="true">As set</button>
       <button type="button" data-mode="comfort" aria-pressed="false">Comfort</button>
       <button type="button" data-mode="privacy" aria-pressed="false">Privacy</button>
       <button type="button" data-mode="clinical" aria-pressed="false">Clinical</button>
@@ -57,7 +57,7 @@
   </div>
   <p id="modeNote" class="mode-note" hidden></p>
   <p id="compareNote" class="mode-note" hidden>Before: today's room, with every option at its default and none of the added items, at the same view and time. Press Compare again for yours; your design and its link are unchanged.</p>
-  <p id="clinicalNote" class="mode-note" hidden>Clinical view: equipment labels, and hatched keep-clear areas for care around the bed. Illustrative, without dimensions: not a clinical or compliance check.</p>
+  <p id="clinicalNote" class="mode-note" hidden>Equipment labels: each piece of equipment named, and hatched keep-clear areas for care around the bed. Illustrative, without dimensions: not a clinical or compliance check.</p>
   <div id="modeBanner" class="mode-banner" hidden>
     <p><strong>Emergency-ready</strong>, started by staff. Room lights full, task light on, the TV and aquarium screen off, the glazed front clear. The monitor keeps running; clinical alarms and medical devices are not changed.</p>
     <button type="button" id="leaveEmergency">Exit Emergency-ready</button>
@@ -84,7 +84,7 @@
     <a class="back" href="../">Adaptive ICU</a>
     <h1>Room configurator</h1>
     <p class="tag">Design proposal</p>
-    <button type="button" id="openProfile" class="profile-launch">Tune it in <span aria-hidden="true">↗</span></button>
+    <button type="button" id="openProfile" class="profile-launch">Suggest a room <span aria-hidden="true">↗</span></button>
     <button type="button" id="openGuide" class="guide-launch"><span aria-hidden="true">▶</span> Guided tour, about a minute and a half</button>
   </header>
   <div id="panelBody">
@@ -131,7 +131,7 @@
       <h2 id="hView">View</h2>
       <div id="views" class="grid" role="group" aria-labelledby="hView">
         <button type="button" data-value="patient" class="wide" aria-pressed="false">Patient view</button>
-        <button type="button" id="clinicalToggle" class="wide" aria-pressed="false">Clinical view: labels and keep-clear areas</button>
+        <button type="button" id="clinicalToggle" class="wide" aria-pressed="false">Equipment labels and keep-clear areas</button>
         <button type="button" id="compareToggle" class="wide" aria-pressed="false">Compare with today's room</button>
         <button type="button" data-value="overview" aria-pressed="true">Overview</button>
         <button type="button" data-value="family" aria-pressed="false">Family zone</button>
@@ -249,7 +249,7 @@
 <dialog id="profile" aria-labelledby="profileTitle">
   <div class="sheet profile-sheet">
     <header>
-      <h2 id="profileTitle">Tune it in</h2>
+      <h2 id="profileTitle">Suggest a room</h2>
       <p class="tag">Room idea</p>
       <button type="button" id="closeProfile" class="sheet-close">Close</button>
     </header>

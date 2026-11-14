@@ -1,5 +1,5 @@
 // Saved rooms: a name and a share code each, kept in this browser's localStorage and nowhere else. A code holds only the
-// room's design (finishes, furniture, lighting choices, the view and the time): never a mode, a PACS scenario or Tune it in
+// room's design (finishes, furniture, lighting choices, the view and the time): never a mode, a PACS scenario or Suggest a room
 // answers. Storage can be missing or refused (a private window, blocked site data), so every read and write is guarded.
 
 const KEY = "icu-configurator-saved-rooms";

@@ -182,7 +182,7 @@ Notes flag concerns and don't block any choice. Each was checked against its sou
 | Palms and planting | No fresh flowers or potted plants in patient-care areas for immunosuppressed patients. So planting stays outside the glass | [CDC 2003 guidelines](https://www.cdc.gov/mmwr/preview/mmwrhtml/rr5210a1.htm) | Guidance, Category II |
 | Patio on W1 | An outside door works against the pressure regime. No structural or fall-safety design has been done | None: reasoned from how isolation rooms work | Should go to infection control and structural review |
 
-### Tune it in
+### Suggest a room
 
 A short survey that turns answers into an editable comfort and furnishing draft. **It doesn't choose a clinical room or recommend care.** It never changes the room, and its rules are design assumptions, not clinical guidance.
 
@@ -212,9 +212,9 @@ These were added on top of the configurator in one day. Each was checked before 
 | Feature | What it does | What it isn't |
 |---|---|---|
 | Patient view | The camera moves to the pillow and only turns, about 100° each way and up to the ceiling, then returns to the view before | Not a measurement of sightlines. The eye is where the bed view's is |
-| Room modes | Standard, Comfort, Privacy, Clinical and Emergency-ready, laid over the configured room and eased in over about two seconds. After sunset (sun below −0.833° at the room's solar hour, about 5:59 pm to 6:01 am on the modelled date), Comfort and PACS change only the lighting, leave the blinds alone and say why | They change no choice or link, and Standard puts back exactly what was there. Emergency-ready is started by staff and doesn't touch devices or alarms |
+| Room modes | As set, Comfort, Privacy, Clinical and Emergency-ready, laid over the configured room and eased in over about two seconds. After sunset (sun below −0.833° at the room's solar hour, about 5:59 pm to 6:01 am on the modelled date), Comfort and PACS change only the lighting, leave the blinds alone and say why | They change no choice or link, and As set puts back exactly what was there. Emergency-ready is started by staff and doesn't touch devices or alarms |
 | Task light | An examination light over the bed on its own switch, which modes never dim | Not a lux level or a lighting design |
-| Clinical view | Labels on the kit and on placed items, and hatched keep-clear areas beside the bed and at its foot, clipped to the open floor | Illustrative, without dimensions. Not a clearance or compliance check |
+| Equipment labels | Labels on the kit and on placed items, and hatched keep-clear areas beside the bed and at its foot, clipped to the open floor | Illustrative, without dimensions. Not a clearance or compliance check |
 | Placed items | A bedside tablet arm, privacy screen, hand-rub dispenser, waste bins, sharps box, family chair and a biophilic wall panel (a wipe-clean printed leaf scene; living plants stay outside the glass because CDC guidance keeps potted plants and fresh flowers away from immunosuppressed patients), dragged from the panel onto the floor or a wall wherever the visitor likes | Nothing checks staff access, clearances or infection-control positions, and each card says so |
 | Orientation screen | The TV can show the weekday and date and the room's own time of day, darker at night | It shows no patient details and makes no claim about delirium or sleep |
 | Before and after | Today's room (every default, no placed items) against the visitor's, at the same view and time | The visitor's design and link are untouched while it shows |
@@ -302,7 +302,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 ### Checks
 
-`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, Tune it in's rules for every combination of answers, the vocal-distress cue in both rooms, the clean-air rows on the plan and on the comfort control's card, every feature card by click and by keyboard with every demo put back, Explore features on High, Low and a phone, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
+`scripts/08_check_configurator.py` tests the published site under `/<repo>/` in a software renderer. It covers load and download budget, all views and orbit limits, every route between views, a frame timed before the click that started a move or a glass fade, every option in both rooms (it fails if an option leaves the picture unchanged), all themes by day and night, opaque glass hiding what's behind it, the wall switch, spec codes across 24 rooms, the summary, image download, tour, Suggest a room's rules for every combination of answers, the vocal-distress cue in both rooms, the clean-air rows on the plan and on the comfort control's card, every feature card by click and by keyboard with every demo put back, Explore features on High, Low and a phone, reduced motion, a phone layout, and accessibility with axe plus a keyboard walk through every control.
 
 ### Known limitations
 
