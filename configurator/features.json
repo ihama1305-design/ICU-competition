@@ -1,5 +1,5 @@
 {
- "_": "The feature cards: one entry per feature, and one per part of a feature. main.js shows an entry in the object card when its object is clicked or it's chosen from the panel's Features list; Explore features marks the objects; scripts/14_check_features.mjs checks every entry has its fields, links to an object and names a demo or action that exists. Objects: addon:<id> (an add-on built in addons.js), part:<name> (a part of the room models), placed:<type> (an item from Place items), node:<name> (a named object, such as a wardrobe compartment, which counts only while its door is open), lights (the ceiling lights of the scheme in use), switch (the smart-glass wall switch). After a |, a condition on the room's choices: the object counts for this entry only then. The first object is where Explore's marker goes. Evidence is either 'Expected, not shown.' or a line with its strength and sources from options.json (sourcesFrom: a group, or group:option). Nothing here is measured: every reading and status on a card is simulated.",
+ "_": "The feature cards: one entry per feature, and one per part of a feature. main.js shows an entry in the object card when its object is clicked or it's chosen from the panel's Features list; Explore features marks the objects; scripts/14_check_features.mjs checks every entry has its fields, links to an object and names a demo or action that exists. Objects: addon:<id> (an add-on built in addons.js), part:<name> (a part of the room models), placed:<type> (an item from Place items), node:<name> (a named object, such as a wardrobe compartment, which counts only while its door is open), lights (the ceiling lights of the scheme in use), switch (the smart-glass wall switch). After a |, a condition on the room's choices: the object counts for this entry only then. The first object is where Explore's marker goes. A feature worked from a control above the room, with no object of its own, names that control's id in `control` instead. Evidence is either 'Expected, not shown.' or a line with its strength and sources from options.json (sourcesFrom: a group, or group:option). Nothing here is measured: every reading and status on a card is simulated.",
  "groups": [
   {
    "id": "comfort",
@@ -74,19 +74,22 @@
    "id": "orientation",
    "name": "Patient orientation display",
    "group": "comfort",
-   "purpose": "The TV can show the weekday, the date and the time of day, large enough to read from the bed.",
-   "how": "Choose Orientation under Entertainment. The time comes from the room's own sun, and the screen is darker at night. It shows no patient details.",
+   "purpose": "The TV can show the weekday, the date, the time of day and whether it's day or night, with a few calm lines beside them: where the patient is, visiting confirmed by staff, and what's planned. Large enough to read from the bed.",
+   "how": "Choose Orientation under Entertainment. The time comes from the room's own sun, and the screen is darker at night. Beside it: a line about where the patient is, visiting information marked as confirmed by staff, a non-urgent plan, and a recovery note when the patient is recovering. Family can add a line, if staff confirm it. It never shows a name, a diagnosis or care information.",
    "benefit": "Knowing the day and the time without having to ask.",
    "awake": "Readable from the pillow. Patient view shows what the patient sees.",
    "sedated": "It stays calm, and darker at night, with nothing that asks for attention.",
-   "limits": "It makes no claim about delirium or sleep. It never shows a name, a diagnosis or care information.",
+   "limits": "It makes no claim about delirium or sleep. The lines are samples: a real screen would show only what staff have confirmed, and never patient details.",
    "evidence": {
     "text": "Expected, not shown."
    },
    "objects": [
     "addon:tv|tvplay=off,orientation"
    ],
-   "demo": "orientation"
+   "demo": "orientation",
+   "actions": [
+    "bedside:family"
+   ]
   },
   {
    "id": "nature",
@@ -291,6 +294,87 @@
    },
    "objects": [
     "node:wardrobe_part_doors"
+   ]
+  },
+  {
+   "id": "patientStates",
+   "name": "Patient states",
+   "group": "comfort",
+   "purpose": "The room follows the patient: sedated or unresponsive, awake, or recovering. A control above the room, beside the room modes.",
+   "how": "Sedated: steady light by the time of day, a little lower, and nothing on the patient's screen; staff set comfort and see the positioning reminder, line status and noise. Awake: the room as configured, with the patient's own controls, communication, privacy and family. Recovering: the orientation screen first, light by the time of day, simple choices. Changes ease over a few seconds. The room modes stay as they are: Clinical and Emergency-ready are the staff override and always win.",
+   "benefit": "What the patient sees and hears suits what they can take in.",
+   "awake": "The patient's own controls and choices.",
+   "sedated": "Steady light and no entertainment. Comfort is set by staff.",
+   "limits": "Staff decide the state: the room never works it out from the patient. It changes no alarm, device or clinical setting, and it changes no choice or link.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "patientBar",
+   "demo": "transition",
+   "demoLabel": "See the transition",
+   "actions": [
+    "bedside:board"
+   ]
+  },
+  {
+   "id": "communicationBoard",
+   "name": "Communication board",
+   "group": "comfort",
+   "purpose": "Large buttons for a patient who can't speak: I need help, I am in pain, I feel cold, I feel hot, I need repositioning, I want to contact my family, I need a nurse.",
+   "how": "On the bedside tablet, or on any bedside screen. Three ways to choose: touch; a single switch, while a highlight steps through the buttons; or gaze, where a look held on a button chooses it. Here the switch and gaze are simulated. Each request goes to a nurse-side list with the time, and stays there until a nurse acknowledges it.",
+   "benefit": "A patient who can't speak can still ask for what they need.",
+   "awake": "The patient chooses by touch, a switch or gaze.",
+   "sedated": "Not offered: staff watch for signs instead.",
+   "limits": "Simulated. It does not replace a certified nurse-call system: a real one is wired, tested and maintained to its own standard. No request leaves this page.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "placed:tablet"
+   ],
+   "actions": [
+    "bedside:board"
+   ]
+  },
+  {
+   "id": "comfortPassport",
+   "name": "Personal comfort passport",
+   "group": "comfort",
+   "purpose": "A sample record of what a patient would like: light, temperature, music or quiet, a nature scene, family photographs, privacy, how they communicate, and entertainment.",
+   "how": "Recorded with the patient or their family. It keeps the patient's preferences apart from the settings the care team controls, and shows how each preference is used or held back in each patient state. Save it in this browser, or restore the sample. It's its own record: Tune it in and PACS keep theirs.",
+   "benefit": "Staff can see at a glance what the patient likes, even when the patient can't say.",
+   "awake": "The patient's preferences are used.",
+   "sedated": "Most are held back; staff use some, if they judge them right.",
+   "limits": "A sample for a made-up patient, with no name. Temperature is shown, not applied: no approved limits were supplied. Saved only in this browser, never sent.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "part:cfg_bay_mullions",
+    "part:cfg_bay_transom_low"
+   ],
+   "actions": [
+    "bedside:passport"
+   ]
+  },
+  {
+   "id": "familyConnection",
+   "name": "Family connection",
+   "group": "family",
+   "purpose": "Family close by on the bedside screens: photographs, a video call, a voice message, a personal scene, familiar music and a line on the orientation screen.",
+   "how": "Drawn photographs stand in for real ones. The video call and voice message are simulated: shown, not played, because there's no real voice to use. The personal scene goes on the TV, and familiar music plays as demo sound, only when pressed. Staff have Quiet now, which turns all stimulation off, sound included. For an unresponsive patient it offers only what staff allow.",
+   "benefit": "Familiar faces, voices and music, when the patient can take them in.",
+   "awake": "The patient and family choose.",
+   "sedated": "Only what staff allow.",
+   "limits": "No photograph is uploaded, no camera or microphone is used, and nothing is sent. A real call would need the hospital's approved system.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "openBedside",
+   "actions": [
+    "bedside:family"
    ]
   },
   {
