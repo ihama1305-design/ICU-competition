@@ -4,7 +4,8 @@ import * as THREE from "three";
 
 import { parseObject } from "./feature-links.js";
 
-const shown = o => { for (let n = o; n; n = n.parent) if (!n.visible) return false; return true; };
+// shown, and not behind a closed door: a wardrobe compartment says which door shows it (addons.js)
+const shown = o => { for (let n = o; n; n = n.parent) if (!n.visible || n.userData.revealed?.() === false) return false; return true; };
 
 export class Features {
   /**
@@ -79,6 +80,7 @@ export class Features {
       return hits.find(f => f.parent) || hits[0] || null;
     };
     for (let n = object; n && n !== room.root; n = n.parent) {
+      if (n.userData.revealed?.() === false) continue; // a part behind a closed door is the whole wardrobe's
       for (const key of this.keysOf(n)) { const f = match(key); if (f) return f; }
     }
     const top = this.env.stage.topName(object, room.root);
