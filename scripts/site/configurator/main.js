@@ -7,7 +7,7 @@ import { Daylight, sunAt } from "./sky.js";
 import { Lighting } from "./lights.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
-import { setAddon, setAddonLook, setOrientation, setShade, setTv, syncPalms, tickAddons, toggleWardrobe } from "./addons.js";
+import { setAddon, setAddonLook, setOldWardrobe, setOrientation, setShade, setTv, setWardrobe, syncPalms, tickAddons, tickWardrobe, toggleWardrobe, wardrobeFigures, wardrobeMoving } from "./addons.js";
 import { decodeSpec, encodeSpec } from "./state.js";
 import { differences, optionLabel, resolveProfile } from "./profile.js";
 import { summaryContent } from "./summary.js";
@@ -846,12 +846,19 @@ let cardOpener = null, cardFromSheet = false; // where focus goes back to when t
 /** The card buttons a feature names in `actions` (demos.js lists them): what each says, and what it does. */
 const ACTION_HANDLERS = {
   wardrobe: {
-    label: () => (stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open"),
-    run: b => { const open = toggleWardrobe(stage.current); b.textContent = open ? "Slide doors closed" : "Slide doors open"; stage.renderer.shadowMap.needsUpdate = true; invalidate(); refreshExplore(); },
+    label: () => (stage.current.addons?.wardrobe?.userData.side ? "Close cabinet" : "Open cabinet"),
+    run: b => { const open = toggleWardrobe(stage.current); b.textContent = open ? "Close cabinet" : "Open cabinet"; invalidate(); say(open ? "The cabinet's left door slides open." : "The cabinet's doors close."); },
+  },
+  // Learn about this design: the card's own How it works, opened and brought into view
+  "wardrobe:learn": {
+    label: () => "Learn about this design",
+    run: () => { const how = $("featureHow"); how.open = true; how.scrollIntoView({ block: "nearest" }); how.querySelector("summary").focus({ preventScroll: true }); },
   },
   "sound:call": { label: () => "Simulate a call for help", run: () => simulateSound("call") },
   "sound:groan": { label: () => "Simulate a groan", run: () => simulateSound("groan") },
 };
+// "demo:<id>": another of the feature's demos, such as the wardrobe's compartments, under the label that demo gives
+for (const a of ACTIONS) if (a.startsWith("demo:")) ACTION_HANDLERS[a] = { label: () => DEMOS[a.slice(5)].label, run: () => startDemo($("objectCard").dataset.feature, a.slice(5)).catch(err => window.__configErrors.push(String(err))) };
 for (const a of ACTIONS) if (!ACTION_HANDLERS[a]) window.__configErrors.push(`No handler for the card action ${a}`);
 
 const optionName = (group, id) => optionOf(group, id)?.label ?? id;
@@ -864,7 +871,7 @@ const FEATURE_STATUS = {
   skyCeiling: () => (selected.ceiling === "sky" ? "In this room: on." : "In this room: the ceiling is plain."),
   digitalAquarium: () => (selected.aquarium === "digital" ? "In this room: on." : `In this room: ${selected.aquarium === "none" ? "no aquarium" : "the sealed tank instead"}.`),
   biophilicPanel: () => { const n = placement.list(state.room).filter(p => p.type === "leafpanel").length; return n ? `In this room: ${n} placed.` : "In this room: none placed yet."; },
-  wardrobe: () => (selected.wardrobe === "on" ? `In this room: doors ${stage.current?.addons?.wardrobe?.userData.open ? "open" : "closed"}.` : "In this room: off. Turn it on under Furniture and bathroom."),
+  wardrobe: () => { const side = stage.current?.addons?.wardrobe?.userData.side; return selected.wardrobe === "on" ? `In this room: ${side ? `the ${side} side is open` : "doors closed"}.` : "In this room: off. Turn it on under Furniture and bathroom."; },
   soundSensor: () => (selected.soundSensor === "on" ? "" : "In this room: hidden. Show it under Sound-level indicator."),
   comfortControl: () => `SIMULATED readout: ${$("demoTempValue").textContent}, ${$("demoHumidityValue").textContent}.`,
   daylightSensor: () => { const e = daylight.elevation; return `Now: the sun is ${Math.abs(e).toFixed(0)}° ${e >= 0 ? "above" : "below"} the horizon at ${clock(state.hour)}, so ${afterDark() ? "it's after sunset" : "it's daylight"}.`; },
@@ -902,6 +909,7 @@ function fillFeature(f) {
   ev.hidden = !f;
   const demoButton = $("featureDemo");
   demoButton.hidden = !f?.demo;
+  demoButton.textContent = f?.demoLabel || "See it in action";
   demoButton.dataset.demo = f?.demo || "";
   // a feature with more than two actions lists them in a short menu, so the card stays one row of buttons
   const menu = $("featureMenu"), acts = f?.actions || [];
@@ -958,7 +966,7 @@ function showObjectCard(info, x, y, opener = document.activeElement) {
   $("objectSources").replaceChildren(...sources.map(link));
   $("objectSources").hidden = !sources.length;
   if (!f) {
-    if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
+    if (info.action === "wardrobe") action.textContent = ACTION_HANDLERS.wardrobe.label();
     else if (info.action === "soundCue") { // the sensor's two simulated sounds, as in the Comfort systems section
       action.textContent = "Simulate a call for help"; action.dataset.action = "sound:call";
       action2.textContent = "Simulate a groan"; action2.dataset.action = "sound:groan"; action2.hidden = false;
@@ -981,7 +989,9 @@ function showObjectCard(info, x, y, opener = document.activeElement) {
  * Put the card by the point it was opened from, clear of the options panel (or PACS's), of the room-mode bar and of every
  * notice above the room. If there isn't room for all of it, it scrolls.
  */
+let cardAt = { x: 24, y: 24 }; // where the card was opened from, to fit it again when it grows
 function placeCard(card, x, y) {
+  cardAt = { x, y };
   card.style.maxHeight = "";
   const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
@@ -1152,19 +1162,30 @@ const demoApi = {
     const { eye, target } = framePose(objs);
     rig.goTo(eye, target);
   },
-  wardrobe: open => {
-    const w = stage.current.addons?.wardrobe;
-    if (w && !!w.userData.open !== open) { toggleWardrobe(stage.current); stage.renderer.shadowMap.needsUpdate = true; invalidate(); }
+  wardrobe: side => {
+    const w = stage.current.addons?.wardrobe, want = side === true ? "left" : side || null;
+    if (w && w.userData.side !== want) { setWardrobe(stage.current, want); invalidate(); if (features.on) refreshExplore(); }
+  },
+  outline: id => { highlight.show("demo", features.objects(id)); invalidate(); },
+  oldWardrobe: on => { setOldWardrobe(stage.current, on); invalidate(); },
+  /** The two wardrobes' floor areas and heights, from their models, as a sentence. */
+  figures: () => {
+    const f = wardrobeFigures(stage.current);
+    if (!f) return "";
+    const m = n => (n + 1e-9).toFixed(2), diff = f.now.area - f.before.area; // 1.355 is stored just under itself, and should read 1.36
+    const size = x => `${m(x.width)} by ${m(x.depth)} m`;
+    return `It took ${m(f.before.area)} m² of floor (${size(f.before)}), and this one takes ${m(f.now.area)} m² (${size(f.now)}): ${Math.abs(diff) < 0.005 ? "the same" : `${m(Math.abs(diff))} m² ${diff > 0 ? "more" : "less"}`}. It was ${m(f.before.height)} m tall; this one reaches the ceiling, at ${m(f.now.height)} m. Both from the models' sizes.`;
   },
 };
 /** The room has come to rest: the camera has arrived, and any change of mode or of the glass has finished easing. */
 const roomStill = () => new Promise(done => {
-  const look = () => (rig.tween || modes.easing || glass.fading ? requestAnimationFrame(look) : done());
+  const look = () => (rig.tween || modes.easing || glass.fading || wardrobeMoving(stage.current) ? requestAnimationFrame(look) : done());
   requestAnimationFrame(look);
 });
 
-async function startDemo(featureId) {
-  const f = features.get(featureId), steps = DEMOS[f?.demo]?.steps;
+/** A feature's demo: its own, or another it names in its actions ("demo:<id>"). */
+async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
+  const f = features.get(featureId), steps = DEMOS[demoId]?.steps;
   if (!steps) return;
   if (modes.current === "emergency") { $("featureStatus").textContent = "Not during Emergency-ready: care comes first."; $("featureStatus").hidden = false; say($("featureStatus").textContent); return; }
   const opener = cardOpener;
@@ -1174,8 +1195,8 @@ async function startDemo(featureId) {
   if (guide.running || guide.ended) await guide.exit();
   $("objectCard").hidden = true;
   demo = {
-    id: f.demo, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
-    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: !!stage.current.addons?.wardrobe?.userData.open, pose: cameraPose() },
+    id: demoId, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
+    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose() },
   };
   if (modes.current !== "standard") modes.set("standard", { instant: true }); // a mode would hide what the demo shows
   $("demoName").textContent = f.name;
@@ -1191,8 +1212,12 @@ async function demoStep(i) {
   const token = ++d.token, step = d.steps[i];
   d.timer = 0;
   $("demoCount").textContent = `${i + 1} of ${d.steps.length}`;
-  demoSay(step.say);
-  try { step.run(demoApi); await roomStill(); } catch (err) { window.__configErrors.push(String(err)); }
+  if (highlight.clear("demo")) invalidate(); // each step marks its own subject
+  try {
+    step.run(demoApi);
+    demoSay(typeof step.say === "function" ? step.say(demoApi) : step.say); // a caption worked out from the room, once it's set up
+    await roomStill();
+  } catch (err) { window.__configErrors.push(String(err)); }
   if (demo !== d || token !== d.token) return;
   d.timer = setTimeout(() => { if (demo === d) (i + 1 < d.steps.length ? demoStep(i + 1) : endDemo("done")); }, DEMO_HOLD_MS);
 }
@@ -1210,7 +1235,9 @@ function endDemo(why = "") {
   for (const g of shownGroups) delete demoShown[g];
   for (const g of shownGroups) runEffects(groupById(g), selected[g]);
   settle();
-  demoApi.wardrobe(d.snap.wardrobe);
+  highlight.clear("demo");
+  setOldWardrobe(stage.current, false);
+  setWardrobe(stage.current, d.snap.wardrobe, { instant: true });
   if (modes.current !== d.snap.mode || modes.easing) modes.set(d.snap.mode, { instant: true });
   if (state.hour !== d.snap.hour) setTime(d.snap.hour);
   if (why !== "view") restorePose(d.snap.pose);
@@ -1239,7 +1266,10 @@ $("featureMenuToggle").addEventListener("click", e => {
   const open = e.currentTarget.getAttribute("aria-expanded") !== "true";
   e.currentTarget.setAttribute("aria-expanded", String(open));
   $("featureMenuList").hidden = !open;
+  placeCard($("objectCard"), cardAt.x, cardAt.y); // taller now: it stays on screen
 });
+// How it works, opened or closed, changes the card's height the same way
+$("featureHow").addEventListener("toggle", () => { if (!$("objectCard").hidden) placeCard($("objectCard"), cardAt.x, cardAt.y); });
 $("featureMenuList").addEventListener("click", e => {
   const b = e.target.closest("button[data-action]");
   if (b) ACTION_HANDLERS[b.dataset.action]?.run(b);
@@ -1714,6 +1744,11 @@ function frame(now) {
   }
   if (glass.update(now)) dirty = true;
   if (tickAddons(stage.current, now, stage.camera)) dirty = true;
+  if (tickWardrobe(stage.current, now)) {
+    dirty = true;
+    stage.renderer.shadowMap.needsUpdate = true;
+    if (!wardrobeMoving(stage.current) && features?.on) refreshExplore(); // its compartments' marks, now the doors have stopped
+  }
   if (modes.update(now)) dirty = true;
   if (pacs.update(now)) dirty = true;
   if (dirty) {
@@ -1889,6 +1924,11 @@ window.__config = {
   tour: () => ({ running: tour.running, log: tour.log.slice(), order: tour.order.slice() }),
   startTour: () => tour.start(),
   placeInView: type => placeInView(type),
+  wardrobe: (side, instant = true) => { setWardrobe(stage.current, side, { instant }); invalidate(); if (features.on) refreshExplore(); return stage.current.addons?.wardrobe?.userData.side ?? null; },
+  wardrobeMoving: () => wardrobeMoving(stage.current),
+  wardrobeFigures: () => wardrobeFigures(stage.current),
+  /** Stand in front of a feature, as its demo does, at once. */
+  frameFeature: id => { const objs = features.objects(id); if (!objs.length) return false; if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true }); const { eye, target } = framePose(objs); rig.goTo(eye, target, { instant: true }); return true; },
   // feature cards
   features: () => features.entries.map(f => ({ id: f.id, name: f.name, group: f.group, parent: f.parent || null, demo: f.demo || null, actions: f.actions || [], present: features.present(f.id) })),
   featureAt: (x, y) => { const hit = nearestSolid(rayAt(x, y)); return hit ? features.at(hit.object)?.id ?? null : null; },
@@ -1924,7 +1964,7 @@ window.__config = {
   demo: () => (demo ? { id: demo.id, feature: demo.feature, at: demo.at, steps: demo.steps.length, waiting: !!demo.timer } : null),
   /** Skip the rest of a step's hold, once its room is still: every step still runs, without the reading time. */
   demoAdvance: () => { if (!demo?.timer) return false; const d = demo; clearTimeout(d.timer); d.timer = 0; if (d.at + 1 < d.steps.length) demoStep(d.at + 1); else endDemo("done"); return true; },
-  highlight: () => ({ hover: hoverId, on: ["hover", "card", "explore"].filter(k => highlight.has(k)) }),
+  highlight: () => ({ hover: hoverId, on: ["hover", "card", "explore", "demo"].filter(k => highlight.has(k)) }),
   explore: () => ({ on: features.on, filter: features.filter, markers: features.showing() }),
   /** The room as it's shown now, for proving a demo put it all back. */
   fingerprint: () => {
@@ -1933,7 +1973,7 @@ window.__config = {
       live: encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))), selected: { ...selected }, shown: { ...demoShown },
       mode: modes.current, look: lighting.scene && { ...lighting.scene }, task: lighting.taskOn, scheme: lighting.params.scheme?.kind, kelvin: lighting.params.kelvin,
       hour: state.hour, view: state.view, eye: stage.camera.position.toArray().map(r), target: controls.target.toArray().map(r),
-      wardrobe: !!w?.userData.open, wardrobeShown: !!w?.visible, tv: tv ? (tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
+      wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque], blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
     };
   },

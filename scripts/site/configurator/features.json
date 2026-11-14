@@ -1,12 +1,30 @@
 {
- "_": "The feature cards: one entry per feature, and one per part of a feature. main.js shows an entry in the object card when its object is clicked or it's chosen from the panel's Features list; Explore features marks the objects; scripts/14_check_features.mjs checks every entry has its fields, links to an object and names a demo or action that exists. Objects: addon:<id> (an add-on built in addons.js), part:<name> (a part of the room models), placed:<type> (an item from Place items), node:<name> (a named object), lights (the ceiling lights of the scheme in use), switch (the smart-glass wall switch). After a |, a condition on the room's choices: the object counts for this entry only then. The first object is where Explore's marker goes. Evidence is either 'Expected, not shown.' or a line with its strength and sources from options.json (sourcesFrom: a group, or group:option). Nothing here is measured: every reading and status on a card is simulated.",
+ "_": "The feature cards: one entry per feature, and one per part of a feature. main.js shows an entry in the object card when its object is clicked or it's chosen from the panel's Features list; Explore features marks the objects; scripts/14_check_features.mjs checks every entry has its fields, links to an object and names a demo or action that exists. Objects: addon:<id> (an add-on built in addons.js), part:<name> (a part of the room models), placed:<type> (an item from Place items), node:<name> (a named object, such as a wardrobe compartment, which counts only while its door is open), lights (the ceiling lights of the scheme in use), switch (the smart-glass wall switch). After a |, a condition on the room's choices: the object counts for this entry only then. The first object is where Explore's marker goes. Evidence is either 'Expected, not shown.' or a line with its strength and sources from options.json (sourcesFrom: a group, or group:option). Nothing here is measured: every reading and status on a card is simulated.",
  "groups": [
-  { "id": "comfort", "label": "Comfort" },
-  { "id": "bed", "label": "Bed" },
-  { "id": "light", "label": "Light" },
-  { "id": "family", "label": "Family" },
-  { "id": "admission", "label": "Admission" },
-  { "id": "storage", "label": "Storage" }
+  {
+   "id": "comfort",
+   "label": "Comfort"
+  },
+  {
+   "id": "bed",
+   "label": "Bed"
+  },
+  {
+   "id": "light",
+   "label": "Light"
+  },
+  {
+   "id": "family",
+   "label": "Family"
+  },
+  {
+   "id": "admission",
+   "label": "Admission"
+  },
+  {
+   "id": "storage",
+   "label": "Storage"
+  }
  ],
  "features": [
   {
@@ -24,7 +42,9 @@
     "strength": "Observational pilot; randomised trial, stopped early for futility",
     "sourcesFrom": "scheme:circadian"
    },
-   "objects": ["lights"],
+   "objects": [
+    "lights"
+   ],
    "demo": "circadian"
   },
   {
@@ -42,7 +62,12 @@
     "strength": "Project report, not a trial",
     "sourcesFrom": "front:smart"
    },
-   "objects": ["switch", "part:cfg_front_frame", "part:cfg_curtain", "part:cfg_blinds"],
+   "objects": [
+    "switch",
+    "part:cfg_front_frame",
+    "part:cfg_curtain",
+    "part:cfg_blinds"
+   ],
    "demo": "privacy"
   },
   {
@@ -55,8 +80,12 @@
    "awake": "Readable from the pillow. Patient view shows what the patient sees.",
    "sedated": "It stays calm, and darker at night, with nothing that asks for attention.",
    "limits": "It makes no claim about delirium or sleep. It never shows a name, a diagnosis or care information.",
-   "evidence": { "text": "Expected, not shown." },
-   "objects": ["addon:tv|tvplay=off,orientation"],
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:tv|tvplay=off,orientation"
+   ],
    "demo": "orientation"
   },
   {
@@ -69,7 +98,9 @@
    "awake": "The patient can choose what's on, or turn it off.",
    "sedated": "Staff choose, and keep it still and quiet.",
    "limits": "Emergency-ready turns the screens off. Living plants and fish tanks stay out of patient-care areas, as CDC guidance advises.",
-   "evidence": { "text": "Expected, not shown." },
+   "evidence": {
+    "text": "Expected, not shown."
+   },
    "objects": [],
    "demo": "nature"
   },
@@ -82,8 +113,12 @@
    "how": "Choose On under Entertainment, TV. It's drawn in the page at a slow frame rate, and only while the TV is in view.",
    "benefit": "A slow, natural scene to rest the eyes on.",
    "limits": "Placeholder content, not real footage. Emergency-ready turns it off.",
-   "evidence": { "text": "Expected, not shown." },
-   "objects": ["addon:tv|tvplay=on"],
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:tv|tvplay=on"
+   ],
    "demo": "tvScene"
   },
   {
@@ -95,8 +130,12 @@
    "how": "Choose Printed sky under Ceiling above the bed. The panel is 3 by 2.2 m, centred over the bed, and it glows without the room lights.",
    "benefit": "Something to look up at that isn't a light fitting or a ceiling grid.",
    "limits": "A real panel needs a wipe-clean face and a fixing the ceiling can take.",
-   "evidence": { "text": "Expected, not shown." },
-   "objects": ["addon:sky"],
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:sky"
+   ],
    "demo": "skyCeiling"
   },
   {
@@ -108,8 +147,12 @@
    "how": "Choose Digital screen under Aquarium. The fish are drawn in the page, and move only while the screen is in view.",
    "benefit": "The calm of watching fish, with nothing to clean or keep alive.",
    "limits": "CDC guidance says to avoid fish tanks in patient-care areas, which is why it's a screen. Emergency-ready turns it off.",
-   "evidence": { "text": "Expected, not shown." },
-   "objects": ["addon:digital"],
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:digital"
+   ],
    "demo": "digitalAquarium"
   },
   {
@@ -121,24 +164,134 @@
    "how": "Place it from Place items, on any clear stretch of wall. It's about 0.9 by 1.2 m, centred 1.7 m up, clear of wall ledges.",
    "benefit": "Green to look at, from something that's cleaned like any other surface.",
    "limits": "CDC guidance says not to allow fresh flowers or potted plants in patient-care areas for immunosuppressed patients, so real plants stay outside.",
-   "evidence": { "text": "Expected, not shown." },
+   "evidence": {
+    "text": "Expected, not shown."
+   },
    "sourcesFrom": "palms",
-   "objects": ["placed:leafpanel"]
+   "objects": [
+    "placed:leafpanel"
+   ]
   },
   {
    "id": "wardrobe",
    "name": "Built-in sliding wardrobe",
    "group": "storage",
-   "purpose": "Storage for the patient's clothes and belongings, built in floor to ceiling against the back wall, clear of the entry route.",
-   "how": "Two sliding doors on two tracks: the left runs behind the right. Inside are a shelf, a hanging rail and clothes. Flush end and filler panels make it read as joinery, and a fixed panel above the doors hides the track and leaves no top for dust.",
-   "benefit": "Belongings kept together, close at hand and out of sight, so the room looks less cluttered.",
+   "purpose": "Compact, organised storage for the patient's clothing, belongings and daily necessities, built in floor to ceiling against the back wall, clear of the entry route.",
+   "how": "Two flush sliding doors on two tracks, so one side opens at a time: the left door runs behind the right. Behind them, a compartment for each use: daily essentials on a shelf at eye level, a lockable box for valuables, room for a bag, and a rail for clothes. A low-glare light comes on inside when a door opens. Flush end and filler panels make it read as joinery, and a fixed panel over the doors hides the track and leaves no top for dust. A real one would need the wall, services, infection-control requirements and emergency clearances checked.",
+   "benefit": "Belongings kept organised, private and easy to find, and out of sight, so the room looks less cluttered.",
    "awake": "The patient knows where their things are, and can ask for them.",
-   "sedated": "Nurses or family reach belongings for the patient.",
-   "limits": "A design concept. A real one needs the wall, cleaning needs and emergency clearances checked.",
-   "evidence": { "text": "Expected, not shown." },
-   "objects": ["addon:wardrobe"],
-   "actions": ["wardrobe"],
-   "demo": "wardrobe"
+   "sedated": "Nurses or authorised caregivers reach belongings for the patient.",
+   "limits": "It takes about the same floor area as the freestanding wardrobe it replaced: what it adds is height, easier cleaning and a tidier look. A design concept: no inventory display or electronic lock is modelled.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:wardrobe"
+   ],
+   "demo": "wardrobe",
+   "demoLabel": "See how it works",
+   "actions": [
+    "wardrobe:learn",
+    "wardrobe",
+    "demo:wardrobeCompartments",
+    "demo:wardrobeCompare"
+   ]
+  },
+  {
+   "id": "wardrobeClothing",
+   "parent": "wardrobe",
+   "name": "Clothing",
+   "group": "storage",
+   "purpose": "A dedicated area for clean patient clothing and personal garments, keeping belongings organised and separate from clinical supplies.",
+   "how": "A hanging rail behind the right-hand door, with room for shoes below it.",
+   "benefit": "Clothes kept clean, together and ready to wear.",
+   "limits": "Patient clothing only: clinical supplies are kept elsewhere.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "node:wardrobe_part_clothing"
+   ]
+  },
+  {
+   "id": "wardrobeEssentials",
+   "parent": "wardrobe",
+   "name": "Daily essentials",
+   "group": "storage",
+   "purpose": "An accessible shelf for items such as glasses, books and approved everyday necessities.",
+   "how": "A shelf at eye level behind the left-hand door, about 1.5 m up, within reach of someone standing.",
+   "benefit": "Less searching for the things used every day.",
+   "limits": "What may be kept at the bedside is the ward's decision.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "node:wardrobe_part_essentials"
+   ]
+  },
+  {
+   "id": "wardrobeBelongings",
+   "parent": "wardrobe",
+   "name": "Personal belongings",
+   "group": "storage",
+   "purpose": "A section for bags and other permitted belongings, keeping the room organised.",
+   "how": "Space on the cabinet floor behind the left-hand door, for a bag or a small case.",
+   "benefit": "A bag has its own place, instead of standing on the floor.",
+   "limits": "Only permitted belongings: the ward decides what can stay.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "node:wardrobe_part_belongings"
+   ]
+  },
+  {
+   "id": "wardrobeValuables",
+   "parent": "wardrobe",
+   "name": "Secure valuables",
+   "group": "storage",
+   "purpose": "A separately controlled box for permitted valuables.",
+   "how": "A lockable box on a low shelf behind the left-hand door. In this model the keypad is drawn on, and nothing locks.",
+   "benefit": "Valuables kept apart from everyday things, out of sight.",
+   "limits": "In real hospital use, storage and access must follow institutional security policies.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "node:wardrobe_part_valuables"
+   ]
+  },
+  {
+   "id": "wardrobeLighting",
+   "parent": "wardrobe",
+   "name": "Cabinet lighting",
+   "group": "storage",
+   "purpose": "Low-glare light inside the cabinet, for finding belongings in dim conditions.",
+   "how": "A warm strip under the inside top. In this model it comes on while a door is open.",
+   "benefit": "Staff can find things without turning on the room lights.",
+   "limits": "It can be turned off, so it doesn't disturb the patient's rest. No switch or sensor is modelled.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "node:wardrobe_part_lighting"
+   ]
+  },
+  {
+   "id": "wardrobeDoors",
+   "parent": "wardrobe",
+   "name": "Sliding doors",
+   "group": "storage",
+   "purpose": "Flush sliding doors, which open without swinging out into the room.",
+   "how": "Two doors on two tracks, hung from above behind the fixed panel, with a guide at the foot. One side opens at a time.",
+   "benefit": "Nothing swings into the space where staff work.",
+   "limits": "The freestanding wardrobe it replaced had sliding doors too, so the mechanism isn't new.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "node:wardrobe_part_doors"
+   ]
   },
   {
    "id": "soundSensor",
@@ -146,16 +299,25 @@
    "group": "comfort",
    "purpose": "A closed door keeps a patient's voice in. This sensor concept gives that hearing back: it would recognise a groan or a call for help and put a notice in front of the nurse outside, who looks in through the glass before deciding to enter. Simulated here by the two buttons.",
    "byRoom": {
-    "W1": { "purpose": "A closed isolation door keeps the air in, and the patient's voice with it. This sensor concept gives that hearing back: it would recognise a groan or a call for help and put a notice in front of the nurse outside, who looks in through the glass before deciding to enter. Simulated here by the two buttons." }
+    "W1": {
+     "purpose": "A closed isolation door keeps the air in, and the patient's voice with it. This sensor concept gives that hearing back: it would recognise a groan or a call for help and put a notice in front of the nurse outside, who looks in through the glass before deciding to enter. Simulated here by the two buttons."
+    }
    },
    "how": "The sensor would classify sounds on the device. A call for help asks for a look now. One groan asks for a look when the nurse can, and a third within a minute for a look now. Its light changes colour, and the notice says what was heard. The nurse decides whether to go in.",
    "benefit": "A patient behind a closed door can still be heard.",
    "awake": "A call for help reaches the nurse without a button.",
    "sedated": "Ventilated or sedated patients may make no sound. Quiet is never a sign that all is well.",
-   "evidence": { "text": "Expected, not shown." },
+   "evidence": {
+    "text": "Expected, not shown."
+   },
    "rowsFrom": "vocalCue",
-   "objects": ["addon:soundSensor"],
-   "actions": ["sound:call", "sound:groan"]
+   "objects": [
+    "addon:soundSensor"
+   ],
+   "actions": [
+    "sound:call",
+    "sound:groan"
+   ]
   },
   {
    "id": "comfortControl",
@@ -165,9 +327,13 @@
    "how": "The Comfort systems section has two SIMULATED sliders, for temperature and humidity. They change this control's status light: blue when cool, amber when warm. Nothing is heated, cooled or measured.",
    "benefit": "One place by the door where staff can see the room's comfort settings.",
    "limits": "No hospital-approved temperature limits were supplied, so nothing is set from here. Cleaning the air is the plant room's job.",
-   "evidence": { "text": "Expected, not shown." },
+   "evidence": {
+    "text": "Expected, not shown."
+   },
    "rowsFrom": "cleanAir",
-   "objects": ["addon:comfortControl"]
+   "objects": [
+    "addon:comfortControl"
+   ]
   },
   {
    "id": "daylightSensor",
@@ -177,8 +343,12 @@
    "how": "By day, Comfort mode lowers the blinds against glare. After sunset there's no glare to block, so Comfort mode and PACS leave the blinds alone and change only the lighting. In this model the sun's height at the room's solar hour stands in for its reading.",
    "benefit": "The blinds don't close on an evening view for no reason.",
    "limits": "A concept: it isn't connected to anything, and it reads nothing here.",
-   "evidence": { "text": "Expected, not shown." },
-   "objects": ["addon:daylightSensor"],
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:daylightSensor"
+   ],
    "demo": "daylight"
   }
  ]
