@@ -53,21 +53,23 @@
     <button type="button" data-mode="emergency" class="mode-emergency" aria-pressed="false">Emergency-ready</button>
     <span class="alarm-chip"><span class="dot" aria-hidden="true"></span>Clinical alarms unaffected</span>
   </div>
-  <div id="patientBar" class="mode-bar patient-bar" role="group" aria-labelledby="patientTitle">
-    <span id="patientTitle" class="mode-title">Patient</span>
-    <div class="mode-seg">
-      <button type="button" data-state="sedated" aria-pressed="false">Sedated</button>
-      <button type="button" data-state="awake" aria-pressed="true">Awake</button>
-      <button type="button" data-state="recovering" aria-pressed="false">Recovering</button>
+  <div class="hud-row">
+    <div id="patientBar" class="mode-bar patient-bar" role="group" aria-labelledby="patientTitle">
+      <span id="patientTitle" class="mode-title">Patient</span>
+      <div class="mode-seg">
+        <button type="button" data-state="sedated" aria-pressed="false">Sedated</button>
+        <button type="button" data-state="awake" aria-pressed="true">Awake</button>
+        <button type="button" data-state="recovering" aria-pressed="false">Recovering</button>
+      </div>
+      <button type="button" id="openBedside" class="patient-screens">Bedside screens</button>
     </div>
-    <button type="button" id="openBedside" class="patient-screens">Bedside screens</button>
+    <div class="explore-row">
+      <button type="button" id="exploreToggle" class="explore-toggle" aria-pressed="false">Explore features</button>
+      <button type="button" id="acousticToggle" class="explore-toggle" aria-pressed="false">Acoustic comfort mode</button>
+      <div id="exploreFilters" class="explore-filters" role="group" aria-label="Show features of one kind" hidden></div>
+    </div>
   </div>
   <p id="patientNote" class="mode-note" hidden></p>
-  <div class="explore-row">
-    <button type="button" id="exploreToggle" class="explore-toggle" aria-pressed="false">Explore features</button>
-    <button type="button" id="acousticToggle" class="explore-toggle" aria-pressed="false">Acoustic comfort mode</button>
-    <div id="exploreFilters" class="explore-filters" role="group" aria-label="Show features of one kind" hidden></div>
-  </div>
   <p id="modeNote" class="mode-note" hidden></p>
   <p id="compareNote" class="mode-note" hidden>Before: today's room, with every option at its default and none of the added items, at the same view and time. Press Compare again for yours; your design and its link are unchanged.</p>
   <p id="clinicalNote" class="mode-note" hidden>Clinical view: equipment labels, and hatched keep-clear areas for care around the bed. Illustrative, without dimensions: not a clinical or compliance check.</p>

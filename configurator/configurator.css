@@ -271,7 +271,14 @@ footer p { margin: 0; }
 
 /* Explore features: a button above the room, a filter by kind, and a mark on everything registered */
 .explore-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.explore-toggle { min-height: 36px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: 500 13px/1.2 var(--ui); box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in); }
+/* the Patient bar and the two buttons share a row where there's room, so the bars above the room stay short */
+.hud-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; pointer-events: none; }
+.hud-row > * { pointer-events: auto; }
+.hud-row .explore-row { pointer-events: none; }
+.hud-row .explore-row > * { pointer-events: auto; }
+/* where the row would wrap, the Bedside screens shortcut goes: the panel's Bedside screens buttons do the same */
+@media (min-width: 821px) and (max-width: 1140px) { .patient-bar .patient-screens { display: none; } }
+.explore-toggle { min-height: 36px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: 500 13px/1.2 var(--ui); box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in); }
 .explore-toggle:active { transform: scale(var(--press)); }
 .explore-filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .explore-filters button { min-height: 30px; padding: 4px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); font: 500 12px/1.2 var(--ui); cursor: pointer; }
