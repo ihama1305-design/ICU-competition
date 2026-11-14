@@ -133,10 +133,40 @@ function restful({ onPart, onEnd }) {
   later(LENGTH * 1000, () => onEnd());
 }
 
-const SCENES = { noisy: noisyRoom, restful };
+/**
+ * Familiar music, as family might choose it: here an original slow tune, made up for this page, not a recording of anything.
+ * Soft triangle notes on a pentatonic scale, all under 600 Hz, legato, about twenty-four seconds.
+ */
+function music({ onPart, onEnd }) {
+  onPart("music");
+  const tune = [[294, 1], [330, 1], [392, 2], [330, 1], [294, 1], [262, 2], [294, 1], [330, 1], [392, 1], [440, 1], [392, 3],
+    [330, 1], [392, 1], [440, 2], [392, 1], [330, 1], [294, 2], [262, 1], [294, 1], [330, 1], [294, 4]];
+  const beat = 0.62, t0 = ctx.currentTime + 0.1;
+  let at = t0;
+  for (const [f, n] of tune) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), len = n * beat;
+    o.type = "triangle"; o.frequency.value = Math.min(f, 590);
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(0.07, at + 0.08);
+    g.gain.setTargetAtTime(0.04, at + 0.1, 0.3);
+    g.gain.setTargetAtTime(0.0001, at + len - 0.05, 0.12);
+    o.connect(g).connect(master);
+    o.start(at); o.stop(at + len + 0.4);
+    scene.nodes.push(o);
+    at += len;
+  }
+  // a low, held note under it
+  const bass = ctx.createOscillator(), bg = ctx.createGain();
+  bass.type = "sine"; bass.frequency.value = 147;
+  bg.gain.setValueAtTime(0, t0); bg.gain.linearRampToValueAtTime(0.035, t0 + 2); bg.gain.setValueAtTime(0.035, at - 2); bg.gain.linearRampToValueAtTime(0, at);
+  bass.connect(bg).connect(master); bass.start(t0); bass.stop(at + 0.1); scene.nodes.push(bass);
+  later((at - ctx.currentTime) * 1000 + 300, () => onEnd());
+}
+
+const SCENES = { noisy: noisyRoom, restful, music };
 
 /**
- * Play a scene: "noisy" (the room without, then with, the fittings) or "restful". Only ever called from a press on
+ * Play a scene: "noisy" (the room without, then with, the fittings), "restful", or "music" (family connection's familiar music). Only ever called from a press on
  * Play demo sound, so a browser's autoplay rule and this site's agree. Replaces any scene already playing.
  */
 export function playSound(name, { onEvent = () => {}, onPart = () => {}, onEnd = () => {} } = {}) {
