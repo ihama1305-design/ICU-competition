@@ -53,12 +53,25 @@ p { margin: 0; }
 .top nav { display: flex; flex-wrap: wrap; gap: 0 4px; margin-inline: -10px; }
 .top nav a { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding-inline: 10px; border-radius: 4px; font-size: 0.95rem; color: var(--muted); text-decoration: none; }
 .top nav a::after { left: 10px; right: 10px; bottom: 9px; height: 1.5px; }
-/* on a phone nine links would wrap to three rows and push the headline down: one row that scrolls sideways, fading at its end */
+.menu { display: none; }
+/* on a phone nine links would wrap to three rows and push the headline down. With scripts, one Menu button opens them all,
+   two to a row; without, they are one row that scrolls sideways, fading at its end */
 @media (max-width: 720px) {
-  .top nav { flex-wrap: nowrap; width: calc(100% + 20px); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
-  .top nav::-webkit-scrollbar { display: none; }
-  .top nav a { flex: none; }
-  .top nav a:last-child { margin-right: 36px; }
+  .has-menu .menu { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: var(--r-s); background: transparent; color: var(--text); font: 600 0.95rem var(--sans); cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in); }
+  .has-menu .menu::after { content: ""; width: 7px; height: 7px; margin-top: -4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform var(--t-spring) var(--spring); }
+  .has-menu .menu[aria-expanded="true"] { background: var(--teal-soft); transition: transform var(--t-spring) var(--spring), background-color var(--t-enter) var(--ease-out); }
+  .has-menu .menu[aria-expanded="true"]::after { margin-top: 4px; transform: rotate(-135deg); }
+  .has-menu .menu:active { transform: scale(var(--press)); transition: transform var(--t-press) var(--spring); }
+  .has-menu .top nav { display: none; }
+  .has-menu .top.open nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; gap: 0 12px; flex-basis: 100%; margin-inline: 0; padding-bottom: 6px; animation: rise var(--t-enter) var(--ease-out); }
+  .has-menu .top.open nav a { padding-inline: 0; border-top: 1px solid var(--border); border-radius: 0; font-size: 1rem; color: var(--text); }
+  .has-menu .top.open nav a::after { content: none; }
+}
+@media (max-width: 720px) {
+  html:not(.has-menu) .top nav { flex-wrap: nowrap; width: calc(100% + 20px); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+  html:not(.has-menu) .top nav::-webkit-scrollbar { display: none; }
+  html:not(.has-menu) .top nav a { flex: none; }
+  html:not(.has-menu) .top nav a:last-child { margin-right: 36px; }
 }
 
 /* buttons: a fill wipes up on hover and leaves through the top; a press scales down and springs back */
@@ -83,8 +96,24 @@ p { margin: 0; }
 .hero figure a { display: block; overflow: hidden; border-radius: var(--r-l); border: 1px solid var(--border); background: var(--teal-soft); }
 figcaption { margin-top: 10px; font-size: 0.9rem; line-height: 1.45; color: var(--muted); max-width: 62ch; }
 figcaption b { color: var(--text); font-weight: 600; }
+/* what a picture's link opens, when that isn't the picture itself */
+figcaption .opens { display: block; margin-top: 4px; font-size: 0.85rem; }
 @media (min-width: 960px) {
   .hero .wrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; }
+}
+/* one column: the picture comes straight after the headline, and the first action straight after the picture, so the first
+   screen shows the room and what to do with it. The paragraph that sat between them follows. The copy's own box steps
+   aside so that its parts and the picture can be put in one order. */
+@media (max-width: 959px) {
+  .hero { padding-top: clamp(16px, 4vw, 40px); }
+  .hero .wrap { gap: 18px; }
+  .hero-copy { display: contents; }
+  .hero-copy > .eyebrow { order: 1; }
+  .hero-copy > h1 { order: 2; }
+  .rooms { order: 3; }
+  .hero-copy > .actions { order: 4; }
+  .hero-copy > .lede { order: 5; }
+  .hero-copy > .proof { order: 6; }
 }
 
 /* room carousel: each room and its caption in a snapping scroller, so it still swipes without the script */
