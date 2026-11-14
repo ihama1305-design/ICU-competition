@@ -18,9 +18,12 @@ import { PACS } from "./pacs.js";
 import { RoomModes, modeText } from "./modes.js";
 import { HORIZON_DEG } from "./solar.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
-import { ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById, wallsOf } from "./placed.js";
+import { CHECK, ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById, wallsOf } from "./placed.js";
 import { ClinicalView } from "./clinical.js";
 import { GuidedTour, CAVEAT } from "./guide.js";
+import { Features } from "./features.js";
+import { Highlight } from "./highlight.js";
+import { ACTIONS, DEMOS, HOLD_MS as DEMO_HOLD_MS } from "./demos.js";
 import { LookHint } from "./hint.js";
 import { readChoice, saveChoice, readMeasured, saveMeasured, startTier, handheld, pickTier, probe } from "./quality.js";
 
@@ -301,6 +304,9 @@ canvas.addEventListener("keydown", e => {
 // ---------------------------------------------------------------- options, from options.json
 let optionData = null, panelUi = null;
 const selected = {};
+// options a feature demo is showing without choosing them (demos.js): the panel, the link and the summary keep `selected`
+const demoShown = {};
+const shownChoice = id => demoShown[id] ?? selected[id];
 const optionOf = (groupId, optionId) => groupById(groupId).options.find(o => o.id === optionId);
 const groupById = id => optionData.sections.flatMap(s => s.groups).find(g => g.id === id);
 
@@ -551,15 +557,11 @@ $("vocalAck").addEventListener("click", () => {
   endVocalCue("Acknowledged. The sensor's light is green again. Nothing was recorded.");
   canvas.focus({ preventScroll: true });
 });
-$("closeObjectCard").addEventListener("click", () => { $("objectCard").hidden = true; canvas.focus({ preventScroll: true }); });
+$("closeObjectCard").addEventListener("click", () => closeCard());
 $("objectAction").addEventListener("click", e => {
-  if (e.currentTarget.dataset.action === "wardrobe") {
-    const open = toggleWardrobe(stage.current);
-    e.currentTarget.textContent = open ? "Slide doors closed" : "Slide doors open";
-    stage.renderer.shadowMap.needsUpdate = true;
-    invalidate();
-  } else if (e.currentTarget.dataset.action.startsWith("sound:")) {
-    simulateSound(e.currentTarget.dataset.action.slice(6));
+  const handler = ACTION_HANDLERS[e.currentTarget.dataset.action];
+  if (handler) {
+    handler.run(e.currentTarget);
   } else if (e.currentTarget.dataset.action.startsWith("apis:")) {
     apis.open(e.currentTarget.dataset.action.slice(5));
   } else if (e.currentTarget.dataset.action === "pacs") {
@@ -570,7 +572,8 @@ $("objectAction").addEventListener("click", e => {
   }
 });
 $("objectAction2").addEventListener("click", e => {
-  if (e.currentTarget.dataset.action.startsWith("sound:")) { simulateSound(e.currentTarget.dataset.action.slice(6)); return; }
+  const handler = ACTION_HANDLERS[e.currentTarget.dataset.action];
+  if (handler) { handler.run(e.currentTarget); return; }
   const found = placement.find(Number(e.currentTarget.dataset.action.slice(7)));
   if (found) removePlaced(found.entry);
 });
@@ -581,12 +584,13 @@ function syncUi() {
   const theme = currentTheme();
   $("themes").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.value === theme?.id)));
   $("themeNote").textContent = theme ? theme.blurb : "Your own combination. Choose a theme to start again from it.";
+  if (features?.on) refreshExplore(); // a choice can add, move or swap what Explore marks
   remember();
 }
 
 // ---------------------------------------------------------------- sharing: the room is in the URL
-// while today's room is showing for comparison, the link and summary stay with the visitor's own design
-const specCode = () => (compare ? compare.code : encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))));
+// while today's room is showing for comparison, or a feature demo runs, the link and summary stay with the visitor's own design
+const specCode = () => (compare ? compare.code : demo ? demo.snap.code : encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))));
 let rememberTimer = 0;
 function remember() {
   if (!optionData || !window.__configReady) return;
@@ -735,10 +739,10 @@ canvas.addEventListener("keydown", () => { if (tour.running) tour.stop(); });
 const apis = new APIS({ stage, rig, controls, invalidate, stopTour: () => tour.stop() });
 const pacs = new PACS({ stage, lighting, rig, controls, relight, invalidate,
   stopTour: () => tour.stop(), getState: () => state, isDark: () => afterDark(),
-  closeApis: () => { endVocalCue(); endCompare(); endMode(); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
+  closeApis: () => { endVocalCue(); endCompare(); endMode(); setExplore(false); const enabled = apis.enabled; if (apis.active) { apis.dialog.close(); apis.restore(); } apis.setEnabled(false); return enabled; },
   restoreApisMarkers: on => apis.setEnabled(on),
 });
-apis.beforeOpen = () => { if (pacs.active) pacs.exit(); };
+apis.beforeOpen = () => { endDemo(); setExplore(false); if (pacs.active) pacs.exit(); };
 pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); describe(); };
 
 // ---------------------------------------------------------------- room modes: scenes over the configured room (modes.js)
@@ -750,9 +754,10 @@ const modeApi = {
     const node = stage.current?.root.getObjectByName("cfg_blinds");
     return node && (stage.current.parts.cfg_blinds || []).some(n => n.visible) ? node.scale.y : 0;
   },
-  configuredBlinds: () => optionOf("blinds", selected.blinds)?.effects.find(e => e.do === "blinds")?.level ?? 0,
+  configuredBlinds: () => optionOf("blinds", shownChoice("blinds"))?.effects.find(e => e.do === "blinds")?.level ?? 0,
   setBlinds: level => { EFFECTS.blinds({ level }); stage.renderer.shadowMap.needsUpdate = true; invalidate(); },
-  restore: ids => { for (const id of ids) runEffects(groupById(id), selected[id]); stage.renderer.shadowMap.needsUpdate = true; invalidate(); },
+  // a mode lays itself over what the room shows: its choices, or what a feature demo is showing in their place
+  restore: ids => { for (const id of ids) runEffects(groupById(id), shownChoice(id)); stage.renderer.shadowMap.needsUpdate = true; invalidate(); },
   screens: on => {
     if (!on) setTv(stage.current, { playing: false });
     // the digital aquarium's picture; its dark case stays, like a screen that's off
@@ -761,7 +766,7 @@ const modeApi = {
   },
   glassClear: () => { glass.set({ mode: "clear", opaque: false }); EFFECTS.visible({ part: "cfg_curtain", on: false }); },
   // only smart glass changes: a clear front has its curtain, and a blinds front its slats, closed already
-  glassPrivate: () => { if (selected.front === "smart") glass.set({ opaque: true }); },
+  glassPrivate: () => { if (shownChoice("front") === "smart") glass.set({ opaque: true }); },
   overlay: on => { clinicalByMode = on; syncClinical(); },
   beforeChange: () => { if (pacs.active) pacs.exit(); },
   changed: name => syncModes(name),
@@ -833,10 +838,93 @@ const OBJECT_DETAILS = {
   cfg_front_frame: ["Glazed room front", "The room-front frame and glazing concept."],
 };
 
-function showObjectCard(info, x, y) {
+// ---------------------------------------------------------------- feature cards (features.json, features.js, highlight.js)
+let features = null; // the registry against the room on show, once features.json has loaded
+const highlight = new Highlight();
+let cardOpener = null, cardFromSheet = false; // where focus goes back to when the card closes, and whether a phone's sheet was open
+
+/** The card buttons a feature names in `actions` (demos.js lists them): what each says, and what it does. */
+const ACTION_HANDLERS = {
+  wardrobe: {
+    label: () => (stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open"),
+    run: b => { const open = toggleWardrobe(stage.current); b.textContent = open ? "Slide doors closed" : "Slide doors open"; stage.renderer.shadowMap.needsUpdate = true; invalidate(); refreshExplore(); },
+  },
+  "sound:call": { label: () => "Simulate a call for help", run: () => simulateSound("call") },
+  "sound:groan": { label: () => "Simulate a groan", run: () => simulateSound("groan") },
+};
+for (const a of ACTIONS) if (!ACTION_HANDLERS[a]) window.__configErrors.push(`No handler for the card action ${a}`);
+
+const optionName = (group, id) => optionOf(group, id)?.label ?? id;
+/** A line on a feature's card about the room on show: is it on here, and what does it read. Simulated, like the rest. */
+const FEATURE_STATUS = {
+  circadian: () => (selected.scheme === "circadian" ? "In this room: on." : `In this room: the lighting is ${optionName("scheme", selected.scheme).toLowerCase()}. Choose Circadian under Lighting, or see it in action.`),
+  privacy: () => `In this room: the glazed front is ${optionName("front", selected.front).toLowerCase()}.`,
+  orientation: () => (selected.tvplay === "orientation" ? "In this room: on." : `In this room: the TV is ${optionName("tvplay", selected.tvplay).toLowerCase()}.`),
+  tvScene: () => (selected.tvplay === "on" ? "In this room: on." : `In this room: the TV is ${optionName("tvplay", selected.tvplay).toLowerCase()}.`),
+  skyCeiling: () => (selected.ceiling === "sky" ? "In this room: on." : "In this room: the ceiling is plain."),
+  digitalAquarium: () => (selected.aquarium === "digital" ? "In this room: on." : `In this room: ${selected.aquarium === "none" ? "no aquarium" : "the sealed tank instead"}.`),
+  biophilicPanel: () => { const n = placement.list(state.room).filter(p => p.type === "leafpanel").length; return n ? `In this room: ${n} placed.` : "In this room: none placed yet."; },
+  wardrobe: () => (selected.wardrobe === "on" ? `In this room: doors ${stage.current?.addons?.wardrobe?.userData.open ? "open" : "closed"}.` : "In this room: off. Turn it on under Furniture and bathroom."),
+  soundSensor: () => (selected.soundSensor === "on" ? "" : "In this room: hidden. Show it under Sound-level indicator."),
+  comfortControl: () => `SIMULATED readout: ${$("demoTempValue").textContent}, ${$("demoHumidityValue").textContent}.`,
+  daylightSensor: () => { const e = daylight.elevation; return `Now: the sun is ${Math.abs(e).toFixed(0)}° ${e >= 0 ? "above" : "below"} the horizon at ${clock(state.hour)}, so ${afterDark() ? "it's after sunset" : "it's daylight"}.`; },
+};
+
+const link = s => Object.assign(document.createElement("a"), { href: s.url, textContent: s.label, target: "_blank", rel: "noopener noreferrer" });
+/** Sources from options.json, named as a group ("palms") or one of its options ("front:smart"), so a source lives in one place. */
+function sourcesOf(ref) {
+  if (!ref) return [];
+  const [g, o] = ref.split(":");
+  return (o ? optionOf(g, o)?.note?.sources : groupById(g)?.note?.sources) || [];
+}
+
+/** Fill the card's feature parts, or hide them for an object that isn't a feature. */
+function fillFeature(f) {
+  const facts = $("featureFacts"), how = $("featureHow");
+  $("objectKicker").textContent = !f ? "Selected object" : f.parent ? `Part of ${features.get(f.parent).name}` : `Feature · ${features.groupLabel(f.group)}`;
+  const status = f ? FEATURE_STATUS[f.id]?.() || "" : "";
+  $("featureStatus").textContent = status;
+  $("featureStatus").hidden = !status;
+  how.hidden = !f?.how;
+  how.open = false; // short text first: How it works is there to open
+  $("featureHowText").textContent = f?.how || "";
+  const rows = f ? [["Benefit", f.benefit], ["Awake", f.awake], ["Sedated", f.sedated], ["Limits", f.limits]].filter(([, t]) => t) : [];
+  facts.replaceChildren(...rows.flatMap(([k, t]) => [el("dt", { textContent: k }), el("dd", { textContent: t })]));
+  facts.hidden = !rows.length;
+  const ev = $("featureEvidence");
+  ev.replaceChildren();
+  if (f) {
+    ev.append(el("span", { className: "evidence-label", textContent: "Evidence " }), f.evidence.text);
+    if (f.evidence.strength) ev.append(" ", el("span", { className: "evidence-strength", textContent: `(${f.evidence.strength})` }));
+    const s = sourcesOf(f.evidence.sourcesFrom);
+    if (s.length) { ev.append(" "); s.forEach((src, i) => { ev.append(link(src)); if (i < s.length - 1) ev.append("; "); }); }
+  }
+  ev.hidden = !f;
+  const demoButton = $("featureDemo");
+  demoButton.hidden = !f?.demo;
+  demoButton.dataset.demo = f?.demo || "";
+  // a feature with more than two actions lists them in a short menu, so the card stays one row of buttons
+  const menu = $("featureMenu"), acts = f?.actions || [];
+  menu.hidden = $("featureMenuToggle").hidden = acts.length <= 2;
+  $("featureMenuToggle").setAttribute("aria-expanded", "false");
+  $("featureMenuList").hidden = true;
+  $("featureMenuList").replaceChildren(...(acts.length > 2 ? acts : []).map(a => {
+    const b = el("button", { type: "button", className: "outline-action", textContent: ACTION_HANDLERS[a].label() });
+    b.dataset.action = a;
+    return b;
+  }));
+}
+
+/** opener: where focus goes back to when the card closes; by default whatever has focus as it opens. */
+function showObjectCard(info, x, y, opener = document.activeElement) {
   const card = $("objectCard"), action = $("objectAction"), action2 = $("objectAction2");
-  $("objectTitle").textContent = info.title;
-  $("objectDescription").textContent = info.description;
+  const f = info.feature ? features.get(info.feature) : null;
+  if (!card.contains(opener)) cardOpener = opener;
+  card.dataset.feature = f?.id || "";
+  fillFeature(f);
+  $("objectTitle").textContent = f ? f.name : info.title;
+  const text = f ? features.text(f, "purpose") : info.description;
+  $("objectDescription").textContent = text;
   action.hidden = !info.action;
   action.dataset.action = info.action || "";
   // a placed item: turn it (on the floor) and remove it, by button or, with the card focused, by key
@@ -849,37 +937,332 @@ function showObjectCard(info, x, y) {
     action.hidden = !onFloor;
     action.textContent = "Turn 45°";
     action2.textContent = "Remove";
-    $("objectDescription").textContent = `${info.description} Drag it to move it. With this card focused, the arrow keys move it${onFloor ? ", R turns it" : ""} and Delete removes it.`;
+    $("objectDescription").textContent = `${f ? `${text} ${CHECK}` : text} Drag it to move it. With this card focused, the arrow keys move it${onFloor ? ", R turns it" : ""} and Delete removes it.`;
+  } else if (f) {
+    const acts = f.actions || [], few = acts.length <= 2;
+    for (const [b, a] of [[action, few ? acts[0] : null], [action2, few ? acts[1] : null]]) {
+      b.hidden = !a; b.dataset.action = a || "";
+      if (a) b.textContent = ACTION_HANDLERS[a].label();
+    }
   }
   // a card that cites a source: the same links as the option note it names, so a source lives in one place, options.json
   // a card with a short table: rows from a named block of options.json, in the column for this kind of room where the block
   // has one. The comfort control's clean-air rows are the same list as the ventilation plan's, and the block's link leads to
   // the basis there; the sound sensor's are the limits of the vocal-distress cue
-  const table = info.rowsFrom ? optionData[info.rowsFrom] : null, kind = rig.meta.isolation ? "isolation" : "patient";
+  const rowsFrom = f ? f.rowsFrom : info.rowsFrom, sourcesFrom = f ? f.sourcesFrom : info.sourcesFrom;
+  const table = rowsFrom ? optionData[rowsFrom] : null, kind = rig.meta.isolation ? "isolation" : "patient";
   $("objectRowsTitle").textContent = table ? table.titles?.[kind] ?? table.title : "";
   $("objectRows").replaceChildren(...(table?.rows || []).flatMap(r => [el("dt", { textContent: r.label }), el("dd", { textContent: r[kind] ?? r.text })]));
   $("objectRowsTitle").hidden = $("objectRows").hidden = !table;
-  const sources = table?.sources || (info.sourcesFrom ? groupById(info.sourcesFrom)?.note?.sources || [] : []);
-  $("objectSources").replaceChildren(...sources.map(s => Object.assign(document.createElement("a"), { href: s.url, textContent: s.label, target: "_blank", rel: "noopener noreferrer" })));
+  const sources = table?.sources || (sourcesFrom ? groupById(sourcesFrom)?.note?.sources || [] : []);
+  $("objectSources").replaceChildren(...sources.map(link));
   $("objectSources").hidden = !sources.length;
-  if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
-  else if (info.action === "soundCue") { // the sensor's two simulated sounds, as in the Comfort systems section
-    action.textContent = "Simulate a call for help"; action.dataset.action = "sound:call";
-    action2.textContent = "Simulate a groan"; action2.dataset.action = "sound:groan"; action2.hidden = false;
+  if (!f) {
+    if (info.action === "wardrobe") action.textContent = stage.current.addons?.wardrobe?.userData.open ? "Slide doors closed" : "Slide doors open";
+    else if (info.action === "soundCue") { // the sensor's two simulated sounds, as in the Comfort systems section
+      action.textContent = "Simulate a call for help"; action.dataset.action = "sound:call";
+      action2.textContent = "Simulate a groan"; action2.dataset.action = "sound:groan"; action2.hidden = false;
+    }
+    else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";
+    else if (info.action === "pacs") action.textContent = "Physiological Adaptive Mode";
   }
-  else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";
-  else if (info.action === "pacs") action.textContent = "Physiological Adaptive Mode";
   card.hidden = false;
+  card.scrollTop = 0;
+  placeCard(card, x, y);
+  card.tabIndex = -1;
+  card.focus({ preventScroll: true });
+  // the feature whose card is open stays outlined, in place of the one under the pointer
+  setHover(null);
+  if (f) highlight.show("card", features.objects(f.id)); else highlight.clear("card");
+  invalidate();
+}
+
+/**
+ * Put the card by the point it was opened from, clear of the options panel (or PACS's), of the room-mode bar and of every
+ * notice above the room. If there isn't room for all of it, it scrolls.
+ */
+function placeCard(card, x, y) {
+  card.style.maxHeight = "";
   const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : panel.getBoundingClientRect();
+  const phone = matchMedia("(max-width: 820px)").matches;
   let left = x + 14, top = y + 14;
   if (left + rect.width > panelRect.left && x < panelRect.left) left = Math.max(12, panelRect.left - rect.width - 12);
   if (left + rect.width > innerWidth - 12) left = innerWidth - rect.width - 12;
-  if (matchMedia("(max-width: 820px)").matches && top + rect.height > panelRect.top) top = Math.max(12, panelRect.top - rect.height - 10);
-  if (top + rect.height > innerHeight - 12) top = innerHeight - rect.height - 12;
-  card.style.left = `${Math.max(12, left)}px`;
-  card.style.top = `${Math.max(12, top)}px`;
-  card.tabIndex = -1;
-  card.focus({ preventScroll: true });
+  left = Math.max(12, left);
+  // the bar and the notices sit at the top left: a card that would overlap any of them goes below the lowest it meets
+  const above = [...$("hud").children].filter(n => !n.hidden && n.offsetParent).map(n => restingRect(n)).filter(r => r.width && left < r.right && left + rect.width > r.left);
+  const floor = above.reduce((m, r) => Math.max(m, r.bottom), 0);
+  const bottom = phone && panelRect.height ? panelRect.top - 10 : innerHeight - 12;
+  if (top < floor + 10) top = floor + 10;
+  if (top + rect.height > bottom) top = Math.max(floor + 10, bottom - rect.height);
+  card.style.left = `${left}px`;
+  card.style.top = `${top}px`;
+  if (top + rect.height > bottom) card.style.maxHeight = `${Math.max(140, bottom - top)}px`;
+}
+
+/** Close the card and give focus back to whatever opened it: the room, a marker, or the button in the Features list. */
+function closeCard() {
+  const card = $("objectCard");
+  if (card.hidden) return;
+  card.hidden = true;
+  const back = cardOpener?.isConnected && cardOpener !== document.body && !cardOpener.closest("[hidden]") ? cardOpener : canvas;
+  cardOpener = null;
+  if (cardFromSheet && isPhone()) setSheet(true);
+  cardFromSheet = false;
+  back.focus({ preventScroll: true });
+}
+// however the card goes (its close button, Esc, a click on nothing, a placed item removed), its outline goes with it
+new MutationObserver(() => { if ($("objectCard").hidden && highlight.clear("card")) invalidate(); }).observe($("objectCard"), { attributes: true, attributeFilter: ["hidden"] });
+
+/** Open an entry's card: by its object if that's on screen, otherwise beside the panel. */
+function openFeature(id, from) {
+  const at = features.anchor(id);
+  let x = 24, y = 24;
+  if (at) {
+    const p = at.clone().project(stage.camera), sx = ((p.x + 1) / 2) * innerWidth, sy = ((1 - p.y) / 2) * innerHeight;
+    if (p.z < 1 && sx > 0 && sx < rig.visible.w && sy > 0 && sy < innerHeight) { x = sx; y = sy; }
+  }
+  // on a phone the open sheet would leave the card no room: it closes, and opens again when the card does
+  cardFromSheet = isPhone() && !!from && panel.contains(from) && panel.classList.contains("open");
+  if (cardFromSheet) setSheet(false);
+  const f = features.get(id), placedOne = f.objects.some(o => o.startsWith("placed:")) ? features.objects(id)[0] : null;
+  const action = placedOne?.userData.itemInfo?.action;
+  showObjectCard({ feature: id, ...(action ? { action } : {}) }, x, y, from || document.activeElement);
+}
+
+// ---------------------------------------------------------------- hover: on a desktop, the feature under the pointer is outlined
+const hoverable = matchMedia("(hover: hover) and (pointer: fine)");
+let hoverAt = null, hoverId = null, hoverQueued = false;
+canvas.addEventListener("pointermove", e => {
+  if (!features || !hoverable.matches || e.pointerType !== "mouse") return;
+  hoverAt = e.buttons ? null : [e.clientX, e.clientY];
+  if (!hoverQueued) { hoverQueued = true; requestAnimationFrame(hoverCheck); }
+});
+canvas.addEventListener("pointerleave", () => { hoverAt = null; setHover(null); });
+function hoverCheck() {
+  hoverQueued = false;
+  if (!hoverAt || !stage.current || placing || moving || apis.active || pacs.active || rig.tween || document.body.classList.contains("dragging-item")) { setHover(null); return; }
+  const hit = nearestSolid(rayAt(...hoverAt));
+  setHover(hit ? features.at(hit.object)?.id ?? null : null);
+}
+/** One draw per change: nothing is drawn while the pointer moves within the same feature, or over nothing. */
+function setHover(id) {
+  if (id === hoverId) return;
+  hoverId = id;
+  canvas.classList.toggle("over-feature", !!id);
+  const open = $("objectCard").hidden ? "" : $("objectCard").dataset.feature;
+  if (id && id !== open) highlight.show("hover", features.objects(id)); else highlight.clear("hover");
+  invalidate();
+}
+
+// ---------------------------------------------------------------- Explore features: every registered object marked, by group
+function setExplore(on, filter) {
+  if (!features || (on === features.on && filter === undefined)) return;
+  features.set(on, filter === undefined ? features.filter : filter);
+  syncExplore();
+  if (on) say(`Explore features on: ${features.marked().length} features marked${features.filter ? `, ${features.groupLabel(features.filter)} only` : ""}. Click a mark for its card.`);
+  else say("Explore features off.");
+}
+function syncExplore() {
+  if (!features) return;
+  const on = features.on;
+  $("exploreToggle").setAttribute("aria-pressed", String(on));
+  $("exploreFilters").hidden = !on;
+  if (on) {
+    const groups = features.groupsHere();
+    if (features.filter && !groups.some(g => g.id === features.filter)) features.filter = null;
+    $("exploreFilters").replaceChildren(...[{ id: "", label: "All" }, ...groups].map(g => {
+      const b = el("button", { type: "button", textContent: g.label });
+      b.dataset.group = g.id;
+      b.setAttribute("aria-pressed", String((features.filter || "") === g.id));
+      return b;
+    }));
+  }
+  refreshExplore();
+}
+/** The markers and soft outlines, for the room as it is now. */
+function refreshExplore() {
+  if (!features) return;
+  features.refresh();
+  if (features.on) highlight.show("explore", features.marked().flatMap(f => features.objects(f.id)), "soft");
+  else highlight.clear("explore");
+  invalidate();
+}
+$("exploreToggle").addEventListener("click", () => setExplore(!features.on));
+$("exploreFilters").addEventListener("click", e => {
+  const b = e.target.closest("button[data-group]");
+  if (b) setExplore(true, b.dataset.group || null);
+});
+
+// ---------------------------------------------------------------- See it in action: a feature's demo (demos.js)
+// An overlay, like a room mode: options are shown, not chosen (demoShown), the link and summary stay as they were, and
+// when it ends the room goes back exactly. It never runs during Emergency-ready, and starting one ends any room mode for
+// as long as it runs.
+var demo = null; // { id, feature, steps, at, token, timer, snap, opener }
+const demoSay = text => { $("demoText").textContent = text; say(text); };
+
+function cameraPose() { return { view: state.view, pos: stage.camera.position.clone(), target: controls.target.clone(), hfov: rig.hfov }; }
+function restorePose(p) {
+  rig.go(p.view, { instant: true });
+  stage.camera.position.copy(p.pos);
+  controls.target.copy(p.target);
+  rig.hfov = p.hfov; rig.fit();
+  stage.camera.lookAt(p.target);
+  controls.update();
+  invalidate();
+}
+/**
+ * Where to stand to see objects: straight in front of the first, along the way it faces (a wall item's front faces into
+ * the room), far enough back to take in their width and height, and never past the room's walls.
+ */
+function framePose(objects) {
+  const box = new THREE.Box3();
+  objects.forEach(o => box.expandByObject(o));
+  const c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3()), m = rig.meta;
+  const dir = new THREE.Vector3(0, 0, 1).transformDirection(objects[0].matrixWorld).setY(0);
+  if (dir.lengthSq() < 0.25) { const mid = W2T((m.room[0] + m.room[2]) / 2, (m.room[1] + m.room[3]) / 2, 0); dir.set(mid.x - c.x, 0, mid.z - c.z); }
+  dir.normalize();
+  const tan = deg => Math.tan(THREE.MathUtils.degToRad(deg / 2));
+  // with room to spare: the panel and the bar above the room cover some of the view
+  const want = Math.max(2.4, (Math.hypot(size.x, size.z) / 2) / tan(rig.hfov) * 1.6, (Math.min(size.y, 2.4) / 2) / tan(stage.camera.fov) * 1.6);
+  const inRoom = p => p.x > m.room[0] + 0.35 && p.x < m.room[2] - 0.35 && -p.z > m.room[1] + 0.35 && -p.z < m.room[3] - 0.35;
+  let dist = 0.6;
+  for (let d = 0.6; d <= want + 1e-6; d += 0.1) { if (!inRoom(c.clone().addScaledVector(dir, d))) break; dist = d; }
+  const eye = c.clone().addScaledVector(dir, dist);
+  eye.y = Math.min(m.ceiling - 0.3, 1.6);
+  return { eye, target: new THREE.Vector3(c.x, Math.min(c.y, 1.4), c.z) };
+}
+
+const demoApi = {
+  option: (group, id) => {
+    const g = groupById(group);
+    for (const [gid, oid] of [[group, id], ...Object.entries(optionOf(group, id).sets || {})]) {
+      demoShown[gid] = oid;
+      runEffects(groupById(gid), oid);
+    }
+    if (g) { settle(); relight(); refreshExplore(); }
+  },
+  time: stop => setTime(STOPS[stop]),
+  mode: name => modes.set(name),
+  camera: name => { if (rig.meta.cameras[name] && state.view !== name) rig.go(name); },
+  frame: id => {
+    const objs = features.objects(id);
+    if (!objs.length) return;
+    if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
+    const { eye, target } = framePose(objs);
+    rig.goTo(eye, target);
+  },
+  wardrobe: open => {
+    const w = stage.current.addons?.wardrobe;
+    if (w && !!w.userData.open !== open) { toggleWardrobe(stage.current); stage.renderer.shadowMap.needsUpdate = true; invalidate(); }
+  },
+};
+/** The room has come to rest: the camera has arrived, and any change of mode or of the glass has finished easing. */
+const roomStill = () => new Promise(done => {
+  const look = () => (rig.tween || modes.easing || glass.fading ? requestAnimationFrame(look) : done());
+  requestAnimationFrame(look);
+});
+
+async function startDemo(featureId) {
+  const f = features.get(featureId), steps = DEMOS[f?.demo]?.steps;
+  if (!steps) return;
+  if (modes.current === "emergency") { $("featureStatus").textContent = "Not during Emergency-ready: care comes first."; $("featureStatus").hidden = false; say($("featureStatus").textContent); return; }
+  const opener = cardOpener;
+  endCompare(); // and any demo already running
+  tour.stop();
+  if (pacs.active) pacs.exit();
+  if (guide.running || guide.ended) await guide.exit();
+  $("objectCard").hidden = true;
+  demo = {
+    id: f.demo, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
+    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: !!stage.current.addons?.wardrobe?.userData.open, pose: cameraPose() },
+  };
+  if (modes.current !== "standard") modes.set("standard", { instant: true }); // a mode would hide what the demo shows
+  $("demoName").textContent = f.name;
+  $("demoBar").hidden = false;
+  $("demoStop").focus({ preventScroll: true });
+  demoStep(0);
+}
+
+async function demoStep(i) {
+  const d = demo;
+  if (!d) return;
+  d.at = i;
+  const token = ++d.token, step = d.steps[i];
+  d.timer = 0;
+  $("demoCount").textContent = `${i + 1} of ${d.steps.length}`;
+  demoSay(step.say);
+  try { step.run(demoApi); await roomStill(); } catch (err) { window.__configErrors.push(String(err)); }
+  if (demo !== d || token !== d.token) return;
+  d.timer = setTimeout(() => { if (demo === d) (i + 1 < d.steps.length ? demoStep(i + 1) : endDemo("done")); }, DEMO_HOLD_MS);
+}
+
+/**
+ * End the demo and put the room back as it was: its options, doors, mode, time and view. "view": the visitor took the
+ * view in hand, so the camera stays where they put it. Returns whether a demo was running.
+ */
+function endDemo(why = "") {
+  const d = demo;
+  if (!d) return false;
+  clearTimeout(d.timer);
+  demo = null;
+  const shownGroups = Object.keys(demoShown);
+  for (const g of shownGroups) delete demoShown[g];
+  for (const g of shownGroups) runEffects(groupById(g), selected[g]);
+  settle();
+  demoApi.wardrobe(d.snap.wardrobe);
+  if (modes.current !== d.snap.mode || modes.easing) modes.set(d.snap.mode, { instant: true });
+  if (state.hour !== d.snap.hour) setTime(d.snap.hour);
+  if (why !== "view") restorePose(d.snap.pose);
+  relight();
+  stage.renderer.shadowMap.needsUpdate = true;
+  $("demoBar").hidden = true;
+  refreshExplore();
+  remember();
+  invalidate();
+  say(why === "done" ? "Demo finished. The room is back as it was." : "Demo stopped. The room is back as it was.");
+  if (why === "done" || why === "stop" || why === "esc") {
+    const back = d.opener?.isConnected && !d.opener.closest("[hidden]") ? d.opener : canvas;
+    back.focus({ preventScroll: true });
+  }
+  return true;
+}
+$("featureDemo").addEventListener("click", () => startDemo($("objectCard").dataset.feature).catch(err => window.__configErrors.push(String(err))));
+$("demoStop").addEventListener("click", () => endDemo("stop"));
+// Esc stops a demo before anything else hears it, such as Patient view's own Esc
+addEventListener("keydown", e => { if (e.key === "Escape" && demo) { e.preventDefault(); e.stopPropagation(); endDemo("esc"); } }, true);
+// taking the view in hand ends the demo, and the camera stays where the visitor puts it
+canvas.addEventListener("pointerdown", () => { if (demo) endDemo("view"); });
+canvas.addEventListener("wheel", () => { if (demo) endDemo("view"); }, { passive: true });
+
+$("featureMenuToggle").addEventListener("click", e => {
+  const open = e.currentTarget.getAttribute("aria-expanded") !== "true";
+  e.currentTarget.setAttribute("aria-expanded", String(open));
+  $("featureMenuList").hidden = !open;
+});
+$("featureMenuList").addEventListener("click", e => {
+  const b = e.target.closest("button[data-action]");
+  if (b) ACTION_HANDLERS[b.dataset.action]?.run(b);
+});
+
+/** The Features list in the panel: every entry by group, parts under their feature, each opening its card. */
+function buildFeatureList() {
+  const button = f => {
+    const b = el("button", { type: "button", textContent: f.name });
+    b.dataset.feature = f.id;
+    b.addEventListener("click", () => openFeature(f.id, b));
+    return b;
+  };
+  $("featureList").replaceChildren(...features.data.groups.filter(g => features.entries.some(f => f.group === g.id && !f.parent)).map(g => {
+    const ul = el("ul", { className: "feature-list" });
+    for (const f of features.entries.filter(x => x.group === g.id && !x.parent)) {
+      const li = el("li", {}, button(f)), parts = features.partsOf(f.id);
+      if (parts.length) li.append(el("ul", { className: "feature-parts" }, ...parts.map(p => el("li", {}, button(p)))));
+      ul.append(li);
+    }
+    const h = el("h3", { textContent: g.label });
+    return el("div", { className: "feature-group" }, h, ul);
+  }));
 }
 
 // Clicking any visible solid object identifies it. The wall switch keeps its existing interaction.
@@ -913,6 +1296,9 @@ canvas.addEventListener("pointerup", e => {
   for (let node = hit.object; node && node !== stage.current.root; node = node.parent) {
     if (node.userData.itemInfo) { info = node.userData.itemInfo; break; }
   }
+  // part of a registered feature: its card. A placed one keeps its Turn and Remove
+  const f = features?.at(hit.object);
+  if (f) { showObjectCard({ feature: f.id, ...(info?.action?.startsWith("placed:") ? { action: info.action } : {}) }, e.clientX, e.clientY); return; }
   if (!info) {
     const top = stage.topName(hit.object, stage.current.root), known = OBJECT_DETAILS[top];
     const label = top.replace(/^cfg_(kit_|)/, "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase()) || "Room object";
@@ -973,6 +1359,7 @@ function placeItem(type, at) {
   remember();
   placeSay(`Placed the ${itemById(type).label.toLowerCase()}.`);
   say(`${itemById(type).label} placed.`);
+  if (features?.on) refreshExplore();
   return entry;
 }
 
@@ -1019,6 +1406,7 @@ function removePlaced(entry) {
   remember();
   placeSay(`Removed the ${itemById(entry.type).label.toLowerCase()}.`);
   say(`${itemById(entry.type).label} removed.`);
+  if (features?.on) refreshExplore();
 }
 
 function turnPlaced(entry, degrees) {
@@ -1051,6 +1439,7 @@ function nudgePlaced(entry, dx, dy) {
 }
 
 $("objectCard").addEventListener("keydown", e => {
+  if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeCard(); return; }
   const found = placement.find(Number($("objectCard").dataset.placed || 0));
   if (!found || $("objectCard").hidden) return;
   const { entry } = found;
@@ -1166,6 +1555,7 @@ const endMove = e => {
   stage.renderer.shadowMap.needsUpdate = true;
   invalidate();
   remember();
+  if (features?.on) refreshExplore();
   say(`${itemById(m.entry.type).label} moved.`);
 };
 addEventListener("pointerup", endMove, true);
@@ -1178,6 +1568,7 @@ var compare = null;
 function setCompare(on) {
   if (on === !!compare || !stage.current) return;
   if (on) {
+    endDemo();
     if (pacs.active) pacs.exit();
     tour.stop();
     compare = { selected: { ...selected }, mode: modes.current, code: specCode() };
@@ -1199,8 +1590,8 @@ function setCompare(on) {
   invalidate();
   say(on ? "Showing today's room, at the same view and time." : "Showing your room again.");
 }
-/** Something is about to change the design: the comparison ends first, so the change lands on the visitor's own room. */
-function endCompare() { if (compare) setCompare(false); }
+/** Something is about to change the design: the comparison and any feature demo end first, so the change lands on the visitor's own room. */
+function endCompare() { endDemo(); if (compare) setCompare(false); }
 $("compareToggle").addEventListener("click", () => setCompare(!compare));
 
 // ---------------------------------------------------------------- the guided tour (guide.js)
@@ -1329,6 +1720,7 @@ function frame(now) {
     dirty = false;
     stage.draw();
     clinical.update(stage.camera, rig.visible.w);
+    features?.update(stage.camera, rig.visible.w);
     window.__configFrames = (window.__configFrames || 0) + 1;
   }
 }
@@ -1496,6 +1888,55 @@ window.__config = {
   currentTheme: () => currentTheme()?.id,
   tour: () => ({ running: tour.running, log: tour.log.slice(), order: tour.order.slice() }),
   startTour: () => tour.start(),
+  placeInView: type => placeInView(type),
+  // feature cards
+  features: () => features.entries.map(f => ({ id: f.id, name: f.name, group: f.group, parent: f.parent || null, demo: f.demo || null, actions: f.actions || [], present: features.present(f.id) })),
+  featureAt: (x, y) => { const hit = nearestSolid(rayAt(x, y)); return hit ? features.at(hit.object)?.id ?? null : null; },
+  /** A point on screen where a click lands on this feature, from where the camera is now, or null. */
+  featurePoint: id => {
+    stage.current.root.updateMatrixWorld(true); stage.camera.updateMatrixWorld();
+    for (const o of features.objects(id)) {
+      const pts = [];
+      o.traverse(n => {
+        if (!n.isMesh || n.userData.outline || !n.geometry?.attributes.position) return;
+        const pos = n.geometry.attributes.position, idx = n.geometry.index, tris = (idx ? idx.count : pos.count) / 3, step = Math.max(1, Math.floor(tris / 60));
+        const corner = (t, k) => new THREE.Vector3().fromBufferAttribute(pos, idx ? idx.getX(t * 3 + k) : t * 3 + k);
+        for (let t = 0; t < tris; t += step) pts.push(corner(t, 0).add(corner(t, 1)).add(corner(t, 2)).divideScalar(3).applyMatrix4(n.matrixWorld));
+      });
+      for (const p of pts) {
+        const s = p.project(stage.camera), x = ((s.x + 1) / 2) * innerWidth, y = ((1 - s.y) / 2) * innerHeight;
+        if (s.z > 1 || x < 4 || y < 4 || x > rig.visible.w - 4 || y > innerHeight - 4) continue;
+        const top = document.elementFromPoint(x, y);
+        if (top !== canvas) continue; // under the panel, the bar or a marker
+        const hit = nearestSolid(rayAt(x, y));
+        if (hit && features.at(hit.object)?.id === id) return { x, y };
+      }
+    }
+    return null;
+  },
+  card: () => {
+    const c = $("objectCard"), r = c.getBoundingClientRect();
+    return { open: !c.hidden, feature: c.dataset.feature, title: $("objectTitle").textContent, kicker: $("objectKicker").textContent,
+      buttons: [...c.querySelectorAll(".object-actions button")].filter(b => !b.hidden && b.offsetParent).map(b => b.textContent),
+      how: !$("featureHow").hidden, facts: [...$("featureFacts").querySelectorAll("dt")].map(d => d.textContent), evidence: $("featureEvidence").textContent,
+      rect: { left: r.left, top: r.top, right: r.right, bottom: r.bottom } };
+  },
+  demo: () => (demo ? { id: demo.id, feature: demo.feature, at: demo.at, steps: demo.steps.length, waiting: !!demo.timer } : null),
+  /** Skip the rest of a step's hold, once its room is still: every step still runs, without the reading time. */
+  demoAdvance: () => { if (!demo?.timer) return false; const d = demo; clearTimeout(d.timer); d.timer = 0; if (d.at + 1 < d.steps.length) demoStep(d.at + 1); else endDemo("done"); return true; },
+  highlight: () => ({ hover: hoverId, on: ["hover", "card", "explore"].filter(k => highlight.has(k)) }),
+  explore: () => ({ on: features.on, filter: features.filter, markers: features.showing() }),
+  /** The room as it's shown now, for proving a demo put it all back. */
+  fingerprint: () => {
+    const r = n => Math.round(n * 1000) / 1000, tv = stage.current.addons?.tv?.userData, w = stage.current.addons?.wardrobe;
+    return {
+      live: encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))), selected: { ...selected }, shown: { ...demoShown },
+      mode: modes.current, look: lighting.scene && { ...lighting.scene }, task: lighting.taskOn, scheme: lighting.params.scheme?.kind, kelvin: lighting.params.kelvin,
+      hour: state.hour, view: state.view, eye: stage.camera.position.toArray().map(r), target: controls.target.toArray().map(r),
+      wardrobe: !!w?.userData.open, wardrobeShown: !!w?.visible, tv: tv ? (tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
+      glass: [glass.mode, glass.opaque], blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
+    };
+  },
 };
 
 // ?stats=1: a readout of the GPU, tier, pixel ratio, canvas size and draw time, for diagnosing a slow device (stats.js)
@@ -1505,9 +1946,15 @@ if (query.get("stats") === "1") {
 
 async function boot() {
   window.__configStage = "fetching options";
-  const res = await fetch("options.json");
+  const [res, featureRes] = await Promise.all([fetch("options.json"), fetch("features.json")]);
   if (!res.ok) throw new Error(`options.json: HTTP ${res.status}`);
+  if (!featureRes.ok) throw new Error(`features.json: HTTP ${featureRes.status}`);
   optionData = await res.json();
+  features = new Features(await featureRes.json(), {
+    stage, placement, choice: shownChoice, layer: $("featureMarkers"),
+    onPick: (id, marker) => openFeature(id, marker),
+  });
+  buildFeatureList();
   for (const sec of optionData.sections) for (const g of sec.groups) selected[g.id] = g.default;
   panelUi = new Panel($("options"), optionData, setOption);
   $("themes").replaceChildren(...optionData.themes.map(t => Object.assign(document.createElement("button"), { type: "button", textContent: t.label })));
