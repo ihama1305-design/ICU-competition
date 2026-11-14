@@ -118,7 +118,9 @@ export class AcousticView {
     for (const s of SOURCES) {
       const p = this.pts[s.id];
       if (!p) continue;
-      mark(s.id, `${s.label} · ${Math.round(sourceLevel(s, this.fittings))} dBA at 1 m${loud.has(s.id) ? " · loudest at the pillow" : ""}`, [p[0], p[1], p[2] + 0.25], loud.has(s.id) ? "loudest" : "");
+      // the patient's kit always shows its own level: no fitting changes a device. For the rest, what reaches the room too
+      const own = s.level, heard = Math.round(sourceLevel(s, this.fittings)), room = s.kind !== "medical" && heard < own ? `, ${heard} in the room` : "";
+      mark(s.id, `${s.label} · ${own} dBA at 1 m${room}${loud.has(s.id) ? " · loudest at the pillow" : ""}`, [p[0], p[1], p[2] + 0.25], loud.has(s.id) ? "loudest" : "");
     }
     const [x, y] = this.pillow(room);
     mark("zone", `Quiet zone · about ${Math.round(r.pillow)} dBA at the pillow`, [x, y, 0.05], "zone");

@@ -1868,6 +1868,9 @@ with sync_playwright() as p:
         w = pg.evaluate(AC)
         check(all(w["shown"].values()) and w["reading"]["pillow"] < a["reading"]["pillow"] and "made-up difference" in pg.inner_text("#acousticReading") and "acoustic" in pg.evaluate("window.__config.highlight().on"),
               f"{room}: with fittings, all four are shown and outlined, the pillow is quieter, and the panel says the difference is made up ({a['reading']['pillow']:.1f} -> {w['reading']['pillow']:.1f} dBA)")
+        wm = {m["id"]: m["text"] for m in w["marks"]}
+        check(all("in the room" not in wm[k] for k in ("monitor", "pumps", "ventilator")) and all("in the room" in wm[k] for k in ("door", "corridor")),
+              f"{room}: with fittings the patient's kit shows its own level, since no fitting changes a device, and the door and corridor show what reaches the room {wm.get('monitor')} / {wm.get('corridor')}")
         mid = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
         check(mid["code"] == before["code"] and mid["fp"]["selected"] == before["fp"]["selected"], f"{room}: the fittings are shown, not chosen: no choice or link changes")
         shot(pg, f"{room.lower()}_acoustic_with")
