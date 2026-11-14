@@ -18,6 +18,7 @@ import http.server
 import io
 import json
 import random
+import re
 import os
 import shutil
 import sys
@@ -1818,7 +1819,7 @@ with sync_playwright() as p:
         said, st = pg.inner_text("#demoText"), pg.evaluate(WSTATE)
         areas = [f"{fig['before']['area']:.2f} m²", f"{fig['now']['area']:.2f} m²"]
         more = fig["now"]["area"] > fig["before"]["area"]
-        check(st["old"] and all(a in said for a in areas) and ("more" if more else "less") in said and "models' sizes" in said and not any(w in said.lower() for w in ("saves", "saved", "frees")),
+        check(st["old"] and all(a in said for a in areas) and ("more" if more else "less") in said and "models' sizes" in said and not re.search(r"\b(sav(es|ed|ing)|frees|freed)\b", said, re.I),  # whole words: "freestanding" is fine
               f"{room}: Compare outlines the old wardrobe and gives both floor areas from the models, {'more' if more else 'less'} floor now, and no claim of space saved: {said}")
         shot(pg, f"{room.lower()}_wardrobe_compare")
         pg.click("#demoStop")

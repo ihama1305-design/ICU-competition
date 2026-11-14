@@ -989,7 +989,9 @@ function showObjectCard(info, x, y, opener = document.activeElement) {
  * Put the card by the point it was opened from, clear of the options panel (or PACS's), of the room-mode bar and of every
  * notice above the room. If there isn't room for all of it, it scrolls.
  */
+let cardAt = { x: 24, y: 24 }; // where the card was opened from, to fit it again when it grows
 function placeCard(card, x, y) {
+  cardAt = { x, y };
   card.style.maxHeight = "";
   const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
@@ -1264,7 +1266,10 @@ $("featureMenuToggle").addEventListener("click", e => {
   const open = e.currentTarget.getAttribute("aria-expanded") !== "true";
   e.currentTarget.setAttribute("aria-expanded", String(open));
   $("featureMenuList").hidden = !open;
+  placeCard($("objectCard"), cardAt.x, cardAt.y); // taller now: it stays on screen
 });
+// How it works, opened or closed, changes the card's height the same way
+$("featureHow").addEventListener("toggle", () => { if (!$("objectCard").hidden) placeCard($("objectCard"), cardAt.x, cardAt.y); });
 $("featureMenuList").addEventListener("click", e => {
   const b = e.target.closest("button[data-action]");
   if (b) ACTION_HANDLERS[b.dataset.action]?.run(b);
