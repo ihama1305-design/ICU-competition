@@ -252,9 +252,23 @@ for (const text of [limitText, soundGroup.note.text]) {
 }
 for (const r of cfgOptions.vocalCue.rows) assert.ok(words(r.text) <= 20, `limit "${r.label}" has ${words(r.text)} words`);
 assert.equal(soundGroup.code, 31); assert.deepEqual(soundGroup.options.map(o => [o.id, o.code]), [["on", 0], ["off", 1]]); assert.equal(soundGroup.default, "on");
-// nothing on the site can listen: no audio or speech API is named in any page or module
-const siteDir = new URL("./site/", import.meta.url), listening = /getUserMedia|mediaDevices|MediaRecorder|MediaStream|AudioContext|AudioWorklet|SpeechRecognition|<audio|new Audio\(/;
+// nothing on the site can listen, and only one module makes sound. Capture, speech recognition and speech synthesis are
+// named in no page or module, the sound module included. Playback is named only in configurator/sound.js, which makes its
+// sounds in the page: no audio file, no fetched or decoded sound. (Hassan's yes for demo sound, 13 November 2026.)
+const siteDir = new URL("./site/", import.meta.url);
+const listening = /getUserMedia|mediaDevices|MediaRecorder|MediaStream|createMediaStreamSource|AudioWorklet|SpeechRecognition|speechSynthesis|SpeechSynthesis/;
+const playing = /AudioContext|<audio|new Audio\(|HTMLAudioElement/;
+const SOUND = "configurator/sound.js";
 const sources = [...readdirSync(new URL("configurator/", siteDir)).filter(f => /\.(js|css)$/.test(f)).map(f => `configurator/${f}`), "configurator.template.html", "index.template.html", "ventilation.template.html"];
-for (const f of sources) assert.ok(!listening.test(readFileSync(new URL(f, siteDir), "utf8")), `${f} names no audio or speech API`);
-assert.ok(!listening.test(readFileSync(new URL("./viewer_template.html", import.meta.url), "utf8")), "nor does the walkthrough");
-console.log(`PASS vocal-distress cue: a call always raises a notice, groans only add urgency (${[1, 2, 3].map(n => cueFor("groan", n) ?? "none").join(", ")}), the notice asks for a look and leaves going in to the nurse, four limits on the card and the option, codes unchanged, and no audio API in ${sources.length + 1} files`);
+for (const f of sources) {
+  const text = readFileSync(new URL(f, siteDir), "utf8");
+  assert.ok(!listening.test(text), `${f} names no capture or speech API`);
+  if (f !== SOUND) assert.ok(!playing.test(text), `${f} names no audio playback API: only ${SOUND} makes sound`);
+}
+const soundSrc = readFileSync(new URL(SOUND, siteDir), "utf8");
+assert.ok(/new AudioContext\(\)/.test(soundSrc) && /createOscillator|createBufferSource/.test(soundSrc), "the sound module makes its sounds in the page");
+assert.ok(!/fetch\(|decodeAudioData|\.(mp3|wav|ogg|m4a|aac|flac)\b|import\s.*from\s+["']https?:/.test(soundSrc), "and loads no sound from anywhere");
+assert.ok(/const CAP = 0\.\d+;/.test(soundSrc) && Number(/const CAP = (0\.\d+);/.exec(soundSrc)[1]) <= 0.15, "its level is capped low");
+const walk = readFileSync(new URL("./viewer_template.html", import.meta.url), "utf8");
+assert.ok(!listening.test(walk) && !playing.test(walk), "the walkthrough names no audio or speech API");
+console.log(`PASS vocal-distress cue: a call always raises a notice, groans only add urgency (${[1, 2, 3].map(n => cueFor("groan", n) ?? "none").join(", ")}), the notice asks for a look and leaves going in to the nurse, four limits on the card and the option, codes unchanged; no capture or speech API in ${sources.length + 1} files, and sound only from ${SOUND}, made in the page`);

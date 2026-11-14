@@ -350,6 +350,91 @@
     "addon:daylightSensor"
    ],
    "demo": "daylight"
+  },
+  {
+   "id": "acousticComfort",
+   "name": "Acoustic comfort mode",
+   "group": "comfort",
+   "purpose": "A picture of the room's sound: where it comes from, where it's loudest, and what acoustic fittings would change. Simulated.",
+   "how": "Press Acoustic comfort mode above the room. Labels mark six simulated sources: monitor tones, infusion pumps, the ventilator, equipment fans, the door and talk in the corridor, and the two loudest at the pillow are marked. A sound map colours the floor, a ring marks a quiet zone round the bed, and the sound sensor shows a level. Without fittings and With fittings compare the room. The map uses the simplest distance rule: 6 dB quieter each time the distance from a source doubles. Demo sound plays only when asked.",
+   "benefit": "Shows where the room's noise comes from, so a team can see what to change first.",
+   "awake": "A restful sound can play, if staff decide it suits the patient. It never plays over a notice or an alarm.",
+   "sedated": "Nothing here touches the patient's equipment: its alarms and settings stay as they are.",
+   "limits": "Not a measurement: no microphone is used, and nothing listens. Every level is illustrative, and the fittings' effect is made up. Critical alarms are always sounding and visible, and the comfort system has no control over them.",
+   "evidence": {
+    "text": "Every ICU in a five-unit study was louder than WHO's hospital guideline, which its authors judged out of reach in an ICU. The fittings' effect is expected, not shown.",
+    "strength": "Observational study of five UK ICUs",
+    "sourcesFrom": "acousticPanels"
+   },
+   "objects": [],
+   "demo": "acoustic",
+   "actions": [
+    "acoustic"
+   ]
+  },
+  {
+   "id": "acousticPanels",
+   "parent": "acousticComfort",
+   "name": "Acoustic panels",
+   "group": "comfort",
+   "purpose": "Wipe-clean panels on the wall and ceiling that absorb some of the sound bouncing round the room.",
+   "how": "Two panels on the family zone's back wall and three ceiling tiles over it, clear of the vents, the lights and the bed. A sealed face over the absorber, wiped like any other surface. Choose them under Acoustic fittings.",
+   "benefit": "Less of every sound bounces back into the room.",
+   "limits": "Their effect in Acoustic comfort mode is made up. A real one needs infection-control and manufacturer sign-off.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:acousticPanels"
+   ]
+  },
+  {
+   "id": "acousticFront",
+   "parent": "acousticComfort",
+   "name": "Acoustic partition",
+   "group": "comfort",
+   "purpose": "The glazed front in laminated acoustic glass, sealed all round: staff still see in, and less corridor talk comes through.",
+   "how": "Laminated glass with a sound-damping layer, and seals round the opening. It stays clear glass, so the smart glass and the curtain still work. Choose it under Acoustic fittings.",
+   "benefit": "Corridor talk stays outside, and the view in stays open.",
+   "limits": "Its effect in Acoustic comfort mode is made up. A real one needs infection-control and manufacturer sign-off. An isolation room's door still needs its own seal and pressure tests.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:acousticFront"
+   ]
+  },
+  {
+   "id": "softClose",
+   "parent": "acousticComfort",
+   "name": "Soft-close door and cabinets",
+   "group": "comfort",
+   "purpose": "Dampers that slow the door and cabinet doors over their last few centimetres, so they don't bang.",
+   "how": "A damper at the head of the room's door, and in the wardrobe's track. The door still closes and seals by itself. Choose it under Acoustic fittings.",
+   "benefit": "No bang when a door shuts at night.",
+   "limits": "Its effect in Acoustic comfort mode is made up. A real one needs infection-control and manufacturer sign-off. It must never stop a door closing fully.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:softClose"
+   ]
+  },
+  {
+   "id": "dampers",
+   "parent": "acousticComfort",
+   "name": "Vibration-damping mounts",
+   "group": "comfort",
+   "purpose": "Rubber isolators behind non-critical kit, here the TV, so a hum doesn't carry into the wall.",
+   "how": "Isolators between the TV's bracket and the wall. Never on the monitor, the pumps, the ventilator or any medical device. Choose them under Acoustic fittings.",
+   "benefit": "Less hum carried through the wall.",
+   "limits": "Non-critical kit only. Their effect in Acoustic comfort mode is made up. A real one needs infection-control and manufacturer sign-off.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:dampers"
+   ]
   }
  ]
 }

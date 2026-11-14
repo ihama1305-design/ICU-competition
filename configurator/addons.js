@@ -379,6 +379,87 @@ Object.assign(BUILD, {
     return g;
   },
 
+  // ---------------------------------------------------------------- acoustic fittings (Acoustic comfort mode). Off by default.
+  // Each is small, clear of the bed's keep-clear areas, the ceiling vents and the lights, and none touches a medical device.
+
+  /**
+   * Wipe-clean acoustic panels: two on the back wall of the family zone, high enough to clear chairs and hands, and three
+   * ceiling tiles over the family zone, kept clear of the ceiling vents and the lights. A sealed, wipeable face over the absorber.
+   */
+  acousticPanels(room) {
+    const g = new THREE.Group(), w1 = room.label === "W1", H = room.meta.ceiling;
+    const face = std("#d6dad4", 0.97); face.name = "acoustic_face"; // a sealed, matt, light face: wiped like the walls round it
+    const edge = std("#c3c9c4", 0.6);
+    const info = { title: "Acoustic panels", description: "Wipe-clean acoustic panels on the wall and ceiling." };
+    // on the wall: x along it, the wall's y, and the way into the room
+    const wall = w1 ? { xs: [15.25, 16.55], y: 31.61, into: -1 } : { xs: [12.6, 13.85], y: 22.385, into: -1 };
+    for (const x of wall.xs) {
+      const p = new THREE.Group();
+      p.add(box(1.1, 0.8, 0.04, face, 0, 0, 0), box(1.12, 0.82, 0.03, edge, 0, 0, -0.006));
+      p.position.copy(W2T(x, wall.y + wall.into * 0.025, 1.85));
+      p.rotation.y = wall.into < 0 ? 0 : Math.PI; // a back wall at the far side of the room: the face looks into it
+      g.add(tagItem(p, info.title, info.description));
+    }
+    // ceiling tiles, 1.2 by 0.6 m, at least half a metre from every vent and light panel
+    const tiles = w1 ? [[15.2, 29.9], [16.25, 30.25], [14.4, 30.6]] : [[12.6, 21.4], [13.6, 20.9], [12.4, 20.2]];
+    for (const [x, y] of tiles) {
+      const t = box(1.2, 0.025, 0.6, face, 0, 0, 0);
+      t.position.copy(W2T(x, y, H - 0.02));
+      g.add(tagItem(t, info.title, info.description));
+    }
+    g.userData.itemInfo = info;
+    return g;
+  },
+
+  /**
+   * The acoustic partition: the glazed front made with laminated acoustic glass and sealed all round, so the corridor stays
+   * in sight while less of its talk comes through. Drawn as the seal around the opening, on the room side.
+   */
+  acousticFront(room) {
+    const g = new THREE.Group(), f = room.meta.front, seal = std("#5b6a70", 0.55);
+    const W = f.width, Hf = f.height, t = 0.035, out = frontFace(room) + t / 2 + 0.004;
+    g.position.copy(W2T(f.at[0] + f.inward[0] * out, f.at[1] + f.inward[1] * out, 0));
+    g.rotation.y = faceInto(f); // its front faces into the room
+    g.add(box(W, t, t, seal, 0, Hf - t / 2, 0), box(W, t, t, seal, 0, t / 2, 0), box(t, Hf, t, seal, -W / 2 + t / 2, Hf / 2, 0), box(t, Hf, t, seal, W / 2 - t / 2, Hf / 2, 0));
+    g.userData.itemInfo = { title: "Acoustic partition", description: "The glazed front, sealed all round." };
+    g.traverse(n => { if (n.isMesh) n.userData.itemInfo = g.userData.itemInfo; });
+    return g;
+  },
+
+  /** A soft-close damper at the head of the room's door, which slows the last few centimetres. */
+  softClose(room) {
+    const g = new THREE.Group(), f = room.meta.front, body = std("#9aa4a8", 0.35, { metalness: 0.4 }), cap = std("#33393c", 0.5);
+    const out = frontFace(room) + 0.08; // clear of the wall's face, which runs at a slight slant in W3
+    g.position.copy(W2T(f.at[0] + f.inward[0] * out, f.at[1] + f.inward[1] * out, f.height - 0.1));
+    const th = g.rotation.y = faceInto(f); // its front faces into the room
+    // at the end of the opening away from where the curtain gathers, so the curtain never hides it. Its local x runs
+    // along the front, one way or the other depending on the room
+    const curtain = new THREE.Box3();
+    (room.parts.cfg_curtain || []).forEach(n => curtain.expandByObject(n));
+    const c = curtain.isEmpty() ? null : curtain.getCenter(new THREE.Vector3());
+    const side = c && ((c.x - f.at[0]) * Math.cos(th) + (-c.z - f.at[1]) * Math.sin(th)) > 0 ? -1 : 1;
+    g.add(box(0.42, 0.07, 0.06, body, side * (f.width / 2 - 0.32), 0, 0), box(0.05, 0.07, 0.065, cap, side * (f.width / 2 - 0.08), 0, 0));
+    g.userData.itemInfo = { title: "Soft-close door", description: "A damper that slows the door at the end of its travel." };
+    g.traverse(n => { if (n.isMesh) n.userData.itemInfo = g.userData.itemInfo; });
+    return g;
+  },
+
+  /**
+   * Vibration-damping mounts for non-critical kit: rubber isolators behind the TV, showing at its corners. Never on the
+   * patient's monitor, pumps or ventilator. They follow the TV's size (syncDampers).
+   */
+  dampers(room) {
+    const g = placeAt(new THREE.Group(), room.anchors.tv), rubber = std("#2c2f31", 0.9);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+      const pad = box(0.07, 0.07, 0.03, rubber, 0, 0, 0.015);
+      pad.userData.corner = [sx, sy];
+      g.add(pad);
+    }
+    g.userData.itemInfo = { title: "Damping mounts", description: "Rubber isolators behind the TV." };
+    g.traverse(n => { if (n.isMesh) n.userData.itemInfo = g.userData.itemInfo; });
+    return g;
+  },
+
   /** Fixture concept fitted into the existing W1 toilet room beside its entry. */
   bathroom(room) {
     const g = new THREE.Group();
@@ -743,6 +824,31 @@ export function setAddonLook(room, id, look) {
   }
 }
 
+/** The turn that makes an object's front (its local +z) face into the room through the glazed front. */
+const faceInto = f => Math.atan2(f.inward[0], -f.inward[1]);
+
+/**
+ * How far the glazed front's frame reaches into the room from the front's own line, in metres, read from the model: the
+ * acoustic seal and the door's damper go just on the room side of it, where they can be seen.
+ */
+function frontFace(room) {
+  const f = room.meta.front, frame = room.parts.cfg_front_frame || [];
+  if (!frame.length) return 0.1;
+  const box = new THREE.Box3();
+  room.root.updateMatrixWorld(true);
+  frame.forEach(n => box.expandByObject(n));
+  let reach = -Infinity;
+  for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) reach = Math.max(reach, (x - f.at[0]) * f.inward[0] + (-z - f.at[1]) * f.inward[1]);
+  // and the wall it stands in: the room-side line of the wall it crosses on the way into the room, if that's further in
+  for (const w of room.meta.wall_runs) {
+    const ex = w.b[0] - w.a[0], ey = w.b[1] - w.a[1], den = f.inward[0] * ey - f.inward[1] * ex;
+    if (Math.abs(den) < 1e-6) continue;
+    const t = ((w.a[0] - f.at[0]) * ey - (w.a[1] - f.at[1]) * ex) / den, u = ((w.a[0] - f.at[0]) * f.inward[1] - (w.a[1] - f.at[1]) * f.inward[0]) / den;
+    if (t > 0 && t < 0.5 && u >= -0.05 && u <= 1.05) reach = Math.max(reach, t);
+  }
+  return Math.max(0.02, Math.min(0.5, reach));
+}
+
 // ---------------------------------------------------------------- the wardrobe's doors, and the one it replaced
 
 const SLIDE_MS = 900;
@@ -842,6 +948,14 @@ export function setOrientation(room, hour) {
   if (u.orientAt === minute) return;
   u.orientAt = minute;
   u.orientText = drawOrientation(u.orient, hour);
+}
+
+/** The damping mounts sit at the TV's corners, so they move with its size. */
+export function syncDampers(room) {
+  const d = room.addons?.dampers, tv = room.addons?.tv?.userData;
+  if (!d || !tv) return;
+  const w = tv.scaler.scale.x, h = w * (9 / 16);
+  for (const pad of d.children) { const [sx, sy] = pad.userData.corner; pad.position.set(sx * (w / 2 + 0.02), sy * (h / 2 + 0.02), 0.015); }
 }
 
 export function setShade(room, kind) {
