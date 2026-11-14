@@ -22,7 +22,7 @@ export function autoKelvin(h) {
   if (h < 19) return between(4800, 2700, h, 15, 19);
   return between(2700, 2200, h, 19, 21.5);
 }
-const circadianLevel = h => between(1, 0.42, h, 18.5, 21.5);
+export const circadianLevel = h => between(1, 0.42, h, 18.5, 21.5);
 const AMBER = new THREE.Color().setRGB(1, 0.42, 0.07, THREE.SRGBColorSpace);
 
 /** Quads with a brightness per corner, for additive glows. */
@@ -215,8 +215,9 @@ export class Lighting {
     const p = this.params, s = p.scheme, f = this.room?.fixtures;
     if (!f) return;
     this.day = day;
-    // a room mode's look replaces the configured one while it's on; neither changes the option settings
-    const look = this.scene || this.base(hour, day);
+    // a room mode's look replaces the configured one while it's on, and the patient's state's look sits under any mode (the
+    // modes are the staff override). Neither changes the option settings
+    const look = this.scene || this.patient || this.base(hour, day);
     const k = this.comfort?.kelvin ?? look.kelvin;
     const col = this.colour.copy(kelvinColour(k));
     const night = 1 - day;

@@ -9,6 +9,7 @@ import { gunzipSync } from "node:zlib";
 import { ACTIONS, DEMOS, HOLD_MS } from "./site/configurator/demos.js";
 import { MODES } from "./site/configurator/modes.js";
 import { parseObject } from "./site/configurator/feature-links.js";
+import { APPLY, BOARD, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
 import { BACKGROUND, BANDS, FITTINGS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS, SOURCES, levelAt, sourceLevel } from "./site/configurator/acoustic.js";
 
 const here = p => new URL(p, import.meta.url);
@@ -76,7 +77,9 @@ for (const f of data.features) {
   // objects: each exists, in every room
   assert.ok(Array.isArray(f.objects), `${who} lists its objects`);
   const parts = data.features.filter(p => p.parent === f.id);
-  assert.ok(f.objects.length || parts.length, `${who} links to an object, or has parts that do`);
+  const template = read("./site/configurator.template.html");
+  if (f.control !== undefined) assert.ok(new RegExp(`id="${f.control}"`).test(template) && !f.objects.length, `${who}: its control, #${f.control}, is on the page, and it links no object`);
+  assert.ok(f.objects.length || parts.length || f.control, `${who} links to an object, or has parts that do, or names its control above the room`);
   for (const s of f.objects) {
     const o = parseObject(s);
     links += 1;
@@ -134,6 +137,7 @@ const api = {
   figures: () => "It took 0.64 m² of floor (1.00 by 0.64 m), and this one takes 0.71 m² (1.11 by 0.64 m): 0.07 m² more.",
   acoustic: state => { assert.ok(["without", "with"].includes(state), `a demo shows the room without or with the fittings (${state})`); calls.push(["acoustic"]); },
   notices: open => { assert.equal(typeof open, "boolean", "the notifications list opens or closes"); calls.push(["notices"]); },
+  patient: name => { assert.ok(STATES[name], `a demo sets a patient state that exists (${name})`); calls.push(["patient"]); },
 };
 let steps = 0;
 for (const [id, d] of Object.entries(DEMOS)) {
@@ -185,5 +189,36 @@ assert.ok(/always sounding and always visible/i.test(NOTIFICATIONS.critical.line
 assert.ok(/might review some/.test(NOTIFICATIONS.routine.line) && /Nothing here changes that/.test(NOTIFICATIONS.routine.line), "routine notifications: a hospital might review some, and nothing here changes that");
 assert.ok(/only notices this system raises itself/.test(NOTIFICATIONS.environmental.line) && /Staff acknowledge/.test(NOTIFICATIONS.environmental.line) && NOTIFICATIONS.environmental.examples.length === 3, "environmental notices: the only ones it raises, acknowledged by staff");
 assert.ok(/made up/.test(ILLUSTRATIVE) && /Nothing is measured/.test(ILLUSTRATIVE), "the screen says the levels and the difference are made up");
+
+// ---------------------------------------------------------------- patient states and the bedside screens (patient-states.js)
+assert.deepEqual(STATE_ORDER, ["sedated", "awake", "recovering"], "three patient states, in the brief's order");
+assert.equal(DEFAULT_STATE, "awake", "Awake is the default");
+assert.deepEqual(STATES.awake.shows, {}, "and it shows the room as configured, so the room looks the same as it loads");
+assert.equal(STATES.awake.light, null, "with its own light");
+assert.ok(STATES.sedated.shows.tvplay === "off" && !OFFERS.sedated.board, "sedated: nothing on the patient's screen, and no board to work");
+assert.ok(STATES.recovering.shows.tvplay === "orientation", "recovering: the orientation screen first");
+assert.ok(STATE_MS >= 1500, "a change of state eases, never abruptly");
+for (const st of Object.values(STATES)) for (const g of Object.keys(st.shows)) assert.ok(groupById(g) && !/front|switch|task|blinds|nightlight/.test(g), `a state shows only screen options, never privacy, light switches or anything for care (${g})`);
+assert.deepEqual(BOARD.map(b => b.label), ["I need help", "I am in pain", "I feel cold", "I feel hot", "I need repositioning", "I want to contact my family", "I need a nurse"], "the board's seven requests, in the brief's words");
+assert.ok(BOARD.filter(b => b.simple).length >= 3 && BOARD.find(b => b.id === "help").simple, "recovering keeps a simple few, help among them");
+const pp = Object.fromEntries(PASSPORT.map(x => [x.id, x]));
+assert.deepEqual(Object.keys(pp), ["light", "temperature", "sound", "scene", "photos", "privacy", "communicate", "entertainment"], "the passport's eight preferences");
+assert.ok(pp.temperature.shownOnly && STATE_ORDER.every(st => APPLY.temperature[st][0] === "held"), "temperature is shown and never applied, in any state");
+for (const x of PASSPORT) {
+  assert.ok(x.value in x.options, `${x.id}: the sample's value is one of its options`);
+  assert.ok(STATE_ORDER.every(st => ["used", "gentle", "staff", "held"].includes(APPLY[x.id][st][0]) && APPLY[x.id][st][1]), `${x.id}: each state says how it's used, and why`);
+}
+assert.ok(PASSPORT.every(x => !/name|diagnos|age\b/i.test(x.label)), "no name, diagnosis or age in the passport");
+assert.ok(CLINICIAN.length >= 4 && CLINICIAN.some(c => /Alarm/.test(c.label) && /Never changed/.test(c.value)), "the care team's settings are listed apart, alarms never changed here");
+assert.ok(STATE_ORDER.every(st => !["used", "gentle"].includes(APPLY.entertainment.sedated[0])), "no entertainment for a sedated patient");
+assert.deepEqual(FAMILY.map(x => x.id), ["photos", "message", "call", "scene", "music", "orientation"], "family connection's six things");
+assert.ok(!FAMILY.find(x => x.id === "call").staffAllow && !FAMILY.find(x => x.id === "music").staffAllow, "a call and music are off for an unresponsive patient until staff allow them");
+assert.ok(/not played/.test(FAMILY.find(x => x.id === "message").what) && /no camera, microphone or call/i.test(FAMILY.find(x => x.id === "call").what), "the voice message is shown, not played, and the call uses no camera or microphone");
+assert.ok(Object.values(ORIENTATION).every(l => !/\b(Mr|Mrs|Ms|diagnos|surgery|sepsis|bed \d)/i.test(l)) && /confirmed by staff/.test(ORIENTATION.visiting), "the orientation screen's lines carry no patient details, and visiting is marked as confirmed by staff");
+assert.ok(/SIMULATED/.test(STAFF.reminder) && /Nothing here moves a patient/.test(STAFF.reminder), "the positioning reminder is simulated and moves nobody");
+const bedsideSrc = read("./site/configurator/bedside.js");
+assert.ok(/does not replace a certified nurse-call system/.test(bedsideSrc) && !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/.test(bedsideSrc), "the board says it doesn't replace nurse call, and nothing in the bedside screens is sent anywhere");
+assert.ok(byId.get("communicationBoard").objects.includes("placed:tablet") && byId.get("comfortPassport").objects.some(o => o.startsWith("part:cfg_bay")) && byId.get("orientation").actions.includes("bedside:family"),
+  "the screens open from the tablet arm, the window and the TV, as well as from the panel");
 
 console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification`);

@@ -5,7 +5,7 @@
 // api: option(group, id) shows an option without choosing it; time(stop); mode(name); camera(view); frame(featureId) stands
 // in front of a feature's object; wardrobe(side) slides its doors ("left", "right" or null for closed); outline(featureId)
 // marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced; acoustic("without" | "with") shows
-// Acoustic comfort mode; notices(open) opens its list of notifications. A step's caption can be worked out
+// Acoustic comfort mode; notices(open) opens its list of notifications; patient(state) sets the patient's state. A step's caption can be worked out
 // from the room: say(api), where api.figures() gives the two wardrobes' sizes as a sentence.
 
 export const DEMOS = {
@@ -87,6 +87,14 @@ export const DEMOS = {
       { say: "Critical alarms stay as they are: always sounding, always visible, and out of the comfort system's reach.", run: a => a.notices(true) },
     ],
   },
+  // the transition: sedated, then awake, then recovering, each eased, never abrupt
+  transition: {
+    steps: [
+      { say: "Sedated: the light is steady and a little lower, and nothing plays on the patient's screen.", run: a => { a.time("afternoon"); a.camera("overview"); a.patient("sedated"); } },
+      { say: "Awake: the room as configured, and the patient's own controls.", run: a => a.patient("awake") },
+      { say: "Recovering: the orientation screen comes first, with gentle light by the time of day.", run: a => { a.patient("recovering"); a.camera("patient"); } },
+    ],
+  },
   daylight: {
     steps: [
       { say: "Afternoon: the sensor sees daylight, so Comfort mode lowers the blinds against glare.", run: a => { a.time("afternoon"); a.camera("bed_window"); a.mode("comfort"); } },
@@ -99,6 +107,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest

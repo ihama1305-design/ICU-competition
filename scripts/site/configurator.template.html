@@ -53,6 +53,16 @@
     <button type="button" data-mode="emergency" class="mode-emergency" aria-pressed="false">Emergency-ready</button>
     <span class="alarm-chip"><span class="dot" aria-hidden="true"></span>Clinical alarms unaffected</span>
   </div>
+  <div id="patientBar" class="mode-bar patient-bar" role="group" aria-labelledby="patientTitle">
+    <span id="patientTitle" class="mode-title">Patient</span>
+    <div class="mode-seg">
+      <button type="button" data-state="sedated" aria-pressed="false">Sedated</button>
+      <button type="button" data-state="awake" aria-pressed="true">Awake</button>
+      <button type="button" data-state="recovering" aria-pressed="false">Recovering</button>
+    </div>
+    <button type="button" id="openBedside" class="patient-screens">Bedside screens</button>
+  </div>
+  <p id="patientNote" class="mode-note" hidden></p>
   <div class="explore-row">
     <button type="button" id="exploreToggle" class="explore-toggle" aria-pressed="false">Explore features</button>
     <button type="button" id="acousticToggle" class="explore-toggle" aria-pressed="false">Acoustic comfort mode</button>
@@ -182,6 +192,15 @@
       <p class="note">Every feature has a card: what it is, how it works, and its limits. Choose one to open it, or press Explore features above the room to see where they are.</p>
       <div id="featureList" class="feature-groups"></div>
     </details>
+    <section aria-labelledby="hBedside">
+      <h2 id="hBedside">Bedside screens</h2>
+      <div class="grid bedside-launch" role="group" aria-labelledby="hBedside">
+        <button type="button" class="wide" data-open="board">Communication board</button>
+        <button type="button" class="wide" data-open="passport">Comfort passport</button>
+        <button type="button" class="wide" data-open="family">Family connection</button>
+      </div>
+      <p class="note">They follow the patient's state, set above the room. Simulated: no request, photograph or voice leaves this page. No item needs to be placed.</p>
+    </section>
     <div id="options"></div>
 
     <details class="section" name="options" id="systemsSection">
@@ -236,6 +255,23 @@
   </div>
 </aside>
 <p id="lookHint" class="look-hint" aria-hidden="true" hidden></p>
+<section id="bedside" class="acoustic-panel bedside" aria-labelledby="bedsideTitle" hidden>
+  <button type="button" id="bedsideClose" class="object-close" aria-label="Close the bedside screens">×</button>
+  <p class="object-kicker">Bedside screens · SIMULATED</p>
+  <h2 id="bedsideTitle" tabindex="-1">Bedside screens</h2>
+  <p id="bedsideState" class="bedside-state"></p>
+  <label class="quiet-now" for="quietNow"><input type="checkbox" id="quietNow" role="switch"> <span><strong>Quiet now</strong> · staff: all stimulation off, sound included</span></label>
+  <div id="bedsideTabs" class="seg bedside-tabs" role="group" aria-label="Screens">
+    <button type="button" data-tab="board" aria-pressed="true">Communication</button>
+    <button type="button" data-tab="passport" aria-pressed="false">Passport</button>
+    <button type="button" data-tab="family" aria-pressed="false">Family</button>
+    <button type="button" data-tab="staff" aria-pressed="false">Staff</button>
+  </div>
+  <div id="pane-board" class="bedside-pane"></div>
+  <div id="pane-passport" class="bedside-pane" hidden></div>
+  <div id="pane-family" class="bedside-pane" hidden></div>
+  <div id="pane-staff" class="bedside-pane" hidden></div>
+</section>
 <section id="acousticPanel" class="acoustic-panel" aria-labelledby="acousticTitle" hidden>
   <button type="button" id="acousticClose" class="object-close" aria-label="Close Acoustic comfort mode">×</button>
   <p class="object-kicker">Acoustic comfort mode · SIMULATED</p>
