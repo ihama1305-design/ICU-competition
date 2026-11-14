@@ -82,7 +82,7 @@ for (const f of data.features) {
     if (o.kind === "addon") assert.ok(ADDONS.has(o.arg), `${who}: add-on ${o.arg} is built in addons.js`);
     else if (o.kind === "part") for (const [label, r] of Object.entries(ROOMS)) assert.ok(r.parts.has(o.arg), `${who}: ${o.arg} is a part of ${label}'s model`);
     else if (o.kind === "placed") assert.ok(PLACED.has(o.arg), `${who}: ${o.arg} is an item in Place items`);
-    else if (o.kind === "node") assert.ok(new RegExp(`name\\s*[=:]\\s*["'\`]${o.arg}["'\`]`).test(addonsSrc), `${who}: an object named ${o.arg} is built in addons.js`);
+    else if (o.kind === "node") assert.ok(new RegExp(`(name\\s*[=:]\\s*|part\\()["'\`]${o.arg}["'\`]`).test(addonsSrc), `${who}: an object named ${o.arg} is built in addons.js`);
     else assert.ok(["lights", "switch"].includes(o.kind) && !o.arg, `${who}: ${s} is a kind of link the page knows`);
     for (const [g, vs] of Object.entries(o.when)) {
       const group = groupById(g);
@@ -91,15 +91,31 @@ for (const f of data.features) {
   }
   // what it does: a demo the page has, and actions with handlers
   if (f.demo) { assert.ok(DEMOS[f.demo]?.steps?.length, `${who}: its demo ${f.demo} is in demos.js`); demosUsed.add(f.demo); }
-  for (const a of f.actions || []) assert.ok(ACTIONS.includes(a), `${who}: its action ${a} has a handler`);
+  if (f.demoLabel !== undefined) assert.ok(f.demo && typeof f.demoLabel === "string" && f.demoLabel.trim(), `${who}: a demo label goes with a demo`);
+  for (const a of f.actions || []) {
+    assert.ok(ACTIONS.includes(a), `${who}: its action ${a} has a handler`);
+    if (a.startsWith("demo:")) { assert.ok(DEMOS[a.slice(5)]?.label && DEMOS[a.slice(5)].steps.length, `${who}: its action ${a} names a demo with a label`); demosUsed.add(a.slice(5)); }
+  }
+  assert.ok((f.actions || []).length <= 4, `${who}: a short menu, at most four actions`);
 }
-for (const a of ACTIONS) assert.ok(new RegExp(`["']?${a.replace(":", "\\:")}["']?\\s*:\\s*\\{`).test(mainSrc), `main.js handles the card action ${a}`);
+// a demo action is handled by one rule in main.js; every other action by a handler of its own
+assert.ok(/a\.startsWith\("demo:"\)\) ACTION_HANDLERS\[a\] = /.test(mainSrc), "main.js runs any demo:<id> action");
+for (const a of ACTIONS.filter(x => !x.startsWith("demo:"))) assert.ok(new RegExp(`(^|[\\s{,])["']?${a.replace(":", "\\:")}["']?\\s*:\\s*\\{`, "m").test(mainSrc), `main.js handles the card action ${a}`);
 assert.ok(/for \(const a of ACTIONS\) if \(!ACTION_HANDLERS\[a\]\)/.test(mainSrc), "and says so at load if one has no handler");
 assert.deepEqual([...demosUsed].sort(), Object.keys(DEMOS).sort(), "every demo belongs to a feature");
 
 // the eight features that were here before the cards, and the nature display's four parts
 for (const id of ["circadian", "privacy", "orientation", "nature", "wardrobe", "soundSensor", "comfortControl", "daylightSensor"]) assert.ok(byId.has(id) && !byId.get(id).parent, `${id} is registered`);
 assert.deepEqual(data.features.filter(f => f.parent === "nature").map(f => f.id), ["tvScene", "skyCeiling", "digitalAquarium", "biophilicPanel"], "the nature display's four parts");
+// the wardrobe: the brief's six parts, each a compartment built inside it, and its card's four actions
+assert.deepEqual(data.features.filter(f => f.parent === "wardrobe").map(f => f.name), ["Clothing", "Daily essentials", "Personal belongings", "Secure valuables", "Cabinet lighting", "Sliding doors"], "the wardrobe's six parts");
+for (const f of data.features.filter(x => x.parent === "wardrobe")) {
+  const node = parseObject(f.objects[0]).arg;
+  assert.ok(new RegExp(`part\\("${node}", "(left|right|any)"\\)`).test(addonsSrc), `${f.id}: ${node} is built inside the wardrobe, behind a door`);
+}
+assert.deepEqual(byId.get("wardrobe").actions.map(a => (a.startsWith("demo:") ? DEMOS[a.slice(5)].label : a)), ["wardrobe:learn", "wardrobe", "View storage compartments", "Compare with the old wardrobe"], "the wardrobe's four actions");
+// no claim of floor space saved: the built-in wardrobe takes about the same floor as the one it replaced (wardrobeFigures)
+for (const f of data.features.filter(x => x.id === "wardrobe" || x.parent === "wardrobe")) for (const k of TEXT) assert.ok(!/(sav\w*|more|frees?|gains?)\s+(usable\s+)?(floor|space)/i.test(f[k] || ""), `${f.id}: its ${k} claims no floor space saved`);
 
 // ---------------------------------------------------------------- every demo, against a stand-in for the page
 // The stand-in keeps what a step asks for. A step may show an option without choosing it, change the time, set a mode,
@@ -111,17 +127,21 @@ const api = {
   mode: name => { assert.ok(MODES[name] && name !== "emergency", `a demo sets ${name}, a room mode that isn't Emergency-ready`); calls.push(["mode"]); },
   camera: v => { for (const [label, r] of Object.entries(ROOMS)) assert.ok(r.views.has(v), `a demo goes to the ${v} view, which ${label} has`); calls.push(["camera"]); },
   frame: id => { assert.ok(byId.get(id)?.objects.length, `a demo stands in front of ${id}, a registered feature with objects`); calls.push(["frame"]); },
-  wardrobe: open => { assert.equal(typeof open, "boolean", "the wardrobe's doors open or close"); calls.push(["wardrobe"]); },
+  wardrobe: side => { assert.ok([null, "left", "right"].includes(side), `the wardrobe's doors show the left side, the right, or close (${side})`); calls.push(["wardrobe"]); },
+  outline: id => { assert.ok(byId.has(id), `a demo outlines ${id}, a registered feature`); calls.push(["outline"]); },
+  oldWardrobe: on => { assert.equal(typeof on, "boolean", "the old wardrobe's outline shows or goes"); calls.push(["oldWardrobe"]); },
+  figures: () => "It took 0.64 m² of floor (1.00 by 0.64 m), and this one takes 0.71 m² (1.11 by 0.64 m): 0.07 m² more.",
 };
 let steps = 0;
 for (const [id, d] of Object.entries(DEMOS)) {
   for (const step of d.steps) {
-    assert.ok(typeof step.say === "string" && step.say.trim() && typeof step.run === "function", `${id}: each step has a caption and a run`);
-    assert.ok(!/\d\s*%/.test(step.say) && !OUTCOME.test(step.say), `${id}: its caption makes no claim: ${step.say}`);
+    assert.ok(["string", "function"].includes(typeof step.say) && typeof step.run === "function", `${id}: each step has a caption and a run`);
     step.run(api);
+    const say = typeof step.say === "function" ? step.say(api) : step.say;
+    assert.ok(typeof say === "string" && say.trim() && !/\d\s*%/.test(say) && !OUTCOME.test(say), `${id}: its caption is text and makes no claim: ${say}`);
     steps += 1;
   }
-  assert.ok(d.steps.length <= 6, `${id} is short`);
+  assert.ok(d.steps.length <= 8, `${id} is short`);
 }
 assert.ok(HOLD_MS >= 2500 && HOLD_MS <= 6000, "each step holds long enough to read, and no longer");
 assert.ok(calls.length >= steps, "every step sets something up");
