@@ -1064,8 +1064,8 @@ with sync_playwright() as p:
     # an older, shorter code still opens, with defaults for what it doesn't mention; a bad one says so
     pg.evaluate("window.__config.theme('desert')")
     short = pg.evaluate("window.__config.code()")[:12]
+    pg.goto("about:blank")
     pg.goto(URL + "?tier=low#c=" + short)
-    pg.reload()
     pg.wait_for_function("window.__configReady === true", timeout=120000)
     check(pg.evaluate("window.__config.selected().patio") == "off" and pg.evaluate("window.__config.selected().paint") == "sand", "an older, shorter code opens with defaults for the rest")
     pg.goto(URL + "?tier=low#c=!!nonsense")
@@ -1080,8 +1080,9 @@ with sync_playwright() as p:
     old_code = list(pg.evaluate("window.__config.code()"))
     for g in hidden:
         old_code[5 + g["code"]] = ALPHA[next(o["code"] for o in g["options"] if o["id"] != g["default"])]
+    # a fresh load of the old link: a change of hash alone lets the open page tidy the address before a reload reads it
+    pg.goto("about:blank")
     pg.goto(URL + "?tier=low#c=" + "".join(old_code))
-    pg.reload()
     pg.wait_for_function("window.__configReady === true", timeout=120000)
     sel = pg.evaluate("window.__config.selected()")
     check(all(sel[g["id"]] == g["default"] for g in hidden), f"an old link's hidden options fall back to their defaults {[(g['id'], sel[g['id']]) for g in hidden if sel[g['id']] != g['default']]}")
