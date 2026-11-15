@@ -1556,6 +1556,7 @@ with sync_playwright() as p:
             if not f["own"]:
                 continue  # a feature made of parts, like the nature display: its parts are what's clicked
             pg.evaluate(f"window.__config.set('tvplay', '{'on' if f['id'] == 'tvScene' else 'off'}')")
+            pg.evaluate(f"window.__config.set('scene', '{'forest' if f['id'] == 'transformEnvironment' else 'off'}')")  # a scene's picture is there only while one is chosen
             # a wardrobe compartment is there only while its door is open: the clothes are behind the right, the rest the left
             side = ("right" if f["id"] == "wardrobeClothing" else "left") if f["parent"] == "wardrobe" else None
             pg.evaluate("s => window.__config.wardrobe(s)", side)
@@ -1604,7 +1605,8 @@ with sync_playwright() as p:
         check(not keyed, f"{room}: from the Features list, Enter opens each card with focus in it, and Esc gives focus back to the list {keyed[:3]}")
         # every demo puts the room back exactly: its choices, link, mode, time, view, doors and screens. W1 waits through each
         # step as a visitor would; W3 runs every step without the reading time
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'plain'); c.set('aquarium', 'none'); c.set('tvplay', 'off'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers']) c.set(g, 'off'); c.camera('overview', { instant: true }); }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'plain'); c.set('aquarium', 'none'); c.set('tvplay', 'off'); c.set('scene', 'off'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers']) c.set(g, 'off'); c.camera('overview', { instant: true }); }")
+        pg.wait_for_function("!window.__config.fading()", timeout=60000)  # the last card's scene has gone, and its light with it
         drawn(pg)
         bad = []
         demos = [(x["id"], None) for x in feats if x["demo"]] + [("wardrobe", "View storage compartments"), ("wardrobe", "Compare with the old wardrobe")]
@@ -2382,6 +2384,158 @@ with sync_playwright() as p:
     check(not errs, f"the Future ICU look: no errors {errs[:3]}")
     ctx.close()
 
+    # ---------------------------------------------------------------- the smart clinical wall, Transform my environment and the clinician workstation, in step with the room
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+    W = "window.__config.wall()"
+
+    def still_wall():
+        pg.wait_for_function("!window.__config.fading() && !window.__config.state().moving", timeout=60000)
+        return pg.evaluate(W)
+
+    def mode(name):
+        pg.click(f"#modeBar button[data-mode='{name}']")
+        pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+
+    FOREST = {"kelvin": 3500, "level": 0.6}
+    for room in ROOMS:
+        go(pg, room)
+        pg.click("#themes button[data-value='future']")
+        pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
+        w = still_wall()
+        check(w["wall"] == "patient" and w["staff"] == "standby" and w["tv"] == "orientation" and w["strip"] == {"shown": True, "buttons": ["board", "family"]} and not w["wallScene"] and w["env"] is None,
+              f"{room}: Future ICU sets the wall for the patient: the orientation screen, the care team and the plan with two buttons, and the staff panel resting {w}")
+        # from the pillow: the strip reads at least as large as the orientation screen's own lines, and its buttons open the bedside screens
+        pg.click("#views button[data-value='patient']")
+        pg.wait_for_function("window.__config.state().view === 'patient' && !window.__config.state().moving", timeout=120000)
+        rd = pg.evaluate("window.__config.readable()")
+        check(rd["strip"] and rd["strip"] >= rd["orient"] and rd["strip"] >= 9, f"{room}: from Patient view, the strip's letters ({rd['strip']} px) are no smaller than the orientation screen's lines ({rd['orient']} px)")
+        shot(pg, f"{room.lower()}_wall_patient")
+        pt = pg.evaluate("window.__config.wallButtonPoint('board')")
+        pg.mouse.click(pt["x"], pt["y"])
+        bs = pg.evaluate("window.__config.bedside()")
+        check(bs["open"] and bs["tab"] == "board", f"{room}: the wall's Ask for something button, clicked in the room, opens the communication board {bs['open']} {bs['tab']}")
+        pg.click("#bedsideClose")
+        # the switch, and the modes moving it without changing it
+        pg.evaluate("window.__config.set('wall', 'clinical')")
+        w = still_wall()
+        check(w["staff"] == "clinical" and w["tv"] == "orientation" and w["strip"]["buttons"] == [] and "clinical" in w["drawn"]["staffLeft"], f"{room}: Clinical: made-up observations on the staff panel, the patient keeps the time, and no buttons {w['staff']} {w['drawn'].get('staffLeft')}")
+        pg.evaluate("window.__config.set('wall', 'relaxation')")
+        w = still_wall()
+        check(w["wallScene"] == "desert" and w["tv"] == "scene" and not w["strip"]["shown"] and w["env"] is None and w["ceilingScene"] is None,
+              f"{room}: Relaxation: the passport's desert across the wall and the TV, and the room's light and ceiling as they were {w['wallScene']} {w['tv']} {w['env']}")
+        pg.evaluate("window.__config.set('wall', 'patient')")
+        mode("clinical")
+        w = still_wall()
+        check(w["wall"] == "clinical" and w["staff"] == "clinical" and pg.evaluate("window.__config.selected().wall") == "patient", f"{room}: Clinical mode turns the wall to Clinical, and leaves the choice as it was")
+        mode("comfort")
+        w = still_wall()
+        check(w["wall"] == "relaxation" and w["wallScene"] == "desert" and w["staff"] == "standby", f"{room}: Comfort mode turns it to Relaxation {w['wall']} {w['wallScene']}")
+        mode("standard")
+        w = still_wall()
+        check(w["wall"] == "patient" and w["tv"] == "orientation" and not w["wallScene"], f"{room}: As set puts it back {w['wall']} {w['tv']}")
+        # Transform my environment: the wall, the ceiling and the light together, slowly, and back
+        pg.evaluate("window.__config.set('scene', 'forest')")
+        check(pg.evaluate("window.__config.fading()") or pg.evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches"), f"{room}: a scene comes in slowly")
+        w = still_wall()
+        code = pg.evaluate("window.__config.code()")
+        check(w["wallScene"] == "forest" and w["ceilingScene"] == "forest" and w["env"] == FOREST and w["tv"] == "scene" and w["strip"]["buttons"] == ["board", "family"] and code[5 + 44] == "1",
+              f"{room}: Forest sets the wall, the ceiling over the bed and the light together, the plan and buttons stay over it, and the link keeps it {w['wallScene']} {w['ceilingScene']} {w['env']} {code[5 + 44]}")
+        pg.evaluate("window.__config.camera('across', { instant: true })")
+        shot(pg, f"{room.lower()}_scene_forest")
+        # Emergency-ready: scenes off, the patient wall off, the station's emergency view; and back
+        mode("emergency")
+        w = still_wall()
+        check(w["emergency"] and w["tv"] == "off" and not w["wallScene"] and not w["ceilingScene"] and w["env"] is None and w["staff"] == "clinical" and pg.evaluate("window.__config.selected().scene") == "forest",
+              f"{room}: Emergency-ready turns every scene and the patient wall off, and the staff panel to Clinical, without changing the choice {w}")
+        pg.click("#openStation") if pg.is_visible("#openStation") else pg.evaluate("window.__config.openStation(true)")
+        st = pg.evaluate("window.__config.station()")
+        check(st["open"] and st["emergency"] and st["route"] and st["outlined"] and pg.is_visible("#stationEmergency") and "Not a validated emergency protocol" in pg.inner_text("#stationEmergency"),
+              f"{room}: in Emergency-ready the workstation shows where the emergency equipment is, lights it, marks the clear route, and says it isn't a validated protocol {st}")
+        faults = axe_faults(pg, "#stationPanel")
+        check(not faults, f"{room}: the workstation's Emergency view passes axe {faults[:3]}")
+        pg.keyboard.press("Escape")
+        pg.click("#leaveEmergency")
+        pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+        w = still_wall()
+        st = pg.evaluate("window.__config.station()")
+        check(w["wallScene"] == "forest" and w["env"] == FOREST and not st["route"] and not st["emergency"], f"{room}: leaving Emergency-ready brings the scene back, and takes the route away {w['wallScene']} {st['route']}")
+        # a sedated patient gets no prompts; Quiet now clears the patient's wall
+        pg.click("#patientBar button[data-state='sedated']")
+        w = still_wall()
+        check(w["strip"]["buttons"] == [] and not w["prompts"], f"{room}: a sedated patient gets no buttons on the wall")
+        pg.click("#patientBar button[data-state='awake']")
+        pg.click("#openBedside")
+        pg.check("#quietNow")
+        w = still_wall()
+        check(w["patient"] == "off" and w["tv"] == "off" and not w["wallScene"], f"{room}: Quiet now takes the scene and the screens off the patient wall {w['patient']} {w['tv']}")
+        pg.uncheck("#quietNow")
+        pg.click("#bedsideClose")
+        # Off: the way back
+        pg.evaluate("window.__config.set('scene', 'off')")
+        w = still_wall()
+        check(w["env"] is None and not w["ceilingScene"] and not w["wallScene"] and w["tv"] == "orientation", f"{room}: Off goes back to how the room was {w['env']} {w['tv']}")
+        # without the patient wall the scene goes on the TV, and the TV goes back to its own choice after
+        pg.evaluate("window.__config.set('patientWall', 'off'); window.__config.set('tvplay', 'off'); window.__config.set('scene', 'ocean')")
+        w = still_wall()
+        on_tv = w["tv"]
+        pg.evaluate("window.__config.set('scene', 'off')")
+        w = still_wall()
+        check(on_tv == "scene" and w["tv"] == "off", f"{room}: without the patient wall a scene shows on the TV, and Off gives the TV back to its own choice {on_tv} {w['tv']}")
+        pg.click("#themes button[data-value='future']")
+        # the clinician workstation: its panel, a task from choosing to Done, both views, the hands-free buttons, PACS
+        pg.evaluate("window.__config.set('workstation', 'off')")
+        pg.click("#openStation")
+        pg.wait_for_selector("#stationPanel", state="visible", timeout=10000)
+        st = pg.evaluate("window.__config.station()")
+        check(st["open"] and st["desk"] and st["view"] == "nurse" and st["sections"] == ["Overview", "Care tasks", "Equipment", "Observations", "Where supplies are", "Handover"] and pg.evaluate("document.activeElement.id") == "stationTitle",
+              f"{room}: Open the workstation: Nurse view, tasks first, the desk in the room while it's open, and focus in the panel {st['sections']}")
+        pg.click("#stationBody button[data-task='dressing']")
+        st = pg.evaluate("window.__config.station()")
+        check(st["task"] == "dressing" and st["lit"] == "supplies" and st["outlined"] and "Dressing pack" in pg.inner_text(".station-detail"), f"{room}: a task shows what it needs and lights the cupboard it's in {st['lit']}")
+        pg.click(".station-detail .station-done")
+        st = pg.evaluate("window.__config.station()")
+        check(st["done"] == ["dressing"] and "dressing" in pg.evaluate(W)["drawn"]["staffRight"], f"{room}: Done ticks it off, on the station and on the staff panel {st['done']}")
+        pg.click("#stationViews button[data-view='doctor']")
+        st = pg.evaluate("window.__config.station()")
+        check(st["view"] == "doctor" and st["sections"][:3] == ["Overview", "Observations", "Plan"], f"{room}: Doctor view: the same patient, observations and the plan first {st['sections']}")
+        pg.click("#stationHands button[data-say='next']")
+        st = pg.evaluate("window.__config.station()")
+        check(st["view"] == "nurse" and st["task"] == "turn" and st["lit"] == "bed", f"{room}: hands-free: \"Next task\" chooses the next one not done, and lights the bed {st['task']} {st['lit']}")
+        pg.click("#stationHands button[data-say='handover']")
+        check(pg.evaluate("window.__config.station().task") is None and "isn't read aloud" in pg.inner_text("#announce"), f"{room}: \"Show the handover\" puts it on the screen, and nothing is read aloud")
+        faults = axe_faults(pg, "#stationPanel")
+        check(not faults, f"{room}: the workstation's panel passes axe {faults[:3]}")
+        shot(pg, f"{room.lower()}_station")
+        pg.keyboard.press("Escape")
+        check(gone(pg, "#stationPanel") and pg.evaluate("document.activeElement.id") == "openStation" and not pg.evaluate("window.__config.station().desk") and not pg.evaluate("window.__config.station().outlined"),
+              f"{room}: Esc closes it, focus goes back to its button, and the desk goes with it when it wasn't chosen")
+        pg.evaluate("window.__config.set('workstation', 'on')")
+        pg.click("#openStation")
+        pg.click("#stationPacs")
+        pg.wait_for_function("window.__config.pacs().active", timeout=30000)
+        check(not pg.evaluate("window.__config.station().open"), f"{room}: Open PACS opens PACS as it is, in the workstation's place")
+        pg.evaluate("window.__config.pacsExit()")
+    # an old link opens as it did; a link with a scene keeps it
+    pg.evaluate("window.__config.set('scene', 'garden')")
+    linked = pg.evaluate("window.__config.code()")
+    pg.goto("about:blank")
+    pg.goto(f"{URL}#c={linked}")
+    pg.wait_for_function("window.__configReady === true", timeout=120000)
+    w = still_wall()
+    check(pg.evaluate("window.__config.selected().scene") == "garden" and w["wallScene"] == "garden" and w["env"] == {"kelvin": 4000, "level": 0.7}, f"a link with a scene opens with it {w['wallScene']}")
+    pg.goto("about:blank")
+    pg.goto(f"{URL}#c=10030010002000000000000000000000000100")
+    pg.wait_for_function("window.__configReady === true", timeout=120000)
+    w = still_wall()
+    sel = pg.evaluate("window.__config.selected()")
+    check(sel["scene"] == "off" and sel["wall"] == "patient" and w["env"] is None and not w["ceilingScene"] and w["tv"] == "off", f"the reference link opens the same room: no scene, the TV off, the light as it was {w['tv']} {w['env']}")
+    pg.add_script_tag(url=AXE)  # a fresh load: axe again
+    faults = axe_faults(pg, "#panel")
+    check(not faults, f"the panel with the smart clinical wall's section passes axe {faults[:3]}")
+    check(not errs, f"the smart clinical wall and the workstation: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- reduced motion
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
@@ -2823,4 +2977,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, accessibility, adaptive quality, stats readout, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, accessibility, adaptive quality, stats readout, phone)")

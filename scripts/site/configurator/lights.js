@@ -66,6 +66,7 @@ export class Lighting {
     this.params = { scheme: { kind: "panels", rect: 30, fill: 0.4, panel: 2.2 }, kelvin: 4000, reading: false, nightLight: "off", task: false };
     // a room mode's look, { kelvin, level }, laid over the configured light (main.js eases it), and whether it turns the task light on
     this.scene = null; this.sceneTask = false;
+    this.env = null; // a scene's light from Transform my environment, under the patient's state and the modes
     this.day = 1;
     this.room = null;
     this.colour = new THREE.Color();
@@ -215,9 +216,9 @@ export class Lighting {
     const p = this.params, s = p.scheme, f = this.room?.fixtures;
     if (!f) return;
     this.day = day;
-    // a room mode's look replaces the configured one while it's on, and the patient's state's look sits under any mode (the
-    // modes are the staff override). Neither changes the option settings
-    const look = this.scene || this.patient || this.base(hour, day);
+    // a room mode's look replaces the configured one while it's on, the patient's state's look sits under any mode (the
+    // modes are the staff override), and a scene's look (Transform my environment) under both. None changes the option settings
+    const look = this.scene || this.patient || this.env || this.base(hour, day);
     const k = this.comfort?.kelvin ?? look.kelvin;
     const col = this.colour.copy(kelvinColour(k));
     const night = 1 - day;

@@ -29,6 +29,9 @@ import { CHECK, ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemBy
 import { ClinicalView, keepClearAreas } from "./clinical.js";
 import { ACROSS, FITTINGS, syncFittings } from "./fittings.js";
 import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip } from "./layout.js";
+import { WallView, buttonAt } from "./wall.js";
+import { Station } from "./station.js";
+import { SCENES, SCENE_MS, STRIP_TEXT, wallFor } from "./wall-data.js";
 import { GuidedTour, CAVEAT } from "./guide.js";
 import { Features } from "./features.js";
 import { Highlight } from "./highlight.js";
@@ -103,7 +106,7 @@ function resize() {
   stage.resize(w, h);
   stage.camera.aspect = w / h;
   const cls = document.body.classList;
-  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : panel.getBoundingClientRect();
+  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : cls.contains("station-active") ? restingRect($("stationPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -111,7 +114,7 @@ function resize() {
   stage.camera.setViewOffset(w, h, coverX / 2, coverY / 2, w, h);
   rig.visible = { w: w - coverX, h: h };
   if (rig.meta) rig.fit();
-  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active"); // off-screen, or covered by a panel in its place
+  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active") || cls.contains("station-active"); // off-screen, or covered by a panel in its place
   $("panelBody").inert = closed;
   panel.querySelector(".actions").inert = closed;
   stage.camera.updateProjectionMatrix();
@@ -201,6 +204,8 @@ function setTime(h) {
 async function setRoom(label, { keepView = true } = {}) {
   setAcoustic(false); // its map and labels are this room's
   setBed(false); // and the bed panel's
+  setStation(false); // and the workstation's, with its lit places
+  station.reset(); // another room, another made-up patient
   endVocalCue(); // its notice names the room being left
   endCompare();
   if (pacs.active) pacs.exit();
@@ -330,7 +335,7 @@ function layoutNow() {
   const solids = [];
   const add = (id, label, roots, fitting = false) => {
     const boxes = [];
-    for (const r of roots) r.traverse(n => { if (n.isMesh && shown(n) && n.name !== "fitting_screen") { const b = new THREE.Box3().setFromObject(n); if (!b.isEmpty()) boxes.push(plan(b)); } });
+    for (const r of roots) r.traverse(n => { if (n.isMesh && shown(n) && !n.userData.screen) { const b = new THREE.Box3().setFromObject(n); if (!b.isEmpty()) boxes.push(plan(b)); } });
     if (boxes.length) solids.push({ id, label, boxes, fitting, wall: Math.min(...boxes.map(b => b[2])) >= 0.9 }); // off the floor, it takes none
   };
   for (const p of KIT) add(`part:${p}`, p, room.parts[p] || []);
@@ -353,11 +358,11 @@ function layoutNow() {
 let optionData = null, panelUi = null;
 const selected = {};
 // Options shown without being chosen, in layers: a feature demo's on top (demos.js), then Acoustic comfort mode's fittings,
-// the bed panel's line clips, staff's Quiet now, the fittings Explore features shows, and the patient's state
+// the bed panel's line clips, the workstation while its panel is open, staff's Quiet now, the fittings Explore features shows, and the patient's state
 // (patient-states.js). The panel, the link and the summary only ever read `selected`.
-const overlays = { demo: {}, acoustic: {}, bed: {}, quiet: {}, explore: {}, patient: {} };
+const overlays = { demo: {}, acoustic: {}, bed: {}, station: {}, quiet: {}, explore: {}, patient: {} };
 const demoShown = overlays.demo;
-const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
+const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.station[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
 /** Set what one layer shows (null: nothing), and bring the room up to whichever layer is on top for each group it touched. */
 function showLayer(layer, values) {
   const touched = new Set([...Object.keys(overlays[layer]), ...Object.keys(values || {})]);
@@ -399,6 +404,7 @@ const EFFECTS = {
   },
   tv: e => setTv(stage.current, e),
   shade: e => setShade(stage.current, e.kind),
+  wall: () => {}, // the smart clinical wall and Transform my environment: settle() brings the wall up to date (syncWall)
 };
 
 function runEffects(group, optionId) {
@@ -420,6 +426,7 @@ function settle() {
   for (const g of allGroups()) {
     if (selected[g.id] === "custom" || optionOf(g.id, selected[g.id])?.effects.some(e => e.do === "color" || e.do === "addonLook")) runEffects(g, selected[g.id]);
   }
+  syncWall(); // what the wall's screens, the ceiling and the TV show, from everything above
   stage.renderer.shadowMap.needsUpdate = true;
 }
 
@@ -817,7 +824,7 @@ pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); de
 
 // ---------------------------------------------------------------- room modes: scenes over the configured room (modes.js)
 const modeApi = {
-  baseLight: () => lighting.patient || lighting.base(state.hour), // a patient's state's light, under the modes
+  baseLight: () => lighting.patient || lighting.env || lighting.base(state.hour), // a patient's state's light, or a scene's, under the modes
   isDark: () => afterDark(),
   setLight: (look, task) => { lighting.scene = look; lighting.sceneTask = task; relight(); },
   blindsNow: () => {
@@ -855,6 +862,8 @@ function syncModes(name) {
   if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency-ready is on."); setAcoustic(false); setBed(false); } // comfort yields to care
   if (quietOn) modeApi.screens(false); // a mode turns the screens back on; Quiet now keeps them off
   document.body.classList.toggle("emergency-ready", name === "emergency");
+  station.setEmergency(name === "emergency"); // the workstation shows where the emergency equipment is
+  syncWall();
   say(text.say);
   invalidate();
 }
@@ -935,6 +944,7 @@ const ACTION_HANDLERS = {
   "sound:groan": { label: () => "Simulate a groan", run: () => simulateSound("groan") },
   "bed:pressure": { label: () => "Open the pressure map", run: () => setBed(true, "pressure") },
   "bed:lines": { label: () => "Open the lines", run: () => setBed(true, "lines") },
+  station: { label: () => "Open the workstation", run: () => setStation(true) },
 };
 // "demo:<id>": another of the feature's demos, such as the wardrobe's compartments, under the label that demo gives
 for (const a of ACTIONS) if (a.startsWith("demo:")) ACTION_HANDLERS[a] = { label: () => DEMOS[a.slice(5)].label, run: () => startDemo($("objectCard").dataset.feature, a.slice(5)).catch(err => window.__configErrors.push(String(err))) };
@@ -1257,6 +1267,9 @@ const demoApi = {
   bed: tab => setBed(true, tab, { fromDemo: true }),
   position: (id, minutes) => bedView.setPosition(id, minutes),
   askMove: id => bedView.ask(id, { focus: false }), // the line check, on screen: the demo says it plays the staff member
+  station: view => { if (!stationOn) setStation(true, { fromDemo: true }); station.setView(view, { quietly: true }); },
+  // a task chosen, or pressed Done: the demo says it plays the staff member who presses it
+  task: (id, done = false) => { if (!stationOn) setStation(true, { fromDemo: true }); if (done) { if (!station.done.has(id)) station.toggleDone(id, { focus: false }); } else station.choose(id, { focus: false }); },
   /** The two wardrobes' floor areas and heights, from their models, as a sentence. */
   figures: () => {
     const f = wardrobeFigures(stage.current);
@@ -1268,7 +1281,7 @@ const demoApi = {
 };
 /** The room has come to rest: the camera has arrived, and any change of mode or of the glass has finished easing. */
 const roomStill = () => new Promise(done => {
-  const look = () => (rig.tween || modes.easing || glass.fading || patientTween || wardrobeMoving(stage.current) ? requestAnimationFrame(look) : done());
+  const look = () => (rig.tween || modes.easing || glass.fading || patientTween || envTween || wallView.easing || wardrobeMoving(stage.current) ? requestAnimationFrame(look) : done());
   requestAnimationFrame(look);
 });
 
@@ -1281,13 +1294,14 @@ async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   endCompare(); // and any demo already running
   setAcoustic(false);
   setBed(false);
+  setStation(false);
   tour.stop();
   if (pacs.active) pacs.exit();
   if (guide.running || guide.ended) await guide.exit();
   $("objectCard").hidden = true;
   demo = {
     id: demoId, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
-    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot() },
+    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot(), station: station.snapshot(), stationOn },
   };
   if (modes.current !== "standard") modes.set("standard", { instant: true }); // a mode would hide what the demo shows
   $("demoName").textContent = f.name;
@@ -1329,6 +1343,8 @@ function endDemo(why = "") {
   if (acousticOn) setAcoustic(false); // only a demo can have it on now: starting one ends the visitor's
   if (bedOn) setBed(false); // and the same for the bed panel
   bedView.restore(d.snap.bed);
+  if (stationOn && !d.snap.stationOn) setStation(false); // and the workstation's, with its views and ticks as they were
+  station.restore(d.snap.station);
   highlight.clear("demo");
   setOldWardrobe(stage.current, false);
   setWardrobe(stage.current, d.snap.wardrobe, { instant: true });
@@ -1336,6 +1352,7 @@ function endDemo(why = "") {
   if (modes.current !== d.snap.mode || modes.easing) modes.set(d.snap.mode, { instant: true });
   if (state.hour !== d.snap.hour) setTime(d.snap.hour);
   if (why !== "view") restorePose(d.snap.pose);
+  syncWall({ instant: true }); // a scene the demo showed is gone at once, its light with it
   relight();
   stage.renderer.shadowMap.needsUpdate = true;
   $("demoBar").hidden = true;
@@ -1386,6 +1403,7 @@ function setAcoustic(on, { fromDemo = false } = {}) {
     if (!fromDemo) { endDemo(); endCompare(); }
     setBedside(false); // one panel in the options panel's place at a time
     setBed(false);
+    setStation(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1569,7 +1587,7 @@ const patientShows = () => ({ ...STATES[patientState].shows, ...(family.scene ? 
 /** Step to a state. The light eases over a couple of seconds (at once with reduced motion), never abruptly. */
 function setPatientState(name, { instant = false, quietly = false } = {}) {
   if (!STATES[name]) return;
-  const was = patientState, from = lighting.patient || lighting.base(state.hour);
+  const was = patientState, from = lighting.patient || lighting.env || lighting.base(state.hour);
   patientState = name;
   if (name === "sedated" && was !== "sedated") bedView.remind(); // a reminder staff dismissed comes back
   bedside.stateChanged(was); // what a sedated patient isn't allowed stops first
@@ -1586,7 +1604,7 @@ function setPatientState(name, { instant = false, quietly = false } = {}) {
 function updatePatient(now) {
   const tw = patientTween;
   if (!tw) return false;
-  const t = Math.max(0, Math.min(1, (now - tw.start) / STATE_MS)), k = easeState(t), to = tw.to || lighting.base(state.hour);
+  const t = Math.max(0, Math.min(1, (now - tw.start) / STATE_MS)), k = easeState(t), to = tw.to || lighting.env || lighting.base(state.hour);
   lighting.patient = { kelvin: tw.from.kelvin + (to.kelvin - tw.from.kelvin) * k, level: tw.from.level + (to.level - tw.from.level) * k };
   if (t >= 1) { patientTween = null; lighting.patient = tw.to; }
   relight();
@@ -1598,6 +1616,7 @@ function syncPatient() {
   $("patientNote").textContent = STATES[patientState].note;
   $("patientNote").hidden = !STATES[patientState].note;
   document.body.dataset.patient = patientState;
+  syncWall(); // a sedated patient gets no prompts on the wall
   invalidate();
 }
 
@@ -1624,6 +1643,7 @@ function applyQuiet(on) {
   showLayer("quiet", on ? { tvplay: "off" } : null);
   modeApi.screens(!on && modes.current !== "emergency");
   document.body.classList.toggle("quiet-now", on);
+  syncWall();
   invalidate();
 }
 
@@ -1671,6 +1691,7 @@ function setBed(on, tab, { fromDemo = false } = {}) {
     if (!fromDemo) { endDemo(); endCompare(); }
     setAcoustic(false);
     setBedside(false);
+    setStation(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1715,6 +1736,167 @@ document.querySelector(".bed-launch").addEventListener("click", e => {
   setBed(true, b.dataset.open);
 });
 
+// ---------------------------------------------------------------- the smart clinical wall and Transform my environment (wall-data.js, wall.js)
+// The wall's switch and the scene are choices. The room mode, Quiet now and the patient's state are laid over them by
+// wallFor(), so a mode never changes a choice. A scene's light eases in over SCENE_MS, under the patient's state and any
+// mode, and Off eases back to how the room was. Nothing here touches the bedside monitor, an alarm or a device.
+var wallView = new WallView(), envTween = null, envId = null;
+const wallNow = () => wallFor({ wall: shownChoice("wall"), mode: modes.current, state: patientState, quiet: quietOn, scene: shownChoice("scene") });
+
+/** Bring the wall's screens, the TV, the ceiling above the bed and the scene's light up to the room. `instant`: no easing. */
+function syncWall({ instant = false } = {}) {
+  const room = stage.current;
+  if (!room || !optionData || !station) return; // not before the station exists: its ticks are on the staff panel
+  const st = wallNow();
+  wallView.apply(room, st, {
+    hour: state.hour, done: station.done, task: station.task, view: station.view, tv: shownChoice("tvplay"),
+    setTv: playing => setTv(room, { playing }),
+    restoreTv: () => { runEffects(groupById("tvplay"), shownChoice("tvplay")); if (modes.current === "emergency" || quietOn) modeApi.screens(false); },
+  }, { instant });
+  stage.refreshCeiling();
+  setEnvLight(st.light, { instant });
+  invalidate();
+}
+
+/** The scene's light, as a look laid over the configured light. It eases, unless `instant` or reduced motion. */
+function setEnvLight(id, { instant = false } = {}) {
+  if (id === envId && !(instant && envTween)) return;
+  envId = id;
+  const to = id ? { ...SCENES[id].light } : null;
+  if (instant || matchMedia("(prefers-reduced-motion: reduce)").matches) { envTween = null; lighting.env = to; relight(); return; }
+  envTween = { start: performance.now(), from: { ...(lighting.env || lighting.base(state.hour)) }, to };
+}
+/** Once a frame while a scene's light eases. Returns true while it moves. */
+function updateEnv(now) {
+  const tw = envTween;
+  if (!tw) return false;
+  const t = Math.max(0, Math.min(1, (now - tw.start) / SCENE_MS)), k = easeState(t), to = tw.to || lighting.base(state.hour);
+  lighting.env = { kelvin: tw.from.kelvin + (to.kelvin - tw.from.kelvin) * k, level: tw.from.level + (to.level - tw.from.level) * k };
+  if (t >= 1) { envTween = null; lighting.env = tw.to; }
+  relight();
+  return true;
+}
+
+// ---------------------------------------------------------------- the clinician workstation (station.js)
+// A staff panel in the options panel's place, as the bed's is. While it's open the desk is in the room, chosen or not. A
+// task lights where its things are; Emergency-ready lights the emergency equipment and marks the clear route on the floor.
+// It changes no choice, link or summary. SIMULATED throughout.
+var stationOn = false, stationOpener = null, stationFromSheet = false, stationPose = null;
+var station = new Station($("stationPanel"), {
+  light: where => { if (stationOn || !where) lightPlace(where); }, // only while its panel is open: Emergency-ready alone looks as it did
+  route: on => showRoute(on && stationOn),
+  changed: () => syncWall(),
+  pacs: () => { setStation(false); pacs.open(); }, // PACS as it is: nothing is copied or changed
+  say,
+});
+
+/** The strip of screen over the TV on the patient wall, if the wall is built. */
+function stripOf(room) { let s = null; room?.addons?.patientWall?.traverse(n => { if (n.userData.screen === "strip") s = n; }); return s; }
+
+/** The objects in the room that a station entry names (wall-data.js `where`). */
+function placeOf(where) {
+  const room = stage.current, a = room?.addons || {}, part = n => room?.parts[n] || [];
+  const inDesk = name => { const n = a.workstation?.visible ? a.workstation.getObjectByName(name) : null; return n ? [n] : []; };
+  const shownAddon = id => (a[id]?.visible ? [a[id]] : []);
+  const places = {
+    bed: part("cfg_kit_bed"), pumps: part("cfg_kit_pumps"), ventilator: part("cfg_kit_ventilator"), monitor: part("cfg_kit_monitor"), pendant: part("cfg_kit_pendant"),
+    supplies: inDesk("ws_supplies"), ppe: inDesk("ws_ppe"), belongings: [...shownAddon("bedsideCabinet"), ...shownAddon("wardrobe")],
+    emergency: [...part("cfg_kit_pendant"), ...part("cfg_kit_monitor"), ...part("cfg_kit_ventilator")],
+  };
+  return places[where] || [];
+}
+
+/** Light a place, and stand in front of it while the panel is open. null: nothing lit. */
+function lightPlace(where) {
+  const objs = where ? placeOf(where) : [];
+  if (!objs.length) { if (highlight.clear("station")) invalidate(); return; }
+  highlight.show("station", objs);
+  if (stationOn && where !== "emergency") {
+    if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
+    const { eye, target } = framePose(objs);
+    rig.goTo(eye, target);
+  }
+  invalidate();
+}
+
+/** The clear route from the door to the bed, marked on the floor (layout.js ROUTES). Illustrative. */
+function showRoute(on) {
+  const room = stage.current;
+  if (!room) return;
+  if (on && !room.stationRoute) { // one even band on a canvas, so the corridor's overlapping pieces don't darken where they meet
+    const points = ROUTES[room.label], polys = corridor(points), all = polys.flat(), PX = 128; // pixels a metre
+    const x0 = Math.min(...all.map(p => p[0])), x1 = Math.max(...all.map(p => p[0])), y0 = Math.min(...all.map(p => p[1])), y1 = Math.max(...all.map(p => p[1]));
+    const c = document.createElement("canvas"); c.width = Math.ceil((x1 - x0) * PX); c.height = Math.ceil((y1 - y0) * PX);
+    const g = c.getContext("2d"), at = ([x, y]) => [(x - x0) * PX, (y1 - y) * PX];
+    g.fillStyle = "#3fc1c9"; // each piece filled solid: the plane's opacity makes the whole band see-through at once
+    for (const poly of polys) { g.beginPath(); poly.forEach((p, i) => g[i ? "lineTo" : "moveTo"](...at(p))); g.closePath(); g.fill(); }
+    g.strokeStyle = "#0b6d75"; g.lineWidth = 6; g.setLineDash([22, 16]);
+    g.beginPath(); points.forEach((p, i) => g[i ? "lineTo" : "moveTo"](...at(p))); g.stroke();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.6, depthWrite: false, toneMapped: false }));
+    m.rotation.x = -Math.PI / 2; m.position.copy(W2T((x0 + x1) / 2, (y0 + y1) / 2, 0.012)); m.renderOrder = 6; m.raycast = () => {};
+    m.name = "station_route";
+    room.root.add(m);
+    room.stationRoute = m;
+  }
+  if (room.stationRoute) room.stationRoute.visible = on;
+  invalidate();
+}
+
+function setStation(on, { fromDemo = false } = {}) {
+  if (on) {
+    if (!fromDemo) { endDemo(); endCompare(); }
+    setAcoustic(false);
+    setBedside(false);
+    setBed(false);
+    tour.stop();
+    if (pacs.active) pacs.exit();
+    $("objectCard").hidden = true;
+    const was = stationOn;
+    if (!stationOn) { if (!stationOpener) stationOpener = document.activeElement; stationPose = cameraPose(); }
+    stationOn = true;
+    showLayer("station", { workstation: "on" }); // the desk is in the room while its panel is open, chosen or not
+    $("stationPanel").hidden = false;
+    document.body.classList.add("station-active");
+    resize();
+    station.render();
+    const desk = stage.current.addons?.workstation;
+    if (station.emergency) { showRoute(true); lightPlace("emergency"); } else if (!was && desk?.visible) { // stand in front of the desk
+      if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
+      const { eye, target } = framePose([desk]);
+      rig.goTo(eye, target);
+    }
+    if (!fromDemo) $("stationTitle").focus({ preventScroll: true });
+    say(station.emergency ? "The clinician workstation, simulated: where the emergency equipment is, and the clear route to the bed. Not a validated protocol." : `The clinician workstation, simulated: ${station.view === "nurse" ? "Nurse view" : "Doctor view"}. No name, no diagnosis.`);
+  } else {
+    if (!stationOn) return;
+    stationOn = false;
+    showLayer("station", null);
+    if (highlight.clear("station")) invalidate();
+    showRoute(false);
+    $("stationPanel").hidden = true;
+    document.body.classList.remove("station-active");
+    resize();
+    if (stationPose) restorePose(stationPose); // the view it was opened from
+    stationPose = null;
+    if (stationFromSheet && isPhone()) setSheet(true);
+    stationFromSheet = false;
+    const back = stationOpener?.isConnected && !stationOpener.closest("[hidden]") && !stationOpener.closest("[inert]") && stationOpener.offsetParent ? stationOpener : canvas;
+    stationOpener = null;
+    back.focus({ preventScroll: true });
+    if (features?.on) refreshExplore();
+  }
+  invalidate();
+}
+$("stationClose").addEventListener("click", () => setStation(false));
+$("stationPanel").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); setStation(false); } });
+$("openStation").addEventListener("click", e => {
+  stationOpener = e.currentTarget;
+  stationFromSheet = isPhone() && panel.classList.contains("open");
+  if (stationFromSheet) setSheet(false);
+  setStation(true);
+});
+
 var bedside = new Bedside($("bedside"), {
   state: () => patientState,
   reminder: () => bedView.reminderState(),
@@ -1735,6 +1917,7 @@ function setBedside(on, tab) {
   if (on) {
     setAcoustic(false);
     setBed(false);
+    setStation(false);
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
     if (!bedsideOn && !bedsideOpener) bedsideOpener = document.activeElement;
@@ -1826,6 +2009,8 @@ canvas.addEventListener("pointerup", e => {
   const hit = nearestSolid(rayAt(e.clientX, e.clientY));
   if (!hit) { $("objectCard").hidden = true; return; }
   if (apis.pick(hit.object)) return;
+  const wallTab = buttonAt(hit.object, hit.uv); // the patient wall's two buttons open the bedside screens
+  if (wallTab) { setBedside(true, wallTab); return; }
   if (glass.isSwitch(hit.object)) setOption("switch", selected.switch === "opaque" ? "clear" : "opaque");
   let info = null;
   for (let node = hit.object; node && node !== stage.current.root; node = node.parent) {
@@ -1858,6 +2043,7 @@ function nearestSolid(r) {
   return r.intersectObject(stage.current.root, true).find(h => {
     if (!shown(h.object)) return false;
     if (glass.isSwitch(h.object)) return true;
+    if (h.object.userData.pickable) return true; // a scene's picture answers a click, though it fades in and out
     return [h.object.material].flat().filter(Boolean).every(m => !m.transparent && !m.transmission);
   });
 }
@@ -2257,6 +2443,8 @@ function frame(now) {
   }
   if (modes.update(now)) dirty = true;
   if (updatePatient(now)) dirty = true;
+  if (wallView.update(now)) dirty = true;
+  if (updateEnv(now)) dirty = true;
   if (pacs.update(now)) dirty = true;
   if (dirty) {
     dirty = false;
@@ -2400,7 +2588,7 @@ window.__config = {
   comfortTint: () => { let hex = null; for (const m of stage.current.parts.addon_comfortControl || []) for (const mat of [m.material].flat()) if (mat?.name === "comfort_status") hex = mat.color.getHexString(); return hex; },
   ventPlates: () => { let n = 0; stage.current.addons?.ventilation?.traverse(o => { if (/grille/.test(o.userData.itemInfo?.title || "")) n += 1; }); return n; },
   profile: answers => resolveProfile(optionData, answers),
-  fading: () => glass.fading,
+  fading: () => glass.fading || wallView.easing || !!envTween, // the glass, a scene fading on the wall or ceiling, or its light easing
   glassLevel: () => glass.k,
   /** Stand in front of an anchor, looking at it, and return where it is on screen. */
   frameAnchor: (name, back = 1.2, up = 0.1) => {
@@ -2485,6 +2673,42 @@ window.__config = {
   bedside: () => ({ open: bedsideOn, ...bedside.inspect() }),
   openBedside: tab => setBedside(true, tab),
   bed: () => ({ open: bedOn, ...bedView.inspect() }),
+  /** The smart clinical wall: what wallFor() says, and what the room shows. */
+  wall: () => {
+    const room = stage.current, w = room.wallState || {}, tv = room.addons?.tv?.userData, strip = stripOf(room);
+    return {
+      ...wallNow(), envId, env: lighting.env && { kelvin: Math.round(lighting.env.kelvin), level: +lighting.env.level.toFixed(3) }, easing: !!envTween || wallView.easing,
+      wallScene: w.wallScene?.visible ? w.wallScene.userData.shown : null, ceilingScene: w.ceilingScene?.visible ? w.ceilingScene.userData.shown : null,
+      tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
+      strip: strip ? { shown: strip.visible, buttons: (strip.userData.buttons || []).map(b => b.tab) } : null,
+      drawn: { ...(w.key || {}) },
+    };
+  },
+  wallButtonPoint: tab => {
+    const strip = stripOf(stage.current);
+    const i = (strip?.userData.buttons || []).findIndex(b => b.tab === tab);
+    if (i < 0) return null;
+    const n = strip.userData.buttons.length, u = (1600 - (n - i) * 274 + 125) / 1600, p = new THREE.Vector3((u - 0.5) * strip.geometry.parameters.width, 0, 0.001);
+    stage.camera.updateMatrixWorld(); strip.updateWorldMatrix(true, false);
+    p.applyMatrix4(strip.matrixWorld).project(stage.camera);
+    return { x: ((p.x + 1) / 2) * innerWidth, y: ((1 - p.y) / 2) * innerHeight };
+  },
+  station: () => ({ open: stationOn, ...station.inspect(), route: !!stage.current.stationRoute?.visible, outlined: highlight.has("station"), desk: !!stage.current.addons?.workstation?.visible }),
+  openStation: on => setStation(on),
+  stationCommand: id => station.command(id),
+  stationTask: (id, done) => (done ? station.toggleDone(id, { focus: false }) : station.choose(id, { focus: false })),
+  stationView: id => station.setView(id),
+  /** From the camera as it stands, in screen pixels: the strip's letters, and the orientation screen's detail lines. */
+  readable: () => {
+    const room = stage.current, strip = stripOf(room), tv = room.addons?.tv?.userData.screen;
+    const px = (mesh, share) => {
+      stage.camera.updateMatrixWorld(); mesh.updateWorldMatrix(true, false);
+      const h = mesh.geometry.parameters.height, a = new THREE.Vector3(0, h / 2, 0).applyMatrix4(mesh.matrixWorld).project(stage.camera), b = new THREE.Vector3(0, -h / 2, 0).applyMatrix4(mesh.matrixWorld).project(stage.camera);
+      return +((Math.abs(a.y - b.y) / 2) * innerHeight * share).toFixed(1);
+    };
+    return { strip: strip?.visible ? px(strip, STRIP_TEXT.size / STRIP_TEXT.canvas[1]) : null, orient: tv ? px(tv, 15 / 270) : null };
+  },
+  pacsExit: () => { if (pacs.active) pacs.exit(); },
   openBed: tab => setBed(true, tab),
   setBed: on => setBed(on),
   bedPosition: (id, minutes) => bedView.setPosition(id, minutes),
@@ -2541,10 +2765,11 @@ window.__config = {
       live: encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))), selected: { ...selected }, shown: { ...demoShown },
       mode: modes.current, look: lighting.scene && { ...lighting.scene }, task: lighting.taskOn, scheme: lighting.params.scheme?.kind, kelvin: lighting.params.kelvin,
       hour: state.hour, view: state.view, eye: stage.camera.position.toArray().map(r), target: controls.target.toArray().map(r),
-      wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
+      wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque], blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
       overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
-      bed: JSON.stringify([bedOn, bedView.snapshot()]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,
+      bed: JSON.stringify([bedOn, bedView.snapshot()]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
+      wallScenes: JSON.stringify([stage.current.wallState?.wallScene?.visible ?? false, stage.current.wallState?.ceilingScene?.visible ?? false]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,
     };
   },
 };
