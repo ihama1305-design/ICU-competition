@@ -10,14 +10,15 @@ import { SENSORS } from "./intel-data.js";
 export function sensorSpots(room) {
   const b = room.meta.bed, r = ROUTES[room.label], [x0, y0] = r[0], [x1, y1] = r[1], len = Math.hypot(x1 - x0, y1 - y0);
   return {
-    bed: [b.head[0] + b.foot[0] * 1.0, b.head[1] + b.foot[1] * 1.0],
+    bed: [b.head[0] + b.foot[0] * 1.6, b.head[1] + b.foot[1] * 1.6], // toward the foot, clear of the examination light over the bed's middle
     door: [x0 + ((x1 - x0) / len) * 0.6, y0 + ((y1 - y0) / len) * 0.6],
     room: [...r[Math.min(2, r.length - 1)]],
   };
 }
 
 export const INTEL = {
-  /** Three flush discs on the ceiling, each a white ring round a dark lens. On the ceiling, so the dollhouse lifts them off. */
+  /** Three flush discs on the ceiling, each a white ring round a dark lens. Not lifted off with the ceiling in the dollhouse:
+   * from above, each disc shows over the floor it would cover. */
   ceilingSensors(room) {
     const g = new THREE.Group(), H = room.meta.ceiling, spots = sensorSpots(room);
     const body = new THREE.MeshStandardMaterial({ color: "#f3f4f2", roughness: 0.4 }), lens = new THREE.MeshStandardMaterial({ color: "#2a3236", roughness: 0.2 });
@@ -30,7 +31,6 @@ export const INTEL = {
       d.traverse(n => { if (n.isMesh) n.userData.itemInfo = d.userData.itemInfo; });
       g.add(d);
     }
-    room.ceiling.push(g);
     return g;
   },
 };
@@ -39,11 +39,11 @@ export const INTEL = {
 export function setCoverage(room, on) {
   if (on && !room.intelCover) {
     const g = new THREE.Group(), spots = sensorSpots(room);
-    const fill = new THREE.MeshBasicMaterial({ color: "#3fc1c9", transparent: true, opacity: 0.16, depthWrite: false, toneMapped: false });
+    const fill = new THREE.MeshBasicMaterial({ color: "#3fc1c9", transparent: true, opacity: 0.26, depthWrite: false, toneMapped: false });
     const edge = new THREE.MeshBasicMaterial({ color: "#0b6d75", transparent: true, opacity: 0.7, depthWrite: false, toneMapped: false });
     for (const s of SENSORS) {
       const [x, y] = spots[s.at], at = W2T(x, y, 0.014);
-      const c = new THREE.Mesh(new THREE.CircleGeometry(s.reach, 48), fill), ring = new THREE.Mesh(new THREE.RingGeometry(s.reach - 0.025, s.reach, 64), edge);
+      const c = new THREE.Mesh(new THREE.CircleGeometry(s.reach, 48), fill), ring = new THREE.Mesh(new THREE.RingGeometry(s.reach - 0.05, s.reach, 64), edge);
       for (const m of [c, ring]) { m.rotation.x = -Math.PI / 2; m.position.copy(at); m.renderOrder = 7; m.raycast = () => {}; g.add(m); }
     }
     g.name = "intel_coverage";

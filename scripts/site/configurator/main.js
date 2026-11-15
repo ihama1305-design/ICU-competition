@@ -30,7 +30,7 @@ import { ClinicalView, keepClearAreas } from "./clinical.js";
 import { ACROSS, FITTINGS, syncFittings } from "./fittings.js";
 import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip, suggestSpot } from "./layout.js";
 import { EVENTS, INTEL_TEXT, SCAN_TEXT, SENSORS } from "./intel-data.js";
-import { setCoverage, setEventMark } from "./intel.js";
+import { sensorSpots, setCoverage, setEventMark } from "./intel.js";
 import { WallView, buttonAt } from "./wall.js";
 import { Station } from "./station.js";
 import { SCENES, SCENE_MS, STRIP_TEXT, TASKS, wallFor } from "./wall-data.js";
@@ -2165,7 +2165,11 @@ function activateIntel(on) {
   intelActive = on;
   showLayer("intel", on ? { ceilingSensors: "on" } : null);
   setCoverage(stage.current, on);
-  if (on) { rig.go("dollhouse"); } // from above, the circles read at once
+  if (on) { // the dollhouse's angle, closer, centred on the three sensors: each disc over the floor it would cover
+    rig.go("dollhouse", { instant: true });
+    const { bed, room } = sensorSpots(stage.current), c = W2T((bed[0] + room[0]) / 2, (bed[1] + room[1]) / 2, 0); // the patient's room, between the bed and the middle
+    rig.goTo(c.clone().add(stage.camera.position.clone().sub(controls.target).multiplyScalar(0.6)), c);
+  }
   renderIntel();
   say(on ? `Room intelligence active: ${SENSORS.length} sensors, and the floor each would cover, illustrative.` : "Room intelligence off.");
   invalidate();
@@ -2256,7 +2260,7 @@ function runScan() {
   const results = list.map(p => {
     const id = `placed:${p.uid}`, mine = findings.filter(f => f.a === id || f.b === id), item = solids.find(x => x.id === id);
     const level = mine.some(f => f.level === "overlap") ? "overlap" : mine.length ? "clearance" : null;
-    const why = mine.map(f => (f.level === "overlap" ? `overlaps ${name(f.a === id ? f.b : f.a).toLowerCase()}` : `stands in ${name(f.b).toLowerCase()}`));
+    const why = mine.map(f => (f.level === "overlap" ? `overlapping ${name(f.a === id ? f.b : f.a).toLowerCase()}` : `in ${name(f.b).toLowerCase()}`));
     const spot = level && item && !item.wall ? suggestSpot({ item, solids, areas, mounted: MOUNTED, within: room.meta.walkable }) : null;
     return { uid: p.uid, label: itemById(p.type)?.label || p.type, level, why, spot, at: [p.x, p.y], wall: !!item?.wall };
   });
@@ -2277,9 +2281,14 @@ var scanResultsNow = [];
 /** One result: why, the item lit, and a nearby clear spot marked on the floor. The visitor drags it there. */
 function explainScan(r) {
   const found = placement.find(r.uid);
-  if (found?.entry.node) highlight.show("scan", [found.entry.node]);
   clearScanMark();
-  let text = r.level ? `${r.label} ${r.why.join(", and ")}. ` : `${r.label}: ${SCAN_TEXT.clear.toLowerCase()}. `;
+  if (found?.entry.node) { // stand where the item and the spot near it can both be seen
+    highlight.show("scan", [found.entry.node]);
+    if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
+    const { eye, target } = framePose([found.entry.node]);
+    rig.goTo(eye, target);
+  }
+  let text = r.level ? `${r.label}: ${r.why.join(", and ")}. ` : `${r.label}: ${SCAN_TEXT.clear.toLowerCase()}. `;
   if (r.level && r.spot) {
     const [x, y] = [r.at[0] + r.spot.dx, r.at[1] + r.spot.dy];
     scanMarker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.28, 40), new THREE.MeshBasicMaterial({ color: "#2f8f5b", transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false }));
