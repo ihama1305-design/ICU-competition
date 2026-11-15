@@ -28,6 +28,6 @@ export const FIT = {
 
 /** The view across the room from the front toward the window, at the reference picture's angle. Appended to the views. */
 export const ACROSS = {
-  W1: { eye: [13.15, 28.42, 1.95], look: [7.8, 29.6, 1.0], hfov: 86 },
+  W1: { eye: [13.25, 28.85, 1.95], look: [7.8, 29.45, 1.0], hfov: 86 }, // far enough from the angled wall that every move to it stays in the room
   W3: { eye: [12.55, 19.8, 1.95], look: [5.9, 20.65, 1.0], hfov: 86 },
 };

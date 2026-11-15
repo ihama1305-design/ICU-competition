@@ -250,9 +250,9 @@ with sync_playwright() as p:
         pg.wait_for_function(f"window.__config.state().room === '{room}' && window.__config.eye().x !== undefined")
         pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
         views = pg.evaluate("window.__config.views()")
-        # the seven every room has, and any of its own in the spec, such as W1's bathroom
-        want_views = {"overview", "family", "entrance", "bed", "bed_window", "window", "dollhouse"}
-        check(want_views <= set(views) and set(views) == set(spec["configurator"]["rooms"][room]["cameras"]), f"{room} has all the views")
+        # the seven every room has, any of its own in the spec, such as W1's bathroom, and the page's own view across the room
+        want_views = {"overview", "family", "entrance", "bed", "bed_window", "window", "dollhouse", "across"}
+        check(want_views <= set(views) and set(views) == set(spec["configurator"]["rooms"][room]["cameras"]) | {"across"}, f"{room} has all the views")
         for v in views:
             pg.evaluate(f"window.__config.camera('{v}', {{ instant: true }})")
             shot(pg, f"{room.lower()}_{v}")
