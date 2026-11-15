@@ -1243,7 +1243,9 @@ with sync_playwright() as p:
     # on a phone the notice fits under the mode bar, and the card that raised it gets out of its way
     ctx, pg, errs, _, _ = open_page(b, 390, 760, query="?tier=low", has_touch=True, is_mobile=True)
     pg.evaluate("window.__config.camera('family', { instant: true })")
+    pg.evaluate("window.__config.orbit(0, 0.12)")  # tilted a little: on a phone the mode bar's two rows of three would cover the sensor
     at = pg.evaluate("window.__config.itemPoint('Sound-level sensor')")
+    check(pg.evaluate("([x, y]) => document.elementFromPoint(x, y)?.id", [at["x"], at["y"]]) == "c", "phone: the sensor is in sight, below the mode bar")
     pg.touchscreen.tap(at["x"], at["y"])
     pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
     pg.click("#objectAction")
