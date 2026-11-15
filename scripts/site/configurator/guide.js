@@ -39,7 +39,7 @@ export const STEPS = [
   },
   {
     title: "Placing items",
-    text: "Drag items such as a privacy screen or hand-gel dispenser into the room. Nothing checks where they go.",
+    text: "Drag items such as a privacy screen or hand-gel dispenser into the room. The room safety scan checks them against this model's clear areas.",
     run: async a => { a.mode("standard"); a.camera("overview", true); a.place(["screen", "rub"]); },
   },
   {

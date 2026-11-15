@@ -7,7 +7,7 @@
 // marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced; acoustic("without" | "with") shows
 // Acoustic comfort mode; notices(open) opens its list of notifications; patient(state) sets the patient's state; station(view) opens the clinician
 // workstation in Nurse or Doctor view, and task(id, done) chooses one of its tasks or presses Done; clean(n) ticks the first n of
-// Cleaning's steps; twin(id) opens the digital twin on one of its systems; today() shows today's room, every option at its default and no placed item, as Compare does. A step's caption can be worked out
+// Cleaning's steps; twin(id) opens the digital twin on one of its systems; intel(id) opens room intelligence, active, and raises a made-up event, "reset" or none; today() shows today's room, every option at its default and no placed item, as Compare does. A step's caption can be worked out
 // from the room: say(api), where api.figures() gives the two wardrobes' sizes as a sentence.
 
 export const DEMOS = {
@@ -189,6 +189,15 @@ export const DEMOS = {
       { say: "The dashboard's five parts, each read on its own and never added up. No vital signs: those are PACS's.", run: a => a.twin("walls") },
     ],
   },
+  // room intelligence: what the sensors would cover, a made-up event, its notice, and reset
+  roomIntelligence: {
+    steps: [
+      { say: "Room intelligence: three flush sensors on the ceiling, and the floor each would cover. Nothing watches or listens.", run: a => { a.time("afternoon"); a.intel(null); } },
+      { say: "A made-up event: the patient may be moving toward the bed's edge. Its place lights, and a notice stays in front of staff until someone acknowledges it.", run: a => a.intel("edge") },
+      { say: "Another: something left in the clear area at the foot of the bed. The workstation shows the notices too.", run: a => a.intel("clear") },
+      { say: "Reset takes the made-up events away. A concept for decision support, not a validated clinical device.", run: a => a.intel("reset") },
+    ],
+  },
   daylight: {
     steps: [
       { say: "Afternoon: the sensor sees daylight, so Comfort mode lowers the blinds against glare.", run: a => { a.time("afternoon"); a.camera("bed_window"); a.mode("comfort"); } },
@@ -201,6 +210,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin", "intel", "scan"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest
