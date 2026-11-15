@@ -2,6 +2,7 @@
 // rule that keeps them in step with the room. Data only, with no Three.js, so check 14 can read it in Node.
 // SIMULATED throughout: every reading is made up and says so, the patient has no name or diagnosis, nothing listens, and
 // nothing here changes an alarm, a device or the bedside monitor, which keeps running beside the wall.
+import { MODES } from "./modes.js";
 
 /** The wall's switch: who it is for right now. An option group (options.json `wall`, code 43). */
 export const WALL_MODES = {
@@ -41,20 +42,24 @@ export const SCENE_MS = 4000; // a slow change: the light and the pictures ease 
 export const PASSPORT_SCENE = "desert";
 
 /**
- * What the wall shows, kept in step with the room. Highest first: Emergency-ready (care comes first: the patient wall's
- * screens and every scene go off, and the staff panel shows its clinical screen); then the room mode staff chose (Clinical
- * turns the wall to Clinical, Comfort to Relaxation); then Quiet now (the patient wall goes dark); then the wall's own
- * switch and the scene chosen. A sedated patient is never prompted: no buttons on the wall.
- * Returns { staff: "clinical" | "standby", patient: "info" | "orientation" | "scene" | "off", scene: id or null (on the patient
- * wall), ceiling: id or null, light: id or null (the scene whose light is laid over the room), prompts, emergency }.
+ * What the wall shows, kept in step with the room, by the levels in modes.js (LEVELS), highest first. Emergency-ready
+ * (clinical safety: the patient wall's screens and every scene go off, and the staff panel shows its clinical screen); then
+ * the room mode staff chose, from its row in the mode table (Clinical turns the wall to Clinical, Comfort to Relaxation,
+ * Family visit to family connection, Cleaning off); then Quiet now (the patient wall goes dark); then the wall's own switch
+ * and the scene chosen (the patient's comfort preference). A sedated patient is never prompted: no buttons on the wall.
+ * Returns { wall, staff: "clinical" | "standby", patient: "info" | "orientation" | "scene" | "family" | "off", scene: id or
+ * null (on the patient wall), ceiling: id or null, light: id or null (the scene whose light is laid over the room), prompts,
+ * emergency }.
  */
 export function wallFor({ wall = DEFAULT_WALL, mode = "standard", state = "awake", quiet = false, scene = "off" } = {}) {
-  const chosen = SCENES[scene] ? scene : null;
+  const m = MODES[mode] || MODES.standard, chosen = SCENES[scene] && !m.scenesOff ? scene : null;
   if (mode === "emergency") return { wall: "clinical", staff: "clinical", patient: "off", scene: null, ceiling: null, light: null, prompts: false, emergency: true };
-  const w = mode === "clinical" ? "clinical" : mode === "comfort" ? "relaxation" : WALL_MODES[wall] ? wall : DEFAULT_WALL;
+  if (m.wall === "off") return { wall: "off", staff: "standby", patient: "off", scene: null, ceiling: null, light: null, prompts: false, emergency: false }; // no patient: Cleaning
+  const w = m.wall || (WALL_MODES[wall] ? wall : DEFAULT_WALL);
   const out = { wall: w, staff: w === "clinical" ? "clinical" : "standby", patient: "info", scene: null, ceiling: chosen, light: chosen, prompts: state !== "sedated", emergency: false };
   if (w === "clinical") { out.patient = "orientation"; out.prompts = false; } // a focused place to work: the patient keeps the time and date
   else if (w === "relaxation") { out.patient = "scene"; out.scene = chosen || PASSPORT_SCENE; out.prompts = false; }
+  else if (w === "family") { out.patient = "family"; out.scene = chosen; out.prompts = false; } // family connection on the TV, a chosen scene round it
   else if (chosen) { out.patient = "scene"; out.scene = chosen; } // Patient, with a scene: the information sits over it
   if (quiet) { out.patient = "off"; out.scene = null; out.prompts = false; } // staff's Quiet now: no stimulation on the patient's wall
   return out;

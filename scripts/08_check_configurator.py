@@ -2043,8 +2043,8 @@ with sync_playwright() as p:
     # the communication board: touch, a switch that steps, and gaze by dwell; each request listed with the time until acknowledged
     pg.click("#openBedside")
     bs = pg.evaluate("({ b: window.__config.bedside(), focus: document.activeElement.id, options: getComputedStyle(document.getElementById('panel')).visibility })")
-    check(bs["b"]["open"] and bs["focus"] == "bedsideTitle" and bs["options"] == "hidden" and bs["b"]["board"] == ["I need help", "I am in pain", "I feel cold", "I feel hot", "I need repositioning", "I want to contact my family", "I need a nurse"],
-          f"Bedside screens open in the options panel's place, with focus, on the board's seven requests {bs['b']['board']}")
+    check(bs["b"]["open"] and bs["focus"] == "bedsideTitle" and bs["options"] == "hidden" and bs["b"]["board"] == ["I need help", "I am in pain", "I feel cold", "I feel hot", "I need repositioning", "I want to contact my family", "I need a nurse", "I need water", "I can't sleep", "I need help communicating", "I would like some privacy"] and all(a and a[0] and a[1] == "rtl" for a in bs["b"]["arabic"]),
+          f"Bedside screens open in the options panel's place, with focus, on the board's seven requests, three more and a privacy request, each with its Arabic, right to left {bs['b']['board']}")
     pg.click(".board-button[data-request='pain']")
     req = pg.evaluate("window.__config.bedside().requests")
     now = pg.evaluate("document.getElementById('timeNow').textContent")
@@ -2536,6 +2536,100 @@ with sync_playwright() as p:
     check(not errs, f"the smart clinical wall and the workstation: no errors {errs[:3]}")
     ctx.close()
 
+    # ---------------------------------------------------------------- room modes that move everything together: Family visit, Cleaning, the notes, the board in Arabic, and the bar on a phone
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+
+    def set_mode(name):
+        pg.click(f"#modeBar button[data-mode='{name}']")
+        pg.wait_for_function("!window.__config.mode().easing && !window.__config.fading()", timeout=60000)
+
+    bar = pg.evaluate("[...document.querySelectorAll('#modeBar .mode-seg button')].map(b => b.textContent)")
+    check(bar == ["As set", "Comfort", "Privacy", "Clinical", "Family visit", "Cleaning"], f"the bar: As set, Comfort, Privacy, Clinical, Family visit and Cleaning, with Emergency-ready on its own {bar}")
+    for room in ROOMS:
+        go(pg, room)
+        pg.click("#themes button[data-value='future']")
+        pg.evaluate("window.__config.set('front', 'smart'); window.__config.set('scene', 'garden'); window.__config.time(window.__config.stops.afternoon)")
+        pg.wait_for_function("!window.__config.fading()", timeout=60000)
+        before = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
+        # every mode: its note is one line, ending that medical alarms always stay on
+        notes = {}
+        for m in ["comfort", "privacy", "clinical", "family", "cleaning"]:
+            set_mode(m)
+            notes[m] = pg.inner_text("#modeNote")
+        bad = {k: v for k, v in notes.items() if not v.endswith("Medical alarms always stay on.") or "\n" in v.strip()}
+        check(not bad, f"{room}: each mode's note says in one line what changed, and that medical alarms always stay on {bad}")
+        # Family visit: warm light, the glass softened, family connection on the wall, the chosen scene round it; staff end it
+        set_mode("family")
+        w, gl = pg.evaluate("window.__config.wall()"), pg.evaluate("window.__config.glass()")
+        check(w["wall"] == "family" and w["tv"] == "family" and w["wallScene"] == "garden" and gl["opaque"] and 0 < gl["k"] < 1 and pg.evaluate("window.__config.selected().front") == "smart",
+              f"{room}: Family visit: family connection on the TV, the patient's scene round it, and the glass softened, not opaque, so staff can still see in {w['tv']} {w['wallScene']} {gl}")
+        shot(pg, f"{room.lower()}_mode_family")
+        set_mode("standard")
+        gl = pg.evaluate("window.__config.glass()")
+        check(not gl["opaque"] and pg.evaluate("window.__config.wall()")["tv"] == "scene", f"{room}: staff end it, and the glass and the wall come back {gl}")
+        # Cleaning: the bed empty, the screens off, no scene, the checklist lighting each step, and what finishing says
+        set_mode("cleaning")
+        c, w = pg.evaluate("window.__config.cleaning()"), pg.evaluate("window.__config.wall()")
+        check(c["on"] and c["panel"] and c["figure"] is False and c["next"] == "handsIn" and c["outlined"] and w["patient"] == "off" and not w["wallScene"] and not w["ceilingScene"] and w["env"] is None,
+              f"{room}: Cleaning: the patient figure goes, the screens and scenes go off, and the first step, hands, lights the basin {c} {w['patient']}")
+        pg.check("#clean-handsIn")
+        c = pg.evaluate("window.__config.cleaning()")
+        check(c["next"] == "rails" and c["outlined"], f"{room}: ticking a step lights the next: the bed rails {c['next']}")
+        for box in pg.locator("#cleaningSteps input").all():
+            box.check()
+        c = pg.evaluate("window.__config.cleaning()")
+        done = pg.inner_text("#cleaningDone")
+        check(c["done"] and c["next"] is None and not c["outlined"] and "Checklist finished" in done and "doesn't say the room is clean or disinfected" in done,
+              f"{room}: finishing says the checklist is finished, and never that the room is disinfected {done!r}")
+        check(pg.get_attribute("#cleaningAir", "href") == "../ventilation/" and "No airflow" in pg.inner_text("#cleaningPanel"), f"{room}: no airflow in the room: the checklist links to the ventilation plan")
+        faults = axe_faults(pg, "#hud")
+        check(not faults, f"{room}: the bar and the checklist pass axe {faults[:3]}")
+        shot(pg, f"{room.lower()}_mode_cleaning")
+        pg.click("#leaveCleaning")
+        pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+        c = pg.evaluate("window.__config.cleaning()")
+        check(not c["on"] and not c["panel"] and c["figure"] is True and c["ticks"] == [], f"{room}: leaving Cleaning puts the figure back and forgets the ticks {c}")
+        # Emergency-ready from Family visit: it outranks it, and leaving goes back
+        set_mode("family")
+        set_mode("emergency")
+        w = pg.evaluate("window.__config.wall()")
+        check(w["emergency"] and w["tv"] == "off" and not pg.evaluate("window.__config.glass()")["opaque"], f"{room}: Emergency-ready outranks Family visit: screens off and the glass clear")
+        pg.click("#leaveEmergency")
+        pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+        check(pg.evaluate("window.__config.mode().current") == "family", f"{room}: leaving Emergency-ready goes back to Family visit")
+        set_mode("standard")
+        pg.wait_for_function("!window.__config.fading()", timeout=60000)
+        after = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
+        diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k] and k not in ("eye", "target", "view")]
+        check(after["code"] == before["code"] and not diff, f"{room}: no mode changed a choice or the link, and As set puts the room back {diff}")
+    # the board: Arabic beside English, and a privacy request a nurse acts on
+    pg.click("#openBedside")
+    pg.click(".board-button[data-request='privacy']")
+    item = pg.locator(".requests li").last
+    ar = item.locator("[lang='ar']").first
+    check(ar.get_attribute("dir") == "rtl" and "nurse confirms anything clinical in person" in item.inner_text(), "a request shows in English and Arabic, right to left, with the line that a nurse confirms anything clinical in person")
+    item.locator("button", has_text="Turn on Privacy").click()
+    pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+    check(pg.evaluate("window.__config.mode().current") == "privacy", "from the privacy request, the nurse turns Privacy on: nothing happened until they did")
+    faults = axe_faults(pg, "#bedside")
+    check(not faults, f"the board with its Arabic passes axe {faults[:3]}")
+    pg.click("#bedsideClose")
+    set_mode("standard")
+    check(not errs, f"room modes: no errors {errs[:3]}")
+    ctx.close()
+    # the bar on a 390 px phone: two rows of three, Emergency-ready below, nothing off the screen
+    ctx, pg, errs, _, _ = open_page(b, 390, 844)
+    rows = pg.evaluate("""() => { const bs = [...document.querySelectorAll('#modeBar button[data-mode]')];
+      return bs.map(b => { const r = b.getBoundingClientRect(); return [b.dataset.mode, Math.round(r.top), Math.round(r.left), Math.round(r.right)]; }); }""")
+    tops = sorted({r[1] for r in rows})
+    seg = [r for r in rows if r[0] != "emergency"]
+    check(len(tops) == 3 and len({r[1] for r in seg}) == 2 and all(r[3] <= 390 for r in rows) and [r for r in rows if r[0] == "emergency"][0][1] == tops[-1],
+          f"390 px: the six modes in two rows of three, Emergency-ready on the row below, nothing off the screen {rows}")
+    shot(pg, "phone_mode_bar")
+    check(not errs, f"the phone's mode bar: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- reduced motion
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
@@ -2977,4 +3071,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, accessibility, adaptive quality, stats readout, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, accessibility, adaptive quality, stats readout, phone)")
