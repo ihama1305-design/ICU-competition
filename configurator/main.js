@@ -31,6 +31,8 @@ import { ACROSS, FITTINGS, syncFittings } from "./fittings.js";
 import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip, suggestSpot } from "./layout.js";
 import { EVENTS, INTEL_TEXT, SCAN_TEXT, SENSORS } from "./intel-data.js";
 import { sensorSpots, setCoverage, setEventMark } from "./intel.js";
+import { setCableView } from "./cables.js";
+import { CABLE_TEXT, KINDS as CABLE_KINDS } from "./cables-data.js";
 import { WallView, buttonAt } from "./wall.js";
 import { Station } from "./station.js";
 import { SCENES, SCENE_MS, STRIP_TEXT, TASKS, wallFor } from "./wall-data.js";
@@ -212,6 +214,7 @@ async function setRoom(label, { keepView = true } = {}) {
   setBed(false); // and the bed panel's
   setStation(false); // and the workstation's, with its lit places
   setTwin(false); // and the twin's
+  setCables(null, { quietly: true }); // the cable overlay is this room's
   setIntel(false); resetIntel(true); clearScan(); // and room intelligence's, with its made-up events; and the scan's results
   station.reset(); // another room, another made-up patient
   endVocalCue(); // its notice names the room being left
@@ -333,7 +336,7 @@ canvas.addEventListener("keydown", e => {
 // What counts as solid: the kit in the room models, the add-ons that stand in the room, and the items placed. Not the printed
 // sky, what's outside the window, or the clips on the bed's lines. Each object is the boxes of its own parts.
 const KIT = ["cfg_kit_bed", "cfg_kit_monitor", "cfg_kit_pumps", "cfg_kit_ventilator", "cfg_kit_pendant", "cfg_kit_exam_light", "cfg_kit_iv_pole", "cfg_kit_overbed_table", "cfg_kit_recliner", "cfg_kit_visitor_chair"];
-const NOT_SOLID = new Set(["sky", "palms", "planting", "patio", "ventilation", "lineClips"]);
+const NOT_SOLID = new Set(["sky", "palms", "planting", "patio", "ventilation", "lineClips", "cableChannels"]); // the cable channels are flush covers and a floor marking
 // what's meant to touch: the monitor and pumps hang on the pendant, and the overbed table reaches over the bed
 const MOUNTED = [["part:cfg_kit_monitor", "part:cfg_kit_pendant"], ["part:cfg_kit_pumps", "part:cfg_kit_pendant"], ["part:cfg_kit_overbed_table", "part:cfg_kit_bed"]];
 function layoutNow() {
@@ -376,9 +379,9 @@ const selected = {};
 // Options shown without being chosen, in layers: a feature demo's on top (demos.js), then Acoustic comfort mode's fittings,
 // the bed panel's line clips, the workstation while its panel is open, staff's Quiet now, the fittings Explore features shows, and the patient's state
 // (patient-states.js). The panel, the link and the summary only ever read `selected`.
-const overlays = { demo: {}, acoustic: {}, bed: {}, station: {}, intel: {}, quiet: {}, explore: {}, patient: {} };
+const overlays = { demo: {}, acoustic: {}, bed: {}, station: {}, intel: {}, cables: {}, quiet: {}, explore: {}, patient: {} };
 const demoShown = overlays.demo;
-const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.station[id] ?? overlays.intel[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
+const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.station[id] ?? overlays.intel[id] ?? overlays.cables[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
 /** Set what one layer shows (null: nothing), and bring the room up to whichever layer is on top for each group it touched. */
 function showLayer(layer, values) {
   const touched = new Set([...Object.keys(overlays[layer]), ...Object.keys(values || {})]);
@@ -1035,6 +1038,7 @@ const ACTION_HANDLERS = {
   "bed:pressure": { label: () => "Open the pressure map", run: () => setBed(true, "pressure") },
   "bed:lines": { label: () => "Open the lines", run: () => setBed(true, "lines") },
   station: { label: () => "Open the workstation", run: () => setStation(true) },
+  "cables:apis": { label: () => "Lines at the patient, in APIS", run: () => { closeCard(); apis.open(); apis.setMode("routing"); } },
   intel: { label: () => "Open room intelligence", run: () => setIntel(true) },
   scan: { label: () => "Run the room safety scan", run: () => { closeCard(); if (isPhone()) setSheet(true); $("runScan").scrollIntoView({ block: "nearest" }); runScan(); } },
   twin: { label: () => "Open the digital twin", run: () => setTwin(true) },
@@ -1368,6 +1372,8 @@ const demoApi = {
     if (demo) demo.hidPlaced = true;
     settle(); relight(); refreshExplore();
   },
+  // the cable overlay: "traditional", "organised", or null for none
+  cables: state => setCables(state),
   // room intelligence: open and active, and a made-up event raised, or "reset"
   intel: id => { if (!intelOn) setIntel(true, { fromDemo: true }); if (!intelActive) activateIntel(true); if (id === "reset") resetIntel(); else if (id) raiseIntel(id); },
   // the digital twin open on one of its systems (null: none chosen)
@@ -1407,7 +1413,7 @@ async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   $("objectCard").hidden = true;
   demo = {
     id: demoId, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
-    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot(), station: station.snapshot(), stationOn, twinOn, twinSystem: twin.system, intelOn },
+    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot(), station: station.snapshot(), stationOn, twinOn, twinSystem: twin.system, intelOn, cables: cableState },
   };
   if (modes.current !== "standard") modes.set("standard", { instant: true }); // a mode would hide what the demo shows
   $("demoName").textContent = f.name;
@@ -1453,6 +1459,7 @@ function endDemo(why = "") {
   if (stationOn && !d.snap.stationOn) setStation(false); // and the workstation's, with its views and ticks as they were
   if (twinOn && !d.snap.twinOn) setTwin(false); // and the twin's, with the system the visitor had chosen
   if (intelOn && !d.snap.intelOn) { resetIntel(true); setIntel(false); } // and room intelligence's, with its made-up events
+  setCables(d.snap.cables, { quietly: true }); // and the cable overlay as it was
   twin.system = d.snap.twinSystem;
   station.restore(d.snap.station);
   highlight.clear("demo");
@@ -2306,6 +2313,36 @@ function clearScan() { scanShown = false; scanResultsNow = []; clearScanMark(); 
 $("runScan").addEventListener("click", () => runScan());
 $("scanIntro").textContent = SCAN_TEXT.intro;
 
+// ---------------------------------------------------------------- equipment and cables (cables-data.js, cables.js)
+// An overlay, like a room mode: Traditional shows today's arrangement, cables loose on the floor and no channels; Organised
+// shows them routed through the flush channels and down the pendant, gas in its own channel, the ventilator on its docking
+// spot. Each kind has a label as well as a colour. The patient's own lines are the bed's and APIS's: linked, not repeated.
+// It changes no choice, link or summary, and nothing moves, retracts, clamps or disconnects.
+var cableState = null;
+function setCables(which, { quietly = false } = {}) {
+  const room = stage.current;
+  if (!room || which === cableState) return;
+  cableState = which;
+  showLayer("cables", which ? { cableChannels: which === "organised" ? "on" : "off" } : null);
+  setCableView(room, which);
+  if (which === "organised" && room.patient?.routes) highlight.show("cables", [room.patient.routes], "soft"); else highlight.clear("cables");
+  $("cableStates").querySelectorAll("button[data-cables]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cables === (which || "off"))));
+  $("cableNote").textContent = which ? CABLE_TEXT[which] : CABLE_TEXT.intro;
+  if (which && !quietly) { // from a raised corner past the bed's foot: the pendant, the bed head and the floor round the bed
+    if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
+    const b = room.meta.bed, h = b.head, f = b.foot, side = [-f[1], f[0]]; // across the bed, toward the patient's left
+    rig.goTo(W2T(h[0] + f[0] * 2.7 - side[0] * 1.7, h[1] + f[1] * 2.7 - side[1] * 1.7, 2.3), W2T(h[0] - f[0] * 0.1 + side[0] * 0.4, h[1] - f[1] * 0.1 + side[1] * 0.4, 0.6));
+  }
+  if (!quietly) say(which ? `Cables, ${which}: ${CABLE_TEXT[which]}` : "The cable overlay is off.");
+  invalidate();
+}
+$("cableStates").addEventListener("click", e => { const b = e.target.closest("button[data-cables]"); if (b) setCables(b.dataset.cables === "off" ? null : b.dataset.cables); });
+$("cableApis").addEventListener("click", () => { setCables(null, { quietly: true }); apis.open(); apis.setMode("routing"); });
+$("cableNote").textContent = CABLE_TEXT.intro;
+$("cablePatient").textContent = CABLE_TEXT.patient;
+$("cableLimits").textContent = CABLE_TEXT.limits;
+$("cableKey").replaceChildren(...CABLE_KINDS.map(k => el("li", {}, el("span", { className: "cable-swatch", style: `background:${k.colour}` }), ` ${k.label}`)));
+
 var bedside = new Bedside($("bedside"), {
   state: () => patientState,
   reminder: () => bedView.reminderState(),
@@ -3137,6 +3174,9 @@ window.__config = {
     sensors: !!stage.current.addons?.ceilingSensors?.visible, marks: Object.fromEntries(Object.entries(stage.current.intelMarks || {}).map(([k, v]) => [k, v.visible])), station: station.inspect().notices }),
   scan: () => ({ shown: scanShown, results: scanResultsNow.map(r => ({ uid: r.uid, label: r.label, level: r.level, why: r.why, spot: r.spot })), marker: scanMarker ? [+scanMarker.position.x.toFixed(2), +(-scanMarker.position.z).toFixed(2)] : null, detail: $("scanDetail").hidden ? null : $("scanDetail").textContent }),
   runScan: () => runScan().map(r => r.level),
+  cables: () => { const v = stage.current.cableViews || {}, shown = Object.entries(v).find(([, g]) => g.visible); return { state: cableState, view: shown?.[0] ?? null,
+    tubes: shown ? shown[1].children.filter(n => n.isMesh).map(n => n.userData.kind) : [], labels: shown ? shown[1].children.filter(n => n.isSprite).map(n => n.userData.kind) : [],
+    channels: !!stage.current.addons?.cableChannels?.visible, outlined: highlight.has("cables") }; },
   /** For the scan's check: put an item at a spot, move one, and the middle of the keep-clear area on the patient's right. */
   placeAt: (type, x, y) => { const e = placement.add(stage.current, type, x, y, 0); remember(); invalidate(); return e?.uid ?? null; },
   movePlaced: (uid, x, y) => { const f = placement.find(uid); if (!f) return false; placement.move(f.entry, x, y); remember(); invalidate(); if (scanShown) runScan(); return true; },
@@ -3213,7 +3253,7 @@ window.__config = {
       wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.familyOn ? "family" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque, glass.level], cleaning: JSON.stringify([cleaningOn, [...cleaningTicks], highlight.has("cleaning")]), figure: stage.current.patient ? stage.current.patient.root.visible : null, blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
       overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
-      bed: JSON.stringify([bedOn, bedView.snapshot()]), intel: JSON.stringify([intelOn, intelActive, Object.keys(intelEvents), !!stage.current.intelCover?.visible]), twin: JSON.stringify([twinOn, twin.system, highlight.has("twin"), highlight.has("twinAll")]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
+      bed: JSON.stringify([bedOn, bedView.snapshot()]), cables: JSON.stringify([cableState, Object.entries(stage.current.cableViews || {}).filter(([, g]) => g.visible).map(([k]) => k)]), intel: JSON.stringify([intelOn, intelActive, Object.keys(intelEvents), !!stage.current.intelCover?.visible]), twin: JSON.stringify([twinOn, twin.system, highlight.has("twin"), highlight.has("twinAll")]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
       wallScenes: JSON.stringify([stage.current.wallState?.wallScene?.visible ?? false, stage.current.wallState?.ceilingScene?.visible ?? false]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,
     };
   },

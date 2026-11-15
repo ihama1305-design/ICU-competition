@@ -295,6 +295,7 @@ footer p { margin: 0; }
 .feature-marker { position: absolute; left: 0; top: 0; min-height: 28px; padding: 4px 10px; border: 1px solid var(--accent); border-radius: 999px; background: var(--panel-solid); color: var(--ink); font: 500 12px/1.3 var(--ui); white-space: nowrap; box-shadow: 0 2px 8px rgba(16, 44, 54, 0.18); cursor: pointer; pointer-events: auto; }
 .feature-marker::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: var(--lead, 8px); background: var(--accent); }
 .feature-marker[hidden] { display: none; }
+.feature-marker.below::after { top: auto; bottom: 100%; } /* hung below its point: the leader goes up to it */
 @media (hover: hover) { .feature-marker:hover { background: var(--accent); color: var(--accent-ink); } }
 #c.over-feature { cursor: pointer; }
 
@@ -413,6 +414,8 @@ footer p { margin: 0; }
 .station-active #panel { visibility: hidden; pointer-events: none; }
 .twin-active #panel { visibility: hidden; pointer-events: none; }
 .intel-active #panel { visibility: hidden; pointer-events: none; }
+.cable-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 6px; padding: 0; list-style: none; font-size: 12px; }
+.cable-swatch { display: inline-block; width: 14px; height: 6px; border-radius: 3px; vertical-align: middle; }
 .intel-panel h3 { margin: 12px 0 6px; }
 .intel-activate { width: 100%; min-height: 40px; margin: 6px 0; border: 1px solid var(--accent); border-radius: 8px; background: var(--hover); color: var(--accent); font: 600 13px/1.2 var(--ui); cursor: pointer; }
 .intel-activate[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }

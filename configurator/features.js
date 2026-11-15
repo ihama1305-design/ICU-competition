@@ -146,6 +146,8 @@ export class Features {
       const x = ((v.x + 1) / 2) * w, y = ((1 - v.y) / 2) * h;
       return { m, x, y, off: v.z > 1 || x < 8 || x > visibleWidth - 8 || y < 8 || y > h - 8 };
     }).sort((a, b) => (a.y ?? 0) - (b.y ?? 0));
+    // the bar above the room covers the top of the view on its left: a mark lifted under it couldn't be read or clicked
+    const hud = document.getElementById("hud")?.getBoundingClientRect(), under = (l, r, t) => hud && l < hud.right && r > hud.left && t < hud.bottom + 4;
     for (const o of order) {
       o.m.el.hidden = o.off;
       if (o.off) continue;
@@ -157,6 +159,21 @@ export class Features {
         if (!hit) break;
         lift = b.b - hit.t + 4;
       }
+      if (under(b.l, b.r, b.t - lift)) { // no room above: it hangs below its point instead, past any mark in the way
+        let drop = 0;
+        const low = () => ({ l: b.l, r: b.r, t: o.y + 8 + drop, b: o.y + 8 + drop + o.m.h });
+        for (let tries = 0; tries < 6; tries++) {
+          const d = low(), hit = placed.find(p => d.l < p.r && d.r > p.l && d.t < p.b && d.b > p.t);
+          if (!hit) break;
+          drop = hit.b - (o.y + 8) + 4;
+        }
+        o.m.el.classList.add("below");
+        o.m.el.style.setProperty("--lead", `${8 + drop}px`);
+        o.m.el.style.transform = `translate(${Math.round(o.x)}px, ${Math.round(o.y + drop)}px) translate(-50%, 8px)`;
+        placed.push(low());
+        continue;
+      }
+      o.m.el.classList.remove("below");
       o.m.el.style.setProperty("--lead", `${8 + lift}px`);
       o.m.el.style.transform = `translate(${Math.round(o.x)}px, ${Math.round(o.y - lift)}px) translate(-50%, calc(-100% - 8px))`;
       placed.push({ l: b.l, r: b.r, t: b.t - lift, b: b.b - lift });
