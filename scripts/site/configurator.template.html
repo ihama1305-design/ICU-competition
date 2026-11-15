@@ -89,6 +89,12 @@
     <p id="cleaningLimits" class="vocal-meta"></p>
     <button type="button" id="leaveCleaning">End Cleaning</button>
   </section>
+  <section id="intelNotice" class="mode-banner vocal-notice intel-notice" aria-labelledby="intelKicker" hidden>
+    <p id="intelKicker" class="vocal-kicker">Room intelligence · SIMULATED</p>
+    <p id="intelText"></p>
+    <p class="vocal-meta">A made-up event, raised by a button: nothing watched the patient or the room. A person looks and acknowledges.</p>
+    <button type="button" id="intelAck">Acknowledge</button>
+  </section>
   <section id="vocalNotice" class="mode-banner vocal-notice" aria-labelledby="vocalKicker" hidden>
     <p id="vocalKicker" class="vocal-kicker">Notice at the nurse station · SIMULATED</p>
     <p id="vocalText"></p>
@@ -201,7 +207,11 @@
       <h2 id="hPlace">Place items</h2>
       <div id="placeItems" class="place-items" role="group" aria-labelledby="hPlace"></div>
       <p id="placeStatus" class="note" role="status"></p>
-      <p class="note">Drag an item onto the room, or choose it and then click or tap where it goes. Drag a placed item to move it, and click it to turn or remove it. Where they go is up to you: access, clearances and infection-control positions aren't checked.</p>
+      <p class="note">Drag an item onto the room, or choose it and then click or tap where it goes. Drag a placed item to move it, and click it to turn or remove it. Where they go is up to you; the room safety scan checks them against this model's own clear areas, not hospital rules.</p>
+      <button type="button" id="runScan" class="outline-action scan-run">Run the room safety scan</button>
+      <p id="scanIntro" class="note"></p>
+      <ul id="scanResults" class="scan-results" aria-live="polite"></ul>
+      <p id="scanDetail" class="note scan-detail" role="status" hidden></p>
     </section>
 
     <details class="section" name="options" id="featuresSection">
@@ -217,6 +227,13 @@
         <button type="button" class="wide" data-open="family">Family connection</button>
       </div>
       <p class="note">They follow the patient's state, set above the room. Simulated: no request, photograph or voice leaves this page. No item needs to be placed.</p>
+    </section>
+    <section aria-labelledby="hIntel">
+      <h2 id="hIntel">Room intelligence</h2>
+      <div class="grid intel-launch">
+        <button type="button" class="wide" id="openIntel">Open room intelligence</button>
+      </div>
+      <p class="note">Ceiling sensors, what each would cover, and two made-up events that put a notice in front of staff. Nothing watches or listens. Simulated.</p>
     </section>
     <section aria-labelledby="hTwin">
       <h2 id="hTwin">Digital twin</h2>
@@ -310,6 +327,24 @@
   <div id="pane-passport" class="bedside-pane" hidden></div>
   <div id="pane-family" class="bedside-pane" hidden></div>
   <div id="pane-staff" class="bedside-pane" hidden></div>
+</section>
+<section id="intelPanel" class="acoustic-panel intel-panel" aria-labelledby="intelTitle" hidden>
+  <button type="button" id="intelClose" class="object-close" aria-label="Close room intelligence">×</button>
+  <p class="object-kicker">Room intelligence · SIMULATED</p>
+  <h2 id="intelTitle" tabindex="-1">Room intelligence</h2>
+  <p id="intelIntro" class="note"></p>
+  <button type="button" id="intelActivate" class="wide intel-activate" aria-pressed="false">Activate room intelligence</button>
+  <h3 class="acoustic-sub">The sensors</h3>
+  <ul id="intelSensors" class="station-list"></ul>
+  <h3 class="acoustic-sub" id="intelEventsTitle">Made-up events</h3>
+  <div id="intelEvents" class="intel-events" role="group" aria-labelledby="intelEventsTitle"></div>
+  <p id="intelMeta" class="note"></p>
+  <p id="intelStatus" class="note" role="status"></p>
+  <button type="button" id="intelReset" class="outline-action">Reset the events</button>
+  <h3 class="acoustic-sub">Readings the room already has</h3>
+  <ul id="intelReadings" class="station-list"></ul>
+  <p id="intelReadingsNote" class="note"></p>
+  <p id="intelLimits" class="note"></p>
 </section>
 <section id="twinPanel" class="acoustic-panel twin-panel" aria-labelledby="twinTitle" hidden>
   <button type="button" id="twinClose" class="object-close" aria-label="Close the digital twin">×</button>

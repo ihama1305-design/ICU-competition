@@ -1879,6 +1879,24 @@
      "code": 44
     }
    ]
+  },
+  {
+   "id": "intelligence",
+   "label": "Room intelligence",
+   "groups": [
+    {
+     "id": "ceilingSensors",
+     "label": "Ceiling sensors",
+     "default": "off",
+     "check": {"time":"afternoon","eye":[11.2,29.9,1.4],"look":[11.2,29.4,2.85],"rooms":{"W3":{"eye":[10.31,20.9,1.4],"look":[10.31,20.4,2.85]}}},
+     "options": [
+      {"id":"off","label":"Off","effects":[{"do":"addon","id":"ceilingSensors","on":false}],"code":0},
+      {"id":"on","label":"Three, flush","effects":[{"do":"addon","id":"ceilingSensors","on":true}],"code":1}
+     ],
+     "note": {"text":"Three flush discs on the ceiling: over the bed, inside the door and over the middle of the room. Open room intelligence to see what each would cover, and to try two made-up events. A concept: they sense nothing here, and nothing watches or listens."},
+     "code": 45
+    }
+   ]
   }
  ],
  "rooms": [
@@ -1942,7 +1960,8 @@
     "patientWall": "on",
     "workstation": "on",
     "bedsideCabinet": "on",
-    "wall": "patient"
+    "wall": "patient",
+    "ceilingSensors": "on"
    }
   },
   {

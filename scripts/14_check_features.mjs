@@ -10,6 +10,8 @@ import { ACTIONS, DEMOS, HOLD_MS } from "./site/configurator/demos.js";
 import { ALARMS_LINE, LEVELS, MODES, MODE_ORDER, MODE_TABLE, SYSTEMS, decide, modeText } from "./site/configurator/modes.js";
 import { CLEANING_STEPS, CLEANING_TEXT } from "./site/configurator/cleaning-data.js";
 import { HEALTH, STATES as TWIN_STATES, TWIN_SYSTEMS, TWIN_TEXT, twinRead } from "./site/configurator/twin-data.js";
+import { EVENTS, INTEL_TEXT, SCAN_TEXT, SENSORS } from "./site/configurator/intel-data.js";
+import { suggestSpot } from "./site/configurator/layout.js";
 import { parseObject } from "./site/configurator/feature-links.js";
 import { APPLY, BOARD, BOARD_AR, BOARD_CONFIRM, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
 import { BANDS as PRESSURE_BANDS, DEFAULT_MINUTES, DEFAULT_POSITION, GRID, LINES, LINES_TEXT, MOVE_CHECK, PLAN, POSITIONS, POSITION_ORDER, PRESSURE_TEXT, SLACK, SLACK_BY, TIMES, peakOf, pressureMap, sustained } from "./site/configurator/bed.js";
@@ -31,7 +33,7 @@ const groupById = id => groups.find(g => g.id === id);
 
 // what the page has: add-ons, placed items, named objects, the time stops, and each room's model parts and views
 const fittingsSrc = read("./site/configurator/fittings.js");
-const addonsSrc = read("./site/configurator/addons.js") + fittingsSrc + read("./site/configurator/wall.js"), placedSrc = read("./site/configurator/placed.js"), mainSrc = read("./site/configurator/main.js");
+const addonsSrc = read("./site/configurator/addons.js") + fittingsSrc + read("./site/configurator/wall.js") + read("./site/configurator/intel.js"), placedSrc = read("./site/configurator/placed.js"), mainSrc = read("./site/configurator/main.js");
 const ADDONS = new Set([...addonsSrc.matchAll(/^ {2}(\w+)\(room\) \{/gm)].map(m => m[1]));
 const PLACED = new Set([...placedSrc.matchAll(/^ {4}id: "(\w+)", code:/gm)].map(m => m[1]));
 const STOPS = new Set(Object.keys(Function(`return ${/const STOPS = (\{[^}]*\})/.exec(mainSrc)[1]}`)()));
@@ -154,6 +156,7 @@ const api = {
   position: (id, minutes) => { assert.ok(POSITIONS[id] && TIMES.some(t => t.minutes === minutes), `a demo shows ${id} for ${minutes} min, a position and time the panel offers`); calls.push(["position"]); },
   askMove: id => { assert.ok(POSITIONS[id], `a demo asks for the line check before a move to ${id}`); calls.push(["askMove"]); },
   today: () => calls.push(["today"]),
+  intel: id => { assert.ok(id === null || id === "reset" || EVENTS.some(e => e.id === id), `a demo raises ${id}, a made-up event room intelligence has`); calls.push(["intel"]); },
   twin: id => { assert.ok(TWIN_SYSTEMS.some(x => x.id === id), `a demo opens the digital twin on ${id}, a system it reads`); calls.push(["twin"]); },
   clean: n => { assert.ok(Number.isInteger(n) && n >= 0 && n <= CLEANING_STEPS.length, `a demo ticks the first ${n} of Cleaning's steps, which it has`); calls.push(["clean"]); },
   station: view => { assert.ok(STATION_VIEWS[view], `a demo opens the workstation in ${view}, a view it has`); calls.push(["station"]); },
@@ -493,4 +496,27 @@ assert.ok(cleaningNow.state === "look" && /3 of 9/.test(cleaningNow.lines[0]) &&
 assert.ok(/monitors nothing/.test(TWIN_TEXT.limits) && /no total/.test(TWIN_TEXT.limits) && /no vital signs/.test(TWIN_TEXT.limits), "the twin says it monitors nothing, adds no total and shows no vital signs");
 assert.ok(byId.get("digitalTwin")?.control === "openTwin" && byId.get("digitalTwin").demo === "digitalTwin" && /never added into a score/.test(byId.get("digitalTwin").limits), "the twin's card: its button, its demo, and no score");
 
-console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow; the mode table with its five levels for ${Object.keys(MODES).length} modes across ${SYSTEMS.length} systems, every note one line that keeps medical alarms on, Cleaning's checklist, and the board in Arabic with ${BOARD.length} requests; the digital twin's ${TWIN_SYSTEMS.length} systems and ${HEALTH.length} separate parts, read from the room with no total and no vital signs`);
+// ---------------------------------------------------------------- room intelligence and the room safety scan (intel-data.js, intel.js, layout.js)
+const sensorsGroup = groupById("ceilingSensors");
+assert.ok(sensorsGroup?.code === 45 && sensorsGroup.default === "off" && sensorsGroup.options.map(o => o.id).join() === "off,on" && ADDONS.has("ceilingSensors"), "the ceiling sensors are code 45, off by default, an add-on of their own");
+assert.ok(future.sets.ceilingSensors === "on" && others.every(t => !("ceilingSensors" in t.sets)), "Future ICU turns them on, and the other themes leave them off");
+assert.equal(decodeSpec(options, "#c=10030010002000000000000000000000000100").selected.ceilingSensors, "off", "the reference link opens with no sensors");
+assert.deepEqual(SENSORS.map(x => x.at), ["bed", "door", "room"], "three sensors: over the bed, inside the door, over the middle of the room");
+assert.deepEqual(EVENTS.map(e => e.id), ["edge", "clear"], "two made-up events: the patient moving toward the bed's edge, and something left in a clear area");
+assert.ok(/Nothing watched/.test(INTEL_TEXT.meta) && /no camera, no microphone and no sensor reading/.test(INTEL_TEXT.meta) && /A person looks and acknowledges/.test(INTEL_TEXT.meta), "each event says nothing watched, and a person acknowledges");
+assert.ok(/not a validated clinical device/.test(INTEL_TEXT.limits) && /isn't AI/.test(INTEL_TEXT.limits) && /changes no alarm or device/.test(INTEL_TEXT.limits), "a concept, not a validated device, and not AI");
+const intelWords = JSON.stringify([SENSORS, EVENTS, INTEL_TEXT, SCAN_TEXT]).replace("isn't AI", "");
+assert.ok(!/\bAI\b|artificial intelligence|machine learning|detects?\b/i.test(intelWords), "no AI claimed, and nothing said to detect: events are raised by buttons");
+assert.ok(/not a validated clinical device/.test(byId.get("roomIntelligence").limits) && /every event is a button/.test(byId.get("roomIntelligence").limits), "room intelligence's card says what it isn't");
+// the scan: the same check, its words, and a suggested spot that is clear
+assert.ok(SCAN_TEXT.clear === "No modelled conflict found" && !/\bsafe\b/i.test(JSON.stringify(SCAN_TEXT)), "the scan says no modelled conflict found, never safe");
+assert.ok(/never that a room is safe/.test(byId.get("roomSafetyScan").limits) && /isn't a compliance check/.test(byId.get("roomSafetyScan").limits), "the scan's card: not safe, not compliance");
+assert.ok(/room safety scan/.test(read("./site/configurator/placed.js")) && /not hospital rules/.test(read("./site/configurator/placed.js")) && !/haven't been checked/.test(read("./site/configurator/placed.js")), "placed items' cards say the scan checks them, against this model's areas, not hospital rules");
+const floor = [[0, 0], [5, 0], [5, 5], [0, 5]], bedBox = { id: "bed", boxes: [[2, 2, 0, 3, 4, 1]] }, keep = { id: "clear", kind: "keep-clear", poly: [[1.2, 2], [2, 2], [2, 4], [1.2, 4]] };
+const inWay = { id: "placed:1", boxes: [[1.4, 2.8, 0, 1.8, 3.2, 1]] }, spot = suggestSpot({ item: inWay, solids: [bedBox, inWay], areas: [keep], within: floor });
+const moved = { ...inWay, boxes: inWay.boxes.map(b => [b[0] + spot.dx, b[1] + spot.dy, b[2], b[3] + spot.dx, b[4] + spot.dy, b[5]]) };
+assert.ok(spot && Math.hypot(spot.dx, spot.dy) > 0 && !checkLayout({ solids: [bedBox, moved], areas: [keep] }).length, `an item in a keep-clear area gets a nearby spot where nothing is in the way (${spot.dx}, ${spot.dy})`);
+assert.deepEqual(suggestSpot({ item: { id: "placed:2", boxes: [[4, 0.5, 0, 4.3, 0.8, 1]] }, solids: [bedBox], areas: [keep], within: floor }), { dx: 0, dy: 0 }, "an item already clear stays where it is");
+assert.equal(suggestSpot({ item: { id: "placed:3", boxes: [[0.1, 0.1, 0, 0.9, 0.9, 1]] }, solids: [{ id: "wall", boxes: [[0, 0, 0, 5, 5, 1]] }], within: floor, maxR: 0.6 }), null, "with nowhere clear nearby it says so, and moves nothing");
+
+console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow; the mode table with its five levels for ${Object.keys(MODES).length} modes across ${SYSTEMS.length} systems, every note one line that keeps medical alarms on, Cleaning's checklist, and the board in Arabic with ${BOARD.length} requests; the digital twin's ${TWIN_SYSTEMS.length} systems and ${HEALTH.length} separate parts, read from the room with no total and no vital signs; room intelligence's ${SENSORS.length} sensors and ${EVENTS.length} made-up events, raised by buttons, and the room safety scan's clear spot`);
