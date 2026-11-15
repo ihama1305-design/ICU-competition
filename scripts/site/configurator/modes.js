@@ -12,10 +12,11 @@ export const MODES = {
     light: { kelvin: 2700, level: 0.35 },
     blinds: 1,
     blindsByDay: true, // between sunset and sunrise there's no glare to block, so only the lighting changes
-    note: "Comfort: the room lights warm and dim, and the blinds lower. The task light, the monitor and clinical alarms are unaffected.",
+    wall: "relaxation",
+    note: "Comfort: the lights warm and dim, the blinds lower and the wall shows a scene; the task light and the monitor are unaffected.",
     say: "Comfort mode. The room lights warm and dim, and the blinds lower. Clinical alarms are unaffected.",
     dark: {
-      note: "Comfort: the room lights warm and dim. The task light, the monitor and clinical alarms are unaffected.",
+      note: "Comfort: the lights warm and dim, and the wall shows a scene; the task light and the monitor are unaffected.",
       why: "It's after sunset, so the blinds stay as they are: there's no daylight to block, and only the lighting changes.",
       say: "Comfort mode. It's after sunset, so only the lights change: they warm and dim, and the blinds stay as they are. Clinical alarms are unaffected.",
     },
@@ -24,7 +25,7 @@ export const MODES = {
     label: "Privacy",
     blinds: 0.5,
     privateFront: true,
-    note: "Privacy: smart glass on the glazed front turns opaque (a curtain or blinds front is already closed) and the window blinds lower halfway. Staff can end it at any moment, and Emergency-ready clears the glass.",
+    note: "Privacy: smart glass on the glazed front turns opaque and the window blinds lower halfway. Staff can end it at any moment, and Emergency-ready clears the glass.",
     say: "Privacy mode. The glazed front turns opaque and the blinds lower halfway. Staff can end it at any moment.",
   },
   clinical: {
@@ -32,8 +33,28 @@ export const MODES = {
     light: { kelvin: 4000, level: 1 },
     task: true,
     overlay: true,
-    note: "Clinical: full, neutral room light, the examination task light on, and the equipment labels and keep-clear areas.",
+    wall: "clinical",
+    note: "Clinical: full, neutral light, the examination task light, the staff panel's clinical screen, and equipment labels with keep-clear areas.",
     say: "Clinical mode. Full, neutral light and the examination task light on.",
+  },
+  family: {
+    label: "Family visit",
+    light: { kelvin: 2700, level: 0.7 },
+    softFront: true, // smart glass softens to a frost, as the patient asked in the passport: staff can still see in
+    wall: "family",
+    note: "Family visit: warm light, the glazed front softened as the patient asked, and family connection on the patient wall. Staff can still see in, and can end it at any moment.",
+    say: "Family visit. Warm light, the glass softened as the patient asked, and family connection on the wall. Staff can still see in and can end it.",
+  },
+  cleaning: {
+    label: "Cleaning",
+    light: { kelvin: 5000, level: 1 },
+    screensOff: true,
+    glassClear: true,
+    wall: "off",
+    scenesOff: true,
+    cleaning: true, // the bed is empty, the high-touch surfaces are marked in turn, and a checklist comes up
+    note: "Cleaning, for a room between patients: bright light, the bed empty, screens off, and the high-touch surfaces marked in turn with a checklist.",
+    say: "Cleaning mode, for a room between patients. Bright light, the bed empty, and a checklist. Medical alarms always stay on.",
   },
   emergency: {
     label: "Emergency-ready",
@@ -42,10 +63,79 @@ export const MODES = {
     screensOff: true,
     glassClear: true,
     overlay: true,
+    wall: "off",
+    scenesOff: true,
     note: "Emergency-ready, started by staff: room lights full, task light on, the TV and aquarium screen off, the glazed front clear. The monitor keeps running, and clinical alarms and medical devices are not changed.",
     say: "Emergency-ready. Lights full, task light on, screens off, the glass clear. Clinical alarms and medical devices are not changed.",
   },
 };
+/** The bar's order: As set first, then the modes staff choose; Emergency-ready has its own button. */
+export const MODE_ORDER = ["standard", "comfort", "privacy", "clinical", "family", "cleaning"];
+/** Every mode's note ends with this. */
+export const ALARMS_LINE = "Medical alarms always stay on.";
+
+/**
+ * The five levels of priority, highest first. Whatever asks for a system at a higher level wins it; a lower level never
+ * overrides a higher one. Each mode's row in MODE_TABLE says what it sets in each system, and at which level.
+ */
+export const LEVELS = [
+  { id: "safety", label: "Clinical safety and emergency access" },
+  { id: "staff", label: "What staff have switched on" },
+  { id: "communication", label: "Patient communication" },
+  { id: "comfort", label: "Patient comfort preferences" },
+  { id: "decoration", label: "Decoration and presentation" },
+];
+export const SYSTEMS = [
+  { id: "light", label: "Light" },
+  { id: "blinds", label: "Blinds" },
+  { id: "glass", label: "Glazed front" },
+  { id: "wall", label: "Wall screens" },
+  { id: "scenes", label: "Scenes" },
+  { id: "sound", label: "Sound" },
+  { id: "bedside", label: "Bedside screens" },
+  { id: "notices", label: "Notices" },
+  { id: "overlays", label: "Overlays" },
+];
+const AS_SET = null; // the mode leaves this system as the room has it
+/** One table: for each mode, what it does in each system, in words, and at which level. null: as the room is set. */
+export const MODE_TABLE = {
+  standard: {},
+  comfort: {
+    light: ["Warm and dim", "staff"], blinds: ["Lowered by day; after sunset as set", "staff"], wall: ["Relaxation: a scene", "staff"],
+  },
+  privacy: { blinds: ["Halfway down", "staff"], glass: ["Smart glass opaque", "staff"] },
+  clinical: {
+    light: ["Full and neutral, with the task light", "staff"], wall: ["Clinical: the staff panel's made-up observations", "staff"], overlays: ["Equipment labels and keep-clear areas", "staff"],
+  },
+  family: {
+    light: ["Warm ambient", "staff"], glass: ["Softened, as the patient asked; staff can still see in", "comfort"], wall: ["Family connection on the patient wall", "communication"],
+    bedside: ["Family connection offered", "communication"],
+  },
+  cleaning: {
+    light: ["Bright, for cleaning", "staff"], glass: ["Clear", "staff"], wall: ["Off: no patient", "staff"], scenes: ["Off", "staff"], sound: ["Demo sound stops", "staff"],
+    bedside: ["Closed: no patient", "staff"], overlays: ["High-touch surfaces in turn, hand-hygiene points, equipment to clean, and a checklist", "staff"],
+  },
+  emergency: {
+    light: ["Full, with the task light", "safety"], glass: ["Clear", "safety"], wall: ["Patient wall off; staff panel clinical", "safety"], scenes: ["Off", "safety"],
+    sound: ["Demo sound stops", "safety"], bedside: ["Panels in the options' place close", "safety"], notices: ["Critical alarms as they always are", "safety"],
+    overlays: ["Equipment labels and keep-clear areas", "safety"],
+  },
+};
+for (const row of Object.values(MODE_TABLE)) for (const sys of SYSTEMS) row[sys.id] ??= AS_SET;
+
+/**
+ * Who wins a system: of the claims on it ({ level, value, from }), the one at the highest level, and of those the latest.
+ * null if nothing claims it. A lower level never overrides a higher one.
+ */
+export function decide(claims) {
+  let win = null;
+  for (const c of claims) {
+    const i = LEVELS.findIndex(l => l.id === c.level);
+    if (i < 0) continue;
+    if (!win || i <= win.rank) win = { ...c, rank: i };
+  }
+  return win;
+}
 
 const MODE_MS = 1800;
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -54,8 +144,8 @@ const mix = (a, b, k) => a + (b - a) * k;
 
 /** What a mode says on screen and aloud, by day or after dark. `why` is the extra line, if any. */
 export function modeText(name, dark) {
-  const m = MODES[name], d = dark && m.blindsByDay ? m.dark : null;
-  return { note: d?.note ?? m.note, why: d?.why ?? "", say: d?.say ?? m.say };
+  const m = MODES[name], d = dark && m.blindsByDay ? m.dark : null, note = d?.note ?? m.note;
+  return { note: note ? `${note} ${ALARMS_LINE}` : "", why: d?.why ?? "", say: d?.say ?? m.say };
 }
 
 /**
@@ -63,7 +153,7 @@ export function modeText(name, dark) {
  * baseLight() and the room's light as configured, as { kelvin, level }; setLight(look, task) lays a look over it (null for none);
  * isDark() is true between sunset and sunrise at the room's solar hour;
  * blindsNow(), configuredBlinds() and setBlinds(level); restore(groupIds) re-applies the configured choices;
- * screens(on), glassClear(), glassPrivate(), overlay(on) for Equipment labels; beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
+ * screens(on), glassClear(), glassPrivate(), glassSoft() for Family visit, cleaning(on), overlay(on) for Equipment labels; beforeChange() closes anything that holds its own scene, like PACS; changed(name) updates the page.
  */
 export class RoomModes {
   constructor(api) {
@@ -90,6 +180,8 @@ export class RoomModes {
     if (to.screensOff) api.screens(false);
     if (to.glassClear) api.glassClear();
     if (to.privateFront) api.glassPrivate();
+    if (to.softFront) api.glassSoft();
+    api.cleaning(!!to.cleaning); // the empty bed, the marks and the checklist, or none
     api.overlay(!!to.overlay); // Equipment labels and their keep-clear areas
     this.dark = !!to.blindsByDay && api.isDark();
     const ownBlinds = to.blinds !== undefined && !this.dark; // after dark, the blinds are left as the room has them

@@ -7,9 +7,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { ACTIONS, DEMOS, HOLD_MS } from "./site/configurator/demos.js";
-import { MODES } from "./site/configurator/modes.js";
+import { ALARMS_LINE, LEVELS, MODES, MODE_ORDER, MODE_TABLE, SYSTEMS, decide, modeText } from "./site/configurator/modes.js";
+import { CLEANING_STEPS, CLEANING_TEXT } from "./site/configurator/cleaning-data.js";
 import { parseObject } from "./site/configurator/feature-links.js";
-import { APPLY, BOARD, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
+import { APPLY, BOARD, BOARD_AR, BOARD_CONFIRM, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
 import { BANDS as PRESSURE_BANDS, DEFAULT_MINUTES, DEFAULT_POSITION, GRID, LINES, LINES_TEXT, MOVE_CHECK, PLAN, POSITIONS, POSITION_ORDER, PRESSURE_TEXT, SLACK, SLACK_BY, TIMES, peakOf, pressureMap, sustained } from "./site/configurator/bed.js";
 import { BACKGROUND, BANDS, FITTINGS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS, SOURCES, levelAt, sourceLevel } from "./site/configurator/acoustic.js";
 import { ACROSS, FIT } from "./site/configurator/fittings-data.js";
@@ -151,6 +152,7 @@ const api = {
   bed: tab => { assert.ok(["pressure", "lines"].includes(tab), `a demo opens the bed panel's ${tab} tab, which exists`); calls.push(["bed"]); },
   position: (id, minutes) => { assert.ok(POSITIONS[id] && TIMES.some(t => t.minutes === minutes), `a demo shows ${id} for ${minutes} min, a position and time the panel offers`); calls.push(["position"]); },
   askMove: id => { assert.ok(POSITIONS[id], `a demo asks for the line check before a move to ${id}`); calls.push(["askMove"]); },
+  clean: n => { assert.ok(Number.isInteger(n) && n >= 0 && n <= CLEANING_STEPS.length, `a demo ticks the first ${n} of Cleaning's steps, which it has`); calls.push(["clean"]); },
   station: view => { assert.ok(STATION_VIEWS[view], `a demo opens the workstation in ${view}, a view it has`); calls.push(["station"]); },
   task: (id, done) => { assert.ok(TASKS.some(t => t.id === id) && [undefined, true].includes(done), `a demo chooses the task ${id}, or presses its Done`); calls.push(["task"]); },
 };
@@ -214,7 +216,7 @@ assert.ok(STATES.sedated.shows.tvplay === "off" && !OFFERS.sedated.board, "sedat
 assert.ok(STATES.recovering.shows.tvplay === "orientation", "recovering: the orientation screen first");
 assert.ok(STATE_MS >= 1500, "a change of state eases, never abruptly");
 for (const st of Object.values(STATES)) for (const g of Object.keys(st.shows)) assert.ok(groupById(g) && !/front|switch|task|blinds|nightlight/.test(g), `a state shows only screen options, never privacy, light switches or anything for care (${g})`);
-assert.deepEqual(BOARD.map(b => b.label), ["I need help", "I am in pain", "I feel cold", "I feel hot", "I need repositioning", "I want to contact my family", "I need a nurse"], "the board's seven requests, in the brief's words");
+assert.deepEqual(BOARD.map(b => b.label), ["I need help", "I am in pain", "I feel cold", "I feel hot", "I need repositioning", "I want to contact my family", "I need a nurse", "I need water", "I can't sleep", "I need help communicating", "I would like some privacy"], "the board's seven requests in the first brief's words, then this brief's three more and a privacy request");
 assert.ok(BOARD.filter(b => b.simple).length >= 3 && BOARD.find(b => b.id === "help").simple, "recovering keeps a simple few, help among them");
 const pp = Object.fromEntries(PASSPORT.map(x => [x.id, x]));
 assert.deepEqual(Object.keys(pp), ["light", "temperature", "sound", "scene", "photos", "privacy", "communicate", "entertainment"], "the passport's eight preferences");
@@ -348,8 +350,9 @@ for (const wall of WALL_ORDER) for (const mode of Object.keys(MODES)) for (const
 for (const c of combos) {
   const w = wallFor(c), who = JSON.stringify(c);
   if (c.mode === "emergency") assert.ok(w.emergency && w.patient === "off" && !w.scene && !w.ceiling && !w.light && !w.prompts && w.staff === "clinical", `${who}: Emergency-ready turns every scene and the patient wall off, and the staff panel to Clinical`);
+  else if (MODES[c.mode].wall === "off") assert.ok(w.patient === "off" && !w.scene && !w.ceiling && !w.light && !w.prompts && w.staff === "standby", `${who}: Cleaning: no patient, so nothing on either wall panel and no scene`);
   else {
-    assert.equal(w.wall, c.mode === "clinical" ? "clinical" : c.mode === "comfort" ? "relaxation" : c.wall, `${who}: Clinical mode turns the wall to Clinical, Comfort to Relaxation, and otherwise the switch decides`);
+    assert.equal(w.wall, MODES[c.mode].wall || c.wall, `${who}: a mode's row sets the wall (Clinical to Clinical, Comfort to Relaxation, Family visit to family connection), and otherwise the switch decides`);
     assert.equal(w.light, c.scene === "off" ? null : c.scene, `${who}: the light is the chosen scene's, and only a chosen scene's`);
     assert.equal(w.ceiling, w.light, `${who}: the ceiling shows the scene whose light it is`);
     assert.equal(w.staff, w.wall === "clinical" ? "clinical" : "standby", `${who}: the staff panel shows observations only in Clinical`);
@@ -400,4 +403,61 @@ for (const [label, f] of Object.entries(FIT)) {
   assert.ok(arcmin >= 40, `${label}: from the pillow, ${dist.toFixed(2)} m away, its letters subtend ${arcmin.toFixed(0)} arcminutes`);
 }
 
-console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow`);
+// ---------------------------------------------------------------- room modes that move everything together (modes.js, cleaning-data.js), tested as PACS's rules are
+assert.deepEqual(LEVELS.map(l => l.id), ["safety", "staff", "communication", "comfort", "decoration"], "five levels of priority, highest first: clinical safety, staff, communication, comfort, decoration");
+assert.deepEqual(SYSTEMS.map(x => x.id), ["light", "blinds", "glass", "wall", "scenes", "sound", "bedside", "notices", "overlays"], "the systems every mode answers for: light, blinds, glass, the wall, scenes, sound, the bedside screens, notices and overlays");
+assert.deepEqual(Object.keys(MODE_TABLE).sort(), Object.keys(MODES).sort(), "one row in the table for every mode");
+for (const [mode, row] of Object.entries(MODE_TABLE)) {
+  assert.deepEqual(Object.keys(row).sort(), SYSTEMS.map(x => x.id).sort(), `${mode}: its row says something, or "as set", for every system`);
+  for (const [sys, cell] of Object.entries(row)) if (cell) assert.ok(typeof cell[0] === "string" && cell[0] && LEVELS.some(l => l.id === cell[1]), `${mode} ${sys}: what it does, in words, at one of the five levels`);
+  if (mode === "emergency") assert.ok(Object.values(row).filter(Boolean).every(c => c[1] === "safety"), "Emergency-ready acts at the highest level, clinical safety, in every system it touches");
+  else assert.ok(Object.values(row).filter(Boolean).every(c => c[1] !== "safety"), `${mode}: only Emergency-ready claims clinical safety`);
+  // the table and the modes agree: what a mode sets is what its row says
+  const m = MODES[mode];
+  assert.equal(!!row.light, !!m.light, `${mode}: its row and its light agree`);
+  assert.equal(!!row.wall, !!m.wall, `${mode}: its row and the wall it sets agree`);
+  assert.equal(!!row.scenes, !!m.scenesOff, `${mode}: its row and whether it turns scenes off agree`);
+  assert.equal(!!row.overlays, !!(m.overlay || m.cleaning), `${mode}: its row and its overlays agree`);
+  assert.equal(!!row.glass, !!(m.glassClear || m.privateFront || m.softFront), `${mode}: its row and what it does to the glass agree`);
+  if (m.blinds !== undefined) assert.ok(row.blinds, `${mode}: its blinds are in its row`);
+}
+// a lower level never overrides a higher one, whatever order the claims come in
+const lv = LEVELS.map(l => l.id);
+for (let a = 0; a < lv.length; a++) for (let b = 0; b < lv.length; b++) {
+  const win = decide([{ level: lv[a], value: "a" }, { level: lv[b], value: "b" }]);
+  assert.equal(win.value, a < b ? "a" : "b", `${lv[a]} against ${lv[b]}: the higher level wins, and of two at one level the later`);
+}
+assert.equal(decide([]), null, "nothing claimed, nothing decided");
+// the page's systems obey the same order: a room mode's light over the patient's state's, over a scene's, over the configured
+const lightsSrc = read("./site/configurator/lights.js");
+assert.ok(/const look = this\.scene \|\| this\.patient \|\| this\.env \|\| this\.base\(hour, day\);/.test(lightsSrc), "the light: a mode (staff) over the patient's state, over a scene (comfort), over the room as configured (decoration)");
+for (const [mode, m] of Object.entries(MODES)) {
+  const w = wallFor({ mode, scene: "forest", wall: "patient" });
+  if (m.scenesOff) assert.ok(!w.scene && !w.light && !w.ceiling, `${mode}: it turns scenes off, and no scene's light or picture outranks it`);
+}
+// each mode's note: one line that says what changed, and that medical alarms stay on
+assert.ok(/Medical alarms always stay on\./.test(ALARMS_LINE), "the line every note ends with");
+for (const mode of MODE_ORDER.filter(x => x !== "standard")) {
+  for (const dark of [false, true]) {
+    const t = modeText(mode, dark);
+    assert.ok(t.note.endsWith(ALARMS_LINE) && !t.note.includes("\n") && t.note.length <= 260, `${mode}${dark ? " after dark" : ""}: one line, ending that medical alarms always stay on (${t.note.length} characters)`);
+  }
+}
+assert.deepEqual(MODE_ORDER, ["standard", "comfort", "privacy", "clinical", "family", "cleaning"], "the bar: As set, Comfort, Privacy, Clinical, Family visit, Cleaning; Emergency-ready on its own");
+assert.ok(MODES.family.label === "Family visit" && /Staff can still see in/.test(MODES.family.note) && /end it/.test(MODES.family.note) && MODES.family.softFront && MODES.family.wall === "family", "Family visit: staff can still see in and end it, the glass softened, family connection on the wall");
+assert.ok(MODES.cleaning.label === "Cleaning" && MODES.cleaning.cleaning && MODES.cleaning.scenesOff && MODES.cleaning.wall === "off", "Cleaning: an empty room, no scenes, the patient wall off");
+// Cleaning's checklist: hands first and last, the high-touch surfaces and the equipment, and it never says the room is disinfected
+assert.ok(CLEANING_STEPS[0].kind === "hygiene" && CLEANING_STEPS.at(-1).kind === "hygiene" && CLEANING_STEPS.some(x => x.kind === "touch") && CLEANING_STEPS.some(x => x.kind === "equipment"), "hands first and last, high-touch surfaces and equipment between");
+assert.ok(/Checklist finished/.test(CLEANING_TEXT.done) && /doesn't say the room is clean or disinfected/.test(CLEANING_TEXT.done), "finishing says the checklist is finished, and never that the room is disinfected");
+assert.ok(!/\b(is|now) (clean|disinfected|sterile|safe)\b/i.test((JSON.stringify(CLEANING_TEXT) + JSON.stringify(CLEANING_STEPS)).replace("doesn't say the room is clean or disinfected", "")), "nothing else claims the room is clean, disinfected, sterile or safe");
+assert.ok(CLEANING_TEXT.airLink === "../ventilation/" && /No airflow is drawn/.test(CLEANING_TEXT.air), "no airflow in the room: a link to the ventilation plan");
+const cleaningPlaces = /return \(\{\n    basin:([\s\S]*?)\n  \}\)\[where\]/.exec(mainSrc)?.[0] || "";
+for (const step of CLEANING_STEPS) assert.ok(new RegExp(`\\b${step.where}:`).test(cleaningPlaces), `Cleaning can light ${step.where}`);
+// the board: Arabic beside English, in one block, and the nurse confirms anything clinical
+assert.deepEqual(Object.keys(BOARD_AR).filter(k => k !== "confirm").sort(), BOARD.map(b => b.id).sort(), "every request has its Arabic, in one block");
+assert.ok(Object.values(BOARD_AR).every(t => /[؀-ۿ]/.test(t) && !/[A-Za-z]/.test(t)), "the Arabic block is Arabic");
+assert.ok(/A nurse confirms anything clinical in person/.test(BOARD_CONFIRM), "a nurse confirms anything clinical in person");
+assert.ok(/n\.lang = "ar"; n\.dir = "rtl";/.test(bedsideSrc), "the Arabic is marked lang=\"ar\" and dir=\"rtl\"");
+assert.ok(BOARD.find(b => b.id === "privacy")?.privacy && /Turn on Privacy/.test(bedsideSrc) && /this\.api\.privacy\(\)/.test(bedsideSrc), "the patient can ask for privacy, and a nurse turns it on from the request: nothing happens by itself");
+
+console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow; the mode table with its five levels for ${Object.keys(MODES).length} modes across ${SYSTEMS.length} systems, every note one line that keeps medical alarms on, Cleaning's checklist, and the board in Arabic with ${BOARD.length} requests`);

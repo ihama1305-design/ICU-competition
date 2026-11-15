@@ -200,8 +200,9 @@ const STRIP = { w: 1600, h: 200, button: 250, gap: 24, pad: 22 };
 function patientStrip(g, w, h, st) {
   g.fillStyle = "#f3eee4"; g.fillRect(0, 0, w, h); // light, like the orientation screen by day, so it reads from the pillow
   const ink = "#16282e", soft = "#4f6369";
-  if (st.wall === "clinical") {
-    g.font = "600 56px system-ui, sans-serif"; g.fillStyle = ink; g.textBaseline = "middle"; g.fillText("Your care team is with you", 48, h / 2);
+  if (st.wall === "clinical" || st.wall === "family") {
+    g.font = "600 56px system-ui, sans-serif"; g.fillStyle = ink; g.textBaseline = "middle";
+    g.fillText(st.wall === "family" ? "Family visit · your family is with you" : "Your care team is with you", 48, h / 2);
     mark(g, w - 40);
     return;
   }
@@ -275,6 +276,27 @@ export function buttonAt(mesh, uv) {
   return i >= 0 && y >= STRIP.pad && y <= STRIP.h - STRIP.pad ? buttons[i].tab : null;
 }
 
+/** Family connection on the TV in Family visit: drawn placeholder photographs and a message, never a real person's. */
+function familyScreen(g, w, h) {
+  g.fillStyle = "#f3eee4"; g.fillRect(0, 0, w, h);
+  const ink = "#16282e", soft = "#4f6369";
+  g.textBaseline = "alphabetic";
+  g.font = "600 56px system-ui, sans-serif"; g.fillStyle = ink; g.fillText("Family connection", 48, 86);
+  g.font = "400 30px system-ui, sans-serif"; g.fillStyle = soft; g.fillText("Photos and a message from home, shared by family", 48, 132);
+  [["#9fd0e0", "#f2e3c2"], ["#cfe6c8", "#7fae6b"], ["#f3e2cf", "#d9b99a"]].forEach(([top, bottom], i) => {
+    const x = 48 + i * 296, y = 170, pw = 268, ph = 200;
+    const l = g.createLinearGradient(0, y, 0, y + ph); l.addColorStop(0, top); l.addColorStop(1, bottom);
+    g.fillStyle = l; g.fillRect(x, y, pw, ph);
+    for (const [k, colour] of [[0.38, "#c46d4f"], [0.62, "#4f7f8a"]]) { // two figures, as simple shapes
+      g.fillStyle = colour; g.beginPath(); g.ellipse(x + pw * k, y + ph * 0.92, 26, 52, 0, Math.PI, 0); g.fill();
+      g.fillStyle = "#d9a98a"; g.beginPath(); g.arc(x + pw * k, y + ph * 0.52, 18, 0, 7); g.fill();
+    }
+  });
+  g.font = "400 28px system-ui, sans-serif"; g.fillStyle = ink; g.fillText("“We'll see you at four. Love from all of us.”", 48, 430);
+  g.font = "400 22px system-ui, sans-serif"; g.fillStyle = soft; g.fillText("Drawn placeholders: no real photograph, voice or name.", 48, 476);
+  mark(g, w - 32);
+}
+
 // ---------------------------------------------------------------- the planes a scene shows on
 
 function scenePlane(w, h, canvasW) {
@@ -326,8 +348,8 @@ export class WallView {
     const wallOn = on("patientWall"), tv = a.tv?.userData;
     const strip = wallOn ? screenOf(a.patientWall, "strip") : null;
     if (strip) {
-      const showStrip = st.patient === "info" || st.patient === "orientation" || (st.patient === "scene" && st.wall === "patient");
-      strip.visible = showStrip; strip.userData.bezel.visible = showStrip && st.patient !== "scene";
+      const showStrip = st.patient === "info" || st.patient === "orientation" || st.patient === "family" || (st.patient === "scene" && st.wall === "patient");
+      strip.visible = showStrip; strip.userData.bezel.visible = showStrip && !st.scene;
       if (showStrip) draw("strip", [st.wall, st.prompts], () => repaint(strip.material.map, (g, W, H) => patientStrip(g, W, H, st)));
       strip.userData.buttons = st.prompts && st.wall === "patient" ? WALL_BUTTONS : []; // clicked in the room, they open the bedside screens
     }
@@ -352,10 +374,11 @@ export class WallView {
 
     // the TV: on the wall it follows the switch. Alone, it shows only a scene that was chosen, and otherwise its own choice
     if (tv) {
-      const cur = tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off";
+      const cur = tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.familyOn ? "family" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off";
       const scene = wallOn ? st.scene : st.scene && st.scene === st.ceiling ? st.scene : null;
       let want = null;
-      if (st.patient === "off") want = wallOn || cur === "scene" ? "off" : null;
+      if (st.patient === "off") want = wallOn || cur === "scene" || cur === "family" ? "off" : null;
+      else if (st.patient === "family") want = "family"; // Family visit: family connection on the TV, with or without the wall
       else if (scene) want = "scene";
       else if (wallOn) want = st.patient === "info" && extra.tv === "on" ? "on" : "orientation";
       if (want === "scene") {
@@ -369,8 +392,16 @@ export class WallView {
         tv.sceneOn.opacity = wallOn ? w.wallScene.material.opacity : 1;
         if (wallOn) w.wallScene.userData.follow = tv.sceneOn; // it fades with the wall round it
         tv.screen.material = tv.sceneOn;
+      } else if (want === "family") {
+        if (!tv.familyOn) {
+          const c = document.createElement("canvas"); c.width = 960; c.height = 540;
+          const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+          familyScreen(c.getContext("2d"), c.width, c.height); t.needsUpdate = true;
+          tv.familyOn = new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
+        }
+        tv.screen.material = tv.familyOn;
       } else if (want && want !== cur) extra.setTv(want === "on" ? true : want === "off" ? false : "orientation");
-      else if (!want && (cur === "scene" || key.tv)) extra.restoreTv();
+      else if (!want && (cur === "scene" || cur === "family" || key.tv)) extra.restoreTv();
       key.tv = want;
     }
   }

@@ -6,7 +6,8 @@
 // in front of a feature's object; wardrobe(side) slides its doors ("left", "right" or null for closed); outline(featureId)
 // marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced; acoustic("without" | "with") shows
 // Acoustic comfort mode; notices(open) opens its list of notifications; patient(state) sets the patient's state; station(view) opens the clinician
-// workstation in Nurse or Doctor view, and task(id, done) chooses one of its tasks or presses Done. A step's caption can be worked out
+// workstation in Nurse or Doctor view, and task(id, done) chooses one of its tasks or presses Done; clean(n) ticks the first n of
+// Cleaning's steps. A step's caption can be worked out
 // from the room: say(api), where api.figures() gives the two wardrobes' sizes as a sentence.
 
 export const DEMOS = {
@@ -139,6 +140,30 @@ export const DEMOS = {
       { say: "Choose a task, and the station shows what it needs and lights where it is: the dressings, in the left cupboard.", run: a => a.task("dressing") },
       { say: "A member of staff presses Done, and the task is ticked off here and on the staff panel. This demo plays that person.", run: a => a.task("dressing", true) },
       { say: "Doctor view: the same patient, with the observations and the plan first. Every value is made up.", run: a => a.station("doctor") },
+    ],
+  },
+  // the room's modes, one after another: each moves the light, the wall and the overlays together, and none changes a choice
+  roomModes: {
+    steps: [
+      { say: "Comfort: the lights warm and dim, and the wall shows a scene. Medical alarms always stay on.", run: a => { a.option("patientWall", "on"); a.option("staffPanel", "on"); a.time("afternoon"); a.camera("across"); a.mode("comfort"); } },
+      { say: "Clinical: full light, the staff panel's clinical screen, and the equipment labels.", run: a => a.mode("clinical") },
+      { say: "Family visit: warm light, and family connection on the wall the patient faces.", run: a => a.mode("family") },
+      { say: "As set: everything goes back to the room as it was chosen. No mode changes a choice.", run: a => a.mode("standard") },
+    ],
+  },
+  familyVisit: {
+    steps: [
+      { say: "Family visit: warm light, and family connection on the wall the patient faces.", run: a => { a.option("patientWall", "on"); a.option("front", "smart"); a.time("afternoon"); a.camera("patient"); a.mode("family"); } },
+      { say: "From the door, the glass is softened, as the patient asked. Staff can still see in.", run: a => a.camera("entrance") },
+      { say: "Staff can end it at any moment.", run: a => a.mode("standard") },
+    ],
+  },
+  // Cleaning: the empty room, the checklist one step at a time, and what finishing it says. The demo plays the person ticking
+  cleaning: {
+    steps: [
+      { say: "Cleaning, for a room between patients: the bed is empty, the light bright, the screens off. First, clean your hands at the basin.", run: a => { a.time("afternoon"); a.camera("overview"); a.mode("cleaning"); } },
+      { say: "Ticked, and the next step lights: the bed rails, controls and call button. This demo plays the person ticking.", run: a => a.clean(1) },
+      { say: "Every step ticked: the checklist says it's finished, and never that the room is disinfected.", run: a => a.clean(9) },
     ],
   },
   daylight: {

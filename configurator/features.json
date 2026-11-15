@@ -326,11 +326,11 @@
    "name": "Communication board",
    "group": "comfort",
    "purpose": "Large buttons for a patient who can't speak: I need help, I am in pain, I feel cold, I feel hot, I need repositioning, I want to contact my family, I need a nurse.",
-   "how": "On the bedside tablet, or on any bedside screen. Three ways to choose: touch; a single switch, while a highlight steps through the buttons; or gaze, where a look held on a button chooses it. Here the switch and gaze are simulated. Each request goes to a nurse-side list with the time, and stays there until a nurse acknowledges it.",
+   "how": "On the bedside tablet, or on any bedside screen. Eleven requests, each in English and Arabic: the first seven, then I need water, I can't sleep, I need help communicating, and a request for privacy. Three ways to choose: touch; a single switch, while a highlight steps through the buttons; or gaze, where a look held on a button chooses it. Here the switch and gaze are simulated. Each request goes to a nurse-side list with the time, in both languages, with a line that a nurse confirms anything clinical in person, and stays there until a nurse acknowledges it. From a privacy request, the nurse can turn on Privacy.",
    "benefit": "A patient who can't speak can still ask for what they need.",
    "awake": "The patient chooses by touch, a switch or gaze.",
    "sedated": "Not offered: staff watch for signs instead.",
-   "limits": "Simulated. It does not replace a certified nurse-call system: a real one is wired, tested and maintained to its own standard. No request leaves this page.",
+   "limits": "Simulated. It does not replace a certified nurse-call system: a real one is wired, tested and maintained to its own standard. No request leaves this page. The Arabic was written for this demo: a native reader must check it.",
    "evidence": {
     "text": "Expected, not shown."
    },
@@ -697,6 +697,57 @@
     "node:ceiling_scene"
    ],
    "demo": "transform"
+  },
+  {
+   "id": "roomModes",
+   "name": "Room modes",
+   "group": "workflow",
+   "purpose": "The room changes together: one choice of mode moves the light, the blinds, the glass, the wall screens, scenes, sound, the bedside screens, notices and overlays, in step.",
+   "how": "Seven modes above the room: As set, Comfort, Privacy, Clinical, Family visit, Cleaning, and Emergency-ready on its own. One table says what each mode does in each system, and five levels of priority settle any clash, highest first: clinical safety and emergency access; what staff have switched on; patient communication; patient comfort preferences; decoration and presentation. A lower level never overrides a higher one, so a scene the patient chose gives way to Clinical, and everything gives way to Emergency-ready. Each mode's note says in one line what changed, and that medical alarms always stay on. No mode changes a choice: As set puts the room back.",
+   "benefit": "Staff change the room for what's happening now with one press, and nothing has to be put back by hand.",
+   "awake": "The patient's own choices, like a scene, come back when a mode ends.",
+   "sedated": "The modes work the same. The patient's state sits under them: staff modes always win.",
+   "limits": "A demonstration of the idea. No mode touches an alarm, a medical device or the bedside monitor. The table and its levels are this model's own, set as data; a real room's would be set by the hospital and tested.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "modeBar",
+   "demo": "roomModes"
+  },
+  {
+   "id": "familyVisit",
+   "name": "Family visit",
+   "group": "family",
+   "purpose": "A mode for when family come: the room warms, privacy is as the patient asked, and family connection is on the wall they face.",
+   "how": "Family visit, above the room. The light goes warm and ambient. Smart glass on the glazed front softens to a frost, unless the patient's passport says they'd rather see out, so staff can still see in. Family connection goes on the TV, with a scene round it on the patient wall if the patient chose one. Staff can end it at any moment, and Emergency-ready clears everything.",
+   "benefit": "Time with family feels less like a ward, without hiding the patient from the care team.",
+   "awake": "It follows the patient's own passport: how much privacy, and a scene if they chose one.",
+   "sedated": "Family connection offers only what staff allow, as it always does for an unresponsive patient.",
+   "limits": "Simulated: the photographs are drawn placeholders and the message is made up. Softened glass is a concept: a real front needs its privacy level and staff sight lines agreed with the care team.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "modeBar",
+   "demo": "familyVisit"
+  },
+  {
+   "id": "cleaningMode",
+   "name": "Cleaning",
+   "group": "workflow",
+   "purpose": "A mode for the room between patients: bright light, the bed empty, and the surfaces that are touched most marked one after another.",
+   "how": "Cleaning, above the room. The patient figure goes, and comes back when the mode ends. The light goes bright, the screens go off, and a checklist comes up: hands first, then the bed rails and controls, the overbed table, the monitor and pump screens, the ventilator, the pendant, the wall controls and handles, the chairs, and hands again. Each step lights what it covers in the room; tick it, and the next lights. The hand-hygiene point is the basin in the room. No airflow is drawn, because the grilles are hidden: the checklist links to the ventilation plan.",
+   "benefit": "Cleaning in a set order, with nothing missed, and the equipment that needs it marked.",
+   "awake": "Not for an occupied room: the bed is empty.",
+   "sedated": "Not for an occupied room: the bed is empty.",
+   "limits": "An order to show the idea, not a cleaning protocol: products, contact times and the order of work are the infection-control team's. Finishing the checklist says it's finished, and never that the room is clean or disinfected.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "modeBar",
+   "demo": "cleaning"
   }
  ]
 }

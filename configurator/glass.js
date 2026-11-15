@@ -25,7 +25,7 @@ function slatTexture() {
 
 export class FrontGlass {
   constructor(tier) {
-    this.mode = "clear"; this.opaque = false; this.k = 0; this.from = 0; this.start = 0; this.fading = false;
+    this.mode = "clear"; this.opaque = false; this.level = 1; this.k = 0; this.from = 0; this.start = 0; this.fading = false;
     this.room = null;
     this.materials = {};
     this.setTier(tier);
@@ -72,9 +72,10 @@ export class FrontGlass {
 
   setRoom(room) { this.room = room; this.sync(true); }
 
-  set({ mode, opaque }) {
+  /** `level`: how opaque, from 0 to 1, when opaque. Family visit softens it to a frost; anything else that sets opaque means fully. */
+  set({ mode, opaque, level }) {
     if (mode !== undefined) this.mode = mode;
-    if (opaque !== undefined) this.opaque = opaque;
+    if (opaque !== undefined) { this.opaque = opaque; this.level = level ?? 1; }
     this.sync(false);
   }
 
@@ -86,7 +87,7 @@ export class FrontGlass {
     if (this.tier === "low") f.frost.forEach(m => { m.transmission = 0; });
     f.sheet.visible = this.mode === "blinds";
     f.plate.visible = this.mode === "smart";
-    const target = this.mode === "smart" && this.opaque ? 1 : 0;
+    const target = this.mode === "smart" && this.opaque ? this.level : 0;
     f.led.material.color.set(target ? "#f0a23a" : "#2fb5ad");
     if (instant || reduced()) { this.k = target; this.fading = false; this.paint(); return; }
     if (target !== this.k) { this.from = this.k; this.to = target; this.start = performance.now(); this.fading = true; }

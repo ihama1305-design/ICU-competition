@@ -55,7 +55,7 @@ const fakeRoom = dark => {
   const api = {
     isDark: () => dark.value, baseLight: () => ({ kelvin: 4000, level: 1 }), setLight: look => { log.light = look; },
     blindsNow: () => 0.3, configuredBlinds: () => 0.3, setBlinds: level => log.blinds.push(level), restore: ids => log.restored.push(...ids),
-    screens: () => {}, glassClear: () => {}, glassPrivate: () => {}, overlay: () => {}, beforeChange: () => {}, changed: () => {},
+    screens: () => {}, glassClear: () => {}, glassPrivate: () => {}, glassSoft: () => {}, cleaning: () => {}, overlay: () => {}, beforeChange: () => {}, changed: () => {},
   };
   return { api, log };
 };
@@ -68,7 +68,7 @@ assert.equal(modes.timeChanged(), true); // crossing sunset sets Comfort again
 assert.deepEqual(byDay.log.blinds, []); assert.ok(byDay.log.restored.includes("blinds")); assert.deepEqual(byDay.log.light, { kelvin: 2700, level: 0.35 });
 assert.equal(modes.dark, true); assert.equal(modes.timeChanged(), false); // and only when it's crossed
 const nightText = modeText("comfort", true);
-assert.ok(/after sunset/i.test(nightText.why) && /blinds stay/.test(nightText.why) && !/blinds lower/.test(nightText.note) && /alarms are unaffected/.test(nightText.note));
+assert.ok(/after sunset/i.test(nightText.why) && /blinds stay/.test(nightText.why) && !/blinds lower/.test(nightText.note) && /Medical alarms always stay on\./.test(nightText.note)); // every mode's note ends with it
 modes.set("privacy", { instant: true }); assert.deepEqual(byDay.log.blinds, [0.5]); // Privacy's blinds are for privacy, so they still lower after dark
 assert.equal(modeText("privacy", true).why, "");
 console.log("PASS night-aware comfort: sunrise/sunset from the solar hour, PACS and Comfort leave the blinds alone after dark and say why, Privacy unchanged");

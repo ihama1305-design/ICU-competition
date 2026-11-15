@@ -1,12 +1,14 @@
 // The bedside screens: the communication board with its nurse-side list, the comfort passport, family connection, and the
 // staff view. They follow the patient's state (patient-states.js). Everything is SIMULATED: no request leaves this page,
 // nothing listens, no photograph or voice is used, and no alarm, device or clinical setting is changed.
-import { APPLY, APPLY_WORDS, BOARD, CLINICIAN, DWELL_MS, FAMILY, MESSAGE, OFFERS, PASSPORT, SCAN_MS, STAFF, STATES, STATE_ORDER } from "./patient-states.js";
+import { APPLY, APPLY_WORDS, BOARD, BOARD_AR, BOARD_CONFIRM, CLINICIAN, DWELL_MS, FAMILY, MESSAGE, OFFERS, PASSPORT, SCAN_MS, STAFF, STATES, STATE_ORDER } from "./patient-states.js";
 
 const KEY = "adaptiveIcu.passport";
 const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); kids.forEach(k => n.append(k)); return n; };
 const button = (text, cls = "outline-action") => el("button", { type: "button", className: cls, textContent: text });
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** Arabic text, marked as Arabic and right to left, so it's read and laid out as Arabic. */
+const arabic = (text, className) => { const n = el("span", { className, textContent: text }); n.lang = "ar"; n.dir = "rtl"; return n; };
 
 /** A drawn placeholder photograph: shapes, never a real person's picture. */
 function drawPhoto(kind) {
@@ -111,7 +113,11 @@ export class Bedside {
     this.closedNote.textContent = offer ? "" : "Not offered while the patient is sedated: staff watch for signs instead.";
     this.boardEl.hidden = !offer;
     this.boardEl.classList.toggle("simple", offer === "simple");
-    this.boardEl.replaceChildren(...items.map(b => { const n = button(b.label, "board-button"); n.dataset.request = b.id; return n; }));
+    this.boardEl.replaceChildren(...items.map(b => {
+      const n = el("button", { type: "button", className: "board-button" }, el("span", { className: "board-en", textContent: b.label }), arabic(BOARD_AR[b.id], "board-ar"));
+      n.dataset.request = b.id;
+      return n;
+    }));
     this.root.querySelector(".board-inputs").hidden = !offer;
     this.setInput(offer ? this.input : "touch", true);
   }
@@ -159,7 +165,7 @@ export class Bedside {
     this.stopDwell();
     b.classList.add("dwell");
     b.style.setProperty("--dwell-ms", `${reduced() ? 0 : DWELL_MS}ms`);
-    if (reduced()) this.inputNote.textContent = `Looking at "${b.textContent}"…`;
+    if (reduced()) this.inputNote.textContent = `Looking at "${b.querySelector(".board-en")?.textContent ?? b.textContent}"…`;
     this.dwell = { b, timer: setTimeout(() => { this.stopDwell(); this.ask(b.dataset.request); }, DWELL_MS) };
   }
   stopDwell() { if (!this.dwell) return; clearTimeout(this.dwell.timer); this.dwell.b.classList.remove("dwell"); this.dwell = null; }
@@ -170,7 +176,7 @@ export class Bedside {
     if (!item) return;
     this.api.notice();
     const time = this.api.time(), had = this.requests.find(r => r.id === id);
-    if (had) { had.time = time; had.again = true; } else this.requests.push({ id, label: item.label, time });
+    if (had) { had.time = time; had.again = true; } else this.requests.push({ id, label: item.label, time, privacy: !!item.privacy });
     this.renderRequests();
     this.api.say(`Simulated request at the nurse station: ${item.label}, at ${time}.`);
   }
@@ -185,7 +191,13 @@ export class Bedside {
         this.api.say(`Acknowledged: ${r.label}.`);
         (this.list.querySelector("button") || this.boardEl.querySelector("button") || this.root.querySelector("#bedsideTitle")).focus({ preventScroll: true });
       });
-      return el("li", {}, el("span", { className: "request-time", textContent: r.time }), el("span", { textContent: `${r.label}${r.again ? " (asked again)" : ""}` }), ack);
+      // a privacy request: the nurse decides, and can turn Privacy on from here
+      const extra = r.privacy ? [button("Turn on Privacy")] : [];
+      extra[0]?.addEventListener("click", () => { this.api.privacy(); this.api.say("Privacy is on, turned on by the nurse from the patient's request."); });
+      return el("li", {}, el("span", { className: "request-time", textContent: r.time }),
+        el("span", { className: "request-words" }, el("span", { textContent: `${r.label}${r.again ? " (asked again)" : ""}` }), arabic(BOARD_AR[r.id], "request-ar"),
+          el("span", { className: "request-confirm", textContent: BOARD_CONFIRM }), arabic(BOARD_AR.confirm, "request-confirm")),
+        ack, ...extra);
     }));
   }
 
@@ -367,7 +379,8 @@ export class Bedside {
 
   /** For the check. */
   inspect() {
-    return { tab: this.tab, input: this.input, requests: this.requests.map(r => ({ ...r })), board: [...this.boardEl.querySelectorAll("button")].map(b => b.textContent), scanning: !!this.scanTimer,
+    return { tab: this.tab, input: this.input, requests: this.requests.map(r => ({ ...r })), board: [...this.boardEl.querySelectorAll("button")].map(b => b.querySelector(".board-en")?.textContent ?? b.textContent),
+      arabic: [...this.boardEl.querySelectorAll("button")].map(b => { const a = b.querySelector("[lang='ar']"); return a ? [a.textContent, a.dir] : null; }), scanning: !!this.scanTimer,
       values: { ...this.values }, quiet: this.quiet, allow: { ...this.allow }, family: { ...this.familyOn }, reminder: this.api.reminder() };
   }
 }

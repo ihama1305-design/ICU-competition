@@ -44,7 +44,10 @@ export const OFFERS = {
   recovering: { board: "simple", passport: "patient", family: "all", note: "Simple choices and more independence: the board's four main requests, larger." },
 };
 
-/** The communication board, for a patient who can't speak: the brief's seven requests, in its order. */
+/**
+ * The communication board, for a patient who can't speak: the first brief's seven requests in its order, then three more and
+ * a privacy request. `privacy`: a nurse who acknowledges it can turn on Privacy from the list; nothing happens by itself.
+ */
 export const BOARD = [
   { id: "help", label: "I need help", simple: true },
   { id: "pain", label: "I am in pain", simple: true },
@@ -53,7 +56,31 @@ export const BOARD = [
   { id: "reposition", label: "I need repositioning", simple: true },
   { id: "family", label: "I want to contact my family" },
   { id: "nurse", label: "I need a nurse", simple: true },
+  { id: "water", label: "I need water" },
+  { id: "sleep", label: "I can't sleep" },
+  { id: "communicate", label: "I need help communicating" },
+  { id: "privacy", label: "I would like some privacy", privacy: true },
 ];
+/**
+ * The board in Arabic, beside the English: every string in one block, shown with lang="ar" and dir="rtl". Written for this
+ * demo: a native reader must check them before anyone relies on them.
+ */
+export const BOARD_AR = {
+  help: "أحتاج إلى مساعدة",
+  pain: "أشعر بألم",
+  cold: "أشعر بالبرد",
+  hot: "أشعر بالحر",
+  reposition: "أحتاج إلى تغيير وضعيتي",
+  family: "أريد التواصل مع عائلتي",
+  nurse: "أحتاج إلى ممرضة",
+  water: "أحتاج إلى ماء",
+  sleep: "لا أستطيع النوم",
+  communicate: "أحتاج إلى مساعدة في التواصل",
+  privacy: "أريد بعض الخصوصية",
+  confirm: "يؤكد الممرض أو الممرضة أي أمر طبي شخصياً.",
+};
+/** Under every request on the nurse-side list, in both languages. */
+export const BOARD_CONFIRM = "A nurse confirms anything clinical in person.";
 /** The board's two simulated inputs besides touch: a switch that steps through the buttons, and gaze that selects by dwell. */
 export const SCAN_MS = 1400; // the switch's highlight moves on this often
 export const DWELL_MS = 1500; // a look held this long selects
