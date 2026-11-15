@@ -785,6 +785,46 @@
    "actions": [
     "twin"
    ]
+  },
+  {
+   "id": "roomIntelligence",
+   "name": "Room intelligence",
+   "group": "workflow",
+   "purpose": "A room that notices when help may be needed: it would help staff see a possible safety concern while keeping the room calm and uncluttered.",
+   "how": "Three flush sensors on the ceiling: over the bed, inside the door and over the middle of the room. Open room intelligence and activate it to see the floor each would cover. Two buttons raise made-up events: the patient moving toward the edge of the bed, and something left in a clear area. Each lights its place and puts a notice in front of staff and on the clinician workstation, which stays until a person acknowledges it. Reset takes the events away. The readings it lists are the ones the room already has.",
+   "benefit": "Staff would be told where to look, without more alarms or more screens.",
+   "awake": "Nothing about it is shown to the patient.",
+   "sedated": "The bed's edge is the event staff would care about most.",
+   "limits": "A concept for monitoring and decision support, not a validated clinical device. Nothing watches or listens: no camera, no microphone and no sensor reading; every event is a button. It changes no alarm or device, and it isn't AI.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:ceilingSensors"
+   ],
+   "demo": "roomIntelligence",
+   "actions": [
+    "intel"
+   ]
+  },
+  {
+   "id": "roomSafetyScan",
+   "name": "Room safety scan",
+   "group": "workflow",
+   "purpose": "Check a room digitally before it's built: the items a visitor places, against the space that care needs.",
+   "how": "Under Place items, run the room safety scan. It runs the same check the Future ICU fittings passed on the room as the visitor has arranged it: each placed item against the keep-clear areas round the bed, the space in front of each door, the wardrobe's front and the walking route to the bed, and against everything solid. Green: no modelled conflict found. Amber: a clearance to look at. Red: an overlap. Choose a result to read why, with the item lit and a nearby clear spot marked on the floor. The visitor moves the item, and the scan runs again.",
+   "benefit": "Conflicts show up while the room is still a drawing.",
+   "awake": "Nothing about it is shown to the patient.",
+   "sedated": "Nothing about it is shown to the patient.",
+   "limits": "The areas are this model's own, set as data and illustrative: green means no modelled conflict found, never that a room is safe, and it isn't a compliance check against hospital rules.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "runScan",
+   "actions": [
+    "scan"
+   ]
   }
  ]
 }

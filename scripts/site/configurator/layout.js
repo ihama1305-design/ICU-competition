@@ -90,3 +90,27 @@ export function checkLayout({ solids, areas = [], mounted = [], tol = 0.01, minA
   }
   return found.sort((p, q) => (p.level === q.level ? q.size - p.size : p.level === "overlap" ? -1 : 1));
 }
+
+/**
+ * The room safety scan's suggestion: the nearest spot, within `maxR` metres, where an item would neither overlap anything
+ * solid nor stand in an area, trying rings of positions `step` apart around where it is. The item stays on the walkable floor
+ * (`within`). Returns { dx, dy } to move it by, or null if nothing near is clear. The visitor moves it: this only points.
+ */
+export function suggestSpot({ item, solids, areas = [], mounted = [], within, step = 0.15, maxR = 2.4 }) {
+  const others = solids.filter(s => s.id !== item.id);
+  const fits = (dx, dy) => {
+    const boxes = item.boxes.map(b => [b[0] + dx, b[1] + dy, b[2], b[3] + dx, b[4] + dy, b[5]]);
+    if (within && !boxes.every(b => [[b[0], b[1]], [b[3], b[1]], [b[3], b[4]], [b[0], b[4]]].every(([x, y]) => inPolygon(x, y, within)))) return false;
+    const moved = { ...item, boxes };
+    return !checkLayout({ solids: [...others, moved], areas, mounted }).some(f => f.a === item.id || f.b === item.id);
+  };
+  if (fits(0, 0)) return { dx: 0, dy: 0 };
+  for (let r = step; r <= maxR + 1e-9; r += step) {
+    const n = Math.max(8, Math.round((2 * Math.PI * r) / step));
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * 2 * Math.PI, dx = +(r * Math.cos(t)).toFixed(3), dy = +(r * Math.sin(t)).toFixed(3);
+      if (fits(dx, dy)) return { dx, dy };
+    }
+  }
+  return null;
+}

@@ -21,7 +21,7 @@ export class Station {
    */
   constructor(root, api) {
     this.root = root; this.api = api;
-    this.view = "nurse"; this.task = null; this.done = new Set(); this.emergency = false; this.lit = null;
+    this.view = "nurse"; this.task = null; this.done = new Set(); this.emergency = false; this.lit = null; this.notices = [];
     this.views = root.querySelector("#stationViews");
     this.views.addEventListener("click", e => { const b = e.target.closest("button[data-view]"); if (b) this.setView(b.dataset.view); });
     this.body = root.querySelector("#stationBody");
@@ -43,7 +43,9 @@ export class Station {
     this.views.hidden = this.emergency;
     this.urgent.hidden = !this.emergency;
     if (this.emergency) { this.renderEmergency(); this.body.replaceChildren(); return; }
-    this.body.replaceChildren(...STATION_VIEWS[this.view].sections.map(id => this.section(id)));
+    const notices = this.notices.length ? [el("section", { className: "station-section station-notices" }, el("h3", { textContent: "Notices · SIMULATED" }),
+      el("ul", { className: "station-list" }, ...this.notices.map(n => { const b = button("Acknowledge", "station-show"); b.addEventListener("click", () => this.api.ack(n.id)); return el("li", {}, el("span", { textContent: n.text }), b); })))] : [];
+    this.body.replaceChildren(...notices, ...STATION_VIEWS[this.view].sections.map(id => this.section(id)));
   }
 
   section(id) {
@@ -153,11 +155,14 @@ export class Station {
     this.api.changed();
   }
 
+  /** Room intelligence's notices waiting: shown first, until a person acknowledges them here or at the banner. */
+  setNotices(list) { if (JSON.stringify(list) === JSON.stringify(this.notices)) return; this.notices = list; this.render(); }
+
   /** Another room is another made-up patient: no task chosen, nothing ticked. The view stays as the visitor left it. */
   reset() { this.task = null; this.done = new Set(); this.lit = null; this.render(); }
 
   /** For main.js: put the station back as it was (a demo ends), or start fresh. */
   snapshot() { return { view: this.view, task: this.task, done: [...this.done] }; }
   restore(s) { if (!s) return; this.view = s.view; this.task = s.task; this.done = new Set(s.done); this.render(); this.api.changed(); }
-  inspect() { return { view: this.view, task: this.task, done: [...this.done], emergency: this.emergency, lit: this.lit, sections: [...this.body.querySelectorAll("h3")].map(h => h.textContent) }; }
+  inspect() { return { notices: this.notices.map(n => n.id), view: this.view, task: this.task, done: [...this.done], emergency: this.emergency, lit: this.lit, sections: [...this.body.querySelectorAll("h3")].map(h => h.textContent) }; }
 }

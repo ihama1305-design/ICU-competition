@@ -412,6 +412,18 @@ footer p { margin: 0; }
 .bed-active #panel { visibility: hidden; pointer-events: none; }
 .station-active #panel { visibility: hidden; pointer-events: none; }
 .twin-active #panel { visibility: hidden; pointer-events: none; }
+.intel-active #panel { visibility: hidden; pointer-events: none; }
+.intel-panel h3 { margin: 12px 0 6px; }
+.intel-activate { width: 100%; min-height: 40px; margin: 6px 0; border: 1px solid var(--accent); border-radius: 8px; background: var(--hover); color: var(--accent); font: 600 13px/1.2 var(--ui); cursor: pointer; }
+.intel-activate[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.intel-events { display: grid; gap: 6px; }
+.intel-events button { min-height: 40px; text-align: left; }
+.scan-run { margin-top: 8px; }
+.scan-results { margin: 6px 0 0; padding: 0; list-style: none; }
+.scan-result { width: 100%; min-height: 36px; margin: 2px 0; padding: 6px 10px; border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 8px; background: transparent; color: var(--ink); font: 13px/1.25 var(--ui); text-align: left; cursor: pointer; }
+.scan-result.scan-clearance { border-left-color: var(--med); }
+.scan-result.scan-overlap { border-left-color: var(--danger); }
+.scan-word { font-weight: 600; }
 .twin-panel h3 { margin: 12px 0 6px; }
 .twin-health { display: grid; gap: 8px; }
 .twin-part { padding: 8px 10px; border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 10px; font-size: 13px; }

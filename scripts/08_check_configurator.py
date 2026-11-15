@@ -1551,7 +1551,7 @@ with sync_playwright() as p:
         go(pg, room)
         set_defaults(pg)
         # what the default room leaves out, so every card has its object in the room
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips', 'ceilingTray', 'staffPanel', 'patientWall', 'workstation', 'bedsideCabinet']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips', 'ceilingTray', 'staffPanel', 'patientWall', 'workstation', 'bedsideCabinet', 'ceilingSensors']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
         views = pg.evaluate("window.__config.views()")
         missed, wrong, covered, stray = [], [], [], []
         for f in feats:
@@ -2784,6 +2784,63 @@ with sync_playwright() as p:
     check(not errs, f"the digital twin: no errors {errs[:3]}")
     ctx.close()
 
+    # ---------------------------------------------------------------- room intelligence and the room safety scan: made-up events by button, notices until acknowledged, and placed items checked
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+    IN = "window.__config.intel()"
+    for room in ROOMS:
+        go(pg, room)
+        pg.click("#themes button[data-value='future']")
+        pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
+        before = pg.evaluate("window.__config.code()")
+        pg.click("#openIntel")
+        pg.wait_for_selector("#intelPanel", state="visible", timeout=10000)
+        check(pg.evaluate("document.activeElement.id") == "intelTitle" and pg.is_disabled("#intelEvents button[data-event='edge']"), f"{room}: room intelligence opens in the options' place; its events wait until it's active")
+        pg.click("#intelActivate")
+        pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+        i = pg.evaluate(IN)
+        check(i["active"] and i["cover"] and i["sensors"], f"{room}: activated, the three sensors show, with the floor each would cover {i}")
+        shot(pg, f"{room.lower()}_intel_cover")
+        pg.click("#intelEvents button[data-event='edge']")
+        i = pg.evaluate(IN)
+        check(i["notices"] == ["edge"] and i["banner"] and i["marks"].get("edge") and "edge of the bed" in pg.inner_text("#intelNotice") and "Nothing watched" in pg.inner_text("#intelNotice") + pg.inner_text("#intelPanel"),
+              f"{room}: the bed's edge: its place lit, and a notice in front of staff that says nothing watched {i['notices']}")
+        pg.click("#intelEvents button[data-event='clear']")
+        i = pg.evaluate(IN)
+        check(i["notices"] == ["edge", "clear"] and i["marks"].get("clear") and i["station"] == ["edge", "clear"], f"{room}: something left in a clear area: lit too, and both notices on the workstation {i['station']}")
+        faults = axe_faults(pg, "#intelPanel") + axe_faults(pg, "#intelNotice")
+        check(not faults, f"{room}: room intelligence and its notice pass axe {faults[:3]}")
+        pg.click("#intelAck")
+        i = pg.evaluate(IN)
+        check(i["notices"] == ["edge"] and i["marks"].get("clear"), f"{room}: acknowledging takes the notice away, not what it pointed at {i}")
+        pg.click("#intelReset")
+        i = pg.evaluate(IN)
+        check(not i["notices"] and not i["banner"] and not any(i["marks"].values()) and not i["station"], f"{room}: Reset takes every made-up event away {i}")
+        pg.focus("#intelActivate")
+        pg.keyboard.press("Escape")
+        i = pg.evaluate(IN)
+        check(gone(pg, "#intelPanel") and not i["active"] and not i["cover"] and pg.evaluate("document.activeElement.id") == "openIntel" and pg.evaluate("window.__config.code()") == before,
+              f"{room}: Esc closes it, the coverage goes, focus goes back to its button, and no choice or link changed")
+        # the room safety scan: nothing placed, then an item in a keep-clear area, its explanation and a clear spot, then moved
+        pg.click("#runScan")
+        check("No items placed" in pg.inner_text("#scanResults"), f"{room}: the scan with nothing placed says so")
+        spot = pg.evaluate("window.__config.clearSpot()")
+        pg.evaluate(f"window.__config.placeAt('bins', {spot[0]}, {spot[1]})")
+        levels = pg.evaluate("window.__config.runScan()")
+        sc = pg.evaluate("window.__config.scan()")
+        check(levels and levels[0] in ("clearance", "overlap") and sc["results"][0]["why"] and sc["results"][0]["spot"], f"{room}: an item placed beside the bed is flagged, with why, and a nearby clear spot found {sc['results']}")
+        pg.click("#scanResults button")
+        sc = pg.evaluate("window.__config.scan()")
+        check(sc["marker"] and sc["detail"] and "Drag the item there yourself" in sc["detail"], f"{room}: choosing it explains it and marks the clear spot on the floor {sc['detail']!r}")
+        shot(pg, f"{room.lower()}_scan")
+        r0 = sc["results"][0]
+        pg.evaluate(f"window.__config.movePlaced({r0['uid']}, {spot[0] + r0['spot']['dx']}, {spot[1] + r0['spot']['dy']})")
+        levels = pg.evaluate("window.__config.runScan()")
+        check(levels == [None], f"{room}: moved there by the visitor, it's clear: no modelled conflict found {levels}")
+        pg.evaluate("document.getElementById('resetRoom').click()")
+    check(not errs, f"room intelligence and the scan: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- reduced motion
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
@@ -3226,4 +3283,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, accessibility, adaptive quality, stats readout, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, room intelligence and the room safety scan, accessibility, adaptive quality, stats readout, phone)")

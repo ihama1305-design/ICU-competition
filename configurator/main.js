@@ -28,7 +28,9 @@ import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js
 import { CHECK, ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById, wallsOf } from "./placed.js";
 import { ClinicalView, keepClearAreas } from "./clinical.js";
 import { ACROSS, FITTINGS, syncFittings } from "./fittings.js";
-import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip } from "./layout.js";
+import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip, suggestSpot } from "./layout.js";
+import { EVENTS, INTEL_TEXT, SCAN_TEXT, SENSORS } from "./intel-data.js";
+import { sensorSpots, setCoverage, setEventMark } from "./intel.js";
 import { WallView, buttonAt } from "./wall.js";
 import { Station } from "./station.js";
 import { SCENES, SCENE_MS, STRIP_TEXT, TASKS, wallFor } from "./wall-data.js";
@@ -109,7 +111,7 @@ function resize() {
   stage.resize(w, h);
   stage.camera.aspect = w / h;
   const cls = document.body.classList;
-  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : cls.contains("station-active") ? restingRect($("stationPanel")) : cls.contains("twin-active") ? restingRect($("twinPanel")) : panel.getBoundingClientRect();
+  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : cls.contains("station-active") ? restingRect($("stationPanel")) : cls.contains("twin-active") ? restingRect($("twinPanel")) : cls.contains("intel-active") ? restingRect($("intelPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -117,7 +119,7 @@ function resize() {
   stage.camera.setViewOffset(w, h, coverX / 2, coverY / 2, w, h);
   rig.visible = { w: w - coverX, h: h };
   if (rig.meta) rig.fit();
-  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active") || cls.contains("station-active") || cls.contains("twin-active"); // off-screen, or covered by a panel in its place
+  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active") || cls.contains("station-active") || cls.contains("twin-active") || cls.contains("intel-active"); // off-screen, or covered by a panel in its place
   $("panelBody").inert = closed;
   panel.querySelector(".actions").inert = closed;
   stage.camera.updateProjectionMatrix();
@@ -210,6 +212,7 @@ async function setRoom(label, { keepView = true } = {}) {
   setBed(false); // and the bed panel's
   setStation(false); // and the workstation's, with its lit places
   setTwin(false); // and the twin's
+  setIntel(false); resetIntel(true); clearScan(); // and room intelligence's, with its made-up events; and the scan's results
   station.reset(); // another room, another made-up patient
   endVocalCue(); // its notice names the room being left
   endCompare();
@@ -334,6 +337,14 @@ const NOT_SOLID = new Set(["sky", "palms", "planting", "patio", "ventilation", "
 // what's meant to touch: the monitor and pumps hang on the pendant, and the overbed table reaches over the bed
 const MOUNTED = [["part:cfg_kit_monitor", "part:cfg_kit_pendant"], ["part:cfg_kit_pumps", "part:cfg_kit_pendant"], ["part:cfg_kit_overbed_table", "part:cfg_kit_bed"]];
 function layoutNow() {
+  const { solids, areas } = layoutInputs();
+  return {
+    findings: checkLayout({ solids, areas, mounted: MOUNTED }), solids: solids.map(s => s.id), areas: areas.map(a => a.id),
+    names: Object.fromEntries([...solids.map(s => [s.id, s.label]), ...areas.map(a => [a.id, a.label])]),
+  };
+}
+/** What the layout check works on: every solid thing's boxes, and the areas that should stay clear. */
+function layoutInputs() {
   const room = stage.current, m = room.meta, shown = o => { for (let n = o; n; n = n.parent) if (!n.visible) return false; return true; };
   room.root.updateMatrixWorld(true);
   const plan = b => [b.min.x, -b.max.z, b.min.y, b.max.x, -b.min.z, b.max.y].map(v => +v.toFixed(3));
@@ -345,7 +356,7 @@ function layoutNow() {
   };
   for (const p of KIT) add(`part:${p}`, p, room.parts[p] || []);
   for (const [id, a] of Object.entries(room.addons || {})) if (!NOT_SOLID.has(id) && shown(a)) add(`addon:${id}`, a.userData.itemInfo?.title || id, [a], id in FITTINGS);
-  for (const p of placement.list(room.label)) if (p.node && shown(p.node)) add(`placed:${p.uid}`, p.type, [p.node]);
+  for (const p of placement.list(room.label)) if (p.node && shown(p.node)) add(`placed:${p.uid}`, itemById(p.type)?.label || p.type, [p.node]);
   const areas = [
     ...keepClearAreas(room).map(a => ({ ...a, kind: "keep-clear", within: m.walkable })),
     ...m.wall_runs.filter(r => r.door).map((r, i) => ({ id: `door${i}`, label: "In front of a door", kind: "door", poly: strip(r.a, r.b, DOOR_DEPTH), within: m.walkable })),
@@ -356,10 +367,7 @@ function layoutNow() {
     const b = plan(new THREE.Box3().setFromObject(w));
     areas.push({ id: "wardrobe", label: "In front of the wardrobe", kind: "wardrobe", poly: [[b[0], b[1] - WARDROBE_REACH], [b[3], b[1] - WARDROBE_REACH], [b[3], b[1]], [b[0], b[1]]] });
   }
-  return {
-    findings: checkLayout({ solids, areas, mounted: MOUNTED }), solids: solids.map(s => s.id), areas: areas.map(a => a.id),
-    names: Object.fromEntries([...solids.map(s => [s.id, s.label]), ...areas.map(a => [a.id, a.label])]),
-  };
+  return { solids, areas };
 }
 
 // ---------------------------------------------------------------- options, from options.json
@@ -368,9 +376,9 @@ const selected = {};
 // Options shown without being chosen, in layers: a feature demo's on top (demos.js), then Acoustic comfort mode's fittings,
 // the bed panel's line clips, the workstation while its panel is open, staff's Quiet now, the fittings Explore features shows, and the patient's state
 // (patient-states.js). The panel, the link and the summary only ever read `selected`.
-const overlays = { demo: {}, acoustic: {}, bed: {}, station: {}, quiet: {}, explore: {}, patient: {} };
+const overlays = { demo: {}, acoustic: {}, bed: {}, station: {}, intel: {}, quiet: {}, explore: {}, patient: {} };
 const demoShown = overlays.demo;
-const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.station[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
+const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.station[id] ?? overlays.intel[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
 /** Set what one layer shows (null: nothing), and bring the room up to whichever layer is on top for each group it touched. */
 function showLayer(layer, values) {
   const touched = new Set([...Object.keys(overlays[layer]), ...Object.keys(values || {})]);
@@ -1027,6 +1035,8 @@ const ACTION_HANDLERS = {
   "bed:pressure": { label: () => "Open the pressure map", run: () => setBed(true, "pressure") },
   "bed:lines": { label: () => "Open the lines", run: () => setBed(true, "lines") },
   station: { label: () => "Open the workstation", run: () => setStation(true) },
+  intel: { label: () => "Open room intelligence", run: () => setIntel(true) },
+  scan: { label: () => "Run the room safety scan", run: () => { closeCard(); if (isPhone()) setSheet(true); $("runScan").scrollIntoView({ block: "nearest" }); runScan(); } },
   twin: { label: () => "Open the digital twin", run: () => setTwin(true) },
 };
 // "demo:<id>": another of the feature's demos, such as the wardrobe's compartments, under the label that demo gives
@@ -1358,6 +1368,8 @@ const demoApi = {
     if (demo) demo.hidPlaced = true;
     settle(); relight(); refreshExplore();
   },
+  // room intelligence: open and active, and a made-up event raised, or "reset"
+  intel: id => { if (!intelOn) setIntel(true, { fromDemo: true }); if (!intelActive) activateIntel(true); if (id === "reset") resetIntel(); else if (id) raiseIntel(id); },
   // the digital twin open on one of its systems (null: none chosen)
   twin: id => { if (!twinOn) setTwin(true, { fromDemo: true }); twin.choose(id, { toggle: false }); },
   // Cleaning's first n steps ticked: the demo says it plays the person ticking
@@ -1395,7 +1407,7 @@ async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   $("objectCard").hidden = true;
   demo = {
     id: demoId, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
-    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot(), station: station.snapshot(), stationOn, twinOn, twinSystem: twin.system },
+    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot(), station: station.snapshot(), stationOn, twinOn, twinSystem: twin.system, intelOn },
   };
   if (modes.current !== "standard") modes.set("standard", { instant: true }); // a mode would hide what the demo shows
   $("demoName").textContent = f.name;
@@ -1440,6 +1452,7 @@ function endDemo(why = "") {
   if (d.hidPlaced) placement.show(stage.current); // the visitor's placed items, hidden while today's room showed
   if (stationOn && !d.snap.stationOn) setStation(false); // and the workstation's, with its views and ticks as they were
   if (twinOn && !d.snap.twinOn) setTwin(false); // and the twin's, with the system the visitor had chosen
+  if (intelOn && !d.snap.intelOn) { resetIntel(true); setIntel(false); } // and room intelligence's, with its made-up events
   twin.system = d.snap.twinSystem;
   station.restore(d.snap.station);
   highlight.clear("demo");
@@ -1502,6 +1515,7 @@ function setAcoustic(on, { fromDemo = false } = {}) {
     setBed(false);
     setStation(false);
     setTwin(false);
+    setIntel(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1887,6 +1901,7 @@ var station = new Station($("stationPanel"), {
   route: on => showRoute(on && stationOn),
   changed: () => syncWall(),
   pacs: () => { setStation(false); pacs.open(); }, // PACS as it is: nothing is copied or changed
+  ack: id => ackIntel(id), // room intelligence's notices, acknowledged at the desk as at the banner
   say,
 });
 
@@ -2061,7 +2076,7 @@ function twinRefresh() {
 function setTwin(on, { fromDemo = false } = {}) {
   if (on) {
     if (!fromDemo) { endDemo(); endCompare(); }
-    setAcoustic(false); setBedside(false); setBed(false); setStation(false);
+    setAcoustic(false); setBedside(false); setBed(false); setStation(false); setIntel(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -2103,6 +2118,193 @@ $("openTwin").addEventListener("click", e => {
   if (twinFromSheet) setSheet(false);
   setTwin(true);
 });
+
+// ---------------------------------------------------------------- room intelligence (intel-data.js, intel.js)
+// Three flush sensors on the ceiling; Activate shows what each would cover, and two buttons raise made-up events. Each lights
+// its place, and puts a notice in front of staff and on the workstation that stays until a person acknowledges it. Reset
+// takes the events away. Nothing watches or listens: an event is a button. It changes no choice, link or summary.
+var intelOn = false, intelActive = false, intelOpener = null, intelFromSheet = false, intelPose = null;
+const intelEvents = {}; // id -> { raised, acknowledged }
+
+function setIntel(on, { fromDemo = false } = {}) {
+  if (on) {
+    if (!fromDemo) { endDemo(); endCompare(); }
+    setAcoustic(false); setBedside(false); setBed(false); setStation(false); setTwin(false);
+    tour.stop();
+    if (pacs.active) pacs.exit();
+    $("objectCard").hidden = true;
+    if (!intelOn) { if (!intelOpener) intelOpener = document.activeElement; intelPose = cameraPose(); }
+    intelOn = true;
+    $("intelPanel").hidden = false;
+    document.body.classList.add("intel-active");
+    resize();
+    renderIntel();
+    if (!fromDemo) $("intelTitle").focus({ preventScroll: true });
+    say("Room intelligence, simulated. Nothing watches or listens: each event is a button.");
+  } else {
+    if (!intelOn) return;
+    intelOn = false;
+    activateIntel(false);
+    $("intelPanel").hidden = true;
+    document.body.classList.remove("intel-active");
+    resize();
+    if (intelPose) restorePose(intelPose);
+    intelPose = null;
+    if (intelFromSheet && isPhone()) setSheet(true);
+    intelFromSheet = false;
+    const back = intelOpener?.isConnected && !intelOpener.closest("[hidden]") && !intelOpener.closest("[inert]") && intelOpener.offsetParent ? intelOpener : canvas;
+    intelOpener = null;
+    back.focus({ preventScroll: true });
+  }
+  invalidate();
+}
+
+/** Show the sensors and what each would cover, or put them away. The sensors show while it's active, chosen or not. */
+function activateIntel(on) {
+  if (on === intelActive || !stage.current) return;
+  intelActive = on;
+  showLayer("intel", on ? { ceilingSensors: "on" } : null);
+  setCoverage(stage.current, on);
+  if (on) { // the dollhouse's angle, closer, centred on the three sensors: each disc over the floor it would cover
+    rig.go("dollhouse", { instant: true });
+    const { bed, room } = sensorSpots(stage.current), c = W2T((bed[0] + room[0]) / 2, (bed[1] + room[1]) / 2, 0); // the patient's room, between the bed and the middle
+    rig.goTo(c.clone().add(stage.camera.position.clone().sub(controls.target).multiplyScalar(0.6)), c);
+  }
+  renderIntel();
+  say(on ? `Room intelligence active: ${SENSORS.length} sensors, and the floor each would cover, illustrative.` : "Room intelligence off.");
+  invalidate();
+}
+
+/** A made-up event: its place lit, and a notice that stays until acknowledged. */
+function raiseIntel(id) {
+  const ev = EVENTS.find(e => e.id === id);
+  if (!ev || !stage.current) return;
+  intelEvents[id] = { raised: performance.now(), acknowledged: false };
+  setEventMark(stage.current, id, true, keepClearAreas(stage.current));
+  if (id === "edge") highlight.show("intel", stage.current.parts.cfg_kit_bed || []);
+  renderIntel();
+  say(`Simulated notice: ${ev.notice}`);
+  invalidate();
+}
+function ackIntel(id) {
+  const e = intelEvents[id];
+  if (!e || e.acknowledged) return;
+  e.acknowledged = true;
+  if (id === "edge") highlight.clear("intel");
+  renderIntel();
+  say(INTEL_TEXT.acknowledged);
+  invalidate();
+}
+/** Take every made-up event away, with its marks and notices. */
+function resetIntel(quietly = false) {
+  for (const id of Object.keys(intelEvents)) { delete intelEvents[id]; if (stage.current) setEventMark(stage.current, id, false, []); }
+  highlight.clear("intel");
+  renderIntel();
+  if (!quietly) say(INTEL_TEXT.reset);
+  invalidate();
+}
+const intelNotices = () => EVENTS.filter(e => intelEvents[e.id] && !intelEvents[e.id].acknowledged);
+
+function renderIntel() {
+  const open = intelNotices(), latest = open.at(-1);
+  // the notice in front of staff: the latest one waiting, and how many more
+  $("intelNotice").hidden = !latest;
+  if (latest) {
+    $("intelText").textContent = latest.notice + (open.length > 1 ? ` (${open.length - 1} more waiting.)` : "");
+    $("intelAck").dataset.event = latest.id;
+  }
+  station.setNotices(open.map(e => ({ id: e.id, text: e.notice })));
+  if (!intelOn) return;
+  $("intelActivate").setAttribute("aria-pressed", String(intelActive));
+  $("intelActivate").textContent = intelActive ? "Room intelligence is active" : "Activate room intelligence";
+  $("intelSensors").replaceChildren(...SENSORS.map(x => el("li", { textContent: `${x.label}: ${x.covers.toLowerCase()}.` })));
+  $("intelEvents").querySelectorAll("button[data-event]").forEach(b => { b.disabled = !intelActive; });
+  const room = stage.current, noise = room ? Math.round(acousticView.readings(room, fittingsShown()).pillow) : null;
+  $("intelReadings").replaceChildren(...[
+    `Temperature and humidity: ${$("demoTemp").value} °C, ${$("demoHumidity").value}%, from the comfort control. Simulated.`,
+    `Noise at the pillow: about ${noise} dBA. Illustrative.`,
+    `Daylight sensor: ${afterDark() ? "after sunset, no daylight to block" : "daylight"}.`,
+  ].map(t => el("li", { textContent: t })));
+  $("intelStatus").textContent = open.length ? `${open.length} notice${open.length > 1 ? "s" : ""} waiting.` : Object.keys(intelEvents).length ? "Every notice acknowledged." : "No events.";
+}
+
+$("intelIntro").textContent = INTEL_TEXT.intro;
+$("intelMeta").textContent = INTEL_TEXT.meta;
+$("intelReadingsNote").textContent = INTEL_TEXT.readings;
+$("intelLimits").textContent = INTEL_TEXT.limits;
+$("intelEvents").replaceChildren(...EVENTS.map(e => { const b = el("button", { type: "button", className: "outline-action", textContent: e.button }); b.dataset.event = e.id; return b; }));
+$("intelEvents").addEventListener("click", e => { const b = e.target.closest("button[data-event]"); if (b) raiseIntel(b.dataset.event); });
+$("intelActivate").addEventListener("click", () => activateIntel(!intelActive));
+$("intelReset").addEventListener("click", () => resetIntel());
+$("intelAck").addEventListener("click", e => ackIntel(e.currentTarget.dataset.event));
+$("intelClose").addEventListener("click", () => setIntel(false));
+$("intelPanel").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); setIntel(false); } });
+$("openIntel").addEventListener("click", e => {
+  intelOpener = e.currentTarget;
+  intelFromSheet = isPhone() && panel.classList.contains("open");
+  if (intelFromSheet) setSheet(false);
+  setIntel(true);
+});
+
+// ---------------------------------------------------------------- the room safety scan (layout.js)
+// Phase 1's overlap check, run on the room as the visitor has arranged it: each placed item against the clear areas, the
+// doors, the wardrobe's front and the route to the bed, and against everything solid. Green: no modelled conflict found.
+// Amber: a clearance to look at. Red: an overlap. A result explains itself and marks a nearby clear spot; the visitor moves it.
+var scanShown = false, scanMarker = null;
+function runScan() {
+  const room = stage.current, list = placement.list(state.room).filter(p => p.node);
+  scanShown = true;
+  clearScanMark();
+  if (!list.length) { $("scanResults").replaceChildren(el("li", { textContent: SCAN_TEXT.none })); $("scanDetail").hidden = true; say(SCAN_TEXT.none); return []; }
+  const { solids, areas } = layoutInputs(), findings = checkLayout({ solids, areas, mounted: MOUNTED }), name = id => [...solids, ...areas].find(x => x.id === id)?.label || id;
+  const results = list.map(p => {
+    const id = `placed:${p.uid}`, mine = findings.filter(f => f.a === id || f.b === id), item = solids.find(x => x.id === id);
+    const level = mine.some(f => f.level === "overlap") ? "overlap" : mine.length ? "clearance" : null;
+    const why = mine.map(f => (f.level === "overlap" ? `overlapping ${name(f.a === id ? f.b : f.a).toLowerCase()}` : `in ${name(f.b).toLowerCase()}`));
+    const spot = level && item && !item.wall ? suggestSpot({ item, solids, areas, mounted: MOUNTED, within: room.meta.walkable }) : null;
+    return { uid: p.uid, label: itemById(p.type)?.label || p.type, level, why, spot, at: [p.x, p.y], wall: !!item?.wall };
+  });
+  $("scanResults").replaceChildren(...results.map(r => {
+    const b = el("button", { type: "button", className: `scan-result scan-${r.level || "clear"}` },
+      el("span", { className: "scan-word", textContent: r.level ? SCAN_TEXT[r.level] : SCAN_TEXT.clear }), el("span", { textContent: ` · ${r.label}` }));
+    b.dataset.uid = r.uid;
+    b.addEventListener("click", () => explainScan(r));
+    return el("li", {}, b);
+  }));
+  $("scanDetail").hidden = true;
+  scanResultsNow = results;
+  const bad = results.filter(r => r.level);
+  say(bad.length ? `Room safety scan: ${bad.length} of ${results.length} placed items to look at.` : `Room safety scan: ${SCAN_TEXT.clear.toLowerCase()} for ${results.length} placed item${results.length > 1 ? "s" : ""}.`);
+  return results;
+}
+var scanResultsNow = [];
+/** One result: why, the item lit, and a nearby clear spot marked on the floor. The visitor drags it there. */
+function explainScan(r) {
+  const found = placement.find(r.uid);
+  clearScanMark();
+  if (found?.entry.node) { // stand where the item and the spot near it can both be seen
+    highlight.show("scan", [found.entry.node]);
+    if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
+    const { eye, target } = framePose([found.entry.node]);
+    rig.goTo(eye, target);
+  }
+  let text = r.level ? `${r.label}: ${r.why.join(", and ")}. ` : `${r.label}: ${SCAN_TEXT.clear.toLowerCase()}. `;
+  if (r.level && r.spot) {
+    const [x, y] = [r.at[0] + r.spot.dx, r.at[1] + r.spot.dy];
+    scanMarker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.28, 40), new THREE.MeshBasicMaterial({ color: "#2f8f5b", transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false }));
+    scanMarker.rotation.x = -Math.PI / 2; scanMarker.position.copy(W2T(x, y, 0.018)); scanMarker.renderOrder = 9; scanMarker.raycast = () => {}; scanMarker.name = "scan_spot";
+    stage.current.root.add(scanMarker);
+    text += SCAN_TEXT.move;
+  } else if (r.level) text += r.wall ? "" : SCAN_TEXT.nowhere;
+  $("scanDetail").textContent = text;
+  $("scanDetail").hidden = false;
+  say(text);
+  invalidate();
+}
+function clearScanMark() { if (scanMarker) { scanMarker.removeFromParent(); scanMarker = null; } highlight.clear("scan"); invalidate(); }
+function clearScan() { scanShown = false; scanResultsNow = []; clearScanMark(); $("scanResults").replaceChildren(); $("scanDetail").hidden = true; }
+$("runScan").addEventListener("click", () => runScan());
+$("scanIntro").textContent = SCAN_TEXT.intro;
 
 var bedside = new Bedside($("bedside"), {
   state: () => patientState,
@@ -2488,6 +2690,7 @@ const endMove = e => {
   remember();
   if (features?.on) refreshExplore();
   say(`${itemById(m.entry.type).label} moved.`);
+  if (scanShown) runScan(); // the scan reads the room again, so a moved item shows where it now stands
 };
 addEventListener("pointerup", endMove, true);
 addEventListener("pointercancel", endMove, true);
@@ -2930,6 +3133,14 @@ window.__config = {
   stationView: id => station.setView(id),
   twin: () => ({ open: twinOn, ...twin.inspect(), read: twinOn ? twinRead(twinInput()) : null, outlined: highlight.has("twin"), all: highlight.has("twinAll"), route: !!stage.current.stationRoute?.visible }),
   twinChoose: id => twin.choose(id, { toggle: false }),
+  intel: () => ({ open: intelOn, active: intelActive, events: JSON.parse(JSON.stringify(intelEvents)), notices: intelNotices().map(e => e.id), banner: !$("intelNotice").hidden, cover: !!stage.current.intelCover?.visible,
+    sensors: !!stage.current.addons?.ceilingSensors?.visible, marks: Object.fromEntries(Object.entries(stage.current.intelMarks || {}).map(([k, v]) => [k, v.visible])), station: station.inspect().notices }),
+  scan: () => ({ shown: scanShown, results: scanResultsNow.map(r => ({ uid: r.uid, label: r.label, level: r.level, why: r.why, spot: r.spot })), marker: scanMarker ? [+scanMarker.position.x.toFixed(2), +(-scanMarker.position.z).toFixed(2)] : null, detail: $("scanDetail").hidden ? null : $("scanDetail").textContent }),
+  runScan: () => runScan().map(r => r.level),
+  /** For the scan's check: put an item at a spot, move one, and the middle of the keep-clear area on the patient's right. */
+  placeAt: (type, x, y) => { const e = placement.add(stage.current, type, x, y, 0); remember(); invalidate(); return e?.uid ?? null; },
+  movePlaced: (uid, x, y) => { const f = placement.find(uid); if (!f) return false; placement.move(f.entry, x, y); remember(); invalidate(); if (scanShown) runScan(); return true; },
+  clearSpot: () => { const a = keepClearAreas(stage.current).find(x => x.id === "clearRight"); return a ? [a.poly.reduce((t, q) => t + q[0], 0) / a.poly.length, a.poly.reduce((t, q) => t + q[1], 0) / a.poly.length] : null; },
   /** From the camera as it stands, in screen pixels: the strip's letters, and the orientation screen's detail lines. */
   readable: () => {
     const room = stage.current, strip = stripOf(room), tv = room.addons?.tv?.userData.screen;
@@ -3002,7 +3213,7 @@ window.__config = {
       wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.familyOn ? "family" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque, glass.level], cleaning: JSON.stringify([cleaningOn, [...cleaningTicks], highlight.has("cleaning")]), figure: stage.current.patient ? stage.current.patient.root.visible : null, blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
       overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
-      bed: JSON.stringify([bedOn, bedView.snapshot()]), twin: JSON.stringify([twinOn, twin.system, highlight.has("twin"), highlight.has("twinAll")]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
+      bed: JSON.stringify([bedOn, bedView.snapshot()]), intel: JSON.stringify([intelOn, intelActive, Object.keys(intelEvents), !!stage.current.intelCover?.visible]), twin: JSON.stringify([twinOn, twin.system, highlight.has("twin"), highlight.has("twinAll")]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
       wallScenes: JSON.stringify([stage.current.wallState?.wallScene?.visible ?? false, stage.current.wallState?.ceilingScene?.visible ?? false]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,
     };
   },
