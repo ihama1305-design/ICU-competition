@@ -9,6 +9,7 @@ import { gunzipSync } from "node:zlib";
 import { ACTIONS, DEMOS, HOLD_MS } from "./site/configurator/demos.js";
 import { ALARMS_LINE, LEVELS, MODES, MODE_ORDER, MODE_TABLE, SYSTEMS, decide, modeText } from "./site/configurator/modes.js";
 import { CLEANING_STEPS, CLEANING_TEXT } from "./site/configurator/cleaning-data.js";
+import { HEALTH, STATES as TWIN_STATES, TWIN_SYSTEMS, TWIN_TEXT, twinRead } from "./site/configurator/twin-data.js";
 import { parseObject } from "./site/configurator/feature-links.js";
 import { APPLY, BOARD, BOARD_AR, BOARD_CONFIRM, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
 import { BANDS as PRESSURE_BANDS, DEFAULT_MINUTES, DEFAULT_POSITION, GRID, LINES, LINES_TEXT, MOVE_CHECK, PLAN, POSITIONS, POSITION_ORDER, PRESSURE_TEXT, SLACK, SLACK_BY, TIMES, peakOf, pressureMap, sustained } from "./site/configurator/bed.js";
@@ -153,6 +154,7 @@ const api = {
   position: (id, minutes) => { assert.ok(POSITIONS[id] && TIMES.some(t => t.minutes === minutes), `a demo shows ${id} for ${minutes} min, a position and time the panel offers`); calls.push(["position"]); },
   askMove: id => { assert.ok(POSITIONS[id], `a demo asks for the line check before a move to ${id}`); calls.push(["askMove"]); },
   today: () => calls.push(["today"]),
+  twin: id => { assert.ok(TWIN_SYSTEMS.some(x => x.id === id), `a demo opens the digital twin on ${id}, a system it reads`); calls.push(["twin"]); },
   clean: n => { assert.ok(Number.isInteger(n) && n >= 0 && n <= CLEANING_STEPS.length, `a demo ticks the first ${n} of Cleaning's steps, which it has`); calls.push(["clean"]); },
   station: view => { assert.ok(STATION_VIEWS[view], `a demo opens the workstation in ${view}, a view it has`); calls.push(["station"]); },
   task: (id, done) => { assert.ok(TASKS.some(t => t.id === id) && [undefined, true].includes(done), `a demo chooses the task ${id}, or presses its Done`); calls.push(["task"]); },
@@ -461,4 +463,34 @@ assert.ok(/A nurse confirms anything clinical in person/.test(BOARD_CONFIRM), "a
 assert.ok(/n\.lang = "ar"; n\.dir = "rtl";/.test(bedsideSrc), "the Arabic is marked lang=\"ar\" and dir=\"rtl\"");
 assert.ok(BOARD.find(b => b.id === "privacy")?.privacy && /Turn on Privacy/.test(bedsideSrc) && /this\.api\.privacy\(\)/.test(bedsideSrc), "the patient can ask for privacy, and a nurse turns it on from the request: nothing happens by itself");
 
-console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow; the mode table with its five levels for ${Object.keys(MODES).length} modes across ${SYSTEMS.length} systems, every note one line that keeps medical alarms on, Cleaning's checklist, and the board in Arabic with ${BOARD.length} requests`);
+// ---------------------------------------------------------------- the digital twin (twin-data.js): the room read in words, five separate parts, no total, no vital signs
+const sample = {
+  mode: "standard", state: "awake", quiet: false, light: { kelvin: 4000, level: 1, from: "set", task: false }, blinds: 0, glass: { front: "smart", opaque: false, level: 1 },
+  temp: 23, humidity: 45, noise: 41, wall: wallFor({}), sceneLabel: "", tv: "orientation", fittings: { ceilingTray: true, staffPanel: true, patientWall: true, workstation: true, bedsideCabinet: true },
+  sky: false, wardrobe: { shown: true, side: null }, lineClips: true, bed: { position: "on the back, backrest at 30°", minutes: 15, reminder: "none" }, tasks: { done: 0, total: 5 },
+  layout: { added: [], own: 7 }, placed: 0, board: true, family: "all", requests: 0, cleaning: { on: false, ticks: 0, total: 9, next: null },
+};
+const calm = twinRead(sample);
+assert.deepEqual(Object.keys(calm.systems), ["bed", "ceiling", "walls", "storage", "equipment", "floor", "mode"], "seven systems: the bed, the ceiling, the walls, storage, equipment, the floor and the mode in force");
+assert.deepEqual(calm.health.map(h => h.label), ["Environmental comfort", "Equipment organisation", "Access clearance", "Communication readiness", "Cleaning checklist"], "the dashboard's five parts, in the brief's order");
+assert.ok(calm.health.every(h => h.state in TWIN_STATES && h.lines.length) && !("total" in calm) && !("score" in calm) && calm.health.every(h => !("score" in h)), "each part is read on its own, in words: no total and no score");
+assert.ok(calm.health.filter(h => h.id !== "cleaning").every(h => h.state === "settled") && calm.health.find(h => h.id === "cleaning").state === "off", "a settled room has nothing to look at, and Cleaning isn't running");
+const allText = JSON.stringify(calm);
+assert.ok(!/heart rate|oxygen saturation|blood pressure|breathing rate|SpO|\bbpm\b/i.test(allText), "no vital signs: those are PACS's");
+assert.ok(/no modelled conflict found/.test(allText) && /not hospital rules/.test(allText) && /Illustrative/.test(allText) && /simulated/.test(allText), "it says the clear areas are the model's own, and which values are illustrative or simulated");
+// it reads the room as it is: a mode, a request, a loud room, an added item in the way, and Cleaning each change what it says
+const comfort = twinRead({ ...sample, mode: "comfort", light: { kelvin: 2700, level: 0.35, from: "mode", task: false }, wall: wallFor({ mode: "comfort" }) });
+assert.ok(comfort.systems.mode.lines[0].startsWith("Comfort") && comfort.systems.mode.lines.some(l => /Relaxation/.test(l)) && /warm/.test(comfort.health[0].lines[0]) && /room mode/.test(comfort.health[0].lines[0]), "change the mode and it changes: Comfort's row, and the light from the mode");
+assert.equal(twinRead({ ...sample, noise: 57 }).health.find(h => h.id === "comfort").state, "look", "a loud pillow asks someone to look");
+assert.equal(twinRead({ ...sample, requests: 2 }).health.find(h => h.id === "communication").state, "look", "a request waiting asks someone to look");
+assert.equal(twinRead({ ...sample, board: false }).health.find(h => h.id === "communication").lines[0], "Communication board: not offered while sedated.", "a sedated patient isn't offered the board, and it says so");
+const blocked = twinRead({ ...sample, layout: { added: [{ level: "overlap", label: "Privacy screen", what: "overlaps bed" }], own: 7 } }).health.find(h => h.id === "access");
+assert.ok(blocked.state === "look" && blocked.red && /Privacy screen: overlaps bed/.test(blocked.lines[0]), "an added item overlapping something is marked red, by name");
+assert.equal(twinRead({ ...sample, lineClips: false }).health.find(h => h.id === "equipment").state, "look", "lines without clips ask someone to look");
+const cleaningNow = twinRead({ ...sample, mode: "cleaning", cleaning: { on: true, ticks: 3, total: 9, next: "Monitor and pump screens and buttons" } }).health.find(h => h.id === "cleaning");
+const cleaningDone = twinRead({ ...sample, mode: "cleaning", cleaning: { on: true, ticks: 9, total: 9, next: null } }).health.find(h => h.id === "cleaning");
+assert.ok(cleaningNow.state === "look" && /3 of 9/.test(cleaningNow.lines[0]) && cleaningDone.state === "done" && /doesn't say the room is clean or disinfected/.test(cleaningDone.lines[1]), "Cleaning: the steps ticked, and finishing never says the room is disinfected");
+assert.ok(/monitors nothing/.test(TWIN_TEXT.limits) && /no total/.test(TWIN_TEXT.limits) && /no vital signs/.test(TWIN_TEXT.limits), "the twin says it monitors nothing, adds no total and shows no vital signs");
+assert.ok(byId.get("digitalTwin")?.control === "openTwin" && byId.get("digitalTwin").demo === "digitalTwin" && /never added into a score/.test(byId.get("digitalTwin").limits), "the twin's card: its button, its demo, and no score");
+
+console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow; the mode table with its five levels for ${Object.keys(MODES).length} modes across ${SYSTEMS.length} systems, every note one line that keeps medical alarms on, Cleaning's checklist, and the board in Arabic with ${BOARD.length} requests; the digital twin's ${TWIN_SYSTEMS.length} systems and ${HEALTH.length} separate parts, read from the room with no total and no vital signs`);
