@@ -2405,7 +2405,7 @@ $("transformPlay").addEventListener("click", e => { cardOpener = e.currentTarget
 
 // ---------------------------------------------------------------- the guided tour (guide.js)
 var guide = new GuidedTour({
-  snapshot: () => ({ code: specCode(), mode: modes.current, clinical: clinicalByHand, requests: bedside.requests.map(r => ({ ...r })), station: station.snapshot() }),
+  snapshot: () => ({ code: specCode(), mode: modes.current, clinical: clinicalByHand, requests: bedside.requests.map(r => ({ ...r })), station: station.snapshot(), bed: bedView.snapshot() }),
   restore: snap => {
     const spec = decodeSpec(optionData, `#c=${snap.code}`);
     if (!spec) return Promise.resolve();
@@ -2413,6 +2413,7 @@ var guide = new GuidedTour({
     setBedside(false); setBed(false); setStation(false);
     bedside.requests = snap.requests || []; bedside.renderRequests();
     station.restore(snap.station);
+    if (snap.bed) bedView.restore(snap.bed); // the bed panel's tab and position, as the visitor left them
     return applySpec(spec).then(() => {
       modes.set(snap.mode, { instant: true });
       clinicalByHand = snap.clinical;

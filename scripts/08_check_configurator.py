@@ -2698,21 +2698,25 @@ with sync_playwright() as p:
     before = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
     pg.click("#transformPlay")
     pg.wait_for_function("window.__config.demo() && window.__config.demo().id === 'transformIcu'", timeout=30000)
-    captions, shown = [], []
-    while pg.evaluate("window.__config.demo()"):
-        d = pg.evaluate("window.__config.demo()")
-        pg.wait_for_function(f"!window.__config.demo() || (window.__config.demo().at === {d['at']} && window.__config.demo().waiting)", timeout=120000)
+    steps = {}
+    while True:
+        pg.wait_for_function("!window.__config.demo() || window.__config.demo().waiting", timeout=120000)
+        # read the step as soon as it's waiting, then move it on, unless its own timer already has
+        got = pg.evaluate("""() => { const d = window.__config.demo(); if (!d?.waiting) return null;
+          return { at: d.at, text: document.getElementById('demoText').textContent, shown: window.__config.fingerprint().shown }; }""")
         if not pg.evaluate("window.__config.demo()"):
             break
-        captions.append(pg.inner_text("#demoText"))
-        shown.append(pg.evaluate("window.__config.fingerprint().shown"))
-        if d["at"] == 2:
+        if not got:
+            continue
+        steps[got["at"]] = got
+        if got["at"] == 2:
             shot(pg, "transform_icu_tray")
-        pg.evaluate("window.__config.demoAdvance()")
+        pg.evaluate("at => { const d = window.__config.demo(); if (d?.at === at && d.waiting) window.__config.demoAdvance(); }", got["at"])
+    captions, shown = [steps[k]["text"] for k in sorted(steps)], [steps[k]["shown"] for k in sorted(steps)]
     pg.wait_for_function("!window.__config.state().moving && !window.__config.fading() && !window.__config.mode().easing", timeout=60000)
     after = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
     diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k] and k not in ("eye", "target", "view")]
-    check(len(captions) == 7 and "not every ICU" in captions[0] and "how the room works" in captions[-1], f"Transform the ICU: seven captions, from today's room, a typical one, to how the room works {captions[:1]} {captions[-1:]}")
+    check(len(captions) == 7 and "not every ICU" in captions[0] and "how the room works" in captions[-1], f"Transform the ICU: seven captions, from today's room, a typical one, to how the room works {sorted(steps)} {captions[:1]} {captions[-1:]}")
     check(shown[0].get("floor") == "sand" and shown[1].get("floor") == "terrazzo" and shown[5].get("scene") == "forest", "it starts from today's room and adds the new one a piece at a time, shown, not chosen")
     check(after["code"] == before["code"] and not diff, f"and when it ends the visitor's own room is back, slate floor and all {diff}")
     check(not errs, f"the presentation: no errors {errs[:3]}")
