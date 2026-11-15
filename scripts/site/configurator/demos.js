@@ -7,7 +7,7 @@
 // marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced; acoustic("without" | "with") shows
 // Acoustic comfort mode; notices(open) opens its list of notifications; patient(state) sets the patient's state; station(view) opens the clinician
 // workstation in Nurse or Doctor view, and task(id, done) chooses one of its tasks or presses Done; clean(n) ticks the first n of
-// Cleaning's steps. A step's caption can be worked out
+// Cleaning's steps; today() shows today's room, every option at its default and no placed item, as Compare does. A step's caption can be worked out
 // from the room: say(api), where api.figures() gives the two wardrobes' sizes as a sentence.
 
 export const DEMOS = {
@@ -164,6 +164,20 @@ export const DEMOS = {
       { say: "Cleaning, for a room between patients: the bed is empty, the light bright, the screens off. First, clean your hands at the basin.", run: a => { a.time("afternoon"); a.camera("overview"); a.mode("cleaning"); } },
       { say: "Ticked, and the next step lights: the bed rails, controls and call button. This demo plays the person ticking.", run: a => a.clean(1) },
       { say: "Every step ticked: the checklist says it's finished, and never that the room is disinfected.", run: a => a.clean(9) },
+    ],
+  },
+  // Transform the ICU: Compare with today's room, staged. Today's room, then the Future ICU arriving a piece at a time, and
+  // back to the visitor's own room when it ends
+  transformIcu: {
+    label: "Transform the ICU",
+    steps: [
+      { say: "Today's room: a typical arrangement, not every ICU.", run: a => { a.today(); a.time("afternoon"); a.camera("across"); } },
+      { say: "A pale, seamless floor, light that follows the day, and the blinds half down.", run: a => { a.option("floor", "terrazzo"); a.option("scheme", "circadian"); a.option("temperature", "auto"); a.option("blinds", "half"); } },
+      { say: "A lit ceiling tray over the bed.", run: a => a.option("ceilingTray", "on") },
+      { say: "Wall screens: one for staff at the bed head, one for the patient round the TV.", run: a => { a.option("staffPanel", "on"); a.option("patientWall", "on"); a.option("tvplay", "orientation"); } },
+      { say: "A desk for the care team, and a cabinet for the patient's own things.", run: a => { a.option("workstation", "on"); a.option("bedsideCabinet", "on"); } },
+      { say: "A scene the patient chose, on the wall, over the bed and in the light.", run: a => a.option("scene", "forest") },
+      { say: "The difference isn't only how it looks: it's how the room works. Its modes move all of this together.", run: a => a.mode("comfort") },
     ],
   },
   daylight: {

@@ -33,7 +33,7 @@ import { WallView, buttonAt } from "./wall.js";
 import { Station } from "./station.js";
 import { SCENES, SCENE_MS, STRIP_TEXT, wallFor } from "./wall-data.js";
 import { CLEANING_KINDS, CLEANING_STEPS, CLEANING_TEXT } from "./cleaning-data.js";
-import { GuidedTour, CAVEAT } from "./guide.js";
+import { GuidedTour, CAVEAT, TOUR_LINKS } from "./guide.js";
 import { Features } from "./features.js";
 import { Highlight } from "./highlight.js";
 import { ACTIONS, DEMOS, HOLD_MS as DEMO_HOLD_MS } from "./demos.js";
@@ -1342,6 +1342,13 @@ const demoApi = {
   position: (id, minutes) => bedView.setPosition(id, minutes),
   askMove: id => bedView.ask(id, { focus: false }), // the line check, on screen: the demo says it plays the staff member
   station: view => { if (!stationOn) setStation(true, { fromDemo: true }); station.setView(view, { quietly: true }); },
+  // today's room, as Compare shows it: every option at its default and no placed item. The demo's end puts them back
+  today: () => {
+    for (const g of allGroups()) { demoShown[g.id] = g.default; runEffects(g, g.default); }
+    placement.list(state.room).forEach(p => { if (p.node) p.node.visible = false; });
+    if (demo) demo.hidPlaced = true;
+    settle(); relight(); refreshExplore();
+  },
   // Cleaning's first n steps ticked: the demo says it plays the person ticking
   clean: n => { if (!cleaningOn) modes.set("cleaning", { instant: true }); cleaningTicks = new Set(CLEANING_STEPS.slice(0, n).map(x => x.id)); renderCleaning(); },
   // a task chosen, or pressed Done: the demo says it plays the staff member who presses it
@@ -1419,6 +1426,7 @@ function endDemo(why = "") {
   if (acousticOn) setAcoustic(false); // only a demo can have it on now: starting one ends the visitor's
   if (bedOn) setBed(false); // and the same for the bed panel
   bedView.restore(d.snap.bed);
+  if (d.hidPlaced) placement.show(stage.current); // the visitor's placed items, hidden while today's room showed
   if (stationOn && !d.snap.stationOn) setStation(false); // and the workstation's, with its views and ticks as they were
   station.restore(d.snap.station);
   highlight.clear("demo");
@@ -2392,17 +2400,25 @@ function setCompare(on) {
 /** Something is about to change the design: the comparison and any feature demo end first, so the change lands on the visitor's own room. */
 function endCompare() { endDemo(); if (compare) setCompare(false); }
 $("compareToggle").addEventListener("click", () => setCompare(!compare));
+// Transform the ICU: the same comparison, staged, as a demo: it changes no choice, and the room comes back when it ends
+$("transformPlay").addEventListener("click", e => { cardOpener = e.currentTarget; startDemo("transformIcu", "transformIcu").catch(err => window.__configErrors.push(String(err))); });
 
 // ---------------------------------------------------------------- the guided tour (guide.js)
 var guide = new GuidedTour({
-  snapshot: () => ({ code: specCode(), mode: modes.current, clinical: clinicalByHand }),
+  snapshot: () => ({ code: specCode(), mode: modes.current, clinical: clinicalByHand, requests: bedside.requests.map(r => ({ ...r })), station: station.snapshot(), bed: bedView.snapshot() }),
   restore: snap => {
     const spec = decodeSpec(optionData, `#c=${snap.code}`);
     if (!spec) return Promise.resolve();
+    // the panels a step opened close, and what a step asked or ticked goes, before the room is put back
+    setBedside(false); setBed(false); setStation(false);
+    bedside.requests = snap.requests || []; bedside.renderRequests();
+    station.restore(snap.station);
+    if (snap.bed) bedView.restore(snap.bed); // the bed panel's tab and position, as the visitor left them
     return applySpec(spec).then(() => {
       modes.set(snap.mode, { instant: true });
       clinicalByHand = snap.clinical;
       syncClinical();
+      syncWall({ instant: true });
     }).catch(fail);
   },
   room: label => (state.room === label && stage.current ? Promise.resolve() : setRoom(label)),
@@ -2411,11 +2427,17 @@ var guide = new GuidedTour({
   camera: (name, instant) => { if (rig.meta.cameras[name]) rig.go(name, { instant: !!instant }); },
   mode: name => modes.set(name),
   option: (group, id) => { if (selected[group] !== id) setOption(group, id); },
-  // the room has come to rest: the camera has arrived, and any change of mode or of the glass has finished easing
+  // the room has come to rest: the camera has arrived, and any change of mode, of the glass or of a scene has finished easing
   still: () => new Promise(done => {
-    const look = () => (rig.tween || modes.easing || glass.fading ? requestAnimationFrame(look) : done());
+    const look = () => (rig.tween || modes.easing || glass.fading || envTween || wallView.easing ? requestAnimationFrame(look) : done());
     requestAnimationFrame(look);
   }),
+  wait: ms => new Promise(done => setTimeout(done, ms)),
+  // the future tour's people: the patient asks on the board, staff open the bed's lines and the workstation. Each step says whom it plays
+  board: id => { setBedside(true, "board"); bedside.ask(id); },
+  bed: tab => setBed(true, tab, { fromDemo: true }),
+  station: task => { setStation(true, { fromDemo: true }); station.choose(task, { focus: false }); },
+  panels: () => { setBedside(false); setBed(false); setStation(false); },
   place: types => { for (const t of types) placeInView(t); $("objectCard").hidden = true; },
   open: id => $(id === "pacs" ? "startPacsGuide" : "openApis")?.click(),
   shown: on => { document.body.classList.toggle("guided", on); if (on && isPhone()) setSheet(false); },
@@ -2432,7 +2454,9 @@ var guide = new GuidedTour({
   after: $("guideAfter"), tryIt: $("guideTry"), again: $("guideAgain"),
 });
 $("guideCaveat").textContent = CAVEAT;
-$("openGuide").addEventListener("click", () => { setAcoustic(false); endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(); });
+const startGuide = name => { setAcoustic(false); endCompare(); tour.stop(); if (pacs.active) pacs.exit(); guide.start(name); };
+$("openGuide").addEventListener("click", () => startGuide("future")); // the main button: Experience the ICU of the future
+$("openBasics").addEventListener("click", () => startGuide("basics")); // the nine-step tour, as it was
 $("guide").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); guide.exit(); } });
 
 // ---------------------------------------------------------------- graphics quality: Auto, High or Low (quality.js)
@@ -2896,7 +2920,7 @@ async function boot() {
   if (forcedTier) $("quality").querySelectorAll("button").forEach(b => { b.disabled = true; });
   requestAnimationFrame(frame);
   // the home page's "Take the guided tour" link
-  if (query.get("tour") === "guided") requestAnimationFrame(() => guide.start());
+  if (TOUR_LINKS[query.get("tour")]) requestAnimationFrame(() => guide.start(TOUR_LINKS[query.get("tour")])); // ?tour=guided is Room basics, as it always was
   requestAnimationFrame(() => requestAnimationFrame(() => {
     canvas.classList.remove("pending");
     // a first visit is told the room can be moved. Automated pages don't get the hint, so the checks' and the home page's

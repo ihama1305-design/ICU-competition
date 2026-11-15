@@ -1,4 +1,6 @@
-// The guided tour: a few captioned steps through what the configurator does, for someone seeing it for the first time.
+// The guided tours: captioned steps through what the configurator does, for someone seeing it for the first time. The engine
+// takes a script (SCRIPTS): Room basics, the first nine steps, kept at ?tour=guided; and Experience the ICU of the future, one
+// patient's story through the new room, at ?tour=future and on the main button.
 // Each step sets up the room through `api` (main.js); Previous, Pause, Next, Restart and Exit are always there. Exit puts the
 // room back exactly as it was before the tour started, and Restart does the same before playing from the first step.
 // Finish puts the room back too, and the card stays to say so and to offer what comes next (ENDING).
@@ -57,6 +59,62 @@ export const STEPS = [
 // The safety caveats every step would otherwise repeat, said once in a fixed line under the captions (and under PACS's demo)
 export const CAVEAT = "Simulated demo. A nurse approves every change.";
 
+/**
+ * Experience the ICU of the future: one patient's story, in the brief's order. Entering the room; comfort (a scene, the light,
+ * the quiet); the patient asks for something without speaking; where the equipment and cables go; the wall and the
+ * workstation; the room's modes changing together; before and after; the closing lines. A step that plays a person says so.
+ */
+export const FUTURE_STEPS = [
+  {
+    title: "Entering the room",
+    text: "Room W1 as the ICU of the future: a lit ceiling tray, wall screens for staff and patient, and a care team's desk.",
+    run: async a => { await a.room("W1"); a.theme("future"); a.time("afternoon"); a.camera("across"); },
+  },
+  {
+    title: "Comfort: a scene, the light, the quiet",
+    text: "The patient chooses a forest. The wall, the ceiling over the bed and the light change together, slowly. Comfort mode dims the room.",
+    run: async a => { a.option("scene", "forest"); a.mode("comfort"); a.camera("patient"); },
+  },
+  {
+    title: "Asking without speaking",
+    text: "The patient asks for water on the communication board, in English or Arabic. It goes to the nurse's list. The tour plays the patient.",
+    run: async a => { a.mode("standard"); a.board("water"); },
+  },
+  {
+    title: "Where the equipment and cables go",
+    text: "The pendant keeps the monitor, pumps and outlets off the floor. Each line has a clip, a coloured tag, and its slack shown.",
+    run: async a => { a.panels(); a.bed("lines"); },
+  },
+  {
+    title: "The wall and the workstation",
+    text: "For care, the wall turns to Clinical, with made-up observations. At the desk, a task lights the cupboard its things are in.",
+    run: async a => { a.panels(); a.mode("clinical"); a.station("dressing"); },
+  },
+  {
+    title: "The room's modes, together",
+    text: "Family visit: warm light, the glass softened, family connection on the wall. Light, glass, screens and scenes move as one.",
+    run: async a => { a.panels(); a.mode("family"); a.camera("across"); },
+  },
+  {
+    title: "Before and after",
+    text: "Today's room, typical but not every ICU, then the new one piece by piece: different in how it works, not only how it looks.",
+    // the pieces arrive one after another within the step: its reading time starts once the last has landed
+    run: async (a, stale) => {
+      a.mode("standard"); a.theme("calm"); a.camera("across");
+      for (const piece of [["floor", "terrazzo", "scheme", "circadian", "blinds", "half"], ["ceilingTray", "on"], ["staffPanel", "on", "patientWall", "on", "tvplay", "orientation"], ["workstation", "on", "bedsideCabinet", "on"], ["scene", "forest"]]) {
+        await a.wait(1600);
+        if (stale()) return;
+        for (let i = 0; i < piece.length; i += 2) a.option(piece[i], piece[i + 1]);
+      }
+    },
+  },
+  {
+    title: "Adaptive ICU: a room that cares, connects and adapts",
+    text: "The ICU of the future should be a place where patients feel heard, staff are supported, and technology works quietly in the background.",
+    run: async a => { a.camera("across"); },
+  },
+];
+
 // What the card says after Finish, once the room is back as it was. Not a step: it has no number and sets nothing up.
 export const ENDING = {
   title: "That's the tour",
@@ -64,6 +122,20 @@ export const ENDING = {
   go: "Try it yourself",
   again: "Watch again",
 };
+
+export const FUTURE_ENDING = {
+  title: "That's the story",
+  text: "The tour's changes are undone. The room is yours now: pick a theme, a time of day or a room mode.",
+  go: "Try it yourself",
+  again: "Watch again",
+};
+
+/** The tours. Each keeps its own link: ?tour=guided for Room basics, as it always was, and ?tour=future. */
+export const SCRIPTS = {
+  basics: { label: "Room basics", steps: STEPS, ending: ENDING },
+  future: { label: "Experience the ICU of the future", steps: FUTURE_STEPS, ending: FUTURE_ENDING },
+};
+export const TOUR_LINKS = { guided: "basics", future: "future" };
 
 // The ending's buttons appear where Finish was pressed, so a double click meant for Finish would land on one of them.
 // They wait this long before they answer.
@@ -91,18 +163,26 @@ export class GuidedTour {
     this.held = 0; this.since = 0; this.fill = null; // how long this step has been held, when it last started waiting, and the bar's fill
     this.still = false; // whether this step's room has come to rest, which is when its wait starts
     this.ended = false; this.endedAt = 0; // whether the card is showing the ending, and since when
-    ui.bar.style.setProperty("--step", `${100 / STEPS.length}%`);
-    ui.tryIt.textContent = ENDING.go; ui.again.textContent = ENDING.again;
+    this.use("basics");
     ui.prev.addEventListener("click", () => this.go(this.at - 1));
-    ui.next.addEventListener("click", () => (this.at >= STEPS.length - 1 ? this.finish() : this.go(this.at + 1)));
+    ui.next.addEventListener("click", () => (this.at >= this.steps.length - 1 ? this.finish() : this.go(this.at + 1)));
     ui.tryIt.addEventListener("click", () => { if (this.endingReady()) this.close(true); });
-    ui.again.addEventListener("click", () => { if (this.endingReady()) this.start(); });
+    ui.again.addEventListener("click", () => { if (this.endingReady()) this.start(this.name); });
     ui.play.addEventListener("click", () => this.setPlaying(!this.playing));
     ui.exit.addEventListener("click", () => this.exit());
     ui.restart.addEventListener("click", () => this.restart());
   }
 
   get running() { return this.at >= 0; }
+  get steps() { return this.script.steps; }
+
+  /** Load a script: its steps, its ending's words, and the bar's segments. */
+  use(name) {
+    this.name = SCRIPTS[name] ? name : "basics";
+    this.script = SCRIPTS[this.name];
+    this.ui.bar.style.setProperty("--step", `${100 / this.steps.length}%`);
+    this.ui.tryIt.textContent = this.script.ending.go; this.ui.again.textContent = this.script.ending.again;
+  }
 
   /** The card's two layouts: a step with the tour's controls, or the ending with what comes next. */
   layout(ending) {
@@ -110,8 +190,9 @@ export class GuidedTour {
     this.ui.caveat.hidden = ending; // the ending shows no demo, so it has nothing to caveat
   }
 
-  start() {
+  start(name = this.name) {
     if (this.running) return;
+    this.use(name);
     this.ended = false;
     this.layout(false);
     this.snapshot = this.api.snapshot();
@@ -123,22 +204,22 @@ export class GuidedTour {
   }
 
   async go(i) {
-    if (i < 0 || i >= STEPS.length) return;
+    if (i < 0 || i >= this.steps.length) return;
     this.at = i;
-    const token = ++this.token, step = STEPS[i];
-    this.ui.count.textContent = `${i + 1} of ${STEPS.length}`;
+    const token = ++this.token, step = this.steps[i];
+    this.ui.count.textContent = `${i + 1} of ${this.steps.length}`;
     this.ui.title.textContent = step.title;
     this.ui.text.textContent = step.text;
     this.ui.prev.disabled = i === 0;
-    this.ui.next.textContent = i === STEPS.length - 1 ? "Finish" : "Next";
+    this.ui.next.textContent = i === this.steps.length - 1 ? "Finish" : "Next";
     this.ui.links.replaceChildren(...(step.links || []).map(([id, label]) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "outline-action"; b.textContent = label;
       b.addEventListener("click", () => { this.exit(); this.api.open(id); });
       return b;
     }));
-    this.ui.bar.style.setProperty("--done", `${((i + 1) / STEPS.length) * 100}%`);
-    this.api.say(`Step ${i + 1} of ${STEPS.length}: ${step.title}.`);
+    this.ui.bar.style.setProperty("--done", `${((i + 1) / this.steps.length) * 100}%`);
+    this.api.say(`Step ${i + 1} of ${this.steps.length}: ${step.title}.`);
     this.held = 0; this.since = 0; this.still = false; // a new step starts its wait from nothing, and not before its room is drawn
     this.schedule();
     // a later step, or Exit, supersedes this one partway through
@@ -158,7 +239,7 @@ export class GuidedTour {
 
   schedule() {
     this.halt();
-    const last = this.at >= STEPS.length - 1, wait = holdLeft(this.held);
+    const last = this.at >= this.steps.length - 1, wait = holdLeft(this.held);
     // the bar's next segment is the wait: it stands where the wait stands while paused, and fills as the tour plays.
     // The last step has nothing to move on to, so it shows no wait.
     const from = this.running && !last ? 1 - wait / HOLD_MS : 0;
@@ -179,7 +260,7 @@ export class GuidedTour {
 
   /** Back to the first step from wherever the tour is, with the room as it was before it started, and playing again. */
   async restart() {
-    if (!this.running) { this.start(); return; }
+    if (!this.running) { this.start(this.name); return; }
     this.halt();
     const token = ++this.token; // a step still setting up stops here
     // the steps lay modes and placed items over the room; put it back first, so step one starts where the tour first did
@@ -212,8 +293,8 @@ export class GuidedTour {
     this.ui.count.textContent = "Finished";
     this.ui.bar.style.setProperty("--done", "100%");
     this.ui.hold.style.transform = "scaleX(0)";
-    this.ui.title.textContent = ENDING.title;
-    this.ui.text.textContent = ENDING.text;
+    this.ui.title.textContent = this.script.ending.title;
+    this.ui.text.textContent = this.script.ending.text;
     this.ui.links.replaceChildren();
     this.ui.tryIt.focus({ preventScroll: true });
     this.putBack("Guided tour finished. The room is back as it was.");
