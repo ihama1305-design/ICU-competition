@@ -3089,8 +3089,9 @@ with sync_playwright() as p:
     shot(pg, "phone_guide")
     # its ending on a phone: the same card, and Try it yourself brings the options up, since they are behind a closed sheet
     pg.tap("#guidePlay")
-    pg.evaluate("window.__config.guideGo(8)")
-    pg.wait_for_function("window.__config.guide().at === 8", timeout=60000)
+    last = pg.evaluate("+document.getElementById('guideCount').textContent.split(' of ')[1] - 1")  # the main button's tour: its last step
+    pg.evaluate(f"window.__config.guideGo({last})")
+    pg.wait_for_function(f"window.__config.guide().at === {last}", timeout=60000)
     pg.tap("#guideNext")
     pg.wait_for_function("window.__config.guide().ended", timeout=60000)
     drawn(pg)
