@@ -589,10 +589,10 @@
    "name": "Staff panel",
    "group": "workflow",
    "purpose": "Information for the care team on the wall behind the bed head, where staff look and the patient can't.",
-   "how": "One flush white panel with rounded corners, two wide screens and a thin line of light beneath. The pendant in front still carries the monitor, pumps and outlets. For now its screens show a still: the shapes of the observations with no numbers, care tasks and equipment, all marked simulated. Choose it under Future ICU fittings.",
+   "how": "One flush white panel with rounded corners, two wide screens and a thin line of light beneath. The pendant in front still carries the monitor, pumps and outlets. Its screens follow the smart clinical wall: in Clinical, made-up observations, care tasks and equipment, all marked simulated; otherwise a dark standby that shows nothing about the patient. Choose it under Future ICU fittings.",
    "benefit": "Tasks and equipment are at a glance at the bedside, so there's less walking to another screen.",
    "awake": "It's behind the patient's head, so it adds nothing to what they see.",
-   "limits": "Simulated: there's no reading on it, and it never stands in for the patient monitor, which stays on the pendant, working. A real one needs integration, infection-control and regulatory review.",
+   "limits": "Simulated: its values are made up and fixed, not readings, and it never stands in for the patient monitor, which stays on the pendant, working, with its alarms unchanged. A real one needs integration, infection-control and regulatory review.",
    "evidence": {
     "text": "Expected, not shown."
    },
@@ -605,16 +605,20 @@
    "name": "Patient wall",
    "group": "comfort",
    "purpose": "The wall the patient faces, made into one calm surface round the TV.",
-   "how": "A flush white panel round the TV, with a strip of screen over it and a line of light beneath. The TV sits on its face, so the orientation screen, the nature scene and the damping mounts keep working. For now the strip shows a still, marked simulated: who is caring for the patient today, by role, and what the day holds. Choose it under Future ICU fittings.",
+   "how": "A flush white panel round the TV, with a strip of screen over it and a line of light beneath. The TV sits on its face, so the orientation screen, the nature scene and the damping mounts keep working. It follows the smart clinical wall: in Patient, the strip shows the care team by role and the day's plan, with two buttons that open the communication board and family connection; in Relaxation, a scene runs across the whole wall and the TV. Choose it under Future ICU fittings.",
    "benefit": "What a patient is meant to read is on the wall they face, not behind their head.",
    "awake": "The patient sees the TV and the strip over it from the pillow.",
-   "sedated": "The strip stays still: nothing on it moves or flashes.",
+   "sedated": "The strip stays still, with no buttons: nothing on it moves, flashes or asks for anything.",
    "limits": "Simulated: no real names, plans or times. Whether the strip can be read from the pillow depends on the patient's eyesight; Patient view shows the distance. A real one needs integration and infection-control review.",
    "evidence": {
     "text": "Expected, not shown."
    },
    "objects": [
     "addon:patientWall"
+   ],
+   "actions": [
+    "bedside:board",
+    "bedside:family"
    ]
   },
   {
@@ -622,14 +626,19 @@
    "name": "Clinician workstation",
    "group": "workflow",
    "purpose": "A desk for the care team in the room, by the window and out of the space round the bed.",
-   "how": "A rounded white top on a timber-and-white cabinet, a screen and keyboard, a second screen on an arm, and a lit rail. It stands clear of the keep-clear areas, the door and the walking route to the bed. In W1 the visitor chair moves nearer the window to make room. For now its screens show a still, marked simulated, with no patient's name or diagnosis. Choose it under Future ICU fittings.",
+   "how": "A rounded white top on a timber-and-white cabinet, a screen and keyboard, a second screen on an arm, and a lit rail. It stands clear of the keep-clear areas, the door and the walking route to the bed. In W1 the visitor chair moves nearer the window to make room. Its screens show a made-up patient's dashboard, marked simulated, with no name or diagnosis. Open the workstation for its Nurse view and Doctor view, a task that lights where its things are, hands-free buttons, and in Emergency-ready the emergency equipment and the clear route to the bed. Choose it under Future ICU fittings.",
    "benefit": "Notes and tasks are at hand in the room, so there's less walking between workstations and less searching.",
-   "limits": "Simulated: a still with made-up headings. It doesn't copy or change PACS. A real one needs its place, power, data, infection-control and clinical review.",
+   "awake": "Nothing about the patient is said aloud: the hands-free buttons answer on the screen only.",
+   "limits": "Simulated: a made-up patient, made-up values and a scripted task list. Nothing listens: each hands-free button stands in for a spoken command. Its Emergency view is not a validated emergency protocol. It opens PACS, and doesn't copy or change it. A real one needs its place, power, data, infection-control and clinical review.",
    "evidence": {
     "text": "Expected, not shown."
    },
    "objects": [
     "addon:workstation"
+   ],
+   "demo": "workstation",
+   "actions": [
+    "station"
    ]
   },
   {
@@ -647,6 +656,47 @@
    "objects": [
     "addon:bedsideCabinet"
    ]
+  },
+  {
+   "id": "smartWall",
+   "name": "Smart clinical wall",
+   "group": "workflow",
+   "purpose": "One wall, more than one purpose: the staff panel and the patient wall show what each person needs now. Staff get observations, tasks and equipment; the patient gets the day, the time, the care team and the plan; at rest, a calm scene.",
+   "how": "One switch, under Smart clinical wall: Clinical, Patient or Relaxation. Clinical fills the staff panel at the bed head with made-up heart rate, oxygen saturation, blood pressure, breathing rate and temperature, care tasks and equipment, and leaves the patient the day and the time. Patient shows the orientation screen on the TV, the care team by role and the day's plan over it, and two buttons that open the communication board and family connection. Relaxation puts a scene across the patient wall. The room's modes move it too: Clinical turns it to Clinical, Comfort to Relaxation, and Emergency-ready turns the patient wall off, and every scene with it. It needs the staff panel and the patient wall, under Future ICU fittings.",
+   "benefit": "Information organised by who needs it and when, on screens built into the wall instead of more devices round the bed.",
+   "awake": "From the pillow, in Patient view, the time, the care team and the plan are large enough to read, and the two buttons open the bedside screens.",
+   "sedated": "No buttons and no prompts: the patient wall shows the time or a scene, and staff use the staff panel.",
+   "limits": "Simulated: every value is made up and fixed, and the staff panel never stands in for the bedside monitor, which keeps running with its alarms unchanged. Observations show only in Clinical, so visitors don't see them. A real wall needs clinical integration, infection-control and regulatory review.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "node:wall_screen"
+   ],
+   "demo": "smartWall",
+   "actions": [
+    "bedside:board",
+    "bedside:family"
+   ]
+  },
+  {
+   "id": "transformEnvironment",
+   "name": "Transform my environment",
+   "group": "comfort",
+   "purpose": "Bringing the outside world into intensive care: the patient chooses a forest, the ocean, mountains, the desert, a garden, a clear sky or a night sky, and the room takes it on.",
+   "how": "One choice, under Smart clinical wall, sets the patient wall, the ceiling above the bed and the room's light together, and changes slowly, over a few seconds. Off goes back to how the room was. Each scene is drawn in code, in the style of the TV's desert, the sky ceiling and the feature walls. Without the patient wall, the scene shows on the TV. The patient's state and a room mode come first, Quiet now takes the scene off the wall, and Emergency-ready turns every scene off.",
+   "benefit": "A safe choice about their own surroundings, for a patient who has few.",
+   "awake": "The patient chooses a scene, or asks for one on the communication board, and can always go back to how the room was.",
+   "sedated": "Staff or family can choose a calm scene. Nothing in it asks for attention.",
+   "limits": "Drawn scenes, not footage, and a concept: it makes no claim about sleep, delirium or recovery. Living plants stay outside the glass. A real system needs infection-control, electrical and clinical review.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "node:wall_scene",
+    "node:ceiling_scene"
+   ],
+   "demo": "transform"
   }
  ]
 }

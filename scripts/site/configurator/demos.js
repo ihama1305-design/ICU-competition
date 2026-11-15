@@ -5,7 +5,8 @@
 // api: option(group, id) shows an option without choosing it; time(stop); mode(name); camera(view); frame(featureId) stands
 // in front of a feature's object; wardrobe(side) slides its doors ("left", "right" or null for closed); outline(featureId)
 // marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced; acoustic("without" | "with") shows
-// Acoustic comfort mode; notices(open) opens its list of notifications; patient(state) sets the patient's state. A step's caption can be worked out
+// Acoustic comfort mode; notices(open) opens its list of notifications; patient(state) sets the patient's state; station(view) opens the clinician
+// workstation in Nurse or Doctor view, and task(id, done) chooses one of its tasks or presses Done. A step's caption can be worked out
 // from the room: say(api), where api.figures() gives the two wardrobes' sizes as a sentence.
 
 export const DEMOS = {
@@ -114,6 +115,32 @@ export const DEMOS = {
       { say: "Sitting up, the respiratory circuit is the one to check. No tension or force is worked out: the words come from a fixed table, to show the idea.", run: a => a.position("upright", 15) },
     ],
   },
+  // the smart clinical wall's three positions, from where each is read
+  smartWall: {
+    steps: [
+      { say: "Patient: from the pillow, the day, the date and the time, the care team by role and the plan for the day.", run: a => { a.option("patientWall", "on"); a.option("staffPanel", "on"); a.option("wall", "patient"); a.time("afternoon"); a.camera("patient"); } },
+      { say: "Clinical: the panel at the bed head shows made-up observations, care tasks and equipment for staff. The bedside monitor keeps running, and no alarm changes.", run: a => { a.option("wall", "clinical"); a.frame("staffPanel"); } },
+      { say: "Relaxation: a scene across the wall the patient faces, in place of everything that isn't needed now.", run: a => { a.option("wall", "relaxation"); a.camera("patient"); } },
+    ],
+  },
+  // Transform my environment: three scenes, then back to how the room was, each change slow
+  transform: {
+    steps: [
+      { say: "A forest on the wall, leaves over the bed, and the light warms. One choice sets all three.", run: a => { a.option("patientWall", "on"); a.option("ceilingTray", "on"); a.option("scene", "forest"); a.time("afternoon"); a.camera("across"); } },
+      { say: "The ocean: the sea on the wall, sky over the bed, and cooler, brighter light.", run: a => a.option("scene", "ocean") },
+      { say: "A night sky: stars over the bed, seen from the pillow, and the light low.", run: a => { a.option("scene", "nightSky"); a.camera("patient"); } },
+      { say: "Off: the room goes back to how it was, slowly.", run: a => { a.option("scene", "off"); a.camera("across"); } },
+    ],
+  },
+  // the clinician workstation: a task from start to Done, and the doctor's view of the same patient
+  workstation: {
+    steps: [
+      { say: "The clinician workstation in Nurse view: care tasks first, for a made-up patient with no name.", run: a => { a.time("afternoon"); a.station("nurse"); } },
+      { say: "Choose a task, and the station shows what it needs and lights where it is: the dressings, in the left cupboard.", run: a => a.task("dressing") },
+      { say: "A member of staff presses Done, and the task is ticked off here and on the staff panel. This demo plays that person.", run: a => a.task("dressing", true) },
+      { say: "Doctor view: the same patient, with the observations and the plan first. Every value is made up.", run: a => a.station("doctor") },
+    ],
+  },
   daylight: {
     steps: [
       { say: "Afternoon: the sensor sees daylight, so Comfort mode lowers the blinds against glare.", run: a => { a.time("afternoon"); a.camera("bed_window"); a.mode("comfort"); } },
@@ -126,6 +153,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest

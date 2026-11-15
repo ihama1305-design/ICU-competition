@@ -205,6 +205,13 @@
       </div>
       <p class="note">They follow the patient's state, set above the room. Simulated: no request, photograph or voice leaves this page. No item needs to be placed.</p>
     </section>
+    <section aria-labelledby="hStation">
+      <h2 id="hStation">Clinician workstation</h2>
+      <div class="grid station-launch">
+        <button type="button" class="wide" id="openStation">Open the workstation</button>
+      </div>
+      <p class="note">For the care team: tasks, equipment, observations, the plan and where supplies are, for a made-up patient with no name. It lights things in the room. Simulated.</p>
+    </section>
     <section aria-labelledby="hBed">
       <h2 id="hBed">The bed</h2>
       <div class="grid bed-launch" role="group" aria-labelledby="hBed">
@@ -283,6 +290,20 @@
   <div id="pane-passport" class="bedside-pane" hidden></div>
   <div id="pane-family" class="bedside-pane" hidden></div>
   <div id="pane-staff" class="bedside-pane" hidden></div>
+</section>
+<section id="stationPanel" class="acoustic-panel station-panel" aria-labelledby="stationTitle" hidden>
+  <button type="button" id="stationClose" class="object-close" aria-label="Close the clinician workstation">×</button>
+  <p class="object-kicker">Clinician workstation · SIMULATED</p>
+  <h2 id="stationTitle" tabindex="-1">Clinician workstation</h2>
+  <div id="stationViews" class="seg station-views" role="group" aria-label="View">
+    <button type="button" data-view="nurse" aria-pressed="true">Nurse view</button>
+    <button type="button" data-view="doctor" aria-pressed="false">Doctor view</button>
+  </div>
+  <div id="stationEmergency" class="station-emergency" hidden></div>
+  <div id="stationBody" class="station-body"></div>
+  <div id="stationHands" class="station-hands"></div>
+  <button type="button" id="stationPacs" class="outline-action station-pacs">Open PACS</button>
+  <p class="note">A made-up patient: no name and no diagnosis, and every value is made up. It opens PACS as it is, and copies or changes nothing in it. A real station needs integration, infection-control and clinical review.</p>
 </section>
 <section id="bedPanel" class="acoustic-panel bed-panel" aria-labelledby="bedTitle" hidden>
   <button type="button" id="bedClose" class="object-close" aria-label="Close the bed panel">×</button>
