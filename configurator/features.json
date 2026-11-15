@@ -748,6 +748,23 @@
    "objects": [],
    "control": "modeBar",
    "demo": "cleaning"
+  },
+  {
+   "id": "transformIcu",
+   "name": "Transform the ICU",
+   "group": "workflow",
+   "purpose": "Today's room, then the room of the future arriving a piece at a time: the difference is how the room works, not only how it looks.",
+   "how": "Under View, Transform the ICU plays Compare with today's room as a short story. It starts from today's room, every option at its default, then adds the Future ICU's pieces one after another: the floor and the light, the ceiling tray, the wall screens, the desk and the cabinet, a scene, and a room mode moving them together. When it ends, the visitor's own room comes back exactly.",
+   "benefit": "Seeing what changes, one piece at a time, and why each piece is there.",
+   "awake": "The patient's own choices, like a scene, are part of the story.",
+   "sedated": "Nothing in it is for a patient: it's a presentation of the room.",
+   "limits": "Today's room is a typical arrangement, not every ICU, and the equipment is a typical ICU kit, not SSMC's inventory. A demo: it changes no choice or link.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "transformPlay",
+   "demo": "transformIcu"
   }
  ]
 }

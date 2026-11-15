@@ -662,7 +662,7 @@ with sync_playwright() as p:
     filling = "document.getElementById('guideHold').getAnimations().filter(a => a.playState === 'running').length"
     # the wait is time to read the step with its room drawn, so it starts when the camera has arrived, not when the step is chosen.
     # Pressed and read in one go, so the read can't arrive after the camera has
-    early = pg.evaluate(f"""async () => {{ document.getElementById('openGuide').click(); await new Promise(r => setTimeout(r));
+    early = pg.evaluate(f"""async () => {{ document.getElementById('openBasics').click(); await new Promise(r => setTimeout(r));
       return {{ moving: window.__config.state().moving, still: window.__config.guide().still, filling: {filling} }}; }}""")
     g = pg.evaluate("window.__config.guide()")
     check(g["running"] and g["at"] == 0 and pg.is_visible("#guide") and pg.inner_text("#guideCount") == "1 of 9", f"the guided tour starts at its first step {g}")
@@ -707,7 +707,7 @@ with sync_playwright() as p:
         """Run the tour to its last step and press Finish; returns once the room has been put back.
         With twice, a second press follows at once on each button the ending puts where Finish was."""
         if not pg.evaluate("window.__config.guide().running"):
-            pg.click("#openGuide")
+            pg.click("#openBasics")
             pg.click("#guidePlay")
         pg.evaluate("window.__config.guideGo(8)")
         pg.wait_for_function("window.__config.guide().at === 8", timeout=60000)
@@ -762,7 +762,7 @@ with sync_playwright() as p:
     check(gone(pg, "#guide") and not pg.evaluate("window.__config.guide().ended"), "pressing on the room puts the ending away: the room is in the visitor's hands, which is what it asked for")
     pg.evaluate("document.getElementById('objectCard').hidden = true")
     # Esc from the card leaves it too, and dragging the room pauses rather than ends it
-    pg.click("#openGuide")
+    pg.click("#openBasics")
     pg.mouse.move(400, 400); pg.mouse.down(); pg.mouse.move(460, 410); pg.mouse.up()
     g = pg.evaluate("window.__config.guide()")
     check(g["running"] and not g["playing"], f"dragging the room pauses the tour rather than ending it {g}")
@@ -2632,6 +2632,96 @@ with sync_playwright() as p:
     check(not errs, f"the phone's mode bar: no errors {errs[:3]}")
     ctx.close()
 
+    # ---------------------------------------------------------------- the presentation: Experience the ICU of the future, Room basics, and Transform the ICU
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+    go(pg, "W1")
+    before = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
+    check("Experience the ICU of the future" in pg.inner_text("#openGuide") and "nine-step" in pg.inner_text("#openBasics"), "the main button starts Experience the ICU of the future, and Room basics keeps the nine steps")
+    pg.click("#openGuide")
+    pg.wait_for_function("window.__config.guide().running", timeout=30000)
+    if pg.evaluate("window.__config.guide().playing"):
+        pg.click("#guidePlay")  # hold each step here; Next moves on
+    want = ["Entering the room", "Comfort: a scene, the light, the quiet", "Asking without speaking", "Where the equipment and cables go", "The wall and the workstation",
+            "The room's modes, together", "Before and after", "Adaptive ICU: a room that cares, connects and adapts"]
+    seen, bad = [], []
+    for i in range(len(want)):
+        if i:
+            pg.click("#guideNext")
+        pg.wait_for_function(f"window.__config.guide().at === {i} && window.__config.guide().still", timeout=120000)
+        g = pg.evaluate("window.__config.guide()")
+        seen.append(g["title"])
+        st = pg.evaluate("({ sel: window.__config.selected(), mode: window.__config.mode().current, bed: window.__config.bed().open, bs: window.__config.bedside(), station: window.__config.station(), view: window.__config.state().view, count: document.getElementById('guideCount').textContent })")
+        ok = {
+            0: st["sel"]["ceilingTray"] == "on" and st["view"] == "across",
+            1: st["sel"]["scene"] == "forest" and st["mode"] == "comfort",
+            2: st["bs"]["open"] and any(r["id"] == "water" for r in st["bs"]["requests"]),
+            3: st["bed"] and not st["bs"]["open"],
+            4: st["station"]["open"] and st["station"]["task"] == "dressing" and st["mode"] == "clinical",
+            5: st["mode"] == "family" and not st["station"]["open"],
+            6: st["sel"]["scene"] == "forest" and st["sel"]["workstation"] == "on" and st["sel"]["floor"] == "terrazzo" and st["mode"] == "standard",
+            7: True,
+        }[i]
+        if not ok or st["count"] != f"{i + 1} of 8":
+            bad.append((i, g["title"], st["mode"], st["count"]))
+        if i == 1:
+            shot(pg, "future_tour_comfort")
+    check(seen == want, f"Experience the ICU of the future tells one patient's story, in the brief's order {seen}")
+    check(not bad, f"each step sets up what it says: the scene, the board, the lines, the wall and the desk, a mode, and the room arriving piece by piece {bad}")
+    faults = axe_faults(pg, "#guide")
+    check(not faults, f"the tour's card passes axe {faults[:3]}")
+    pg.click("#guideNext")  # Finish
+    pg.wait_for_function("window.__config.guide().ended", timeout=60000)
+    pg.wait_for_function("!window.__config.mode().easing && !window.__config.fading()", timeout=60000)
+    after = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint(), bs: window.__config.bedside(), station: window.__config.station(), bed: window.__config.bed().open })")
+    diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k] and k not in ("eye", "target", "view", "hour")]
+    check(after["code"][:5 + 45] == before["code"][:5 + 45] and not after["bs"]["open"] and not after["bs"]["requests"] and not after["station"]["open"] and not after["station"]["task"] and not after["bed"] and not diff,
+          f"Finish puts the room back as it was: its choices, the patient's request, the panels the steps opened {diff}")
+    check(pg.inner_text("#guideTitle") == "That's the story", "its ending says the story is over")
+    pg.keyboard.press("Escape")
+    # its link, and Room basics' button
+    pg.goto("about:blank")
+    pg.goto(URL + "?tour=future")
+    pg.wait_for_function("window.__configReady === true && window.__config.guide().running", timeout=120000)
+    check(pg.evaluate("window.__config.guide().title") == "Entering the room", "?tour=future starts Experience the ICU of the future")
+    pg.click("#guideExit")
+    pg.wait_for_function("!window.__config.guide().running", timeout=60000)
+    pg.click("#openBasics")
+    pg.wait_for_function("window.__config.guide().running", timeout=30000)
+    check(pg.inner_text("#guideCount") == "1 of 9" and pg.evaluate("window.__config.guide().title") == "An isolation room, as a design proposal", "Room basics plays the nine steps it always did")
+    pg.click("#guideExit")
+    pg.wait_for_function("!window.__config.guide().running", timeout=60000)
+    # Transform the ICU: today's room, then the new one a piece at a time, and the visitor's room back after
+    pg.add_script_tag(url=AXE)
+    go(pg, "W1")
+    pg.evaluate("window.__config.set('floor', 'slate')")
+    before = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
+    pg.click("#transformPlay")
+    pg.wait_for_function("window.__config.demo() && window.__config.demo().id === 'transformIcu'", timeout=30000)
+    steps = {}
+    while True:
+        pg.wait_for_function("!window.__config.demo() || window.__config.demo().waiting", timeout=120000)
+        # read the step as soon as it's waiting, then move it on, unless its own timer already has
+        got = pg.evaluate("""() => { const d = window.__config.demo(); if (!d?.waiting) return null;
+          return { at: d.at, text: document.getElementById('demoText').textContent, shown: window.__config.fingerprint().shown }; }""")
+        if not pg.evaluate("window.__config.demo()"):
+            break
+        if not got:
+            continue
+        steps[got["at"]] = got
+        if got["at"] == 2:
+            shot(pg, "transform_icu_tray")
+        pg.evaluate("at => { const d = window.__config.demo(); if (d?.at === at && d.waiting) window.__config.demoAdvance(); }", got["at"])
+    captions, shown = [steps[k]["text"] for k in sorted(steps)], [steps[k]["shown"] for k in sorted(steps)]
+    pg.wait_for_function("!window.__config.state().moving && !window.__config.fading() && !window.__config.mode().easing", timeout=60000)
+    after = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
+    diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k] and k not in ("eye", "target", "view")]
+    check(len(captions) == 7 and "not every ICU" in captions[0] and "how the room works" in captions[-1], f"Transform the ICU: seven captions, from today's room, a typical one, to how the room works {sorted(steps)} {captions[:1]} {captions[-1:]}")
+    check(shown[0].get("floor") == "sand" and shown[1].get("floor") == "terrazzo" and shown[5].get("scene") == "forest", "it starts from today's room and adds the new one a piece at a time, shown, not chosen")
+    check(after["code"] == before["code"] and not diff, f"and when it ends the visitor's own room is back, slate floor and all {diff}")
+    check(not errs, f"the presentation: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- reduced motion
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
@@ -2791,7 +2881,7 @@ with sync_playwright() as p:
     check(pg.locator("#configurator a[href='configurator/?tour=guided']").count() == 1, "the home page offers the guided tour")
     # the page leads with the proposal: the tour is the first action, and each feature has its own picture that opens its room
     check(pg.text_content(".top .mark").strip() == "Adaptive ICU" and "Walk the" not in pg.inner_text(".top"), "the home page's name is the proposal's, not the walkthrough's")
-    check(pg.locator(".hero .actions a").first.get_attribute("href") == "configurator/?tour=guided", "the home page's first action is the guided tour")
+    check(pg.locator(".hero .actions a").first.get_attribute("href") == "configurator/?tour=future", "the home page's first action is Experience the ICU of the future")
     figs = pg.evaluate("[...document.querySelectorAll('#proposal figure')].map(f => ({ href: f.querySelector('a').getAttribute('href'), alt: f.querySelector('img').alt.length, lead: f.querySelector('figcaption b')?.textContent || '' }))")
     check(len(figs) == 6 and all("configurator/#c=" in f["href"] and f["alt"] > 40 and f["lead"] for f in figs), f"the proposal has six features, each with a described picture that opens its room {[f['lead'] for f in figs]}")
     words = pg.inner_text("#proposal")
@@ -2999,8 +3089,9 @@ with sync_playwright() as p:
     shot(pg, "phone_guide")
     # its ending on a phone: the same card, and Try it yourself brings the options up, since they are behind a closed sheet
     pg.tap("#guidePlay")
-    pg.evaluate("window.__config.guideGo(8)")
-    pg.wait_for_function("window.__config.guide().at === 8", timeout=60000)
+    last = pg.evaluate("+document.getElementById('guideCount').textContent.split(' of ')[1] - 1")  # the main button's tour: its last step
+    pg.evaluate(f"window.__config.guideGo({last})")
+    pg.wait_for_function(f"window.__config.guide().at === {last}", timeout=60000)
     pg.tap("#guideNext")
     pg.wait_for_function("window.__config.guide().ended", timeout=60000)
     drawn(pg)
@@ -3073,4 +3164,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, accessibility, adaptive quality, stats readout, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, accessibility, adaptive quality, stats readout, phone)")

@@ -152,6 +152,7 @@ const api = {
   bed: tab => { assert.ok(["pressure", "lines"].includes(tab), `a demo opens the bed panel's ${tab} tab, which exists`); calls.push(["bed"]); },
   position: (id, minutes) => { assert.ok(POSITIONS[id] && TIMES.some(t => t.minutes === minutes), `a demo shows ${id} for ${minutes} min, a position and time the panel offers`); calls.push(["position"]); },
   askMove: id => { assert.ok(POSITIONS[id], `a demo asks for the line check before a move to ${id}`); calls.push(["askMove"]); },
+  today: () => calls.push(["today"]),
   clean: n => { assert.ok(Number.isInteger(n) && n >= 0 && n <= CLEANING_STEPS.length, `a demo ticks the first ${n} of Cleaning's steps, which it has`); calls.push(["clean"]); },
   station: view => { assert.ok(STATION_VIEWS[view], `a demo opens the workstation in ${view}, a view it has`); calls.push(["station"]); },
   task: (id, done) => { assert.ok(TASKS.some(t => t.id === id) && [undefined, true].includes(done), `a demo chooses the task ${id}, or presses its Done`); calls.push(["task"]); },

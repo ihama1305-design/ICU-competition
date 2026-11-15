@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PacsSimulation, GUIDE, NIGHT_LINE } from "./site/configurator/pacs-state.js";
 import { afterDark, sunTimes } from "./site/configurator/solar.js";
 import { RoomModes, modeText, MODES } from "./site/configurator/modes.js";
-import { STEPS, CAVEAT, ENDING, ENDING_GUARD_MS, HOLD_MS, RESUME_MIN_MS, holdLeft } from "./site/configurator/guide.js";
+import { STEPS, CAVEAT, ENDING, ENDING_GUARD_MS, FUTURE_ENDING, FUTURE_STEPS, HOLD_MS, RESUME_MIN_MS, SCRIPTS, TOUR_LINKS, holdLeft } from "./site/configurator/guide.js";
 import { ATTACHMENTS } from "./site/configurator/apis-data.js";
 import { HINT_TEXT } from "./site/configurator/hint.js";
 import { readFileSync } from "node:fs";
@@ -75,7 +75,7 @@ console.log("PASS night-aware comfort: sunrise/sunset from the solar hour, PACS 
 
 // ---------------------------------------------------------------- plain English: one idea per step, about 20 words, and the safety meanings kept
 const words = text => text.trim().split(/\s+/).length;
-const steps = [...STEPS.map(s => ["tour", s.title, s.text]), ...GUIDE.flatMap(g => [["PACS", g[0], g[1]], ...(g[4] ? [["PACS after dark", g[0], g[4]]] : [])]), ...ATTACHMENTS.map(a => ["APIS", a.title, a.proposed])];
+const steps = [...STEPS.map(s => ["tour", s.title, s.text]), ...FUTURE_STEPS.map(s => ["future tour", s.title, s.text]), ...GUIDE.flatMap(g => [["PACS", g[0], g[1]], ...(g[4] ? [["PACS after dark", g[0], g[4]]] : [])]), ...ATTACHMENTS.map(a => ["APIS", a.title, a.proposed])];
 for (const [where, title, text] of steps) assert.ok(words(text) <= 24, `${where} "${title}" has ${words(text)} words: ${text}`);
 const tourText = STEPS.map(s => s.text).join(" "), pacsText = GUIDE.map(g => g[1]).join(" ");
 // the caveats every step used to repeat are one fixed line under the captions, on the tour's card and PACS's
@@ -272,3 +272,17 @@ assert.ok(/const CAP = 0\.\d+;/.test(soundSrc) && Number(/const CAP = (0\.\d+);/
 const walk = readFileSync(new URL("./viewer_template.html", import.meta.url), "utf8");
 assert.ok(!listening.test(walk) && !playing.test(walk), "the walkthrough names no audio or speech API");
 console.log(`PASS vocal-distress cue: a call always raises a notice, groans only add urgency (${[1, 2, 3].map(n => cueFor("groan", n) ?? "none").join(", ")}), the notice asks for a look and leaves going in to the nurse, four limits on the card and the option, codes unchanged; no capture or speech API in ${sources.length + 1} files, and sound only from ${SOUND}, made in the page`);
+// ---------------------------------------------------------------- the tours as scripts: Room basics keeps its link, and the future tour tells its story in the brief's order
+assert.deepEqual(Object.keys(SCRIPTS), ["basics", "future"], "two scripts on one engine");
+assert.ok(SCRIPTS.basics.steps === STEPS && SCRIPTS.basics.ending === ENDING && TOUR_LINKS.guided === "basics" && TOUR_LINKS.future === "future", "the nine steps are one script, and ?tour=guided still opens them");
+assert.deepEqual(FUTURE_STEPS.map(x => x.title), ["Entering the room", "Comfort: a scene, the light, the quiet", "Asking without speaking", "Where the equipment and cables go", "The wall and the workstation", "The room's modes, together", "Before and after", "Adaptive ICU: a room that cares, connects and adapts"],
+  "the story in the brief's order: entering, comfort, asking without speaking, equipment and cables, the wall and the workstation, the modes, before and after, the closing lines");
+const fs = Object.fromEntries(FUTURE_STEPS.map(x => [x.title, x]));
+assert.ok(/The tour plays the patient/.test(fs["Asking without speaking"].text), "the step that asks for something says the tour plays the patient");
+assert.ok(/not every ICU/.test(fs["Before and after"].text) && /how it works, not only how it looks/.test(fs["Before and after"].text), "before and after: today's room is typical, not every ICU, and the difference is how it works");
+assert.ok(/technology works quietly in the background/.test(fs["Adaptive ICU: a room that cares, connects and adapts"].text) && /patients feel heard/.test(fs["Adaptive ICU: a room that cares, connects and adapts"].text), "the closing lines are Iham's");
+assert.ok(/made-up/.test(fs["The wall and the workstation"].text), "the wall's observations are said to be made up");
+assert.ok(words(FUTURE_ENDING.text) <= 24 && /undone/.test(FUTURE_ENDING.text) && !/simulated|approves every change/i.test(FUTURE_ENDING.text), "the story's ending is short, says its changes are undone, and repeats no caveat");
+for (const label of [FUTURE_ENDING.go, FUTURE_ENDING.again]) assert.ok(words(label) <= 3, `the story's ending buttons say what happens next: ${label}`);
+console.log(`PASS the tours: Room basics' ${STEPS.length} steps at ?tour=guided, and Experience the ICU of the future in ${FUTURE_STEPS.length} steps, in the brief's order, ending on Iham's lines`);
+
