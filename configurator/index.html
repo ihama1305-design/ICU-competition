@@ -228,6 +228,19 @@
       </div>
       <p class="note">They follow the patient's state, set above the room. Simulated: no request, photograph or voice leaves this page. No item needs to be placed.</p>
     </section>
+    <section aria-labelledby="hCables">
+      <h2 id="hCables">Equipment and cables</h2>
+      <div id="cableStates" class="seg seg3" role="group" aria-labelledby="hCables">
+        <button type="button" data-cables="off" aria-pressed="true">Off</button>
+        <button type="button" data-cables="traditional" aria-pressed="false">Traditional</button>
+        <button type="button" data-cables="organised" aria-pressed="false">Organised</button>
+      </div>
+      <p id="cableNote" class="note" role="status"></p>
+      <ul id="cableKey" class="cable-key" aria-label="Kinds of cable and line"></ul>
+      <p id="cablePatient" class="note"></p>
+      <button type="button" id="cableApis" class="outline-action">Lines at the patient, in APIS</button>
+      <p id="cableLimits" class="note"></p>
+    </section>
     <section aria-labelledby="hIntel">
       <h2 id="hIntel">Room intelligence</h2>
       <div class="grid intel-launch">
