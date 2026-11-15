@@ -2328,10 +2328,10 @@ function setCables(which, { quietly = false } = {}) {
   if (which === "organised" && room.patient?.routes) highlight.show("cables", [room.patient.routes], "soft"); else highlight.clear("cables");
   $("cableStates").querySelectorAll("button[data-cables]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cables === (which || "off"))));
   $("cableNote").textContent = which ? CABLE_TEXT[which] : CABLE_TEXT.intro;
-  if (which && !quietly) { // stand where the pendant, the bed head and the kit round it are in sight
+  if (which && !quietly) { // from a raised corner past the bed's foot: the pendant, the bed head and the floor round the bed
     if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
-    const { eye, target } = framePose(room.parts.cfg_kit_pendant || []);
-    rig.goTo(eye, target);
+    const b = room.meta.bed, h = b.head, f = b.foot, side = [-f[1], f[0]]; // across the bed, toward the patient's left
+    rig.goTo(W2T(h[0] + f[0] * 2.7 - side[0] * 1.7, h[1] + f[1] * 2.7 - side[1] * 1.7, 2.3), W2T(h[0] - f[0] * 0.1 + side[0] * 0.4, h[1] - f[1] * 0.1 + side[1] * 0.4, 0.6));
   }
   if (!quietly) say(which ? `Cables, ${which}: ${CABLE_TEXT[which]}` : "The cable overlay is off.");
   invalidate();

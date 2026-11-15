@@ -1551,7 +1551,7 @@ with sync_playwright() as p:
         go(pg, room)
         set_defaults(pg)
         # what the default room leaves out, so every card has its object in the room
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips', 'ceilingTray', 'staffPanel', 'patientWall', 'workstation', 'bedsideCabinet', 'ceilingSensors']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips', 'ceilingTray', 'staffPanel', 'patientWall', 'workstation', 'bedsideCabinet', 'ceilingSensors', 'cableChannels']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
         views = pg.evaluate("window.__config.views()")
         missed, wrong, covered, stray = [], [], [], []
         for f in feats:

@@ -99,20 +99,23 @@ function routePoints(c, r, i) {
 export function setCableView(room, state) {
   room.cableViews ||= {};
   if (state && !room.cableViews[state]) {
-    const c = cablePoints(room), g = new THREE.Group(), seen = new Set();
-    ROUTES_BY_STATE[state].forEach((r, i) => {
-      const kind = KINDS.find(k => k.id === r.kind), pts = routePoints(c, r, i).map(p => W2T(...p));
-      const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), 64, r.floor ? 0.009 : 0.012, 6), new THREE.MeshBasicMaterial({ color: kind.colour, toneMapped: false }));
+    const c = cablePoints(room), g = new THREE.Group(), routes = ROUTES_BY_STATE[state], paths = routes.map((r, i) => routePoints(c, r, i).map(p => W2T(...p)));
+    routes.forEach((r, i) => {
+      const kind = KINDS.find(k => k.id === r.kind);
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(paths[i], false, "centripetal"), 64, r.floor ? 0.009 : 0.012, 6), new THREE.MeshBasicMaterial({ color: kind.colour, toneMapped: false }));
       tube.raycast = () => {}; tube.userData.kind = kind.id;
       g.add(tube);
-      if (!seen.has(`${kind.id}${r.floor ? "f" : ""}`)) { // one label per kind, at the middle of its first route
-        seen.add(`${kind.id}${r.floor ? "f" : ""}`);
-        const m = pts[Math.floor(pts.length / 2)], s = label(kind.label, kind.colour);
-        s.position.copy(m).add(new THREE.Vector3(0, 0.16, 0));
-        s.userData.kind = kind.id;
-        g.add(s);
-      }
     });
+    // one label per kind, on a run that reaches its kit rather than one along the ceiling, so it's in sight
+    for (const kind of KINDS.filter(k => routes.some(r => r.kind === k.id))) {
+      const mine = routes.map((r, i) => [r, i]).filter(([r]) => r.kind === kind.id), toKit = mine.filter(([r]) => !/channel/.test(r.from + r.to));
+      const span = j => paths[j][0].distanceTo(paths[j].at(-1)), [, i] = (toKit.length ? toKit : mine).reduce((a, b) => (span(b[1]) > span(a[1]) ? b : a)); // its longest run to the kit
+      const pts = paths[i], s = label(kind.label, kind.colour);
+      s.position.copy(pts[Math.floor((pts.length - 1) * 0.6)]).add(new THREE.Vector3(0, 0.14, 0));
+      while (g.children.some(n => n.isSprite && n.position.distanceTo(s.position) < 0.16)) s.position.y += 0.17; // two runs side by side: one label above the other
+      s.userData.kind = kind.id;
+      g.add(s);
+    }
     const patient = KINDS.find(k => k.id === "patient"), s = label(patient.label, patient.colour);
     s.position.copy(W2T(...c.bed.slice(0, 2), 1.55)); s.userData.kind = "patient";
     g.add(s);
