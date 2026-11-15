@@ -218,6 +218,13 @@
       </div>
       <p class="note">They follow the patient's state, set above the room. Simulated: no request, photograph or voice leaves this page. No item needs to be placed.</p>
     </section>
+    <section aria-labelledby="hTwin">
+      <h2 id="hTwin">Digital twin</h2>
+      <div class="grid twin-launch">
+        <button type="button" class="wide" id="openTwin">Open the digital twin</button>
+      </div>
+      <p class="note">The room's hidden state, read from the room as it is: the bed, the ceiling, the walls, storage, equipment, the floor and the mode, and room health in five separate parts. Simulated.</p>
+    </section>
     <section aria-labelledby="hStation">
       <h2 id="hStation">Clinician workstation</h2>
       <div class="grid station-launch">
@@ -303,6 +310,18 @@
   <div id="pane-passport" class="bedside-pane" hidden></div>
   <div id="pane-family" class="bedside-pane" hidden></div>
   <div id="pane-staff" class="bedside-pane" hidden></div>
+</section>
+<section id="twinPanel" class="acoustic-panel twin-panel" aria-labelledby="twinTitle" hidden>
+  <button type="button" id="twinClose" class="object-close" aria-label="Close the digital twin">×</button>
+  <p class="object-kicker">Digital twin · SIMULATED</p>
+  <h2 id="twinTitle" tabindex="-1">Digital twin</h2>
+  <p id="twinIntro" class="note"></p>
+  <h3 class="acoustic-sub">Room health, in five parts</h3>
+  <div id="twinHealth" class="twin-health"></div>
+  <h3 id="twinSystemsTitle" class="acoustic-sub">Systems</h3>
+  <div id="twinSystems" class="twin-systems" role="group" aria-labelledby="twinSystemsTitle"></div>
+  <div id="twinDetail" class="twin-detail" aria-live="polite" hidden></div>
+  <p id="twinLimits" class="note"></p>
 </section>
 <section id="stationPanel" class="acoustic-panel station-panel" aria-labelledby="stationTitle" hidden>
   <button type="button" id="stationClose" class="object-close" aria-label="Close the clinician workstation">×</button>

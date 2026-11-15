@@ -7,7 +7,7 @@
 // marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced; acoustic("without" | "with") shows
 // Acoustic comfort mode; notices(open) opens its list of notifications; patient(state) sets the patient's state; station(view) opens the clinician
 // workstation in Nurse or Doctor view, and task(id, done) chooses one of its tasks or presses Done; clean(n) ticks the first n of
-// Cleaning's steps; today() shows today's room, every option at its default and no placed item, as Compare does. A step's caption can be worked out
+// Cleaning's steps; twin(id) opens the digital twin on one of its systems; today() shows today's room, every option at its default and no placed item, as Compare does. A step's caption can be worked out
 // from the room: say(api), where api.figures() gives the two wardrobes' sizes as a sentence.
 
 export const DEMOS = {
@@ -180,6 +180,15 @@ export const DEMOS = {
       { say: "The difference isn't only how it looks: it's how the room works. Its modes move all of this together.", run: a => a.mode("comfort") },
     ],
   },
+  // the digital twin: a system read in words, the mode changing what it reads, and the floor against this model's clear areas
+  digitalTwin: {
+    steps: [
+      { say: "The digital twin: the room's hidden state, read from the room as it is. The bed: the patient, the position, the lines.", run: a => { a.time("afternoon"); a.twin("bed"); } },
+      { say: "Change the mode and it changes: Comfort warms the light and puts a scene on the wall, and the mode's row says what it set.", run: a => { a.mode("comfort"); a.twin("mode"); } },
+      { say: "The floor: added items and fittings against this model's own clear areas, and the route to the bed.", run: a => { a.mode("standard"); a.twin("floor"); } },
+      { say: "The dashboard's five parts, each read on its own and never added up. No vital signs: those are PACS's.", run: a => a.twin("walls") },
+    ],
+  },
   daylight: {
     steps: [
       { say: "Afternoon: the sensor sees daylight, so Comfort mode lowers the blinds against glare.", run: a => { a.time("afternoon"); a.camera("bed_window"); a.mode("comfort"); } },
@@ -192,6 +201,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest
