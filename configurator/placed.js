@@ -290,7 +290,12 @@ export class Placement {
    */
   hangs(room, item, centre, n) {
     const walls = wallsOf(room), back = n.clone().negate();
-    return this.facePoints(item, centre, n).every(p => new THREE.Raycaster(p, back, 0, 0.2).intersectObjects(walls, false).length > 0);
+    // nor over a panel fixed to the wall: the staff panel, the patient wall, the workstation's rail and screen (fittings.js)
+    const panels = Object.values(room.addons || {}).filter(a => a.visible && a.userData.onWall);
+    return this.facePoints(item, centre, n).every(p => {
+      const r = new THREE.Raycaster(p, back, 0, 0.2);
+      return r.intersectObjects(walls, false).length > 0 && !r.intersectObjects(panels, true).length;
+    });
   }
 
   /**
