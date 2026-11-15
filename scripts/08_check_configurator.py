@@ -2841,6 +2841,46 @@ with sync_playwright() as p:
     check(not errs, f"room intelligence and the scan: no errors {errs[:3]}")
     ctx.close()
 
+    # ---------------------------------------------------------------- equipment and cables: Traditional and Organised, each kind labelled, gas in its own channel, APIS linked
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+    CB = "window.__config.cables()"
+    for room in ROOMS:
+        go(pg, room)
+        pg.click("#themes button[data-value='future']")
+        pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
+        before = pg.evaluate("window.__config.code()")
+        check(pg.evaluate(CB)["channels"], f"{room}: Future ICU has the cable channels")
+        pg.click("#cableStates button[data-cables='traditional']")
+        pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+        c = pg.evaluate(CB)
+        check(c["view"] == "traditional" and not c["channels"] and set(c["tubes"]) == {"power", "data", "gas"} and set(c["labels"]) == {"power", "data", "gas", "patient"},
+              f"{room}: Traditional: power, data and gas loose on the floor, no channels, and every kind labelled in the room {c}")
+        shot(pg, f"{room.lower()}_cables_traditional")
+        pg.click("#cableStates button[data-cables='organised']")
+        pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+        c = pg.evaluate(CB)
+        check(c["view"] == "organised" and c["channels"] and set(c["tubes"]) == {"power", "data", "gas"} and "patient" in c["labels"] and c["outlined"],
+              f"{room}: Organised: the channels and the routes down the pendant, the patient's lines outlined {c}")
+        shot(pg, f"{room.lower()}_cables_organised")
+        faults = axe_faults(pg, "#panel")
+        check(not faults, f"{room}: the cables' section passes axe {faults[:3]}")
+        pg.click("#cableStates button[data-cables='off']")
+        c = pg.evaluate(CB)
+        check(c["view"] is None and c["channels"] and not c["outlined"] and pg.evaluate("window.__config.code()") == before, f"{room}: Off puts the room back: the channels as chosen, and no choice or link changed")
+        pg.click("#cableApis")
+        pg.wait_for_function("window.__config.apis().active", timeout=30000)
+        check(pg.evaluate("window.__config.apis().mode") == "routing", f"{room}: the patient's lines open in APIS's Tubing & movement, as it is")
+        pg.keyboard.press("Escape")
+        pg.wait_for_function("!window.__config.apis().active", timeout=30000)
+    # the reference link: no channels
+    pg.goto("about:blank")
+    pg.goto(f"{URL}#c=10030010002000000000000000000000000100")
+    pg.wait_for_function("window.__configReady === true", timeout=120000)
+    check(pg.evaluate("window.__config.selected().cableChannels") == "off" and not pg.evaluate(CB)["channels"], "the reference link opens with no cable channels")
+    check(not errs, f"equipment and cables: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- reduced motion
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
@@ -3283,4 +3323,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, room intelligence and the room safety scan, accessibility, adaptive quality, stats readout, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, room intelligence and the room safety scan, equipment and cables, accessibility, adaptive quality, stats readout, phone)")

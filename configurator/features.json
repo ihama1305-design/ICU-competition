@@ -825,6 +825,47 @@
    "actions": [
     "scan"
    ]
+  },
+  {
+   "id": "ceilingPendant",
+   "name": "Ceiling pendant",
+   "group": "workflow",
+   "purpose": "Ceiling services: the monitor, the pumps and the outlets hang from the ceiling at the bed head, so the floor round the bed stays clearer and the essentials are within reach.",
+   "how": "The pendant in the room model carries the patient monitor, the infusion pumps, shelves and power, data and gas outlets. With the cable channels on, its services come down from flush channels in the ceiling, power and data in one and medical gas in another. Equipment labels name it, and the cable overlay shows what runs through it.",
+   "benefit": "The kit staff reach for is at the bed head, off the floor, and the floor is easier to clean.",
+   "awake": "It sits behind the patient's head, out of their way.",
+   "sedated": "Staff reach the outlets and pumps from either side of the bed.",
+   "limits": "A visual model of a pendant, not a specified product. Its position, load, services and the ceiling's structure would need engineering, infection-control and clinical review.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "part:cfg_kit_pendant"
+   ],
+   "actions": [
+    "cables:apis"
+   ]
+  },
+  {
+   "id": "cableOverlay",
+   "name": "Cables and channels",
+   "group": "workflow",
+   "purpose": "Less clutter, better access and safer movement: the cables and lines round the bed shown by kind, loose and then organised.",
+   "how": "Under Equipment and cables, Traditional shows today's arrangement: power, data and gas cables loose on the floor from the wall to the kit. Organised shows them routed: power and data in one flush channel, medical gas in its own, down the ceiling pendant, and the ventilator on a docking spot fed from the pendant, so nothing crosses the floor. Each kind has a label in the room as well as a colour. The patient's own lines are the bed's (clips and tags) and APIS's (Tubing & movement): linked, not repeated.",
+   "benefit": "Staff can see where each cable runs before a move creates a hazard.",
+   "awake": "Nothing about it is shown to the patient.",
+   "sedated": "Nothing about it is shown to the patient.",
+   "limits": "Illustrative routes, not an engineering or clinical design. Nothing retracts, clamps or disconnects a line, and nothing moves by itself. Medical gas and electrical services would need their own engineering and regulatory review.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:cableChannels"
+   ],
+   "demo": "cables",
+   "actions": [
+    "cables:apis"
+   ]
   }
  ]
 }

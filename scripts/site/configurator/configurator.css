@@ -413,6 +413,8 @@ footer p { margin: 0; }
 .station-active #panel { visibility: hidden; pointer-events: none; }
 .twin-active #panel { visibility: hidden; pointer-events: none; }
 .intel-active #panel { visibility: hidden; pointer-events: none; }
+.cable-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 6px; padding: 0; list-style: none; font-size: 12px; }
+.cable-swatch { display: inline-block; width: 14px; height: 6px; border-radius: 3px; vertical-align: middle; }
 .intel-panel h3 { margin: 12px 0 6px; }
 .intel-activate { width: 100%; min-height: 40px; margin: 6px 0; border: 1px solid var(--accent); border-radius: 8px; background: var(--hover); color: var(--accent); font: 600 13px/1.2 var(--ui); cursor: pointer; }
 .intel-activate[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }

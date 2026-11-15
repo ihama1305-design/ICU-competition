@@ -1897,6 +1897,24 @@
      "code": 45
     }
    ]
+  },
+  {
+   "id": "equipment",
+   "label": "Equipment and cables",
+   "groups": [
+    {
+     "id": "cableChannels",
+     "label": "Cable channels",
+     "default": "off",
+     "check": {"time":"afternoon","eye":[11.2,29.0,1.7],"look":[11.2,31.2,2.6],"rooms":{"W3":{"eye":[10.31,19.8,1.7],"look":[10.31,22.0,2.6]}}},
+     "options": [
+      {"id":"off","label":"Off","effects":[{"do":"addon","id":"cableChannels","on":false}],"code":0},
+      {"id":"on","label":"Flush, with a docking spot","effects":[{"do":"addon","id":"cableChannels","on":true}],"code":1}
+     ],
+     "note": {"text":"Flush channels on the ceiling and on the wall behind the bed head: one for power and data, and a separate one for medical gas, which never shares a channel with anything electrical. A docking spot is marked on the floor where the ventilator stands, fed from the pendant. Illustrative routes, not an engineering design."},
+     "code": 46
+    }
+   ]
   }
  ],
  "rooms": [
@@ -1961,7 +1979,8 @@
     "workstation": "on",
     "bedsideCabinet": "on",
     "wall": "patient",
-    "ceilingSensors": "on"
+    "ceilingSensors": "on",
+    "cableChannels": "on"
    }
   },
   {
