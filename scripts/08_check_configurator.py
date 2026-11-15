@@ -1548,7 +1548,7 @@ with sync_playwright() as p:
         go(pg, room)
         set_defaults(pg)
         # what the default room leaves out, so every card has its object in the room
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
         views = pg.evaluate("window.__config.views()")
         missed, wrong, covered, stray = [], [], [], []
         for f in feats:
@@ -2151,6 +2151,148 @@ with sync_playwright() as p:
     pg.wait_for_function("document.getElementById('panel').classList.contains('open')", timeout=10000)
     check(pg.evaluate("document.activeElement.dataset.open") == "board", "phone: closing the screens brings the sheet back, with focus where it was")
     check(not errs, f"phone, patient states: no errors {errs[:3]}")
+    ctx.close()
+
+    # ---------------------------------------------------------------- the bed: the pressure map on the mattress, the line clips, each line's slack, and the check before a move
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.evaluate("""() => { window.__mic = 0; const count = () => { window.__mic++; return Promise.reject(new Error('refused by the check')); };
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = count; navigator.getUserMedia = count; }""")
+    BED = "window.__config.bed()"
+    pg.add_script_tag(url=AXE)
+    faults = []
+    for room in ROOMS:
+        go(pg, room)
+        set_defaults(pg)
+        pg.evaluate("window.__config.camera('overview', { instant: true })")
+        drawn(pg)
+        before = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
+        check(not before["fp"]["clips"] and not before["fp"]["bedMap"] and not before["fp"]["ghost"], f"{room}: as the room loads, the line clips are off and the map hidden")
+        pg.locator(".bed-launch button[data-open='pressure']").scroll_into_view_if_needed()
+        pg.click(".bed-launch button[data-open='pressure']")
+        pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+        drawn(pg)
+        bd = pg.evaluate(f"({{ b: {BED}, focus: document.activeElement.id, options: getComputedStyle(document.getElementById('panel')).visibility }})")
+        check(bd["b"]["open"] and bd["focus"] == "bedTitle" and bd["options"] == "hidden" and bd["b"]["map"] and bd["b"]["ghost"],
+              f"{room}: the pressure map opens in the options panel's place, with focus, on the mattress, the patient faint over it")
+        check(bd["b"]["marked"] == ["sacrum", "heelR", "heelL"] and bd["b"]["due"] and pg.is_visible(".bed-reminder"),
+              f"{room}: on the back for 2 h 10 min, the sacrum and heels are marked, and Positioning assessment due shows {bd['b']['marked']}")
+        # the map is on screen where the sacrum is: the higher band's red, seen through the faint figure
+        pt = pg.evaluate("window.__config.bedPoint('sacrum')")
+        img = frame(pg)
+        x, y = int(pt["x"]), int(pt["y"])
+        patch = img[max(0, y - 4):y + 5, max(0, x - 4):x + 5].reshape(-1, 3)
+        red, green_back = int((patch[:, 0] - patch[:, 1]).max()), float(patch[:, 1].mean())
+        check(0 < x < 1000 and 0 < y < 820 and red > 30, f"{room}: the map shows on the mattress, red at the sacrum ({x}, {y}): R-G {red}")
+        shot(pg, f"{room.lower()}_pressure_map")
+        text = pg.inner_text("#bedPanel")
+        check("not a measurement" in text and "predicts no injury" in text and "never moves a patient" in text and "don't move" in text and "SIMULATED" in text,
+              f"{room}: the panel says it's not a measurement, predicts no injury, never moves a patient, and the bed and figure don't move")
+        # time in the position: nothing marked before the plan's interval
+        pg.click("#pane-pressure .bed-times button:text-is('15 min')")
+        t = pg.evaluate(BED)
+        check(not t["marked"] and not t["due"] and pg.is_hidden(".bed-reminder") and "Nothing marked" in pg.inner_text(".bed-marked"), f"{room}: at 15 minutes nothing is marked and no reminder shows")
+        pg.click("#pane-pressure .bed-times button:text-is('2 h 10 min')")
+        check(pg.evaluate(BED)["due"], f"{room}: past the interval again, the reminder is back")
+        # a move asks for the line check first; Esc cancels it, and nothing changes
+        pg.click("#bedPositions button[data-position='left']")
+        mv = pg.evaluate(f"({{ b: {BED}, focus: document.activeElement.textContent, check: !document.getElementById('bedCheck').hidden }})")
+        check(mv["check"] and mv["b"]["pending"] == "left" and mv["b"]["position"] == "back" and mv["focus"] == "Lines checked: show the move",
+              f"{room}: choosing a position first asks staff to check the lines, and moves nothing yet {mv['focus']!r}")
+        faults += axe_faults(pg, "#bedPanel")
+        pg.keyboard.press("Escape")
+        cx = pg.evaluate(f"({{ b: {BED}, focus: document.activeElement.dataset.position }})")
+        check(cx["b"]["open"] and not cx["b"]["pending"] and cx["b"]["position"] == "back" and cx["focus"] == "left", f"{room}: Esc cancels the move, keeps the panel open and changes nothing")
+        pg.click("#bedPositions button[data-position='left']")
+        pg.click("#bedCheck .bed-confirm")
+        lf = pg.evaluate(BED)
+        check(lf["position"] == "left" and lf["minutes"] == 15 and not lf["marked"], f"{room}: once a person confirms the check, the map shows the new position, its time starting again")
+        pt = pg.evaluate("window.__config.bedPoint('sacrum')")
+        img = frame(pg)
+        green_left = float(img[max(0, int(pt["y"]) - 4):int(pt["y"]) + 5, max(0, int(pt["x"]) - 4):int(pt["x"]) + 5].reshape(-1, 3)[:, 1].mean())
+        check(green_left - green_back > 20, f"{room}: and on the mattress, the sacrum goes from the higher band to a lighter one (green {green_back:.0f} to {green_left:.0f})")
+        pg.click("#pane-pressure .bed-times button:text-is('2 h 10 min')")
+        check("hipL" in pg.evaluate(BED)["marked"] and "sacrum" not in pg.evaluate(BED)["marked"], f"{room}: turned left, the left hip takes the weight, and the sacrum is spared {pg.evaluate(BED)['marked']}")
+        # staff dismiss the reminder, here or in the staff view: one reminder
+        pg.click(".bed-reminder button:text-is('Dismiss')")
+        check(not pg.evaluate(BED)["due"] and pg.evaluate("window.__config.bedside().reminder") == "dismissed", f"{room}: staff dismiss the reminder, and the staff view's goes with it")
+        faults += axe_faults(pg, "#bedPanel")
+        # the lines: the clips shown, not chosen; each line's slack by its clip and in the list
+        pg.click("#bedTabs button[data-tab='lines']")
+        pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+        drawn(pg)
+        ln = pg.evaluate(f"({{ b: {BED}, fp: window.__config.fingerprint(), code: window.__config.code(), list: [...document.querySelectorAll('.bed-line')].map(li => [li.dataset.line, li.querySelector('.bed-line-status').textContent]) }})")
+        check(ln["fp"]["clips"] and not ln["b"]["map"] and not ln["b"]["ghost"] and ln["code"] == before["code"] and ln["fp"]["selected"] == before["fp"]["selected"],
+              f"{room}: Lines shows the clips without choosing them: the link is unchanged, and the map goes")
+        check(len(ln["b"]["marks"]) == 5 and all("·" in m["text"] for m in ln["b"]["marks"]) and dict(ln["list"])["ecg"].endswith("Less slack"),
+              f"{room}: each of the five lines shows its slack by its clip and in the list {[m['text'] for m in ln['b']['marks']][:2]}")
+        check("no tension, force or flow" in pg.inner_text("#pane-lines") and "Nothing here changes a real line, connector or device" in pg.inner_text("#pane-lines"), f"{room}: no force or flow is worked out, and no real line is changed")
+        shot(pg, f"{room.lower()}_bed_lines")
+        faults += axe_faults(pg, "#bedPanel")
+        # closing puts the room back, at the view it was opened from
+        pg.click("#bedClose")
+        drawn(pg)
+        after = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code(), focus: document.activeElement.dataset.open })")
+        diff = [k for k in before["fp"] if k != "bed" and before["fp"][k] != after["fp"][k]]
+        check(not diff and after["code"] == before["code"] and after["focus"] == "pressure", f"{room}: closing the bed panel puts the room back exactly, focus on what opened it {diff[:4]}")
+        pg.evaluate("window.__config.bedPosition('back', 130)")  # the next room starts where the page does
+    check(not faults, f"axe finds no serious faults in the bed panel, either tab, or the line check {faults[:4]}")
+    # the clips are an option of their own too, off by default: choosing them changes the link and shows them for good
+    pg.evaluate("window.__config.set('lineClips', 'on')")
+    on = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
+    pg.evaluate("window.__config.set('lineClips', 'off')")
+    check(on["fp"]["clips"] and on["code"] != pg.evaluate("window.__config.code()"), "the line clips can be chosen under Bed, and then they're in the link")
+    # Explore features shows the clips, then takes them away
+    pg.click("#exploreToggle")
+    ex = pg.evaluate("window.__config.fingerprint().clips")
+    pg.click("#exploreToggle")
+    check(ex and not pg.evaluate("window.__config.fingerprint().clips"), "Explore features shows the line clips while it's on")
+    # the bed's card from the room, and the staff view's links
+    pg.evaluate("window.__config.camera('overview', { instant: true })")
+    drawn(pg)
+    pt = pg.evaluate("window.__config.featurePoint('pressureBed')")
+    if pt:
+        pg.mouse.click(pt["x"], pt["y"])
+        pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    c = pg.evaluate("window.__config.card()")
+    check(pt and c["feature"] == "pressureBed" and "Open the pressure map" in c["buttons"], f"clicking the bed opens the pressure-awareness bed's card {c['buttons'] if c else None}")
+    pg.click("#objectCard button:text-is('Open the pressure map')")
+    check(pg.evaluate(BED)["open"] and pg.evaluate(BED)["tab"] == "pressure", "and its card opens the pressure map")
+    pg.keyboard.press("Escape")
+    check(not pg.evaluate(BED)["open"], "Esc closes the bed panel")
+    pg.evaluate("window.__config.openBedside('staff')")
+    pg.click("#pane-staff button:text-is('Open the lines')")
+    check(pg.evaluate(BED)["open"] and pg.evaluate(BED)["tab"] == "lines" and not pg.evaluate("window.__config.bedside().open"), "the staff view opens the lines, in the bedside screens' place")
+    # Emergency-ready: care comes first, so the bed panel closes and won't open
+    pg.click("#modeBar button[data-mode='emergency']")
+    em = pg.evaluate(BED)["open"]
+    pg.evaluate("window.__config.openBed('pressure')")
+    check(not em and not pg.evaluate(BED)["open"], "Emergency-ready closes the bed panel, and it waits until Emergency-ready ends")
+    pg.click("#leaveEmergency")
+    pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+    # a sedated patient's dismissed reminder comes back
+    pg.evaluate("window.__config.openBed('pressure')")
+    pg.click("#pane-pressure .bed-times button:text-is('2 h 10 min')")
+    pg.click(".bed-reminder button:text-is('Dismiss')")
+    pg.evaluate("window.__config.setPatientState('sedated', { instant: true })")
+    check(pg.evaluate(BED)["due"], "a reminder staff dismissed comes back when the patient is next sedated")
+    pg.evaluate("window.__config.setPatientState('awake', { instant: true }); window.__config.setBed(false)")
+    mic = pg.evaluate("window.__mic")
+    check(mic == 0 and not errs, f"the bed: no errors, and no microphone ({mic}) {errs[:3]}")
+    ctx.close()
+    # a phone: the bed panel is a sheet, and closing it brings the options back
+    ctx, pg, errs, _, _ = open_page(b, 390, 844, query="?tier=low", has_touch=True, is_mobile=True)
+    pg.tap("#sheet")
+    pg.wait_for_function("document.getElementById('panel').classList.contains('open')")
+    pg.locator(".bed-launch button[data-open='pressure']").scroll_into_view_if_needed()
+    pg.tap(".bed-launch button[data-open='pressure']")
+    drawn(pg)
+    sh = pg.evaluate("(() => { const p = document.getElementById('bedPanel').getBoundingClientRect(), m = document.querySelector('.bed-map').getBoundingClientRect(); return { top: p.top, bottom: p.bottom, l: p.left, r: p.right, mapR: m.right, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()")
+    check(sh["l"] >= 0 and sh["r"] <= 390 and sh["bottom"] <= 844.5 and sh["top"] > 300 and sh["mapR"] <= 390 and sh["over"] <= 0, f"phone: the bed panel is a sheet at the bottom, its map inside the screen {sh}")
+    shot(pg, "phone_bed")
+    pg.tap("#bedClose")
+    pg.wait_for_function("document.getElementById('panel').classList.contains('open')", timeout=10000)
+    check(pg.evaluate("document.activeElement.dataset.open") == "pressure", "phone: closing the bed panel brings the sheet back, with focus where it was")
+    check(not errs, f"phone, the bed: no errors {errs[:3]}")
     ctx.close()
 
     # ---------------------------------------------------------------- reduced motion

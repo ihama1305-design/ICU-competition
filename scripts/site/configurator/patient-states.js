@@ -122,6 +122,6 @@ export const ORIENTATION = {
 /** The staff view while the patient is sedated: a reminder staff dismiss, line status and noise. All simulated. */
 export const STAFF = {
   reminder: "Positioning assessment due · SIMULATED. Check the positioning plan. Nothing here moves a patient.",
-  lines: "Lines and tubes: routed and labelled on the patient figure. SIMULATED: no line or device is monitored.",
+  lines: "Lines and tubes: each line's slack, and the check before a move, are in the bed panel's Lines. SIMULATED: no line or device is monitored.",
   noise: "Noise at the pillow: see Acoustic comfort mode. Illustrative.",
 };

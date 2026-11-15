@@ -48,7 +48,7 @@ export class Bedside {
     this.requests = []; this.scanAt = -1; this.scanTimer = 0; this.scanLeft = 0; this.dwell = null;
     this.values = this.load(); this.allow = Object.fromEntries(FAMILY.map(f => [f.id, f.staffAllow]));
     this.familyOn = { scene: false, lines: false, call: false, message: false, music: false };
-    this.reminder = true; this.quiet = false;
+    this.quiet = false; // the positioning reminder is the bed panel's (bed-view.js): staff see it here too
     this.panes = {};
     for (const id of ["board", "passport", "family", "staff"]) this.panes[id] = root.querySelector(`#pane-${id}`);
     root.querySelector("#bedsideTabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) this.show(b.dataset.tab); });
@@ -347,15 +347,18 @@ export class Bedside {
 
   renderStaff() {
     const dismiss = button("Dismiss");
-    dismiss.addEventListener("click", () => { this.reminder = false; this.renderStaff(); this.api.say("Reminder dismissed by staff."); this.root.querySelector('#bedsideTabs button[data-tab="staff"]').focus({ preventScroll: true }); }); // the button goes: focus stays in the panel
-    const rem = this.reminder ? el("div", { className: "staff-reminder" }, el("p", { textContent: STAFF.reminder }), dismiss) : el("p", { className: "note", textContent: "Positioning reminder dismissed. It comes back when the patient is next sedated." });
-    this.staffBox.replaceChildren(rem, el("p", { textContent: STAFF.lines }), el("p", { textContent: this.api.noise() }),
+    dismiss.addEventListener("click", () => { this.api.dismissReminder(); this.root.querySelector('#bedsideTabs button[data-tab="staff"]').focus({ preventScroll: true }); }); // the button goes: focus stays in the panel
+    const r = this.api.reminder(); // "due", "dismissed" or "none": one reminder, shared with the bed panel
+    const rem = r === "due" ? el("div", { className: "staff-reminder" }, el("p", { textContent: STAFF.reminder }), dismiss)
+      : el("p", { className: "note", textContent: r === "dismissed" ? "Positioning reminder dismissed. It comes back when the patient is next sedated." : "No positioning reminder: the position hasn't been held past the plan's interval." });
+    const open = (text, tab) => { const b = button(text); b.addEventListener("click", () => this.api.openBed(tab)); return b; };
+    this.staffBox.replaceChildren(rem, el("div", { className: "staff-links" }, open("Open the pressure map", "pressure"), open("Open the lines", "lines")), el("p", { textContent: STAFF.lines }), el("p", { textContent: this.api.noise() }),
       el("p", { className: "note", textContent: this.state === "sedated" ? "While the patient is sedated, comfort is set by staff." : "The patient can use their own controls; staff can still set comfort." }));
   }
 
-  /** The state changed: family items a sedated patient isn't allowed stop, and a sedated patient's reminder comes back. */
-  stateChanged(was) {
-    if (this.state === "sedated") { for (const f of FAMILY) if (!this.allow[f.id]) this.stopFamily(f.id); if (was !== "sedated") this.reminder = true; }
+  /** The state changed: family items a sedated patient isn't allowed stop. (main.js brings a sedated patient's reminder back.) */
+  stateChanged() {
+    if (this.state === "sedated") for (const f of FAMILY) if (!this.allow[f.id]) this.stopFamily(f.id);
     this.refresh();
   }
 
@@ -365,6 +368,6 @@ export class Bedside {
   /** For the check. */
   inspect() {
     return { tab: this.tab, input: this.input, requests: this.requests.map(r => ({ ...r })), board: [...this.boardEl.querySelectorAll("button")].map(b => b.textContent), scanning: !!this.scanTimer,
-      values: { ...this.values }, quiet: this.quiet, allow: { ...this.allow }, family: { ...this.familyOn }, reminder: this.reminder };
+      values: { ...this.values }, quiet: this.quiet, allow: { ...this.allow }, family: { ...this.familyOn }, reminder: this.api.reminder() };
   }
 }

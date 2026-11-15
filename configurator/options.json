@@ -1756,6 +1756,24 @@
      "code": 36
     }
    ]
+  },
+  {
+   "id": "bed",
+   "label": "Bed",
+   "groups": [
+    {
+     "id": "lineClips",
+     "label": "Line clips and tags",
+     "default": "off",
+     "check": {"time":"afternoon","eye":[12.55,29.55,1.35],"look":[11.78,29.7,0.92],"rooms":{"W3":{"eye":[11.66,20.34,1.35],"look":[10.89,20.49,0.92]}}},
+     "options": [
+      {"id":"off","label":"Off","effects":[{"do":"addon","id":"lineClips","on":false}],"code":0},
+      {"id":"on","label":"On the bed","effects":[{"do":"addon","id":"lineClips","on":true}],"code":1}
+     ],
+     "note": {"text":"A clip on each line's route round the patient, with a tag in its line's colour: on the side rails' tops for the IV line, the feeding tube and the ECG leads, a holder at the head end for the respiratory circuit, and a guide on the bed frame for urinary drainage, never on a moving rail. They keep each route where staff expect it, so a line is quicker to trace. They don't secure a line, and they change no line, connector or device. Expected, not shown."},
+     "code": 37
+    }
+   ]
   }
  ],
  "rooms": [

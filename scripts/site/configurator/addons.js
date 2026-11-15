@@ -3,6 +3,8 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { W2T } from "./stage.js";
 import { drawn } from "./surfaces.js";
+import { ensurePatient } from "./patient.js";
+import { LINES } from "./bed.js";
 
 const random = seed => { let a = seed >>> 0; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; }; };
 
@@ -479,6 +481,50 @@ Object.assign(BUILD, {
     }
     g.userData.itemInfo = { title: "Damping mounts", description: "Rubber isolators behind the TV." };
     g.traverse(n => { if (n.isMesh) n.userData.itemInfo = g.userData.itemInfo; });
+    return g;
+  },
+
+  // ---------------------------------------------------------------- the bed (bed.js). Off by default.
+
+  /**
+   * Line clips and tags: one clip on each line's route round the patient (patient.js draws the routes; nothing here moves or
+   * changes one), each with a tag in its line's colour. The rail clips sit on the side rails' tops, the drainage guide on the
+   * bed frame below the mattress, never on a moving rail.
+   */
+  lineClips(room) {
+    const patient = ensurePatient(room), g = new THREE.Group();
+    g.position.copy(patient.root.position); g.rotation.copy(patient.root.rotation); // in the patient's bed-local metres
+    const plastic = std("#e4e7e5", 0.55), z = new THREE.Vector3(0, 0, 1);
+    const routes = title => patient.routes.children.filter(n => n.userData.itemInfo?.title === title && n.geometry?.parameters?.path);
+    for (const line of LINES) {
+      const tubes = routes(line.route);
+      if (!tubes.length) continue;
+      const paths = tubes.map(t => t.geometry.parameters.path);
+      const p = paths.map(c => c.getPointAt(line.clip)).reduce((a, b) => a.add(b), new THREE.Vector3()).divideScalar(paths.length);
+      const tangent = paths[0].getTangentAt(line.clip).normalize();
+      const spread = paths.length > 1 ? paths[0].getPointAt(line.clip).distanceTo(paths[1].getPointAt(line.clip)) / 2 : 0;
+      const r = spread + tubes[0].geometry.parameters.radius + 0.011;
+      const clip = new THREE.Group(); clip.position.copy(p);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.006, 8, 24, Math.PI * 1.6), plastic);
+      ring.quaternion.setFromUnitVectors(z, tangent);
+      // the stem: down to the rail's top, or (for drainage) in to the bed frame
+      const under = line.id === "urinary";
+      const stemTo = under ? new THREE.Vector3(Math.sign(-p.x) * 0.06, 0, 0) : new THREE.Vector3(0, -0.055, 0);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, stemTo.length(), 8), plastic);
+      stem.position.copy(stemTo).multiplyScalar(0.5).add(stemTo.clone().normalize().multiplyScalar(r * 0.5));
+      stem.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), stemTo.clone().normalize());
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.014, 0.034), plastic); base.position.copy(stemTo).add(stemTo.clone().normalize().multiplyScalar(r * 0.5));
+      const tag = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.026, 0.006), std(line.colour, 0.6));
+      tag.position.copy(tangent).multiplyScalar(0.045).add(new THREE.Vector3(0, r + 0.008, 0));
+      tag.quaternion.setFromUnitVectors(z, tangent);
+      clip.add(ring, stem, base, tag);
+      clip.name = `lineClip_${line.id}`;
+      clip.userData.line = line.id;
+      clip.userData.itemInfo = { title: `Line clip · ${line.label}`, description: `${line.label}: held on its route by ${line.holder}, with a tag in its colour.` };
+      clip.traverse(n => { if (n.isMesh) { n.castShadow = true; n.userData.itemInfo = clip.userData.itemInfo; } });
+      g.add(clip);
+    }
+    g.userData.itemInfo = { title: "Line clips and tags", description: "A clip on each line's route round the patient, with a tag in its colour." };
     return g;
   },
 
