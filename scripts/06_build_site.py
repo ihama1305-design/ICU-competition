@@ -103,6 +103,7 @@ def capture_configurator_shots(tmp):
         "config-patio": ("W3", "family", "bed_window", "afternoon", [], [], 860),
         # the proposal, at the top of the page: the hero's room at 16:9 like the render beside it, then one picture per feature
         "proposal-room": ("W1", "desert", "overview", "sunset", [], [], 810),
+        "proposal-future": ("W1", "future", "across", "afternoon", [], [], 810),
         "proposal-modes": ("W1", "calm", "overview", "afternoon", ["hud"], ["#modeBar button[data-mode='comfort']"], 860),
         "proposal-pacs": ("W1", "calm", "overview", "afternoon", ["panel", "hud"], ["#openPacs"], 860),
         "proposal-apis": ("W1", "calm", "overview", "afternoon", ["panel", "hud"], ["#openApis"], 860),
@@ -211,7 +212,7 @@ shutil.copyfile(os.path.join(SRC, "styles.css"), os.path.join(SITE_DIR, "styles.
 shutil.copyfile(os.path.join(SRC, "favicon.svg"), os.path.join(SITE_DIR, "favicon.svg"))
 
 # link preview image, 1200 x 630: the proposed room, as at the top of the page
-im = Image.open(os.path.join(shots, "proposal-room.png")).convert("RGB")
+im = Image.open(os.path.join(shots, "proposal-future.png")).convert("RGB")
 scale = 1200 / im.width
 im = im.resize((1200, round(im.height * scale)), Image.LANCZOS)
 top = (im.height - 630) // 2
