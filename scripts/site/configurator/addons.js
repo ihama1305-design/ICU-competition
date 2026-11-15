@@ -5,6 +5,7 @@ import { W2T } from "./stage.js";
 import { drawn } from "./surfaces.js";
 import { ensurePatient } from "./patient.js";
 import { LINES } from "./bed.js";
+import { FITTINGS } from "./fittings.js";
 
 const random = seed => { let a = seed >>> 0; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; }; };
 
@@ -858,6 +859,9 @@ Object.assign(BUILD, {
     return g;
   },
 });
+
+// the Future ICU fittings (fittings.js), built like any other add-on
+Object.assign(BUILD, FITTINGS);
 
 /** Show or hide an add-on, and register what it needs: its materials, for colour choices, and anything that animates. */
 export function ensureParts(room, id) {

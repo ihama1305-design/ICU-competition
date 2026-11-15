@@ -12,6 +12,9 @@ import { parseObject } from "./site/configurator/feature-links.js";
 import { APPLY, BOARD, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
 import { BANDS as PRESSURE_BANDS, DEFAULT_MINUTES, DEFAULT_POSITION, GRID, LINES, LINES_TEXT, MOVE_CHECK, PLAN, POSITIONS, POSITION_ORDER, PRESSURE_TEXT, SLACK, SLACK_BY, TIMES, peakOf, pressureMap, sustained } from "./site/configurator/bed.js";
 import { BACKGROUND, BANDS, FITTINGS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS, SOURCES, levelAt, sourceLevel } from "./site/configurator/acoustic.js";
+import { ACROSS, FIT } from "./site/configurator/fittings-data.js";
+import { DOOR_DEPTH, ROUTES, boxesOverlap, checkLayout, corridor, inPolygon, intrusion, strip } from "./site/configurator/layout.js";
+import { decodeSpec } from "./site/configurator/state.js";
 
 const here = p => new URL(p, import.meta.url);
 const read = p => readFileSync(here(p), "utf8");
@@ -21,13 +24,14 @@ const groups = options.sections.flatMap(s => s.groups);
 const groupById = id => groups.find(g => g.id === id);
 
 // what the page has: add-ons, placed items, named objects, the time stops, and each room's model parts and views
-const addonsSrc = read("./site/configurator/addons.js"), placedSrc = read("./site/configurator/placed.js"), mainSrc = read("./site/configurator/main.js");
+const fittingsSrc = read("./site/configurator/fittings.js");
+const addonsSrc = read("./site/configurator/addons.js") + fittingsSrc, placedSrc = read("./site/configurator/placed.js"), mainSrc = read("./site/configurator/main.js");
 const ADDONS = new Set([...addonsSrc.matchAll(/^ {2}(\w+)\(room\) \{/gm)].map(m => m[1]));
 const PLACED = new Set([...placedSrc.matchAll(/^ {4}id: "(\w+)", code:/gm)].map(m => m[1]));
 const STOPS = new Set(Object.keys(Function(`return ${/const STOPS = (\{[^}]*\})/.exec(mainSrc)[1]}`)()));
-const ROOMS = {};
+const ROOMS = {}, METAS = {};
 for (const label of options.rooms) {
-  const meta = JSON.parse(read(`../assets/model/room_${label.toLowerCase()}.json`));
+  const meta = METAS[label] = JSON.parse(read(`../assets/model/room_${label.toLowerCase()}.json`));
   const glb = gunzipSync(readFileSync(here(`../assets/model/${meta.glb}`)));
   const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString("utf8"));
   ROOMS[label] = { parts: new Set(json.nodes.map(n => n.name).filter(Boolean)), views: new Set(Object.keys(meta.cameras)) };
@@ -35,7 +39,7 @@ for (const label of options.rooms) {
 assert.ok(ADDONS.has("wardrobe") && ADDONS.has("soundSensor") && PLACED.has("leafpanel") && STOPS.has("night"), "the page's add-ons, placed items and time stops are read");
 
 // ---------------------------------------------------------------- the groups the brief names, and the entries
-assert.deepEqual(data.groups.map(g => g.id), ["comfort", "bed", "light", "family", "admission", "storage"], "the six groups");
+assert.deepEqual(data.groups.map(g => g.id), ["comfort", "bed", "light", "family", "admission", "storage", "workflow"], "the six groups, and Clinical workflow for the Future ICU's staff fittings");
 const ids = new Set(), names = new Set(), byId = new Map(data.features.map(f => [f.id, f]));
 const sourcesOf = ref => { const [g, o] = ref.split(":"); return (o ? groupById(g)?.options.find(x => x.id === o)?.note?.sources : groupById(g)?.note?.sources) || []; };
 const TEXT = ["purpose", "how", "benefit", "awake", "sedated", "limits"];
@@ -265,4 +269,57 @@ assert.ok(![bedViewSrc, bedSrc].some(x => /fetch\(|XMLHttpRequest|sendBeacon|Web
 assert.ok(byId.get("pressureBed").objects[0] === "part:cfg_kit_bed" && /not a measurement/.test(byId.get("pressureBed").limits) && /predicts no injury/.test(byId.get("pressureBed").limits) && /never moves a patient/.test(byId.get("pressureBed").limits), "the bed's card: not a measurement, no injury predicted, no patient moved");
 assert.ok(byId.get("lineClips").objects[0] === "addon:lineClips" && /APIS keeps its own tubing tab/.test(byId.get("lineClips").limits), "the clips' card, and APIS's tubing tab left as it is");
 
-console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default`);
+// ---------------------------------------------------------------- the Future ICU fittings and theme (fittings.js, layout.js)
+const FUTURE = ["ceilingTray", "staffPanel", "patientWall", "workstation", "bedsideCabinet"];
+const futureSection = options.sections.find(x => x.id === "future");
+assert.deepEqual(futureSection?.groups.map(g => [g.id, g.code, g.default, g.options.map(o => o.id).join()]), FUTURE.map((id, i) => [id, 38 + i, "off", "off,on"]), "the five fittings are codes 38 to 42, off by default");
+for (const id of FUTURE) {
+  assert.ok(ADDONS.has(id) && byId.get(id)?.objects[0] === `addon:${id}`, `${id}: an add-on, with its card`);
+  assert.ok(groupById(id).check?.eye && groupById(id).check.rooms?.W3, `${id}: 08 knows where to look for it in both rooms`);
+  assert.ok(/simulated|concept/i.test(byId.get(id).limits) || /simulated|concept/i.test(groupById(id).note.text), `${id}: it says it's simulated or a concept`);
+}
+assert.ok(/never stands in for the patient monitor/.test(byId.get("staffPanel").limits) && /working/.test(byId.get("staffPanel").limits), "the staff panel never stands in for the monitor, which stays working");
+// every still is marked SIMULATED, and none shows a number
+const stills = fittingsSrc.slice(fittingsSrc.indexOf("const STILLS = {"), fittingsSrc.indexOf("const screen = "));
+const stillCount = (stills.match(/\(\) => still\(/g) || []).length;
+assert.ok(stillCount === 5 && (stills.match(/simulated\(g, w, h/g) || []).length === stillCount, "each of the five stills carries the SIMULATED mark");
+assert.ok(!/["'`][^"'`]*\d+\s*(bpm|%|mmHg|°)/.test(stills), "no still shows a reading");
+// the theme: listed first, turns every fitting on, sets only what exists, and no other theme turns a fitting on
+const [future, ...others] = options.themes;
+assert.ok(future.id === "future" && future.label === "Future ICU", "Future ICU is the first theme");
+assert.ok(FUTURE.every(id => future.sets[id] === "on"), "it turns on all five fittings");
+for (const [g, o] of Object.entries(future.sets)) assert.ok(groupById(g)?.options.some(x => x.id === o), `it sets ${g} to ${o}, which options.json offers`);
+assert.ok(!future.sets.seating, "it leaves the seating as it is: W3's sofa would stand on the IV pole");
+assert.ok(others.every(t => FUTURE.every(id => !(id in t.sets))), "the other themes leave the fittings off");
+// old links: the view list only grows, and the reference link opens the same room with every fitting off
+assert.deepEqual(options.views.slice(0, 9), ["overview", "family", "entrance", "bed", "bed_window", "window", "dollhouse", "bathroom", "patient"], "the old views keep their places");
+assert.equal(options.views[9], "across", "the view across the room is appended");
+const old = decodeSpec(options, "#c=10030010002000000000000000000000000100");
+assert.ok(old && old.room === "W1" && old.view === "overview" && FUTURE.every(id => old.selected[id] === "off") && !old.dropped.length, "the reference link still opens W1 from Overview, with every fitting off");
+for (const label of options.rooms) assert.ok(ACROSS[label]?.eye?.length === 3 && ACROSS[label].look.length === 3 && inPolygon(ACROSS[label].eye[0], ACROSS[label].eye[1], METAS[label].walkable), `${label}: the view across the room stands inside the room`);
+// the layout check itself, on made-up boxes
+assert.ok(boxesOverlap([0, 0, 0, 1, 1, 1], [0.5, 0.5, 0.5, 2, 2, 2]) && !boxesOverlap([0, 0, 0, 1, 1, 1], [1, 0, 0, 2, 1, 1]), "two boxes overlap when they share space, and not when they only touch");
+const sq = [[0, 0], [1, 0], [1, 1], [0, 1]];
+assert.ok(inPolygon(0.5, 0.5, sq) && !inPolygon(1.5, 0.5, sq) && Math.abs(intrusion([0.5, 0, 0, 1.5, 1, 1], { poly: sq }) - 0.5) < 0.01, "a box half in an area is half in it");
+const toy = checkLayout({
+  solids: [{ id: "a", boxes: [[0, 0, 0, 1, 1, 1]] }, { id: "b", boxes: [[0.5, 0.5, 0, 1.5, 1.5, 1]] }, { id: "c", boxes: [[0.9, 0, 0, 1.1, 0.6, 1]] }, { id: "w", wall: true, boxes: [[0, 0, 1.2, 1, 0.05, 2]] }],
+  areas: [{ id: "clear", kind: "keep-clear", poly: [[2, 0], [3, 0], [3, 1], [2, 1]] }, { id: "route", kind: "route", polys: corridor([[0, 0.5], [1, 0.5]], 0.1) }],
+  mounted: [["a", "c"]],
+});
+assert.deepEqual(toy.map(f => `${f.level}:${f.a}:${f.b}`), ["overlap:a:b", "overlap:b:c", "clearance:a:route", "clearance:b:route", "clearance:c:route"], "the layout check finds overlaps first, skips what's mounted, and leaves wall items off the floor");
+assert.deepEqual(checkLayout({ solids: [{ id: "a", boxes: [[0, 0, 0, 1, 1, 1]] }], areas: [] }), [], "a room with nothing in the way: no modelled conflict found");
+// where the floor fittings stand: clear of each door's way and the walking route, in both rooms. The keep-clear areas need
+// the bed's own shape, so 08 checks those in the page with the same function.
+const floorBox = (w, depth, h) => { const y0 = w.into > 0 ? w.y : w.y - depth; return [w.x[0], y0, 0, w.x[1], y0 + depth, h]; };
+for (const [label, f] of Object.entries(FIT)) {
+  const meta = METAS[label];
+  assert.ok(ROUTES[label].every(([x, y]) => inPolygon(x, y, meta.walkable)), `${label}: the walking route is inside the room`);
+  const areas = [...meta.wall_runs.filter(r => r.door).map((r, i) => ({ id: `door${i}`, kind: "door", poly: strip(r.a, r.b, DOOR_DEPTH), within: meta.walkable })), { id: "route", kind: "route", polys: corridor(ROUTES[label]), within: meta.walkable }];
+  const solids = [{ id: "workstation", boxes: [floorBox(f.desk, 0.5, 0.77)] }, { id: "bedsideCabinet", boxes: [floorBox(f.cabinet, 0.45, 0.725)] }];
+  assert.deepEqual(checkLayout({ solids, areas }), [], `${label}: the workstation and cabinet stand clear of the doors and the route to the bed`);
+  const [x0, y0, x1, y1] = meta.room;
+  for (const [x, y] of f.tray.poly) assert.ok(x > x0 && x < x1 && y > y0 && y < y1, `${label}: the tray is inside the room's ceiling`);
+  assert.ok(f.tray.downlights.every(([x, y]) => inPolygon(x, y, f.tray.poly)), `${label}: the tray's downlights are inside it`);
+}
+
+console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms`);

@@ -1774,6 +1774,72 @@
      "code": 37
     }
    ]
+  },
+  {
+   "id": "future",
+   "label": "Future ICU fittings",
+   "groups": [
+    {
+     "id": "ceilingTray",
+     "label": "Ceiling tray",
+     "default": "off",
+     "check": {"time":"evening","eye":[12.3,28.0,1.6],"look":[10.6,30.0,2.75],"rooms":{"W3":{"eye":[11.4,19.0,1.6],"look":[9.7,21.0,2.75]}}},
+     "options": [
+      {"id":"off","label":"Off","effects":[{"do":"addon","id":"ceilingTray","on":false}],"code":0},
+      {"id":"on","label":"Over the bed","effects":[{"do":"addon","id":"ceilingTray","on":true}],"code":1}
+     ],
+     "note": {"text":"A shallow tray in the ceiling over the bed: square tiles inside a border, a line of light round its edge and a row of small downlights by the window. The line of light takes the colour of the room's light. Its border keeps clear of the ceiling lights, the pendant and the wardrobe. With the printed sky on, the sky fits inside it. A real one needs the ceiling's services, structure and infection-control requirements checked."},
+     "code": 38
+    },
+    {
+     "id": "staffPanel",
+     "label": "Staff panel",
+     "default": "off",
+     "check": {"time":"afternoon","eye":[12.5,29.4,1.7],"look":[11.0,31.6,1.75],"rooms":{"W3":{"eye":[11.6,20.2,1.7],"look":[10.1,22.39,1.75]}}},
+     "options": [
+      {"id":"off","label":"Off","effects":[{"do":"addon","id":"staffPanel","on":false}],"code":0},
+      {"id":"on","label":"At the bed head","effects":[{"do":"addon","id":"staffPanel","on":true}],"code":1}
+     ],
+     "note": {"text":"One flush white panel on the wall behind the bed head, with two wide screens for staff and a line of light beneath. Its screens show a still, marked simulated: there's no reading on them. The patient monitor stays on the pendant, working, and the panel never stands in for it. It's for staff, because a patient lying in the bed can't see the wall behind their head."},
+     "code": 39
+    },
+    {
+     "id": "patientWall",
+     "label": "Patient wall",
+     "default": "off",
+     "check": {"time":"afternoon","eye":[11.2,29.9,1.6],"look":[11.2,27.14,1.7],"rooms":{"W3":{"eye":[10.31,20.7,1.6],"look":[10.31,18.14,1.7]}}},
+     "options": [
+      {"id":"off","label":"Off","effects":[{"do":"addon","id":"patientWall","on":false}],"code":0},
+      {"id":"on","label":"Round the TV","effects":[{"do":"addon","id":"patientWall","on":true}],"code":1}
+     ],
+     "note": {"text":"A flush white panel round the TV on the wall the patient faces, with a strip of screen over the TV and a line of light beneath. The TV sits on the panel, and everything on it keeps working. The strip shows a still, marked simulated: no real names, plans or times."},
+     "code": 40
+    },
+    {
+     "id": "workstation",
+     "label": "Clinician workstation",
+     "default": "off",
+     "check": {"time":"afternoon","eye":[10.7,29.5,1.7],"look":[9.0,27.6,0.95],"rooms":{"W3":{"eye":[8.9,20.4,1.7],"look":[7.3,18.3,0.95]}}},
+     "options": [
+      {"id":"off","label":"Off","effects":[{"do":"addon","id":"workstation","on":false}],"code":0},
+      {"id":"on","label":"By the window","effects":[{"do":"addon","id":"workstation","on":true}],"code":1}
+     ],
+     "note": {"text":"A desk for the care team, against the wall by the window, out of the keep-clear areas and the route to the bed: a rounded white top on a timber-and-white cabinet, a screen and keyboard, a second screen on an arm, and a lit rail. Its screens show a still, marked simulated, with no patient's name or diagnosis. In W1 the visitor chair moves nearer the window to make room for it. A real one needs its place, power, data and infection-control requirements checked."},
+     "code": 41
+    },
+    {
+     "id": "bedsideCabinet",
+     "label": "Bedside cabinet",
+     "default": "off",
+     "check": {"time":"afternoon","eye":[10.95,31.3,1.35],"look":[9.65,31.35,0.45],"rooms":{"W3":{"eye":[9.9,22.05,1.35],"look":[8.75,22.15,0.45]}}},
+     "options": [
+      {"id":"off","label":"Off","effects":[{"do":"addon","id":"bedsideCabinet","on":false}],"code":0},
+      {"id":"on","label":"At the bed head","effects":[{"do":"addon","id":"bedsideCabinet","on":true}],"code":1}
+     ],
+     "note": {"text":"A cabinet for the patient's own things, with a white top and a timber front, at the bed head on the window side: clear of the pendant and its outlets, and of the space round the bed."},
+     "code": 42
+    }
+   ]
   }
  ],
  "rooms": [
@@ -1789,7 +1855,8 @@
   "window",
   "dollhouse",
   "bathroom",
-  "patient"
+  "patient",
+  "across"
  ],
  "profile": {
    "_": "Suggest a room: answers pick a theme, then rules adjust it. Rules use `sets`, the group-to-option map themes use, because `effects` only change the scene and never reach the share code, comparison or undo. A rule with no `when` always applies. `when` is one set of conditions, or a list where any one will do. A higher tier locks what it sets against lower tiers. `because` is shown to the person, so it talks about the room and never about the patient. Every answer has to be used by a `when` or listed in `noEffect`: 08_check_configurator.py fails otherwise. This never changes the room and doesn't recommend care.",
@@ -1821,6 +1888,23 @@
    }
  },
  "themes": [
+  {
+   "id": "future",
+   "label": "Future ICU",
+   "blurb": "Soft white and warm timber, a lit ceiling tray, screens for staff and for the patient, and a desk for the care team.",
+   "sets": {
+    "floor": "terrazzo",
+    "scheme": "circadian",
+    "temperature": "auto",
+    "blinds": "half",
+    "tvplay": "orientation",
+    "ceilingTray": "on",
+    "staffPanel": "on",
+    "patientWall": "on",
+    "workstation": "on",
+    "bedsideCabinet": "on"
+   }
+  },
   {
    "id": "calm",
    "label": "Calm Clinical",
