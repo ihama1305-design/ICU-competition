@@ -519,6 +519,50 @@
    "objects": [
     "addon:dampers"
    ]
+  },
+  {
+   "id": "pressureBed",
+   "name": "Pressure-awareness bed",
+   "group": "bed",
+   "purpose": "A sensor grid in the mattress shows where the patient's weight bears, so staff can see when a position has been held too long. Simulated.",
+   "how": "A grid of pressure cells under the sheet. Here the map is made up, from the usual teaching pictures of pressure points: it colours the mattress light, moderate or higher by relative load. A place under a higher load, held past the positioning plan's interval, is marked, and staff see Positioning assessment due until they dismiss it. Choose a position (on the back, turned left or right, or sitting up) and the map shifts. Staff check the lines before any move.",
+   "benefit": "Staff can see where the weight bears, even under the bedding, and when a position has been held a long time.",
+   "awake": "The patient moves by themselves, and the map follows.",
+   "sedated": "Staff see the reminder, assess the skin and reposition by the plan.",
+   "limits": "Simulated: not a measurement. It predicts no injury, and it never moves a patient: staff assess and reposition by the patient's own positioning plan. The bed and the figure in this model don't move, so the positions are shown on the map only.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "part:cfg_kit_bed"
+   ],
+   "demo": "pressure",
+   "demoLabel": "See the map shift",
+   "actions": [
+    "bed:pressure"
+   ]
+  },
+  {
+   "id": "lineClips",
+   "name": "Line clips and tags",
+   "group": "bed",
+   "purpose": "A clip on each line's route round the patient, with a tag in its colour, and each line's slack shown before a move. Simulated.",
+   "how": "Clips on the side rails' tops hold the IV line, the feeding tube and the ECG leads. A holder at the head end takes the respiratory circuit, and a guide on the bed frame takes the urinary drainage, never on a moving rail. In the bed panel's Lines, each line shows its slack in the position chosen: slack enough, less slack, or check this line. Before any move, staff check every line. Choose the clips under Bed in the options.",
+   "benefit": "Each route stays where staff expect it, so a line is quicker to trace before a move.",
+   "awake": "The lines stay clear of the patient's hands and the rails.",
+   "sedated": "Staff check every line before turning the patient or moving the bed.",
+   "limits": "Simulated: no tension, force or flow is worked out, and no line or device is monitored. The clips don't secure a line, and nothing here changes a real line, connector or device. APIS keeps its own tubing tab.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:lineClips"
+   ],
+   "demo": "lines",
+   "demoLabel": "See a bed move",
+   "actions": [
+    "bed:lines"
+   ]
   }
  ]
 }

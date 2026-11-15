@@ -95,6 +95,25 @@ export const DEMOS = {
       { say: "Recovering: the orientation screen comes first, with gentle light by the time of day.", run: a => { a.patient("recovering"); a.camera("patient"); } },
     ],
   },
+  // the pressure map shifting between positions. The bed and the figure don't move: the positions are on the map only
+  pressure: {
+    steps: [
+      { say: "The pressure map: where the patient's weight bears on the mattress, from a simulated sensor grid. On the back, the backrest at 30°.", run: a => { a.time("afternoon"); a.bed("pressure"); a.position("back", 15); } },
+      { say: "Held for 2 hours 10 minutes, past the sample plan's interval: the sacrum and both heels are marked, and staff see Positioning assessment due.", run: a => a.position("back", 130) },
+      { say: "Staff check the lines, then turn the patient 30° onto the left side. This demo plays that staff member. The weight comes off the sacrum, onto the left hip and shoulder.", run: a => a.position("left", 15) },
+      { say: "Turned onto the right side, the right hip and shoulder take the weight instead.", run: a => a.position("right", 15) },
+      { say: "Sitting up, the backrest at 45°, the weight gathers on the sacrum. The bed and the figure here don't move: the positions are shown on the map only.", run: a => a.position("upright", 15) },
+    ],
+  },
+  // a simulated bed move: the line check comes first, then each line's slack
+  lines: {
+    steps: [
+      { say: "Each line round the patient has a clip on its route and a tag in its colour, and its slack shows by its clip. Simulated.", run: a => { a.time("afternoon"); a.bed("lines"); a.position("back", 15); } },
+      { say: "Before any move, staff check every line: its route, its slack and its connections. This demo plays the staff member who checks.", run: a => a.askMove("right") },
+      { say: "Checked, and turned 30° onto the right side. The IV line comes across the body: check it. The feeding tube has less slack.", run: a => a.position("right", 15) },
+      { say: "Sitting up, the respiratory circuit is the one to check. No tension or force is worked out: the words come from a fixed table, to show the idea.", run: a => a.position("upright", 15) },
+    ],
+  },
   daylight: {
     steps: [
       { say: "Afternoon: the sensor sees daylight, so Comfort mode lowers the blinds against glare.", run: a => { a.time("afternoon"); a.camera("bed_window"); a.mode("comfort"); } },
@@ -107,6 +126,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest
