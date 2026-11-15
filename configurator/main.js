@@ -32,6 +32,7 @@ import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip } from
 import { WallView, buttonAt } from "./wall.js";
 import { Station } from "./station.js";
 import { SCENES, SCENE_MS, STRIP_TEXT, wallFor } from "./wall-data.js";
+import { CLEANING_KINDS, CLEANING_STEPS, CLEANING_TEXT } from "./cleaning-data.js";
 import { GuidedTour, CAVEAT } from "./guide.js";
 import { Features } from "./features.js";
 import { Highlight } from "./highlight.js";
@@ -844,10 +845,14 @@ const modeApi = {
   glassClear: () => { glass.set({ mode: "clear", opaque: false }); EFFECTS.visible({ part: "cfg_curtain", on: false }); },
   // only smart glass changes: a clear front has its curtain, and a blinds front its slats, closed already
   glassPrivate: () => { if (shownChoice("front") === "smart") glass.set({ opaque: true }); },
+  // Family visit: smart glass softens to a frost unless the patient's passport says they'd rather see out. Staff still see in
+  glassSoft: () => { if (shownChoice("front") === "smart" && bedside.values.privacy !== "open") glass.set({ opaque: true, level: GLASS_SOFT }); },
+  cleaning: on => setCleaning(on),
   overlay: on => { clinicalByMode = on; syncClinical(); },
   beforeChange: () => { if (pacs.active) pacs.exit(); },
   changed: name => syncModes(name),
 };
+const GLASS_SOFT = 0.55; // how far Family visit frosts the glass: silhouettes still show through
 const modes = new RoomModes(modeApi);
 function syncModes(name) {
   $("modeBar").querySelectorAll("button[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === name)));
@@ -879,6 +884,75 @@ $("modeBar").addEventListener("click", e => {
   if (b) { endCompare(); modes.set(b.dataset.mode); }
 });
 $("leaveEmergency").addEventListener("click", () => modes.exitEmergency());
+
+// ---------------------------------------------------------------- Cleaning mode (cleaning-data.js)
+// For a room between patients: the patient figure goes, the checklist comes up, and each step lights what it covers in
+// turn. Finishing the checklist says only that: never that the room is clean or disinfected. Leaving the mode puts the
+// figure back and forgets the ticks. No airflow is drawn: the grilles are hidden by decision, so it links to the plan.
+var cleaningOn = false, cleaningTicks = new Set();
+
+/** What a step lights in the room. */
+function cleaningPlace(where) {
+  const room = stage.current, part = n => room?.parts[n] || [], m = room?.meta.room;
+  const inRoom = n => { const c = new THREE.Box3().setFromObject(n).getCenter(new THREE.Vector3()); return m && c.x > m[0] && c.x < m[2] && -c.z > m[1] && -c.z < m[3]; };
+  const basins = Object.entries(room?.parts || {}).filter(([k]) => k.startsWith("basin")).flatMap(([, v]) => v).filter(inRoom);
+  return ({
+    basin: basins, bed: part("cfg_kit_bed"), table: part("cfg_kit_overbed_table"), screens: [...part("cfg_kit_monitor"), ...part("cfg_kit_pumps")],
+    ventilator: part("cfg_kit_ventilator"), pendant: part("cfg_kit_pendant"), chairs: [...part("cfg_kit_recliner"), ...part("cfg_kit_visitor_chair")],
+    controls: [room?.addons?.comfortControl, room?.front?.body?.visible ? room.front.body : null].filter(Boolean),
+  })[where] || [];
+}
+
+const cleaningList = $("cleaningSteps");
+$("cleaningIntro").textContent = CLEANING_TEXT.intro;
+$("cleaningDone").textContent = CLEANING_TEXT.done;
+$("cleaningAirText").textContent = `${CLEANING_TEXT.air} `;
+Object.assign($("cleaningAir"), { href: CLEANING_TEXT.airLink, textContent: CLEANING_TEXT.airLinkText });
+$("cleaningLimits").textContent = CLEANING_TEXT.limits;
+cleaningList.replaceChildren(...CLEANING_STEPS.map((step, i) => {
+  const box = Object.assign(document.createElement("input"), { type: "checkbox", id: `clean-${step.id}` });
+  box.dataset.step = step.id;
+  const label = Object.assign(document.createElement("label"), { htmlFor: box.id });
+  label.append(`${i + 1}. ${step.label}`, Object.assign(document.createElement("span"), { className: "cleaning-kind", textContent: ` · ${CLEANING_KINDS[step.kind]}` }));
+  const li = document.createElement("li");
+  li.dataset.step = step.id;
+  li.append(box, label);
+  return li;
+}));
+cleaningList.addEventListener("change", e => {
+  const id = e.target.dataset.step;
+  if (!id) return;
+  if (e.target.checked) cleaningTicks.add(id); else cleaningTicks.delete(id);
+  renderCleaning();
+  const next = CLEANING_STEPS.find(x => !cleaningTicks.has(x.id));
+  say(next ? `Ticked. Next: ${next.label}, lit in the room.` : CLEANING_TEXT.done);
+});
+$("leaveCleaning").addEventListener("click", () => modes.set("standard"));
+
+function renderCleaning() {
+  const next = cleaningOn ? CLEANING_STEPS.find(x => !cleaningTicks.has(x.id)) : null;
+  for (const li of cleaningList.children) {
+    li.querySelector("input").checked = cleaningTicks.has(li.dataset.step);
+    li.classList.toggle("now", li.dataset.step === next?.id);
+  }
+  $("cleaningDone").hidden = !cleaningOn || !!next;
+  const objs = next ? cleaningPlace(next.where) : [];
+  if (objs.length) highlight.show("cleaning", objs); else highlight.clear("cleaning");
+  invalidate();
+}
+
+/** In or out of Cleaning: the figure, the checklist and the lit step. Leaving puts the figure back and forgets the ticks. */
+function setCleaning(on) {
+  if (on === cleaningOn) return;
+  cleaningOn = on;
+  cleaningTicks = new Set();
+  const room = stage.current;
+  if (room?.patient) room.patient.root.visible = !on; // the bed is empty between patients
+  if (on) { stopDemoSound("Demo sound stopped: Cleaning mode."); setBedside(false); setBed(false); setStation(false); setAcoustic(false); }
+  $("cleaningPanel").hidden = !on;
+  document.body.classList.toggle("cleaning-mode", on);
+  renderCleaning();
+}
 
 // ---------------------------------------------------------------- Equipment labels and keep-clear areas (clinical.js)
 function syncClinical() {
@@ -1268,6 +1342,8 @@ const demoApi = {
   position: (id, minutes) => bedView.setPosition(id, minutes),
   askMove: id => bedView.ask(id, { focus: false }), // the line check, on screen: the demo says it plays the staff member
   station: view => { if (!stationOn) setStation(true, { fromDemo: true }); station.setView(view, { quietly: true }); },
+  // Cleaning's first n steps ticked: the demo says it plays the person ticking
+  clean: n => { if (!cleaningOn) modes.set("cleaning", { instant: true }); cleaningTicks = new Set(CLEANING_STEPS.slice(0, n).map(x => x.id)); renderCleaning(); },
   // a task chosen, or pressed Done: the demo says it plays the staff member who presses it
   task: (id, done = false) => { if (!stationOn) setStation(true, { fromDemo: true }); if (done) { if (!station.done.has(id)) station.toggleDone(id, { focus: false }); } else station.choose(id, { focus: false }); },
   /** The two wardrobes' floor areas and heights, from their models, as a sentence. */
@@ -1909,6 +1985,7 @@ var bedside = new Bedside($("bedside"), {
   scene: on => { family.scene = on; showLayer("patient", patientShows()); say(on ? "The personal scene is on the TV." : "The personal scene is off the TV."); },
   familyLines: on => { family.lines = on; orientationLines(); say(on ? "Family's line is on the orientation screen." : "Family's line is off the orientation screen."); },
   quiet: on => applyQuiet(on),
+  privacy: () => { endCompare(); modes.set("privacy"); }, // staff, from the privacy request on the nurse-side list
   noise: () => (stage.current ? `Noise at the pillow: about ${Math.round(acousticView.readings(stage.current, fittingsShown()).pillow)} dBA, illustrative. Acoustic comfort mode shows where it comes from.` : "Noise at the pillow: see Acoustic comfort mode. Illustrative."),
 });
 
@@ -2679,7 +2756,7 @@ window.__config = {
     return {
       ...wallNow(), envId, env: lighting.env && { kelvin: Math.round(lighting.env.kelvin), level: +lighting.env.level.toFixed(3) }, easing: !!envTween || wallView.easing,
       wallScene: w.wallScene?.visible ? w.wallScene.userData.shown : null, ceilingScene: w.ceilingScene?.visible ? w.ceilingScene.userData.shown : null,
-      tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
+      tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.familyOn ? "family" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       strip: strip ? { shown: strip.visible, buttons: (strip.userData.buttons || []).map(b => b.tab) } : null,
       drawn: { ...(w.key || {}) },
     };
@@ -2709,6 +2786,8 @@ window.__config = {
     return { strip: strip?.visible ? px(strip, STRIP_TEXT.size / STRIP_TEXT.canvas[1]) : null, orient: tv ? px(tv, 15 / 270) : null };
   },
   pacsExit: () => { if (pacs.active) pacs.exit(); },
+  cleaning: () => ({ on: cleaningOn, ticks: [...cleaningTicks], next: cleaningOn ? CLEANING_STEPS.find(x => !cleaningTicks.has(x.id))?.id ?? null : null, done: !$("cleaningDone").hidden, outlined: highlight.has("cleaning"), figure: stage.current.patient ? stage.current.patient.root.visible : null, panel: !$("cleaningPanel").hidden }),
+  glass: () => ({ mode: glass.mode, opaque: glass.opaque, level: glass.level, k: +glass.k.toFixed(3) }),
   openBed: tab => setBed(true, tab),
   setBed: on => setBed(on),
   bedPosition: (id, minutes) => bedView.setPosition(id, minutes),
@@ -2765,8 +2844,8 @@ window.__config = {
       live: encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))), selected: { ...selected }, shown: { ...demoShown },
       mode: modes.current, look: lighting.scene && { ...lighting.scene }, task: lighting.taskOn, scheme: lighting.params.scheme?.kind, kelvin: lighting.params.kelvin,
       hour: state.hour, view: state.view, eye: stage.camera.position.toArray().map(r), target: controls.target.toArray().map(r),
-      wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
-      glass: [glass.mode, glass.opaque], blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
+      wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.familyOn ? "family" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
+      glass: [glass.mode, glass.opaque, glass.level], cleaning: JSON.stringify([cleaningOn, [...cleaningTicks], highlight.has("cleaning")]), figure: stage.current.patient ? stage.current.patient.root.visible : null, blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
       overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
       bed: JSON.stringify([bedOn, bedView.snapshot()]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
       wallScenes: JSON.stringify([stage.current.wallState?.wallScene?.visible ?? false, stage.current.wallState?.ceilingScene?.visible ?? false]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,

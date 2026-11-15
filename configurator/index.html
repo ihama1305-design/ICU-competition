@@ -50,6 +50,8 @@
       <button type="button" data-mode="comfort" aria-pressed="false">Comfort</button>
       <button type="button" data-mode="privacy" aria-pressed="false">Privacy</button>
       <button type="button" data-mode="clinical" aria-pressed="false">Clinical</button>
+      <button type="button" data-mode="family" aria-pressed="false">Family visit</button>
+      <button type="button" data-mode="cleaning" aria-pressed="false">Cleaning</button>
     </div>
     <button type="button" data-mode="emergency" class="mode-emergency" aria-pressed="false">Emergency-ready</button>
     <span class="alarm-chip"><span class="dot" aria-hidden="true"></span>Clinical alarms unaffected</span>
@@ -78,6 +80,15 @@
     <p><strong>Emergency-ready</strong>, started by staff. Room lights full, task light on, the TV and aquarium screen off, the glazed front clear. The monitor keeps running; clinical alarms and medical devices are not changed.</p>
     <button type="button" id="leaveEmergency">Exit Emergency-ready</button>
   </div>
+  <section id="cleaningPanel" class="mode-banner cleaning-panel" aria-labelledby="cleaningTitle" hidden>
+    <p id="cleaningTitle" class="vocal-kicker">Cleaning checklist · SIMULATED</p>
+    <p id="cleaningIntro"></p>
+    <ul id="cleaningSteps" class="cleaning-steps"></ul>
+    <p id="cleaningDone" class="cleaning-done" role="status" hidden></p>
+    <p class="cleaning-air"><span id="cleaningAirText"></span><a id="cleaningAir" href="../ventilation/"></a></p>
+    <p id="cleaningLimits" class="vocal-meta"></p>
+    <button type="button" id="leaveCleaning">End Cleaning</button>
+  </section>
   <section id="vocalNotice" class="mode-banner vocal-notice" aria-labelledby="vocalKicker" hidden>
     <p id="vocalKicker" class="vocal-kicker">Notice at the nurse station · SIMULATED</p>
     <p id="vocalText"></p>
