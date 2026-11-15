@@ -1548,7 +1548,7 @@ with sync_playwright() as p:
         go(pg, room)
         set_defaults(pg)
         # what the default room leaves out, so every card has its object in the room
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips', 'ceilingTray', 'staffPanel', 'patientWall', 'workstation', 'bedsideCabinet']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
         views = pg.evaluate("window.__config.views()")
         missed, wrong, covered, stray = [], [], [], []
         for f in feats:
@@ -2293,6 +2293,92 @@ with sync_playwright() as p:
     pg.wait_for_function("document.getElementById('panel').classList.contains('open')", timeout=10000)
     check(pg.evaluate("document.activeElement.dataset.open") == "pressure", "phone: closing the bed panel brings the sheet back, with focus where it was")
     check(not errs, f"phone, the bed: no errors {errs[:3]}")
+    ctx.close()
+
+    # ---------------------------------------------------------------- the Future ICU look: its theme, five fittings in step with the room, the view across it, and nothing in the way
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+    FUTURE = ["ceilingTray", "staffPanel", "patientWall", "workstation", "bedsideCabinet"]
+    themes = pg.evaluate("[...document.querySelectorAll('#themes button')].map(b => [b.dataset.value, b.textContent])")
+    check(themes[0] == ["future", "Future ICU"], f"Future ICU is the first theme {themes[:2]}")
+    check(pg.evaluate("window.__config.currentTheme()") == "calm" and pg.evaluate("window.__config.fittings().shown") == [], "a link with no code still opens today's room, with no fitting")
+    for room in ROOMS:
+        go(pg, room)
+        set_defaults(pg)
+        pg.evaluate("window.__config.camera('overview', { instant: true }); window.__config.time(window.__config.stops.afternoon)")
+        code0 = pg.evaluate("window.__config.code()")
+        check(code0[5 + 38:5 + 43] == "00000", f"{room}: the five fittings are codes 38 to 42, and off ({code0})")
+        pg.click("#themes button[data-value='future']")
+        f = pg.evaluate("window.__config.fittings()")
+        check(f["shown"] == FUTURE and pg.evaluate("window.__config.code()")[5 + 38:5 + 43] == "11111" and pg.evaluate("window.__config.currentTheme()") == "future",
+              f"{room}: Future ICU turns on all five fittings, and the link carries them {f['shown']}")
+        # nothing in the way: one check, the one the room safety scan will use
+        lay = pg.evaluate("window.__config.layout()")
+        mine = [x for x in lay["findings"] if x["fitting"]]
+        own = [x for x in lay["findings"] if x["level"] == "overlap" and x["a"].startswith("part:") and x["b"].startswith("part:")]
+        other = [x for x in lay["findings"] if x["level"] == "overlap" and x not in own]
+        check(all(f"addon:{x}" in lay["solids"] for x in FUTURE) and {"clearRight", "clearLeft", "clearFoot", "route", "wardrobe"} <= set(lay["areas"]) and any(a.startswith("door") for a in lay["areas"]),
+              f"{room}: the layout check sees the five fittings, the keep-clear areas, the doors, the wardrobe's front and the route to the bed {lay['areas']}")
+        check(not mine, f"{room}: no fitting overlaps anything, or stands in a keep-clear area, a door's way, the wardrobe's front or the route to the bed {mine[:3]}")
+        check(not other, f"{room}: with the theme and every fitting on, nothing solid overlaps but the room model's own kit {other[:3]}")
+        print(f"  {room}: the room model's own kit overlaps by its boxes, as exported: {[(x['a'][5:], x['b'][5:]) for x in own]}; in the keep-clear areas, as Equipment labels draws them: {sorted({x['a'] for x in lay['findings'] if x['level'] == 'clearance'})}", flush=True)
+        # seen: every registered object from at least one view, and the new ones from the view across the room
+        present = pg.evaluate("window.__config.features().filter(f => f.present && f.own).map(f => f.id)")
+        seen = {fid: pg.evaluate(f"window.__config.seenFrom('{fid}')") for fid in present}
+        unseen = [k for k, v in seen.items() if not v]
+        check(all(x in present for x in FUTURE) and not unseen, f"{room}: with the theme on, each of the {len(present)} registered objects in the room can be seen from at least one view {unseen}")
+        check(all("across" in seen[x] for x in ["ceilingTray", "staffPanel", "patientWall", "workstation"]), f"{room}: the view across the room shows the tray, both wall panels and the workstation {({x: seen[x] for x in FUTURE})}")
+        check(not seen["staffPanel"] or "bed" not in seen["staffPanel"], f"{room}: the staff panel is behind the patient's head: the view from the bed doesn't show it")
+        # in step: the TV sits on the patient wall's face, the printed sky inside the tray, W1's chair out of the desk's way, and each goes back
+        check(f["tvOut"] == 0.035, f"{room}: the TV and its mounts sit on the patient wall's face ({f['tvOut']} m out)")
+        pg.evaluate("window.__config.set('ceiling', 'sky')")
+        sky_in = pg.evaluate("window.__config.fittings().sky")
+        pg.evaluate("window.__config.set('ceilingTray', 'off')")
+        sky_out = pg.evaluate("window.__config.fittings().sky")
+        check(sky_in and sky_in[0] < 1 and sky_in[1] <= 1 and sky_out == [1, 1], f"{room}: the printed sky fits inside the tray, and takes its own size without it {sky_in} {sky_out}")
+        pg.evaluate("window.__config.set('ceiling', 'plain'); window.__config.set('ceilingTray', 'on'); window.__config.set('patientWall', 'off')")
+        check(pg.evaluate("window.__config.fittings().tvOut") == 0, f"{room}: without the patient wall, the TV is back on the wall")
+        pg.evaluate("window.__config.set('patientWall', 'on')")
+        if room == "W1":
+            chair_on = pg.evaluate("window.__config.fittings().chair")
+            pg.evaluate("window.__config.set('workstation', 'off')")
+            chair_off = pg.evaluate("window.__config.fittings().chair")
+            pg.evaluate("window.__config.set('workstation', 'on')")
+            check(chair_on == [8.82, 29.07] and chair_off != chair_on and abs(chair_off[0] - 9.47) < 0.1, f"W1: the visitor chair moves to the window while the workstation is there, and back after {chair_on} {chair_off}")
+        # placed items: a wall item can't hang over the staff panel or the patient wall, only over bare wall
+        wall = {"W1": ([11.0, 31.61, 0], [11.6, 27.14, 180]), "W3": ([10.3, 22.388, 0], [10.6, 18.14, 180])}[room]
+        over = pg.evaluate(f"[window.__config.wallClear('sharps', {wall[0][0]}, {wall[0][1]}, {wall[0][2]}), window.__config.wallClear('rub', {wall[1][0]}, {wall[1][1]}, {wall[1][2]})]")
+        pg.evaluate("window.__config.set('staffPanel', 'off'); window.__config.set('patientWall', 'off')")
+        bare = pg.evaluate(f"[window.__config.wallClear('sharps', {wall[0][0]}, {wall[0][1]}, {wall[0][2]}), window.__config.wallClear('rub', {wall[1][0]}, {wall[1][1]}, {wall[1][2]})]")
+        pg.click("#themes button[data-value='future']")
+        check(over == [False, False] and bare == [True, True], f"{room}: a wall item can't hang over the staff panel or the patient wall, and can on the bare wall {over} {bare}")
+        # the view across the room, from the reference picture's angle
+        pg.click("#views button[data-value='across']")
+        pg.wait_for_function("window.__config.state().view === 'across' && !window.__config.state().moving", timeout=120000)
+        check(pressed_view(pg) == ["across"] and pg.evaluate("window.__config.code()")[2] == "9", f"{room}: Across the room is a view, and the link keeps it as the tenth")
+        shot(pg, f"{room.lower()}_future_across")
+        pg.evaluate("window.__config.time(window.__config.stops.night)")
+        shot(pg, f"{room.lower()}_future_across_night")
+        pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
+        pg.click("#views button[data-value='dollhouse']")
+        pg.wait_for_function("window.__config.state().view === 'dollhouse' && !window.__config.state().moving", timeout=120000)
+        check(not pg.evaluate("window.__config.addonShown('ceilingTray')"), f"{room}: the dollhouse lifts the tray off with the ceiling")
+        pg.click("#views button[data-value='overview']")
+        pg.wait_for_function("window.__config.state().view === 'overview' && !window.__config.state().moving", timeout=120000)
+        check(pg.evaluate("window.__config.addonShown('ceilingTray')"), f"{room}: and puts it back")
+        # Compare with today's room shows none of them, and puts them back
+        pg.click("#compareToggle")
+        cmp_on = pg.evaluate("window.__config.fittings()")
+        pg.click("#compareToggle")
+        cmp_off = pg.evaluate("window.__config.fittings()")
+        check(cmp_on["shown"] == [] and cmp_on["tvOut"] == 0 and cmp_off["shown"] == FUTURE and cmp_off["tvOut"] == 0.035, f"{room}: today's room has no fittings, and yours gets them back {cmp_on['shown']} {cmp_off['shown']}")
+    # the old reference link: the same room, with every fitting off
+    pg.evaluate("location.hash = '#c=10030010002000000000000000000000000100'")
+    pg.wait_for_function("window.__config.state().room === 'W1' && window.__config.code().startsWith('10030010002000000000000000000000000100')", timeout=60000)
+    check(pg.evaluate("window.__config.fittings().shown") == [], "the reference link still opens the same room, with no fitting")
+    faults = axe_faults(pg, "#panel")
+    check(not faults, f"the panel with the fittings' section passes axe {faults[:3]}")
+    check(not errs, f"the Future ICU look: no errors {errs[:3]}")
     ctx.close()
 
     # ---------------------------------------------------------------- reduced motion

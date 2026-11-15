@@ -21,6 +21,35 @@ const PLACED = { tablet: "Patient tablet", screen: "Privacy screen", rub: "Hand 
 const SIDE = 1.0, FOOT = 0.9; // how far the keep-clear areas reach from the bed's sides and foot, in metres: drawn, never labelled
 const shown = o => { for (let n = o; n; n = n.parent) if (!n.visible) return false; return true; };
 
+/** The bed's footprint in its own frame, from the bed model: along from the head (a0 to a1), across from its centre line (c0 to c1). */
+export function bedFrame(room) {
+  const m = room.meta, f = new THREE.Vector2(...m.bed.foot).normalize(), s = new THREE.Vector2(f.y, -f.x), head = new THREE.Vector2(...m.bed.head);
+  room.root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  (room.parts.cfg_kit_bed || []).forEach(o => box.expandByObject(o));
+  let a0 = 0, a1 = 2.2, c0 = -0.5, c1 = 0.5;
+  if (!box.isEmpty()) {
+    const along = [], across = [];
+    for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) {
+      const d = new THREE.Vector2(x, -z).sub(head);
+      along.push(d.dot(f)); across.push(d.dot(s));
+    }
+    [a0, a1, c0, c1] = [Math.min(...along), Math.max(...along), Math.min(...across), Math.max(...across)];
+  }
+  return { f, s, head, a0, a1, c0, c1 };
+}
+
+/** The keep-clear areas as plan polygons, the same ones drawn on the floor: for the layout check (layout.js). */
+export function keepClearAreas(room) {
+  const { f, s, head, a0, a1, c0, c1 } = bedFrame(room), at = (a, c) => [head.x + f.x * a + s.x * c, head.y + f.y * a + s.y * c];
+  const rect = (A0, A1, C0, C1) => [at(A0, C0), at(A1, C0), at(A1, C1), at(A0, C1)];
+  return [
+    { id: "clearRight", label: "The keep-clear area on the patient's right", poly: rect(a0, a1, c1, c1 + SIDE) },
+    { id: "clearLeft", label: "The keep-clear area on the patient's left", poly: rect(a0, a1, c0 - SIDE, c0) },
+    { id: "clearFoot", label: "The keep-clear area past the bed's foot", poly: rect(a1, a1 + FOOT, c0 - SIDE, c1 + SIDE) },
+  ];
+}
+
 export class ClinicalView {
   constructor({ stage, placement, layer }) {
     this.stage = stage; this.placement = placement; this.layer = layer;
@@ -122,20 +151,7 @@ export class ClinicalView {
     if (room.clinicalZones) return room.clinicalZones;
     const m = room.meta, [x0, y0, x1, y1] = m.room, PX = 25;
     const W = Math.ceil((x1 - x0) * PX), H = Math.ceil((y1 - y0) * PX);
-    // the bed's footprint in its own frame: along from the head, across from its centre line
-    const f = new THREE.Vector2(...m.bed.foot).normalize(), s = new THREE.Vector2(f.y, -f.x), head = new THREE.Vector2(...m.bed.head);
-    room.root.updateMatrixWorld(true);
-    const box = new THREE.Box3();
-    (room.parts.cfg_kit_bed || []).forEach(o => box.expandByObject(o));
-    let a0 = 0, a1 = 2.2, c0 = -0.5, c1 = 0.5;
-    if (!box.isEmpty()) {
-      const along = [], across = [];
-      for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) {
-        const d = new THREE.Vector2(x, -z).sub(head);
-        along.push(d.dot(f)); across.push(d.dot(s));
-      }
-      [a0, a1, c0, c1] = [Math.min(...along), Math.max(...along), Math.min(...across), Math.max(...across)];
-    }
+    const { f, s, head, a0, a1, c0, c1 } = bedFrame(room);
     const inZone = (x, y) => {
       const d = new THREE.Vector2(x, y).sub(head), a = d.dot(f), c = d.dot(s);
       const side = a >= a0 && a <= a1 && ((c >= c0 - SIDE && c < c0) || (c > c1 && c <= c1 + SIDE));

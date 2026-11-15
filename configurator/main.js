@@ -26,7 +26,9 @@ import { RoomModes, modeText } from "./modes.js";
 import { HORIZON_DEG } from "./solar.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
 import { CHECK, ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById, wallsOf } from "./placed.js";
-import { ClinicalView } from "./clinical.js";
+import { ClinicalView, keepClearAreas } from "./clinical.js";
+import { ACROSS, FITTINGS, syncFittings } from "./fittings.js";
+import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip } from "./layout.js";
 import { GuidedTour, CAVEAT } from "./guide.js";
 import { Features } from "./features.js";
 import { Highlight } from "./highlight.js";
@@ -210,6 +212,7 @@ async function setRoom(label, { keepView = true } = {}) {
   if (!known) status.textContent = "Loading the room…";
   const room = await stage.load(label, f => { status.textContent = `Loading the room… ${Math.round(f * 100)}%`; });
   if (state.room !== label) return; // another room was chosen while this one loaded
+  room.meta.cameras.across ||= { ...ACROSS[label] }; // the view across the room, from the reference picture's angle
   stage.show(room);
   placement.show(room);
   apis.setRoom(room);
@@ -313,6 +316,39 @@ canvas.addEventListener("keydown", e => {
   else rig.dolly(zoom);
 });
 
+// ---------------------------------------------------------------- the layout check (layout.js)
+// What counts as solid: the kit in the room models, the add-ons that stand in the room, and the items placed. Not the printed
+// sky, what's outside the window, or the clips on the bed's lines. Each object is the boxes of its own parts.
+const KIT = ["cfg_kit_bed", "cfg_kit_monitor", "cfg_kit_pumps", "cfg_kit_ventilator", "cfg_kit_pendant", "cfg_kit_exam_light", "cfg_kit_iv_pole", "cfg_kit_overbed_table", "cfg_kit_recliner", "cfg_kit_visitor_chair"];
+const NOT_SOLID = new Set(["sky", "palms", "planting", "patio", "ventilation", "lineClips"]);
+// what's meant to touch: the monitor and pumps hang on the pendant, and the overbed table reaches over the bed
+const MOUNTED = [["part:cfg_kit_monitor", "part:cfg_kit_pendant"], ["part:cfg_kit_pumps", "part:cfg_kit_pendant"], ["part:cfg_kit_overbed_table", "part:cfg_kit_bed"]];
+function layoutNow() {
+  const room = stage.current, m = room.meta, shown = o => { for (let n = o; n; n = n.parent) if (!n.visible) return false; return true; };
+  room.root.updateMatrixWorld(true);
+  const plan = b => [b.min.x, -b.max.z, b.min.y, b.max.x, -b.min.z, b.max.y].map(v => +v.toFixed(3));
+  const solids = [];
+  const add = (id, label, roots, fitting = false) => {
+    const boxes = [];
+    for (const r of roots) r.traverse(n => { if (n.isMesh && shown(n) && n.name !== "fitting_screen") { const b = new THREE.Box3().setFromObject(n); if (!b.isEmpty()) boxes.push(plan(b)); } });
+    if (boxes.length) solids.push({ id, label, boxes, fitting, wall: Math.min(...boxes.map(b => b[2])) >= 0.9 }); // off the floor, it takes none
+  };
+  for (const p of KIT) add(`part:${p}`, p, room.parts[p] || []);
+  for (const [id, a] of Object.entries(room.addons || {})) if (!NOT_SOLID.has(id) && shown(a)) add(`addon:${id}`, a.userData.itemInfo?.title || id, [a], id in FITTINGS);
+  for (const p of placement.list(room.label)) if (p.node && shown(p.node)) add(`placed:${p.uid}`, p.type, [p.node]);
+  const areas = [
+    ...keepClearAreas(room).map(a => ({ ...a, kind: "keep-clear", within: m.walkable })),
+    ...m.wall_runs.filter(r => r.door).map((r, i) => ({ id: `door${i}`, label: "In front of a door", kind: "door", poly: strip(r.a, r.b, DOOR_DEPTH), within: m.walkable })),
+    { id: "route", label: "The walking route from the door to the bed", kind: "route", polys: corridor(ROUTES[room.label]), within: m.walkable },
+  ];
+  const w = room.addons?.wardrobe;
+  if (w && shown(w)) { // its doors slide across its front, which faces the bed in both rooms
+    const b = plan(new THREE.Box3().setFromObject(w));
+    areas.push({ id: "wardrobe", label: "In front of the wardrobe", kind: "wardrobe", poly: [[b[0], b[1] - WARDROBE_REACH], [b[3], b[1] - WARDROBE_REACH], [b[3], b[1]], [b[0], b[1]]] });
+  }
+  return { findings: checkLayout({ solids, areas, mounted: MOUNTED }), solids: solids.map(s => s.id), areas: areas.map(a => a.id) };
+}
+
 // ---------------------------------------------------------------- options, from options.json
 let optionData = null, panelUi = null;
 const selected = {};
@@ -377,6 +413,7 @@ const allGroups = () => optionData.sections.flatMap(s => s.groups);
 
 /** What depends on more than one choice, and colours for add-ons built since they were chosen. */
 function settle() {
+  syncFittings(stage.current); // the TV onto the patient wall, the sky inside the tray, the chair out of the desk's way
   syncPalms(stage.current, selected.palms === "on", selected.patio === "on");
   syncDampers(stage.current); // the TV's isolators follow its size
   setShade(stage.current, selected.shade);
@@ -743,7 +780,7 @@ addEventListener("hashchange", () => {
 // ---------------------------------------------------------------- the cinematic tour
 const tour = {
   // starts and ends on the whole room. If the camera is already there, the first stop is a move to where it stands, which still arrives
-  order: ["dollhouse", "overview", "entrance", "family", "bed", "bed_window", "window", "dollhouse"], at: -1, timer: 0, log: [],
+  order: ["dollhouse", "overview", "entrance", "family", "bed", "bed_window", "window", "across", "dollhouse"], at: -1, timer: 0, log: [],
   get running() { return this.at >= 0; },
   toggle() { if (this.running) this.stop(); else this.start(); },
   start() { this.at = -1; this.log = []; this.mark(true); this.at = 0; this.step(); },
@@ -2389,6 +2426,53 @@ window.__config = {
     controls.update();
     stage.camera.updateMatrixWorld();
     invalidate();
+  },
+  layout: () => layoutNow(),
+  fittings: () => {
+    const a = stage.current.addons || {}, chair = stage.current.root.getObjectByName("cfg_kit_visitor_chair");
+    const c = chair ? new THREE.Box3().setFromObject(chair).getCenter(new THREE.Vector3()) : null;
+    return { shown: Object.keys(FITTINGS).filter(id => a[id]?.userData.schemeOn), chair: c && [+c.x.toFixed(2), +(-c.z).toFixed(2)], tvOut: a.tv?.userData.wallAt ? +a.tv.position.distanceTo(a.tv.userData.wallAt).toFixed(3) : 0, sky: a.sky ? [+a.sky.scale.x.toFixed(3), +a.sky.scale.y.toFixed(3)] : null };
+  },
+  /** The views an entry's objects can be seen from: a ray from the view's eye reaches one of them before anything else. */
+  seenFrom: id => {
+    const objs = features.objects(id);
+    if (!objs.length) return null;
+    const was = state.view, seen = [];
+    const owns = h => { for (let n = h.object; n; n = n.parent) if (objs.includes(n)) return true; return false; };
+    for (const v of Object.keys(rig.meta.cameras).filter(v => v !== "patient")) {
+      rig.go(v, { instant: true });
+      stage.setCeiling(v !== "dollhouse");
+      stage.camera.updateMatrixWorld();
+      const eye = stage.camera.getWorldPosition(new THREE.Vector3());
+      const hit = objs.some(o => {
+        // points on it: its box's middle, and the middles of up to 24 of each mesh's own triangles, spread through it
+        const pts = [], b = new THREE.Box3().setFromObject(o), v = [0, 1, 2].map(() => new THREE.Vector3());
+        if (b.isEmpty()) return false;
+        pts.push(b.getCenter(new THREE.Vector3()));
+        o.traverse(n => {
+          const pos = n.isMesh && n.geometry.attributes.position;
+          if (!pos) return;
+          const idx = n.geometry.index, tris = Math.floor((idx ? idx.count : pos.count) / 3);
+          for (let k = 0; k < Math.min(24, tris); k++) {
+            const t = Math.floor((k / Math.min(24, tris)) * tris);
+            v.forEach((p, j) => p.fromBufferAttribute(pos, idx ? idx.getX(t * 3 + j) : t * 3 + j));
+            pts.push(v[0].clone().add(v[1]).add(v[2]).divideScalar(3).applyMatrix4(n.matrixWorld));
+          }
+        });
+        return pts.some(p => {
+          const s = p.clone().project(stage.camera);
+          if (Math.abs(s.x) > 1 || Math.abs(s.y) > 1 || s.z > 1) return false;
+          ray.set(eye, p.clone().sub(eye).normalize());
+          const h = nearestSolid(ray);
+          return !!h && owns(h);
+        });
+      });
+      if (hit) seen.push(v);
+    }
+    rig.go(was, { instant: true });
+    stage.setCeiling(was !== "dollhouse");
+    invalidate();
+    return seen;
   },
   code: specCode,
   theme: applyTheme,

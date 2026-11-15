@@ -96,6 +96,9 @@ STATES = {
     # the other two themes by day (the default is Calm Clinical)
     "desert-day": [("theme", "desert")],
     "family-day": [("theme", "family")],
+    # the Future ICU theme: its five fittings and their screens, by day and at night
+    "future-day": [("theme", "future")],
+    "future-night": [("theme", "future"), ("time", "night")],
     # both moving pictures on, which also keep the page drawing while they're in view
     "screens-on": [("set", "tvplay", "on"), ("set", "aquarium", "digital")],
 }

@@ -24,6 +24,10 @@
   {
    "id": "storage",
    "label": "Storage"
+  },
+  {
+   "id": "workflow",
+   "label": "Clinical workflow"
   }
  ],
  "features": [
@@ -562,6 +566,86 @@
    "demoLabel": "See a bed move",
    "actions": [
     "bed:lines"
+   ]
+  },
+  {
+   "id": "ceilingTray",
+   "name": "Ceiling tray",
+   "group": "light",
+   "purpose": "A calm ceiling over the bed: square tiles in a shallow tray, with a soft line of light round its edge.",
+   "how": "The tray sits over the bed, clear of the ceiling lights, the pendant and the wardrobe. Its line of light takes the colour of the room's light, so with the circadian scheme it follows the day. A row of small downlights runs along the window side. With the printed sky on, the sky fits inside it. Choose it under Future ICU fittings.",
+   "benefit": "The ceiling is what a patient lying in bed sees most. A tidy one, lit at its edges, is calmer to look at than bare fittings.",
+   "awake": "The patient looks up at an even ceiling, with its line of light at the edges.",
+   "limits": "A design concept. In this model its light adds no brightness: the room's own lights do that. A real one needs the ceiling's services, structure, access panels and infection-control requirements checked.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:ceilingTray"
+   ]
+  },
+  {
+   "id": "staffPanel",
+   "name": "Staff panel",
+   "group": "workflow",
+   "purpose": "Information for the care team on the wall behind the bed head, where staff look and the patient can't.",
+   "how": "One flush white panel with rounded corners, two wide screens and a thin line of light beneath. The pendant in front still carries the monitor, pumps and outlets. For now its screens show a still: the shapes of the observations with no numbers, care tasks and equipment, all marked simulated. Choose it under Future ICU fittings.",
+   "benefit": "Tasks and equipment are at a glance at the bedside, so there's less walking to another screen.",
+   "awake": "It's behind the patient's head, so it adds nothing to what they see.",
+   "limits": "Simulated: there's no reading on it, and it never stands in for the patient monitor, which stays on the pendant, working. A real one needs integration, infection-control and regulatory review.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:staffPanel"
+   ]
+  },
+  {
+   "id": "patientWall",
+   "name": "Patient wall",
+   "group": "comfort",
+   "purpose": "The wall the patient faces, made into one calm surface round the TV.",
+   "how": "A flush white panel round the TV, with a strip of screen over it and a line of light beneath. The TV sits on its face, so the orientation screen, the nature scene and the damping mounts keep working. For now the strip shows a still, marked simulated: who is caring for the patient today, by role, and what the day holds. Choose it under Future ICU fittings.",
+   "benefit": "What a patient is meant to read is on the wall they face, not behind their head.",
+   "awake": "The patient sees the TV and the strip over it from the pillow.",
+   "sedated": "The strip stays still: nothing on it moves or flashes.",
+   "limits": "Simulated: no real names, plans or times. Whether the strip can be read from the pillow depends on the patient's eyesight; Patient view shows the distance. A real one needs integration and infection-control review.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:patientWall"
+   ]
+  },
+  {
+   "id": "workstation",
+   "name": "Clinician workstation",
+   "group": "workflow",
+   "purpose": "A desk for the care team in the room, by the window and out of the space round the bed.",
+   "how": "A rounded white top on a timber-and-white cabinet, a screen and keyboard, a second screen on an arm, and a lit rail. It stands clear of the keep-clear areas, the door and the walking route to the bed. In W1 the visitor chair moves nearer the window to make room. For now its screens show a still, marked simulated, with no patient's name or diagnosis. Choose it under Future ICU fittings.",
+   "benefit": "Notes and tasks are at hand in the room, so there's less walking between workstations and less searching.",
+   "limits": "Simulated: a still with made-up headings. It doesn't copy or change PACS. A real one needs its place, power, data, infection-control and clinical review.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:workstation"
+   ]
+  },
+  {
+   "id": "bedsideCabinet",
+   "name": "Bedside cabinet",
+   "group": "storage",
+   "purpose": "A place near the bed for the patient's own small things: glasses, a phone, a book.",
+   "how": "A cabinet with a rounded white top and a timber front, against the wall at the bed head on the window side: clear of the pendant, its outlets and the space round the bed. Choose it under Future ICU fittings.",
+   "benefit": "Small belongings stay near the patient and off the overbed table.",
+   "awake": "Family or staff hand the patient what's in it.",
+   "limits": "A design concept. Clinical supplies are kept apart from it. A real one needs its finishes reviewed for infection control.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [
+    "addon:bedsideCabinet"
    ]
   }
  ]
