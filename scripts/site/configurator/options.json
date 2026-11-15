@@ -1,5 +1,5 @@
 {
- "_": "Everything a person can choose, and what each choice does. Effects use a fixed vocabulary, handled in main.js: color, material, visible, addon, light, glass, blinds, tv, shade. `check` is where 08_check_configurator.py looks to see that an option changes the room. `code` values go into share links: never reuse or renumber them, only add new ones. A group with `hidden: true` is no longer offered: it keeps its code so old links still read, stays at its default, and themes and rules never set it. Hidden today: the toys, play mat and gaming console (not part of an adult ICU) and the ventilation grilles.",
+ "_": "Everything a person can choose, and what each choice does. Effects use a fixed vocabulary, handled in main.js: color, material, visible, addon, light, glass, blinds, tv, shade, wall. `check` is where 08_check_configurator.py looks to see that an option changes the room. `code` values go into share links: never reuse or renumber them, only add new ones. A group with `hidden: true` is no longer offered: it keeps its code so old links still read, stays at its default, and themes and rules never set it. Hidden today: the toys, play mat and gaming console (not part of an adult ICU) and the ventilation grilles.",
  "version": 1,
  "sections": [
   {
@@ -1840,6 +1840,45 @@
      "code": 42
     }
    ]
+  },
+  {
+   "id": "smartWall",
+   "label": "Smart clinical wall",
+   "groups": [
+    {
+     "id": "wall",
+     "label": "Smart clinical wall",
+     "control": "choice",
+     "default": "patient",
+     "check": {"time":"afternoon","eye":[11.2,29.9,1.6],"look":[11.2,27.14,1.7],"rooms":{"W3":{"eye":[10.31,20.7,1.6],"look":[10.31,18.14,1.7]}},"first":{"patientWall":"on","staffPanel":"on"}},
+     "options": [
+      {"id":"clinical","label":"Clinical","effects":[{"do":"wall"}],"note":{"text":"For staff: the staff panel shows made-up heart rate, oxygen saturation, blood pressure, breathing rate and temperature, with care tasks and equipment. The bedside monitor keeps running beside it, and no alarm changes. The patient keeps the day, the date and the time."},"code":1},
+      {"id":"patient","label":"Patient","effects":[{"do":"wall"}],"note":{"text":"For the patient: the day, the date and the time on the TV, the care team by role and a simple plan for the day over it, and two buttons that open the communication board and family connection. A sedated patient gets no buttons. The staff panel rests on a dark standby screen."},"code":0},
+      {"id":"relaxation","label":"Relaxation","effects":[{"do":"wall"}],"note":{"text":"A scene across the patient wall, in place of everything that isn't needed now: the one chosen under Transform my environment, or the desert from the sample comfort passport."},"code":2}
+     ],
+     "note": {"text":"One switch for the staff panel and the patient wall in the Future ICU fittings: who the wall is for right now. Room modes move it too: Clinical turns it to Clinical, Comfort to Relaxation, and Emergency-ready turns the patient wall off, and every scene with it. Simulated: every value is made up, and no screen stands in for the bedside monitor."},
+     "code": 43
+    },
+    {
+     "id": "scene",
+     "label": "Transform my environment",
+     "control": "swatches",
+     "default": "off",
+     "check": {"time":"afternoon","eye":[11.2,29.9,1.6],"look":[11.2,27.14,1.7],"rooms":{"W3":{"eye":[10.31,20.7,1.6],"look":[10.31,18.14,1.7]}},"first":{"patientWall":"on"}},
+     "options": [
+      {"id":"off","label":"Off","swatch":"#e9ecea","effects":[{"do":"wall"}],"code":0},
+      {"id":"forest","label":"Forest","swatch":"#3f6b4a","effects":[{"do":"wall"}],"code":1},
+      {"id":"ocean","label":"Ocean","swatch":"#2f7fa6","effects":[{"do":"wall"}],"code":2},
+      {"id":"mountains","label":"Mountains","swatch":"#7c8fa6","effects":[{"do":"wall"}],"code":3},
+      {"id":"desert","label":"Desert","swatch":"#d3a26e","effects":[{"do":"wall"}],"code":4},
+      {"id":"garden","label":"Garden","swatch":"#7fae6b","effects":[{"do":"wall"}],"code":5},
+      {"id":"clearSky","label":"Clear sky","swatch":"#6fb2d6","effects":[{"do":"wall"}],"code":6},
+      {"id":"nightSky","label":"Night sky","swatch":"#1b2742","effects":[{"do":"wall"}],"code":7}
+     ],
+     "note": {"text":"One choice sets the patient wall, the ceiling above the bed and the room's light together, and changes slowly, over a few seconds. Off goes back to how the room was. Each scene is drawn in code. Without the patient wall, the scene shows on the TV. A room mode, Quiet now and the patient's state come first, and Emergency-ready turns every scene off."},
+     "code": 44
+    }
+   ]
   }
  ],
  "rooms": [
@@ -1902,7 +1941,8 @@
     "staffPanel": "on",
     "patientWall": "on",
     "workstation": "on",
-    "bedsideCabinet": "on"
+    "bedsideCabinet": "on",
+    "wall": "patient"
    }
   },
   {

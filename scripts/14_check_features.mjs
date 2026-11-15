@@ -15,6 +15,10 @@ import { BACKGROUND, BANDS, FITTINGS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATION
 import { ACROSS, FIT } from "./site/configurator/fittings-data.js";
 import { DOOR_DEPTH, ROUTES, boxesOverlap, checkLayout, corridor, inPolygon, intrusion, strip } from "./site/configurator/layout.js";
 import { decodeSpec } from "./site/configurator/state.js";
+import {
+  CARE_TEAM, DAY_PLAN, DEFAULT_WALL, EMERGENCY, EQUIPMENT, HANDS_FREE, HANDS_FREE_NOTE, OBS, OBS_NOTE, OVERVIEW, PASSPORT_SCENE, SCENES, SCENE_MS,
+  SCENE_ORDER, STATION_VIEWS, STRIP_TEXT, SUPPLIES, TASKS, WALL_BUTTONS, WALL_MODES, WALL_ORDER, wallFor,
+} from "./site/configurator/wall-data.js";
 
 const here = p => new URL(p, import.meta.url);
 const read = p => readFileSync(here(p), "utf8");
@@ -25,7 +29,7 @@ const groupById = id => groups.find(g => g.id === id);
 
 // what the page has: add-ons, placed items, named objects, the time stops, and each room's model parts and views
 const fittingsSrc = read("./site/configurator/fittings.js");
-const addonsSrc = read("./site/configurator/addons.js") + fittingsSrc, placedSrc = read("./site/configurator/placed.js"), mainSrc = read("./site/configurator/main.js");
+const addonsSrc = read("./site/configurator/addons.js") + fittingsSrc + read("./site/configurator/wall.js"), placedSrc = read("./site/configurator/placed.js"), mainSrc = read("./site/configurator/main.js");
 const ADDONS = new Set([...addonsSrc.matchAll(/^ {2}(\w+)\(room\) \{/gm)].map(m => m[1]));
 const PLACED = new Set([...placedSrc.matchAll(/^ {4}id: "(\w+)", code:/gm)].map(m => m[1]));
 const STOPS = new Set(Object.keys(Function(`return ${/const STOPS = (\{[^}]*\})/.exec(mainSrc)[1]}`)()));
@@ -34,7 +38,8 @@ for (const label of options.rooms) {
   const meta = METAS[label] = JSON.parse(read(`../assets/model/room_${label.toLowerCase()}.json`));
   const glb = gunzipSync(readFileSync(here(`../assets/model/${meta.glb}`)));
   const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString("utf8"));
-  ROOMS[label] = { parts: new Set(json.nodes.map(n => n.name).filter(Boolean)), views: new Set(Object.keys(meta.cameras)) };
+  // the view across the room is added by the page from fittings-data.js, as it loads each room
+  ROOMS[label] = { parts: new Set(json.nodes.map(n => n.name).filter(Boolean)), views: new Set([...Object.keys(meta.cameras), ...(ACROSS[label] ? ["across"] : [])]) };
 }
 assert.ok(ADDONS.has("wardrobe") && ADDONS.has("soundSensor") && PLACED.has("leafpanel") && STOPS.has("night"), "the page's add-ons, placed items and time stops are read");
 
@@ -146,6 +151,8 @@ const api = {
   bed: tab => { assert.ok(["pressure", "lines"].includes(tab), `a demo opens the bed panel's ${tab} tab, which exists`); calls.push(["bed"]); },
   position: (id, minutes) => { assert.ok(POSITIONS[id] && TIMES.some(t => t.minutes === minutes), `a demo shows ${id} for ${minutes} min, a position and time the panel offers`); calls.push(["position"]); },
   askMove: id => { assert.ok(POSITIONS[id], `a demo asks for the line check before a move to ${id}`); calls.push(["askMove"]); },
+  station: view => { assert.ok(STATION_VIEWS[view], `a demo opens the workstation in ${view}, a view it has`); calls.push(["station"]); },
+  task: (id, done) => { assert.ok(TASKS.some(t => t.id === id) && [undefined, true].includes(done), `a demo chooses the task ${id}, or presses its Done`); calls.push(["task"]); },
 };
 let steps = 0;
 for (const [id, d] of Object.entries(DEMOS)) {
@@ -322,4 +329,75 @@ for (const [label, f] of Object.entries(FIT)) {
   assert.ok(f.tray.downlights.every(([x, y]) => inPolygon(x, y, f.tray.poly)), `${label}: the tray's downlights are inside it`);
 }
 
-console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms`);
+// ---------------------------------------------------------------- the smart clinical wall, Transform my environment and the clinician workstation (wall-data.js, wall.js, station.js)
+const wallSection = options.sections.find(x => x.id === "smartWall");
+assert.deepEqual(wallSection?.groups.map(g => [g.id, g.code, g.default]), [["wall", 43, DEFAULT_WALL], ["scene", 44, "off"]], "the wall's switch and the scene are codes 43 and 44, after the fittings");
+assert.deepEqual(groupById("wall").options.map(o => [o.id, o.label]), WALL_ORDER.map(id => [id, WALL_MODES[id].label]), "the switch: Clinical, Patient and Relaxation, named as the data names them");
+assert.deepEqual(groupById("scene").options.map(o => [o.id, o.label]), [["off", "Off"], ...SCENE_ORDER.map(id => [id, SCENES[id].label])], "Transform my environment: Off and the brief's seven scenes, in its order");
+assert.deepEqual(SCENE_ORDER.map(id => SCENES[id].label), ["Forest", "Ocean", "Mountains", "Desert", "Garden", "Clear sky", "Night sky"], "forest, ocean, mountains, desert, garden, clear sky, night sky");
+for (const g of wallSection.groups) assert.ok(g.check?.eye && g.check.rooms?.W3 && g.options.every(o => o.effects.some(e => e.do === "wall")), `${g.id}: 08 knows where to look, and each option moves the wall`);
+assert.ok(SCENE_ORDER.every(id => SCENES[id].light.kelvin >= 2700 && SCENES[id].light.kelvin <= 6500 && SCENES[id].light.level > 0 && SCENES[id].light.level <= 1), "each scene's light is a look the room's lights can give");
+assert.ok(SCENE_MS >= 2000, "a scene changes slowly, over seconds");
+assert.ok(future.sets.wall === "patient" && !("scene" in future.sets), "Future ICU sets the wall for the patient, and chooses no scene");
+assert.ok(others.every(t => !("wall" in t.sets) && !("scene" in t.sets)), "the other themes leave the wall and the scenes alone");
+const oldWall = decodeSpec(options, "#c=10030010002000000000000000000000000100");
+assert.ok(oldWall.selected.wall === DEFAULT_WALL && oldWall.selected.scene === "off", "the reference link opens with no scene, and the wall's switch at its default, which shows nothing without the fittings");
+// the rule that keeps the wall in step with the room: every combination of switch, mode, state, Quiet now and scene
+const combos = [];
+for (const wall of WALL_ORDER) for (const mode of Object.keys(MODES)) for (const state of STATE_ORDER) for (const quiet of [false, true]) for (const scene of ["off", ...SCENE_ORDER]) combos.push({ wall, mode, state, quiet, scene });
+for (const c of combos) {
+  const w = wallFor(c), who = JSON.stringify(c);
+  if (c.mode === "emergency") assert.ok(w.emergency && w.patient === "off" && !w.scene && !w.ceiling && !w.light && !w.prompts && w.staff === "clinical", `${who}: Emergency-ready turns every scene and the patient wall off, and the staff panel to Clinical`);
+  else {
+    assert.equal(w.wall, c.mode === "clinical" ? "clinical" : c.mode === "comfort" ? "relaxation" : c.wall, `${who}: Clinical mode turns the wall to Clinical, Comfort to Relaxation, and otherwise the switch decides`);
+    assert.equal(w.light, c.scene === "off" ? null : c.scene, `${who}: the light is the chosen scene's, and only a chosen scene's`);
+    assert.equal(w.ceiling, w.light, `${who}: the ceiling shows the scene whose light it is`);
+    assert.equal(w.staff, w.wall === "clinical" ? "clinical" : "standby", `${who}: the staff panel shows observations only in Clinical`);
+  }
+  if (c.state === "sedated") assert.ok(!w.prompts, `${who}: a sedated patient gets no prompts`);
+  if (c.quiet) assert.ok(w.patient === "off" && !w.scene && !w.prompts, `${who}: Quiet now takes everything off the patient wall`);
+  if (w.prompts) assert.ok(w.wall === "patient" && c.state !== "sedated", `${who}: buttons only for the patient, awake or recovering`);
+  if (w.wall === "relaxation" && !c.quiet) assert.equal(w.scene, c.scene === "off" ? PASSPORT_SCENE : c.scene, `${who}: Relaxation shows the chosen scene, or the passport's`);
+}
+assert.ok(PASSPORT.find(p => p.id === "scene").value === PASSPORT_SCENE, "Relaxation's own scene is the one the sample passport asks for");
+// what the screens say: made up and marked, no name, nothing aloud
+assert.deepEqual(OBS.map(o => o.id), ["hr", "spo2", "bp", "rr", "temp"], "the five observations the brief names: heart rate, oxygen saturation, blood pressure, breathing rate, temperature");
+assert.ok(/Made-up/.test(OBS_NOTE) && /bedside monitor shows the patient/.test(OBS_NOTE) && /alarms are unchanged/.test(OBS_NOTE), "the values say they're made up, and that the monitor and its alarms are as they were");
+const wallSrc = read("./site/configurator/wall.js");
+for (const fn of ["staffObs", "staffTasks", "staffEmergency", "deskScreen", "armScreen"]) {
+  const body = wallSrc.slice(wallSrc.indexOf(`function ${fn}(`), wallSrc.indexOf("\n}\n", wallSrc.indexOf(`function ${fn}(`)));
+  assert.ok(/simulated\(g, w, h/.test(body) || /staffEmergency\(g, w, h\)/.test(body), `${fn}: every staff screen carries the SIMULATED mark`);
+}
+const stripBody = wallSrc.slice(wallSrc.indexOf("function patientStrip("), wallSrc.indexOf("\n}\n", wallSrc.indexOf("function patientStrip(")));
+assert.equal((stripBody.match(/mark\(g, /g) || []).length, 2, "the strip over the TV carries its SIMULATED mark, for the patient and in Clinical");
+assert.ok(!/\b(Mr|Mrs|Ms|Miss|Dr)\.?\s+[A-Z]/.test(JSON.stringify([OVERVIEW, TASKS, EQUIPMENT, CARE_TEAM, DAY_PLAN])), "no one is named: roles only");
+assert.ok(CARE_TEAM.every(r => /^[A-Z][a-z]+$/.test(r)) && DAY_PLAN.length >= 3, "the care team by role, and a simple plan");
+assert.deepEqual(WALL_BUTTONS.map(b => b.tab), ["board", "family"], "the wall's two buttons open the communication board and family connection");
+assert.ok(/Nothing listens/.test(HANDS_FREE_NOTE) && /nothing about the patient is said aloud/.test(HANDS_FREE_NOTE) && HANDS_FREE.length >= 3, "hands-free buttons stand in for speech: nothing listens, and nothing is said aloud");
+assert.ok(!/speechSynthesis|SpeechRecognition|getUserMedia|webkitSpeech/.test(wallSrc + read("./site/configurator/station.js")), "the wall and the station neither speak nor listen");
+assert.ok(/Not a validated emergency protocol/.test(EMERGENCY.caveat) && EMERGENCY.items.length >= 3 && /Illustrative/.test(EMERGENCY.route), "Emergency: where things are, the route marked as illustrative, and not a validated protocol");
+// every place the station lights is one the page can find in both rooms
+const places = /const places = \{([\s\S]*?)\n  \};/.exec(mainSrc)?.[1] || "";
+const named = new Set([...places.matchAll(/(\w+):/g)].map(m => m[1]));
+for (const where of [...TASKS, ...EQUIPMENT, ...SUPPLIES, ...EMERGENCY.items].map(x => x.where).filter(w => w && w !== "door")) assert.ok(named.has(where), `the station can light ${where}`);
+for (const part of [...places.matchAll(/part\("(\w+)"\)/g)].map(m => m[1])) for (const [label, r] of Object.entries(ROOMS)) assert.ok(r.parts.has(part), `${label} has ${part}, which the station lights`);
+assert.ok(/name = "ws_supplies"/.test(fittingsSrc) && /"ws_ppe"/.test(fittingsSrc), "the workstation's two cupboards are named, for the supply locator");
+assert.deepEqual(Object.keys(STATION_VIEWS), ["nurse", "doctor"], "Nurse view and Doctor view");
+assert.ok(STATION_VIEWS.nurse.sections[1] === "tasks" && STATION_VIEWS.doctor.sections[1] === "obs" && STATION_VIEWS.nurse.sections.length === STATION_VIEWS.doctor.sections.length, "the same patient, shown differently: tasks first for the nurse, observations first for the doctor");
+// the cards
+for (const id of ["smartWall", "transformEnvironment"]) assert.ok(byId.has(id) && byId.get(id).demo, `${id} is registered, with its demo`);
+assert.ok(/never stands in for the bedside monitor/.test(byId.get("smartWall").limits) && /alarms unchanged/.test(byId.get("smartWall").limits), "the wall's card: it never stands in for the monitor, and the alarms are unchanged");
+assert.ok(/no claim about sleep, delirium or recovery/.test(byId.get("transformEnvironment").limits) && /Living plants stay outside/.test(byId.get("transformEnvironment").limits), "Transform's card: no claim about outcomes, and no living plants inside");
+assert.ok(byId.get("workstation").actions.includes("station") && byId.get("workstation").demo === "workstation" && /not a validated emergency protocol/.test(byId.get("workstation").limits) && /doesn't copy or change it/.test(byId.get("workstation").limits), "the workstation's card opens it, has a demo, and says what it isn't");
+// readable from the pillow: the strip's text is at least as large as the orientation screen's own detail lines, which its
+// card already says read from the bed, at a similar distance
+const tvWidth = groupById("tvsize").options.find(o => o.id === groupById("tvsize").default).effects.find(e => e.do === "tv").width;
+const orientEm = (15 / 270) * 0.97 * (9 / 16) * tvWidth;
+for (const [label, f] of Object.entries(FIT)) {
+  const stripH = (f.patient.x[1] - f.patient.x[0] - 0.3) / 8, em = (STRIP_TEXT.size / STRIP_TEXT.canvas[1]) * stripH;
+  const eye = METAS[label].bed.eye, dist = Math.abs(eye[1] - f.patient.y), arcmin = (Math.atan(em / dist) * 180 / Math.PI) * 60;
+  assert.ok(em >= orientEm, `${label}: the strip's text (${(em * 100).toFixed(1)} cm) is no smaller than the orientation screen's detail lines (${(orientEm * 100).toFixed(1)} cm)`);
+  assert.ok(arcmin >= 40, `${label}: from the pillow, ${dist.toFixed(2)} m away, its letters subtend ${arcmin.toFixed(0)} arcminutes`);
+}
+
+console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow`);

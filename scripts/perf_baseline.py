@@ -99,6 +99,7 @@ STATES = {
     # the Future ICU theme: its five fittings and their screens, by day and at night
     "future-day": [("theme", "future")],
     "future-night": [("theme", "future"), ("time", "night")],
+    "future-scene": [("theme", "future"), ("set", "scene", "forest")],
     # both moving pictures on, which also keep the page drawing while they're in view
     "screens-on": [("set", "tvplay", "on"), ("set", "aquarium", "digital")],
 }

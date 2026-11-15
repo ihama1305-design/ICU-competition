@@ -118,7 +118,15 @@ const STILLS = {
     simulated(g, w, h);
   }),
 };
-const screen = (w, h, texture) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: texture, toneMapped: false })); m.name = "fitting_screen"; return m; };
+/** A screen: `id` is how the smart clinical wall (wall.js) finds it to draw on it. */
+const screen = (w, h, texture, id) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }));
+  m.name = "fitting_screen"; m.userData.screen = id;
+  if (id === "staffLeft" || id === "staffRight" || id === "strip") m.name = "wall_screen"; // the smart clinical wall's own: a click opens its card
+  return m;
+};
+/** The screens' drawing tools, for wall.js. */
+export const PAINT = { simulated, heading, line, trace, INK, DIM, BG };
 
 // ---------------------------------------------------------------- the builders (addons.js adds them to its own)
 
@@ -166,7 +174,7 @@ export const FITTINGS = {
   staffPanel(room) {
     const f = FIT[room.label].staff, w = f.x[1] - f.x[0], g = onWall(new THREE.Group(), f, 1.2), d = 0.03;
     const panel = rounded(w, 1.1, d, 0.07, WHITE()); panel.position.y = 0.55;
-    const left = screen(1.04, 0.594, STILLS.staffObs()), right = screen(1.04, 0.594, STILLS.staffTasks());
+    const left = screen(1.04, 0.594, STILLS.staffObs(), "staffLeft"), right = screen(1.04, 0.594, STILLS.staffTasks(), "staffRight");
     left.position.set(-0.56, 0.6, d + 0.005); right.position.set(0.56, 0.6, d + 0.005);
     const bezel = std("#1b2226", 0.4);
     g.add(panel, box(1.08, 0.634, 0.004, bezel, -0.56, 0.6, d + 0.002), box(1.08, 0.634, 0.004, bezel, 0.56, 0.6, d + 0.002), left, right, lightLine(room, w - 0.2, -0.03, 0.012));
@@ -181,9 +189,10 @@ export const FITTINGS = {
   patientWall(room) {
     const f = FIT[room.label].patient, w = f.x[1] - f.x[0], g = onWall(new THREE.Group(), f, 1.05), d = 0.03;
     const panel = rounded(w, 1.35, d, 0.07, WHITE()); panel.position.y = 0.675;
-    const sw = w - 0.3, strip = screen(sw, sw / 8, STILLS.patientStrip());
+    const sw = w - 0.3, strip = screen(sw, sw / 8, STILLS.patientStrip(), "strip");
     strip.position.set(0, 1.35 - 0.06 - sw / 16, d + 0.005);
-    g.add(panel, box(sw + 0.03, sw / 8 + 0.03, 0.004, std("#1b2226", 0.4), 0, strip.position.y, d + 0.002), strip, lightLine(room, w - 0.2, -0.03, 0.012));
+    strip.userData.bezel = box(sw + 0.03, sw / 8 + 0.03, 0.004, std("#1b2226", 0.4), 0, strip.position.y, d + 0.002);
+    g.add(panel, strip.userData.bezel, strip, lightLine(room, w - 0.2, -0.03, 0.012));
     g.userData.onWall = true; // placed items can't hang over it (placed.js)
     return tag(g, "Patient wall", "A flush panel round the TV, with a strip of screen over it. Simulated.");
   },
@@ -196,21 +205,20 @@ export const FITTINGS = {
     const f = FIT[room.label].desk, w = f.x[1] - f.x[0], D = 0.5, g = onWall(new THREE.Group(), f, 0);
     const white = WHITE(), timber = std("#ffffff", 0.55, { map: drawn("oak", 1, 1) }), dark = std("#262c30", 0.45), plinth = std("#9aa1a4", 0.6);
     const top = rounded(w, D, 0.03, 0.06, white); top.rotation.x = -Math.PI / 2; top.position.set(0, 0.73, D / 2); // its rounded corners face the room
-    const tw = w * 0.42;
-    g.add(top,
-      box(tw, 0.62, D - 0.04, timber, -w / 2 + tw / 2 + 0.01, 0.42, (D - 0.04) / 2),
-      box(w - tw - 0.03, 0.62, D - 0.04, white, w / 2 - (w - tw - 0.03) / 2 - 0.01, 0.42, (D - 0.04) / 2),
+    const tw = w * 0.42, supplies = box(tw, 0.62, D - 0.04, timber, -w / 2 + tw / 2 + 0.01, 0.42, (D - 0.04) / 2), ppe = box(w - tw - 0.03, 0.62, D - 0.04, white, w / 2 - (w - tw - 0.03) / 2 - 0.01, 0.42, (D - 0.04) / 2);
+    supplies.name = "ws_supplies"; ppe.name = "ws_ppe"; // the two cupboards the supply locator lights (wall-data.js SUPPLIES)
+    g.add(top, supplies, ppe,
       box(w - 0.06, 0.1, D - 0.1, plinth, 0, 0.05, (D - 0.1) / 2));
     for (const x of [-w / 2 + tw + 0.06, w / 2 - 0.08]) g.add(box(0.012, 0.12, 0.02, dark, x, 0.6, D - 0.03)); // handles
     // the screen on the desk, and its keyboard
     const mon = new THREE.Group(); mon.position.set(-0.05, 0.76, 0.16);
     mon.add(box(0.5, 0.31, 0.025, dark, 0, 0.23, 0), box(0.04, 0.12, 0.03, dark, 0, 0.06, -0.01), box(0.18, 0.012, 0.12, dark, 0, 0.006, 0));
-    const ds = screen(0.47, 0.289, STILLS.desk()); ds.position.set(0, 0.23, 0.0135); mon.add(ds);
+    const ds = screen(0.47, 0.289, STILLS.desk(), "desk"); ds.position.set(0, 0.23, 0.0135); mon.add(ds);
     g.add(mon, box(0.4, 0.015, 0.13, std("#e6e8e7", 0.5), -0.05, 0.768, 0.36));
     // the second screen, on an arm from the wall
     const arm = new THREE.Group(); arm.position.set(w / 2 - 0.26, 1.52, 0);
     arm.add(box(0.06, 0.1, 0.02, dark, 0, 0, 0.01), box(0.03, 0.03, 0.17, dark, 0, 0, 0.1), box(0.44, 0.27, 0.025, dark, 0, 0, 0.2));
-    const as = screen(0.41, 0.249, STILLS.arm()); as.position.set(0, 0, 0.2135); arm.add(as);
+    const as = screen(0.41, 0.249, STILLS.arm(), "arm"); as.position.set(0, 0, 0.2135); arm.add(as);
     g.add(arm);
     // a lit service rail on the wall over the desk
     g.add(box(w - 0.1, 0.04, 0.025, std("#c9cfd1", 0.4, { metalness: 0.3 }), 0, 1.12, 0.0125), lightLine(room, w - 0.16, 1.095, 0.02));
