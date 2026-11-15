@@ -8,7 +8,7 @@ import { Lighting, autoKelvin, circadianLevel } from "./lights.js";
 import { Bedside } from "./bedside.js";
 import { BedView } from "./bed-view.js";
 import { POSITIONS as BED_POSITIONS } from "./bed.js";
-import { DEFAULT_STATE, ORIENTATION, STATES, STATE_MS } from "./patient-states.js";
+import { DEFAULT_STATE, OFFERS, ORIENTATION, STATES, STATE_MS } from "./patient-states.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook } from "./surfaces.js";
 import { setAddon, setAddonLook, setOldWardrobe, setOrientation, setShade, setTv, setWardrobe, setOrientationLines, syncDampers, syncPalms, tickAddons, tickWardrobe, toggleWardrobe, wardrobeFigures, wardrobeMoving } from "./addons.js";
@@ -31,7 +31,9 @@ import { ACROSS, FITTINGS, syncFittings } from "./fittings.js";
 import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip } from "./layout.js";
 import { WallView, buttonAt } from "./wall.js";
 import { Station } from "./station.js";
-import { SCENES, SCENE_MS, STRIP_TEXT, wallFor } from "./wall-data.js";
+import { SCENES, SCENE_MS, STRIP_TEXT, TASKS, wallFor } from "./wall-data.js";
+import { Twin } from "./twin.js";
+import { twinRead } from "./twin-data.js";
 import { CLEANING_KINDS, CLEANING_STEPS, CLEANING_TEXT } from "./cleaning-data.js";
 import { GuidedTour, CAVEAT, TOUR_LINKS } from "./guide.js";
 import { Features } from "./features.js";
@@ -107,7 +109,7 @@ function resize() {
   stage.resize(w, h);
   stage.camera.aspect = w / h;
   const cls = document.body.classList;
-  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : cls.contains("station-active") ? restingRect($("stationPanel")) : panel.getBoundingClientRect();
+  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : cls.contains("station-active") ? restingRect($("stationPanel")) : cls.contains("twin-active") ? restingRect($("twinPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -115,7 +117,7 @@ function resize() {
   stage.camera.setViewOffset(w, h, coverX / 2, coverY / 2, w, h);
   rig.visible = { w: w - coverX, h: h };
   if (rig.meta) rig.fit();
-  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active") || cls.contains("station-active"); // off-screen, or covered by a panel in its place
+  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active") || cls.contains("station-active") || cls.contains("twin-active"); // off-screen, or covered by a panel in its place
   $("panelBody").inert = closed;
   panel.querySelector(".actions").inert = closed;
   stage.camera.updateProjectionMatrix();
@@ -187,6 +189,7 @@ function setTime(h) {
   state.hour = h;
   if (!isNight(h)) lastDayHour = h;
   relight();
+  twinRefresh();
   stage.renderer.shadowMap.needsUpdate = true;
   const slider = $("time");
   slider.value = String(h);
@@ -206,6 +209,7 @@ async function setRoom(label, { keepView = true } = {}) {
   setAcoustic(false); // its map and labels are this room's
   setBed(false); // and the bed panel's
   setStation(false); // and the workstation's, with its lit places
+  setTwin(false); // and the twin's
   station.reset(); // another room, another made-up patient
   endVocalCue(); // its notice names the room being left
   endCompare();
@@ -352,7 +356,10 @@ function layoutNow() {
     const b = plan(new THREE.Box3().setFromObject(w));
     areas.push({ id: "wardrobe", label: "In front of the wardrobe", kind: "wardrobe", poly: [[b[0], b[1] - WARDROBE_REACH], [b[3], b[1] - WARDROBE_REACH], [b[3], b[1]], [b[0], b[1]]] });
   }
-  return { findings: checkLayout({ solids, areas, mounted: MOUNTED }), solids: solids.map(s => s.id), areas: areas.map(a => a.id) };
+  return {
+    findings: checkLayout({ solids, areas, mounted: MOUNTED }), solids: solids.map(s => s.id), areas: areas.map(a => a.id),
+    names: Object.fromEntries([...solids.map(s => [s.id, s.label]), ...areas.map(a => [a.id, a.label])]),
+  };
 }
 
 // ---------------------------------------------------------------- options, from options.json
@@ -938,6 +945,7 @@ function renderCleaning() {
   $("cleaningDone").hidden = !cleaningOn || !!next;
   const objs = next ? cleaningPlace(next.where) : [];
   if (objs.length) highlight.show("cleaning", objs); else highlight.clear("cleaning");
+  twinRefresh();
   invalidate();
 }
 
@@ -1019,6 +1027,7 @@ const ACTION_HANDLERS = {
   "bed:pressure": { label: () => "Open the pressure map", run: () => setBed(true, "pressure") },
   "bed:lines": { label: () => "Open the lines", run: () => setBed(true, "lines") },
   station: { label: () => "Open the workstation", run: () => setStation(true) },
+  twin: { label: () => "Open the digital twin", run: () => setTwin(true) },
 };
 // "demo:<id>": another of the feature's demos, such as the wardrobe's compartments, under the label that demo gives
 for (const a of ACTIONS) if (a.startsWith("demo:")) ACTION_HANDLERS[a] = { label: () => DEMOS[a.slice(5)].label, run: () => startDemo($("objectCard").dataset.feature, a.slice(5)).catch(err => window.__configErrors.push(String(err))) };
@@ -1349,6 +1358,8 @@ const demoApi = {
     if (demo) demo.hidPlaced = true;
     settle(); relight(); refreshExplore();
   },
+  // the digital twin open on one of its systems (null: none chosen)
+  twin: id => { if (!twinOn) setTwin(true, { fromDemo: true }); twin.choose(id, { toggle: false }); },
   // Cleaning's first n steps ticked: the demo says it plays the person ticking
   clean: n => { if (!cleaningOn) modes.set("cleaning", { instant: true }); cleaningTicks = new Set(CLEANING_STEPS.slice(0, n).map(x => x.id)); renderCleaning(); },
   // a task chosen, or pressed Done: the demo says it plays the staff member who presses it
@@ -1384,7 +1395,7 @@ async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   $("objectCard").hidden = true;
   demo = {
     id: demoId, feature: f.id, steps, at: -1, token: 0, timer: 0, opener,
-    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot(), station: station.snapshot(), stationOn },
+    snap: { code: specCode(), hour: state.hour, mode: modes.current, wardrobe: stage.current.addons?.wardrobe?.userData.side ?? null, pose: cameraPose(), patient: patientState, bed: bedView.snapshot(), station: station.snapshot(), stationOn, twinOn, twinSystem: twin.system },
   };
   if (modes.current !== "standard") modes.set("standard", { instant: true }); // a mode would hide what the demo shows
   $("demoName").textContent = f.name;
@@ -1428,6 +1439,8 @@ function endDemo(why = "") {
   bedView.restore(d.snap.bed);
   if (d.hidPlaced) placement.show(stage.current); // the visitor's placed items, hidden while today's room showed
   if (stationOn && !d.snap.stationOn) setStation(false); // and the workstation's, with its views and ticks as they were
+  if (twinOn && !d.snap.twinOn) setTwin(false); // and the twin's, with the system the visitor had chosen
+  twin.system = d.snap.twinSystem;
   station.restore(d.snap.station);
   highlight.clear("demo");
   setOldWardrobe(stage.current, false);
@@ -1488,6 +1501,7 @@ function setAcoustic(on, { fromDemo = false } = {}) {
     setBedside(false); // one panel in the options panel's place at a time
     setBed(false);
     setStation(false);
+    setTwin(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1776,6 +1790,7 @@ function setBed(on, tab, { fromDemo = false } = {}) {
     setAcoustic(false);
     setBedside(false);
     setStation(false);
+    setTwin(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1839,6 +1854,7 @@ function syncWall({ instant = false } = {}) {
   }, { instant });
   stage.refreshCeiling();
   setEnvLight(st.light, { instant });
+  twinRefresh(); // the twin reads the room as it is
   invalidate();
 }
 
@@ -1933,6 +1949,7 @@ function setStation(on, { fromDemo = false } = {}) {
     setAcoustic(false);
     setBedside(false);
     setBed(false);
+    setTwin(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1981,6 +1998,112 @@ $("openStation").addEventListener("click", e => {
   setStation(true);
 });
 
+// ---------------------------------------------------------------- the digital twin (twin-data.js, twin.js)
+// The room's hidden state, readable: the room health dashboard in five separate parts and each system's state in words, lit
+// in the room when chosen. It reads the room as it is, again whenever anything changes, and changes nothing itself. It
+// takes the options panel's place, as the bed's and the workstation's panels do. SIMULATED throughout.
+var twinOn = false, twinOpener = null, twinFromSheet = false, twinPose = null, twinQueued = false, twinEasing = false;
+var twin = new Twin($("twinPanel"), { read: () => twinRead(twinInput()), light: id => lightTwin(id), say });
+
+/** What the room is doing now, for twinRead(). Every value is one the room already has. */
+function twinInput() {
+  const room = stage.current, a = room.addons || {}, on = id => !!a[id]?.visible, tv = a.tv?.userData, w = a.wardrobe;
+  const look = lighting.scene || lighting.patient || lighting.env || lighting.base(state.hour);
+  const lay = layoutNow(), added = id => id.startsWith("placed:") || (id.startsWith("addon:") && id.slice(6) in FITTINGS);
+  const mine = lay.findings.filter(f => added(f.a) || added(f.b));
+  const next = cleaningOn ? CLEANING_STEPS.find(x => !cleaningTicks.has(x.id)) : null;
+  return {
+    mode: modes.current, state: patientState, quiet: quietOn,
+    light: { kelvin: look.kelvin, level: look.level, from: lighting.scene ? "mode" : lighting.patient ? "patient" : lighting.env ? "scene" : "set", task: lighting.taskOn },
+    blinds: modeApi.blindsNow(), glass: { front: glass.mode, opaque: glass.opaque, level: glass.level },
+    temp: Number($("demoTemp").value), humidity: Number($("demoHumidity").value), noise: acousticView.readings(room, fittingsShown()).pillow,
+    wall: wallNow(), sceneLabel: SCENES[wallNow().ceiling || wallNow().scene]?.label.toLowerCase() || "",
+    tv: !tv ? "off" : tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.familyOn ? "family" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off",
+    fittings: Object.fromEntries(Object.keys(FITTINGS).map(id => [id, on(id)])), sky: on("sky"), wardrobe: { shown: on("wardrobe"), side: w?.userData.side ?? null },
+    lineClips: on("lineClips"), bed: { position: BED_POSITIONS[bedView.position].label.toLowerCase(), minutes: bedView.minutes, reminder: bedView.reminderState() },
+    tasks: { done: station.done.size, total: TASKS.length },
+    layout: { added: mine.map(f => ({ level: f.level, label: lay.names[added(f.a) ? f.a : f.b] || f.a, what: f.level === "overlap" ? `overlaps ${(lay.names[added(f.a) ? f.b : f.a] || "").toLowerCase()}` : `in ${(lay.names[f.b] || "a clear area").toLowerCase()}` })), own: lay.findings.length - mine.length },
+    placed: placement.list(state.room).length,
+    board: OFFERS[patientState].board, family: OFFERS[patientState].family, requests: bedside.requests.length,
+    cleaning: { on: cleaningOn, ticks: cleaningTicks.size, total: CLEANING_STEPS.length, next: next?.label },
+  };
+}
+
+/** The objects a system covers, to light in the room. */
+function twinObjects(id) {
+  const room = stage.current, a = room?.addons || {}, shown = n => n && n.visible, part = n => room?.parts[n] || [];
+  const desk = a.workstation?.visible ? ["ws_supplies", "ws_ppe"].map(n => a.workstation.getObjectByName(n)) : [];
+  return ({
+    bed: part("cfg_kit_bed"),
+    ceiling: [a.ceilingTray, a.sky, room?.wallState?.ceilingScene, a.daylightSensor, a.soundSensor].filter(shown),
+    walls: [a.staffPanel, a.patientWall, a.tv, a.comfortControl, room?.front?.body].filter(shown),
+    storage: [a.wardrobe, a.bedsideCabinet, ...desk].filter(shown),
+    equipment: [...part("cfg_kit_pendant"), ...part("cfg_kit_monitor"), ...part("cfg_kit_pumps"), ...part("cfg_kit_ventilator"), ...part("cfg_kit_iv_pole")],
+    floor: placement.list(state.room).map(p => p.node).filter(shown),
+  })[id] || [];
+}
+/** Light what a system covers, and on the floor show the route to the bed. null: the soft outline of every system only. */
+function lightTwin(id) {
+  if (!twinOn) return;
+  const objs = id ? twinObjects(id) : [];
+  if (objs.length) highlight.show("twin", objs); else highlight.clear("twin");
+  showRoute(id === "floor");
+  invalidate();
+}
+
+/** Read the room again on the next frame, once, however many things changed in this one. */
+function twinRefresh() {
+  if (!twinOn || twinQueued) return;
+  twinQueued = true;
+  requestAnimationFrame(() => { twinQueued = false; if (!twinOn) return; twin.render(); lightTwin(twin.system); });
+}
+
+function setTwin(on, { fromDemo = false } = {}) {
+  if (on) {
+    if (!fromDemo) { endDemo(); endCompare(); }
+    setAcoustic(false); setBedside(false); setBed(false); setStation(false);
+    tour.stop();
+    if (pacs.active) pacs.exit();
+    $("objectCard").hidden = true;
+    if (!twinOn) { if (!twinOpener) twinOpener = document.activeElement; twinPose = cameraPose(); }
+    twinOn = true;
+    $("twinPanel").hidden = false;
+    document.body.classList.add("twin-active");
+    resize();
+    // every system faintly, so the room's hidden parts show at once
+    highlight.show("twinAll", ["bed", "ceiling", "walls", "storage", "equipment"].flatMap(twinObjects), "soft");
+    twin.render();
+    lightTwin(twin.system);
+    if (!fromDemo) $("twinTitle").focus({ preventScroll: true });
+    say("The digital twin: the room's state, read from the room as it is. Simulated.");
+  } else {
+    if (!twinOn) return;
+    twinOn = false;
+    highlight.clear("twin"); highlight.clear("twinAll");
+    if (!stationOn || !station.emergency) showRoute(false);
+    $("twinPanel").hidden = true;
+    document.body.classList.remove("twin-active");
+    resize();
+    if (twinPose) restorePose(twinPose);
+    twinPose = null;
+    if (twinFromSheet && isPhone()) setSheet(true);
+    twinFromSheet = false;
+    const back = twinOpener?.isConnected && !twinOpener.closest("[hidden]") && !twinOpener.closest("[inert]") && twinOpener.offsetParent ? twinOpener : canvas;
+    twinOpener = null;
+    back.focus({ preventScroll: true });
+    if (features?.on) refreshExplore();
+  }
+  invalidate();
+}
+$("twinClose").addEventListener("click", () => setTwin(false));
+$("twinPanel").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); setTwin(false); } });
+$("openTwin").addEventListener("click", e => {
+  twinOpener = e.currentTarget;
+  twinFromSheet = isPhone() && panel.classList.contains("open");
+  if (twinFromSheet) setSheet(false);
+  setTwin(true);
+});
+
 var bedside = new Bedside($("bedside"), {
   state: () => patientState,
   reminder: () => bedView.reminderState(),
@@ -1993,6 +2116,7 @@ var bedside = new Bedside($("bedside"), {
   scene: on => { family.scene = on; showLayer("patient", patientShows()); say(on ? "The personal scene is on the TV." : "The personal scene is off the TV."); },
   familyLines: on => { family.lines = on; orientationLines(); say(on ? "Family's line is on the orientation screen." : "Family's line is off the orientation screen."); },
   quiet: on => applyQuiet(on),
+  requests: () => twinRefresh(), // a request went up or was acknowledged
   privacy: () => { endCompare(); modes.set("privacy"); }, // staff, from the privacy request on the nurse-side list
   noise: () => (stage.current ? `Noise at the pillow: about ${Math.round(acousticView.readings(stage.current, fittingsShown()).pillow)} dBA, illustrative. Acoustic comfort mode shows where it comes from.` : "Noise at the pillow: see Acoustic comfort mode. Illustrative."),
 });
@@ -2003,6 +2127,7 @@ function setBedside(on, tab) {
     setAcoustic(false);
     setBed(false);
     setStation(false);
+    setTwin(false);
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
     if (!bedsideOn && !bedsideOpener) bedsideOpener = document.activeElement;
@@ -2546,6 +2671,10 @@ function frame(now) {
   if (updatePatient(now)) dirty = true;
   if (wallView.update(now)) dirty = true;
   if (updateEnv(now)) dirty = true;
+  // the twin reads the room again once a mode, a state or a scene has finished easing in
+  const easing = modes.easing || !!envTween || !!patientTween;
+  if (twinEasing && !easing) twinRefresh();
+  twinEasing = easing;
   if (pacs.update(now)) dirty = true;
   if (dirty) {
     dirty = false;
@@ -2799,6 +2928,8 @@ window.__config = {
   stationCommand: id => station.command(id),
   stationTask: (id, done) => (done ? station.toggleDone(id, { focus: false }) : station.choose(id, { focus: false })),
   stationView: id => station.setView(id),
+  twin: () => ({ open: twinOn, ...twin.inspect(), read: twinOn ? twinRead(twinInput()) : null, outlined: highlight.has("twin"), all: highlight.has("twinAll"), route: !!stage.current.stationRoute?.visible }),
+  twinChoose: id => twin.choose(id, { toggle: false }),
   /** From the camera as it stands, in screen pixels: the strip's letters, and the orientation screen's detail lines. */
   readable: () => {
     const room = stage.current, strip = stripOf(room), tv = room.addons?.tv?.userData.screen;
@@ -2871,7 +3002,7 @@ window.__config = {
       wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.familyOn ? "family" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque, glass.level], cleaning: JSON.stringify([cleaningOn, [...cleaningTicks], highlight.has("cleaning")]), figure: stage.current.patient ? stage.current.patient.root.visible : null, blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
       overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
-      bed: JSON.stringify([bedOn, bedView.snapshot()]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
+      bed: JSON.stringify([bedOn, bedView.snapshot()]), twin: JSON.stringify([twinOn, twin.system, highlight.has("twin"), highlight.has("twinAll")]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
       wallScenes: JSON.stringify([stage.current.wallState?.wallScene?.visible ?? false, stage.current.wallState?.ceilingScene?.visible ?? false]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,
     };
   },

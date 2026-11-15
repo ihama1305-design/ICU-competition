@@ -765,6 +765,26 @@
    "objects": [],
    "control": "transformPlay",
    "demo": "transformIcu"
+  },
+  {
+   "id": "digitalTwin",
+   "name": "Digital twin",
+   "group": "workflow",
+   "purpose": "A digital reflection of the room: its hidden state made visible, so the space, equipment, environment and work can be seen together.",
+   "how": "Open the digital twin. Seven systems, each read in words and lit in the room when chosen: the bed, the ceiling with its sensors and light, the walls with their screens, privacy and comfort control, storage, equipment, the floor and its clear areas, and the mode in force with its row of the mode table. Above them, room health in five separate parts: environmental comfort, equipment organisation, access clearance, communication readiness and the cleaning checklist. Each part says whether there's anything to look at. It reads the room as it is: change the mode, the patient's state or a choice, and it changes.",
+   "benefit": "One place to see how the room is set up right now, without walking round it.",
+   "awake": "It shows whether the board, the wall's buttons and family connection are offered to the patient.",
+   "sedated": "It shows the bed's position, its reminder and the lines, which staff check most.",
+   "limits": "A concept: it reads only this model, with its simulated and illustrative values, and monitors nothing. The five parts are never added into a score, and it shows no vital signs, which are PACS's. Its clear areas are this model's own, not hospital rules.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "openTwin",
+   "demo": "digitalTwin",
+   "actions": [
+    "twin"
+   ]
   }
  ]
 }

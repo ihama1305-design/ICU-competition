@@ -181,6 +181,7 @@ export class Bedside {
     this.api.say(`Simulated request at the nurse station: ${item.label}, at ${time}.`);
   }
   renderRequests() {
+    this.api.requests?.(); // the digital twin counts what's waiting
     this.listEmpty.hidden = this.requests.length > 0;
     this.list.replaceChildren(...this.requests.map(r => {
       const ack = button("Acknowledge");

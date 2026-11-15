@@ -2722,6 +2722,68 @@ with sync_playwright() as p:
     check(not errs, f"the presentation: no errors {errs[:3]}")
     ctx.close()
 
+    # ---------------------------------------------------------------- the digital twin: the room read as it is, five separate parts, no total, no vital signs
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+    TW = "window.__config.twin()"
+
+    def settled():
+        pg.wait_for_function("!window.__config.mode().easing && !window.__config.fading() && !window.__config.patientState().easing", timeout=60000)
+        pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+        return pg.evaluate(TW)
+
+    for room in ROOMS:
+        go(pg, room)
+        pg.click("#themes button[data-value='future']")
+        pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
+        before = pg.evaluate("({ code: window.__config.code() })")
+        pg.click("#openTwin")
+        pg.wait_for_selector("#twinPanel", state="visible", timeout=10000)
+        t = settled()
+        check(t["open"] and t["all"] and t["parts"] == ["Environmental comfort", "Equipment organisation", "Access clearance", "Communication readiness", "Cleaning checklist"] and pg.evaluate("document.activeElement.id") == "twinTitle",
+              f"{room}: the digital twin opens in the options' place, with every system faintly outlined and room health in five parts {t['parts']}")
+        read = t["read"]
+        check(not any(k in read for k in ("total", "score")) and not any("score" in h for h in read["health"]) and not any(w in pg.inner_text("#twinPanel").lower() for w in ("heart rate", "oxygen saturation", "blood pressure", "breathing rate")),
+              f"{room}: no total, no score, and no vital signs on it")
+        # each system, read in words and lit in the room
+        bad = []
+        for sys_id in ["bed", "ceiling", "walls", "storage", "equipment", "floor", "mode"]:
+            pg.click(f"#twinSystems button[data-system='{sys_id}']")
+            t = settled()
+            if t["system"] != sys_id or not t["detail"] or (sys_id not in ("mode", "floor") and not t["outlined"]) or (sys_id == "floor") != t["route"]:
+                bad.append((sys_id, t["system"], t["outlined"], t["route"]))
+        check(not bad, f"{room}: each system reads its state and lights what it covers; the floor shows the route to the bed {bad}")
+        # it reads the room as it is: the mode, the patient's state, a request, Cleaning
+        pg.click("#modeBar button[data-mode='comfort']")
+        t = settled()
+        light = t["read"]["health"][0]["lines"][0]
+        check(t["detail"].startswith("The mode in forceComfort") and "warm" in light and "room mode" in light, f"{room}: change the mode and it changes: Comfort's row, and the light from the mode {light!r}")
+        pg.click("#modeBar button[data-mode='standard']")
+        t = settled()
+        check("room as set" in t["read"]["health"][0]["lines"][0], f"{room}: and back, once the light has finished easing {t['read']['health'][0]['lines'][0]!r}")
+        pg.click("#patientBar button[data-state='sedated']")
+        t = settled()
+        comm = next(h for h in t["read"]["health"] if h["id"] == "communication")
+        check("not offered while sedated" in comm["lines"][0], f"{room}: a sedated patient isn't offered the board, and the twin says so {comm['lines'][0]!r}")
+        pg.click("#patientBar button[data-state='awake']")
+        pg.click("#modeBar button[data-mode='cleaning']")
+        t = settled()
+        cl = next(h for h in t["read"]["health"] if h["id"] == "cleaning")
+        check(cl["state"] == "look" and "0 of 9" in cl["lines"][0], f"{room}: Cleaning shows its checklist's progress {cl}")
+        pg.click("#leaveCleaning")
+        t = settled()
+        check(next(h for h in t["read"]["health"] if h["id"] == "cleaning")["state"] == "off", f"{room}: and stops when Cleaning ends")
+        faults = axe_faults(pg, "#twinPanel")
+        check(not faults, f"{room}: the twin passes axe {faults[:3]}")
+        shot(pg, f"{room.lower()}_twin")
+        pg.focus("#twinSystems button[data-system='bed']")  # from inside the panel, as the other panels close
+        pg.keyboard.press("Escape")
+        t = pg.evaluate(TW)
+        check(gone(pg, "#twinPanel") and not t["open"] and not t["outlined"] and not t["all"] and not t["route"] and pg.evaluate("document.activeElement.id") == "openTwin" and pg.evaluate("window.__config.code()") == before["code"],
+              f"{room}: Esc closes it, its outlines and route go, focus goes back to its button, and no choice or link changed {[t['open'], t['outlined'], t['all'], t['route'], pg.evaluate('document.activeElement.id'), pg.evaluate('window.__config.code()'), before['code']]}")
+    check(not errs, f"the digital twin: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- reduced motion
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
@@ -3164,4 +3226,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, accessibility, adaptive quality, stats readout, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, accessibility, adaptive quality, stats readout, phone)")
