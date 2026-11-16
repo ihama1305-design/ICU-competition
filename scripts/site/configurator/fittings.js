@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import { W2T } from "./stage.js";
 import { drawn } from "./surfaces.js";
+import { GlowGeometry, glowMaterial } from "./lights.js";
 import { FIT } from "./fittings-data.js";
 
 export { ACROSS, FIT } from "./fittings-data.js";
@@ -160,6 +161,22 @@ export const FITTINGS = {
       const l = new THREE.Mesh(new THREE.BoxGeometry(len, 0.012, 0.006), lit); l.position.copy(W2T(mx + nx * 0.043, my + ny * 0.043, H - 0.03)); l.rotation.y = rot;
       g.add(b, l);
     }
+    // the line's halo on the tiles: bright at the border, gone half a metre in. Drawn, as the cove's is (lights.js), because
+    // real-time light doesn't bounce; it adds no light to the room. `inset` moves the outline in, keeping its corners sharp.
+    const inward = pts.map((p, i) => {
+      const [ax, ay] = p, [bx, by] = pts[(i + 1) % pts.length], len = Math.hypot(bx - ax, by - ay);
+      const n = [-(by - ay) / len, (bx - ax) / len];
+      return n[0] * (cx - (ax + bx) / 2) + n[1] * (cy - (ay + by) / 2) < 0 ? [-n[0], -n[1]] : n;
+    });
+    const inset = d => pts.map(([x, y], i) => {
+      const a = inward[(i + pts.length - 1) % pts.length], b = inward[i], k = d / (1 + a[0] * b[0] + a[1] * b[1]);
+      return [x + (a[0] + b[0]) * k, y + (a[1] + b[1]) * k];
+    });
+    const rim = inset(0.085), fade = inset(0.6), halo = new GlowGeometry(), up = ([x, y]) => { const v = W2T(x, y, H - 0.007); return [v.x, v.y, v.z]; };
+    for (let i = 0; i < pts.length; i++) { const j = (i + 1) % pts.length; halo.quad(up(rim[i]), up(rim[j]), up(fade[j]), up(fade[i]), 1, 1, 0, 0); }
+    const glow = new THREE.Mesh(halo.build(), room.fixtures?.trayGlow || glowMaterial());
+    glow.renderOrder = 1;
+    g.add(glow);
     const disc = new THREE.CylinderGeometry(0.04, 0.04, 0.01, 16);
     for (const [x, y] of f.downlights) { const d = new THREE.Mesh(disc, lit); d.position.copy(W2T(x, y, H - 0.009)); g.add(d); }
     room.ceiling.push(g); // shown and hidden with the ceiling (stage.refreshCeiling)

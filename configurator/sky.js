@@ -91,6 +91,12 @@ export class Daylight {
     this.relight();
   }
 
+  /** The colour daylight takes as it comes up off the floor onto the ceiling and walls. null: the usual warm one. */
+  setBounce(colour) {
+    this.groundBounce.set(colour || 0xbcae97);
+    this.relight();
+  }
+
   relight() {
     const day = this.day, night = 1 - day;
     this.hemi.intensity = 0.03 + 1.7 * day + this.fill * night * 1.05;
