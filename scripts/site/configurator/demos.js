@@ -206,6 +206,16 @@ export const DEMOS = {
       { say: "The ventilator stands on a docking spot fed from the pendant. Nothing here moves, clamps or disconnects a line.", run: a => a.cables("organised") },
     ],
   },
+  // Light across 24 hours: the four phases, quiet hours, and the staff override
+  day: {
+    steps: [
+      { say: "Morning daylight: the blinds are up, and bright, cool white comes up with the day.", run: a => a.day(9) },
+      { say: "Afternoon comfort: steady daylight white, with the blinds half down against the glare.", run: a => a.day(14.5) },
+      { say: "Evening wind-down: the light warms and dims, little by little, and the blinds come down.", run: a => a.day(19.5) },
+      { say: "Night sleep, in quiet hours: warm and low, enough to see by, with the blinds down.", run: a => a.day(2) },
+      { say: "Care needs full light: Clinical mode is the staff override, and it always wins over the plan.", run: a => a.mode("clinical") },
+    ],
+  },
   daylight: {
     steps: [
       { say: "Afternoon: the sensor sees daylight, so Comfort mode lowers the blinds against glare.", run: a => { a.time("afternoon"); a.camera("bed_window"); a.mode("comfort"); } },
@@ -218,6 +228,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin", "intel", "scan", "cables:apis"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin", "intel", "scan", "cables:apis", "day"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest
