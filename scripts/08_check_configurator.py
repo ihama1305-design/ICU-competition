@@ -373,12 +373,12 @@ with sync_playwright() as p:
     note = pg.inner_text("#modeNote")
     check(pg.locator("#modeBar button[data-mode='comfort']").get_attribute("aria-pressed") == "true" and "not affected" in note, "Comfort: its button is pressed and the note says what's not affected")
     why = pg.locator("#modeNote .mode-why")
-    check(why.count() == 1 and "after sunset" in why.inner_text().lower() and "blinds stay" in why.inner_text() and "blinds lower" not in note, f"Comfort after dark: one line says why the blinds stay ({note!r})")
+    check(why.count() == 1 and "after sunset" in why.inner_text().lower() and "blinds stay" in why.inner_text() and "lowered blinds" not in note, f"Comfort after dark: one line says why the blinds stay ({note!r})")
     shot(pg, "w1_mode_comfort_night")
     pg.evaluate("window.__config.time(window.__config.stops.afternoon)")  # crossing sunrise sets Comfort again, now with the blinds
     code0 = pg.evaluate("window.__config.code()")  # the link holds the time, which changed just now; a mode never does
     m = pg.evaluate("window.__config.mode()")
-    check(m["current"] == "comfort" and m["blinds"] == 1 and m["look"] == {"kelvin": 2700, "level": 0.35} and pg.locator("#modeNote .mode-why").count() == 0 and "blinds lower" in pg.inner_text("#modeNote"),
+    check(m["current"] == "comfort" and m["blinds"] == 1 and m["look"] == {"kelvin": 2700, "level": 0.35} and pg.locator("#modeNote .mode-why").count() == 0 and "lowered blinds" in pg.inner_text("#modeNote"),
           f"Comfort by day: the blinds lower too, and the after-dark line goes {m}")
     shot(pg, "w1_mode_comfort")
     pg.click("#modeBar button[data-mode='emergency']")
@@ -734,7 +734,7 @@ with sync_playwright() as p:
           "Finish puts the room back exactly as it was: choices, view, time, items, mode")
     e = pg.evaluate(ending)
     # the ending: Finish used to take the card away and change the room without a word, leaving nothing to do next
-    check(e["card"] and not e["running"] and e["title"] == "That's the tour" and e["count"] == "Finished" and "undone" in e["text"], f"after Finish the card stays to say the tour is over and its changes are undone {e}")
+    check(e["card"] and not e["running"] and e["title"] == "That's the tour" and e["count"] == "Finished" and "back to how it was" in e["text"], f"after Finish the card stays to say the tour is over and the room is back to how it was {e}")
     check(e["buttons"] == ["Try it yourself", "Watch again"] and not e["steps"] and not e["caveat"] and e["focus"] == "guideTry", f"the ending offers what comes next, in place of the tour's own controls, with the keyboard on the first {e}")
     check(said("Guided tour finished. The room is back as it was."), "the last thing announced after Finish is that the tour finished, after the announcements that putting the room back makes")
     shot(pg, "w1_guide_ending")
