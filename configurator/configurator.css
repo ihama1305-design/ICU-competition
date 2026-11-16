@@ -409,6 +409,32 @@ footer p { margin: 0; }
 .staff-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
 .staff-links button { min-height: 38px; }
 
+/* Light across 24 hours: a timeline in the options panel's place */
+.day-active #panel { visibility: hidden; pointer-events: none; }
+.day-open { width: 100%; margin-top: 8px; min-height: 40px; }
+.day-open[aria-pressed="true"] { background: var(--hover); border-color: var(--accent); }
+.day-track { position: relative; height: 92px; margin: 6px 0 2px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; touch-action: none; cursor: pointer; }
+.day-curve { position: absolute; left: 0; right: 0; top: 4px; width: 100%; height: 40px; }
+.day-phases { position: absolute; left: 0; right: 0; bottom: 0; height: 42px; }
+.day-seg { position: absolute; bottom: 0; height: 42px; padding: 4px 4px 0; border-left: 1px solid var(--line); color: var(--ink); font-size: 11px; line-height: 1.2; overflow: hidden; }
+.day-seg.seg-morning { background: rgba(127, 180, 214, 0.22); }
+.day-seg.seg-afternoon { background: rgba(217, 194, 122, 0.22); }
+.day-seg.seg-evening { background: rgba(227, 149, 80, 0.22); }
+.day-seg.seg-night { background: rgba(60, 70, 110, 0.18); }
+.day-quiet { position: absolute; top: 46px; height: 4px; border-radius: 2px; background: var(--accent); font-size: 0; }
+.day-handle { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: var(--ink); outline-offset: 2px; }
+.day-handle::after { content: ""; position: absolute; top: 40px; left: -7px; width: 17px; height: 17px; border: 2px solid var(--panel-solid); border-radius: 50%; background: var(--ink); }
+.day-handle:focus-visible { outline: 2px solid var(--accent); }
+.day-ticks { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+.day-panel .day-jump { grid-template-columns: 1fr 1fr; gap: 4px; margin: 8px 0; }
+.day-jump button { min-height: 38px; font-size: 12px; }
+.day-now { margin: 6px 0; font-size: 14px; font-weight: 600; }
+.day-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0 0 10px; font-size: 13px; }
+.day-facts dt { color: var(--muted); }
+.day-facts dd { margin: 0; }
+#dayPlay { min-height: 40px; margin-bottom: 8px; }
+.day-override.day-overridden { color: var(--ink); font-weight: 600; }
+
 /* the bed: the pressure map and the lines, in the options panel's place */
 .bed-active #panel { visibility: hidden; pointer-events: none; }
 .station-active #panel { visibility: hidden; pointer-events: none; }

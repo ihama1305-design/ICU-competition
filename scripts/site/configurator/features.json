@@ -49,7 +49,33 @@
    "objects": [
     "lights"
    ],
-   "demo": "circadian"
+   "demo": "circadian",
+   "actions": [
+    "day"
+   ]
+  },
+  {
+   "id": "dayPlan",
+   "name": "Light across 24 hours",
+   "group": "light",
+   "purpose": "A plan for the room's light and blinds over a whole day, in four phases: morning daylight, afternoon comfort, evening wind-down and night sleep.",
+   "how": "Open it from Time of day, then drag the hour along a 24-hour timeline, or step it with the arrow keys. The room shows the circadian light and the blinds at that hour, and every change takes an hour or more. Quiet hours, 10 pm to 6 am, are marked. Play the day runs through the 24 hours once, in 24 seconds, and stops.",
+   "benefit": "A clear day and night, with gradual changes and a dark, quiet night.",
+   "awake": "The reading light and the blinds are still there when the patient asks.",
+   "sedated": "The plan runs all the same, and staff set the light for care.",
+   "limits": "A plan, not a measurement, and light alone isn't shown to prevent delirium. Clinical and Emergency-ready are the staff override and always win. It changes no choice or link, and closing it puts the time back.",
+   "evidence": {
+    "text": "Mixed. A pilot in redesigned rooms with dynamic light saw less delirium, but the rooms changed in other ways too. A randomised trial of bright dynamic light alone found no effect.",
+    "strength": "Observational pilot; randomised trial, stopped early for futility",
+    "sourcesFrom": "scheme:circadian"
+   },
+   "objects": [],
+   "control": "openDay",
+   "demo": "day",
+   "demoLabel": "See the four phases",
+   "actions": [
+    "day"
+   ]
   },
   {
    "id": "privacy",

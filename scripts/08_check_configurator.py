@@ -2881,6 +2881,106 @@ with sync_playwright() as p:
     check(not errs, f"equipment and cables: no errors {errs[:3]}")
     ctx.close()
 
+    # ---------------------------------------------------------------- Light across 24 hours: a timeline to drag, four phases, blinds that follow, quiet hours, and the staff override
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+    DAY = "window.__config.day()"
+    faults = []
+    for room in ROOMS:
+        go(pg, room)
+        set_defaults(pg)
+        pg.evaluate("window.__config.camera('overview', { instant: true }); window.__config.time(window.__config.stops.afternoon)")
+        drawn(pg)
+        before = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code(), hash: location.hash })")
+        pg.locator("#openDay").scroll_into_view_if_needed()
+        pg.click("#openDay")
+        pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+        d = pg.evaluate(f"({{ d: {DAY}, focus: document.activeElement.id, options: getComputedStyle(document.getElementById('panel')).visibility, scheme: {DAY}.scheme }})")
+        check(d["d"]["open"] and d["focus"] == "dayTitle" and d["options"] == "hidden" and d["d"]["phase"] == "afternoon" and d["scheme"] == "circadian",
+              f"{room}: Light across 24 hours opens in the options panel's place, with focus, at the room's own hour, the circadian scheme shown {d['d']['handle']}")
+        # the four phases, by their buttons: the light and blinds follow
+        seen = {}
+        for ph in ("Morning daylight", "Afternoon comfort", "Evening wind-down", "Night sleep"):
+            pg.click(f"#dayTimeline .day-jump button:text-is('{ph}')")
+            seen[ph] = pg.evaluate(DAY)
+        m, a, n = seen["Morning daylight"], seen["Afternoon comfort"], seen["Night sleep"]
+        check(m["blinds"] < 0.05 and a["blinds"] == 0.5 and n["blinds"] > 0.95, f"{room}: the blinds follow the plan: up in the morning, half down in the afternoon, down at night {[m['blinds'], a['blinds'], n['blinds']]}")
+        check(a["plan"]["level"] == 1 and a["plan"]["kelvin"] >= 4500 and n["plan"]["level"] < 0.15 and n["plan"]["kelvin"] <= 2400 and n["quiet"] and not a["quiet"],
+              f"{room}: bright, cool white by day; warm and low at night, in quiet hours {a['plan']} {n['plan']}")
+        check("Quiet hours" in pg.inner_text("#dayFacts") and "Care still comes first" in pg.inner_text("#dayFacts"), f"{room}: quiet hours say care still comes first")
+        shot(pg, f"{room.lower()}_day_night")
+        faults += axe_faults(pg, "#dayPanel")
+        # the handle by keyboard, and by dragging the track
+        pg.focus("#dayTimeline .day-handle")
+        h0 = pg.evaluate(DAY)["hour"]
+        pg.keyboard.press("ArrowRight")
+        pg.keyboard.press("PageUp")
+        k = pg.evaluate(DAY)
+        check(abs(((k["hour"] - h0) % 24) - 1.25) < 1e-6 and pg.get_attribute("#dayTimeline .day-handle", "aria-valuetext") == k["handle"], f"{room}: the arrow keys step a quarter hour and Page Up an hour {h0} to {k['hour']}")
+        box = pg.locator("#dayTimeline .day-track").bounding_box()
+        pg.mouse.move(box["x"] + box["width"] * 0.25, box["y"] + box["height"] / 2)
+        pg.mouse.down()
+        pg.mouse.move(box["x"] + box["width"] * 0.6, box["y"] + box["height"] / 2, steps=6)
+        pg.mouse.up()
+        dr = pg.evaluate(DAY)
+        check(abs(dr["hour"] - 20.5) < 0.3 and dr["phase"] == "evening", f"{room}: dragging along the timeline moves the hour: 60% of the way from 6 am is about 8:30 pm {dr['hour']}")
+        # the link stays as it was while the hour moves
+        check(pg.evaluate("window.__config.code()") == before["code"], f"{room}: the link doesn't change while the hour is dragged")
+        # the staff override: Clinical's light wins, and the plan waits
+        pg.click("#modeBar button[data-mode='clinical']")
+        pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+        ov = pg.evaluate("({ look: window.__config.mode().look, text: document.getElementById('dayOverride').textContent })")
+        check(ov["look"] and ov["look"]["level"] == 1 and ov["look"]["kelvin"] == 4000 and "staff override wins" in ov["text"], f"{room}: Clinical mode is the staff override: its full neutral light wins over the plan {ov['look']}")
+        pg.click("#modeBar button[data-mode='standard']")
+        pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+        back = pg.evaluate(DAY)
+        check(pg.evaluate("window.__config.mode().look") is None and back["plan"] and abs(back["blinds"] - back["planBlinds"]) < 0.02, f"{room}: back in Standard, the plan's light and blinds return {back['blinds']} {back['planBlinds']}")
+        # Play the day: once round, then it stops by itself at the hour it began
+        start = back["hour"]
+        pg.click("#dayPlay")
+        check(pg.evaluate(DAY)["playing"], f"{room}: Play the day plays")
+        pg.wait_for_function(f"!{DAY}.playing", timeout=120000)
+        check(abs(pg.evaluate(DAY)["hour"] - start) < 1e-6 and pg.inner_text("#dayPlay") == "Play the day", f"{room}: and stops by itself, back at the hour it began")
+        # closing puts the time, the light, the blinds and the view back
+        pg.click("#dayClose")
+        drawn(pg)
+        after = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code(), hash: location.hash, focus: document.activeElement.id })")
+        diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k]]
+        check(not diff and after["code"] == before["code"] and after["focus"] == "openDay", f"{room}: closing puts the room back exactly, at its own time, focus on the button {diff[:4]}")
+    check(not faults, f"axe finds no serious faults in Light across 24 hours {faults[:4]}")
+    # Emergency-ready closes it and it waits; the circadian card opens it
+    pg.click("#openDay")
+    pg.click("#modeBar button[data-mode='emergency']")
+    em = pg.evaluate(DAY)["open"]
+    pg.evaluate("window.__config.openDay()")
+    check(not em and not pg.evaluate(DAY)["open"], "Emergency-ready closes Light across 24 hours, and it waits until Emergency-ready ends")
+    pg.click("#leaveEmergency")
+    pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
+    pg.evaluate("document.getElementById('featuresSection').open = true")
+    pg.click("#featureList button[data-feature='circadian']")
+    pg.wait_for_selector("#objectCard", state="visible", timeout=10000)
+    pg.click("#objectCard button:text-is('Open Light across 24 hours')")
+    check(pg.evaluate(DAY)["open"], "the circadian lighting card opens Light across 24 hours")
+    pg.keyboard.press("Escape")
+    check(not pg.evaluate(DAY)["open"], "Esc closes it")
+    check(not errs, f"Light across 24 hours: no errors {errs[:3]}")
+    ctx.close()
+    # a phone: a sheet, with the timeline inside the screen
+    ctx, pg, errs, _, _ = open_page(b, 390, 844, query="?tier=low", has_touch=True, is_mobile=True)
+    pg.tap("#sheet")
+    pg.wait_for_function("document.getElementById('panel').classList.contains('open')")
+    pg.locator("#openDay").scroll_into_view_if_needed()
+    pg.tap("#openDay")
+    drawn(pg)
+    sh = pg.evaluate("(() => { const p = document.getElementById('dayPanel').getBoundingClientRect(), t = document.querySelector('.day-track').getBoundingClientRect(); return { top: p.top, bottom: p.bottom, l: p.left, r: p.right, tl: t.left, tr: t.right, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()")
+    check(sh["l"] >= 0 and sh["r"] <= 390 and sh["bottom"] <= 844.5 and sh["top"] > 300 and sh["tl"] >= 0 and sh["tr"] <= 390 and sh["over"] <= 0, f"phone: Light across 24 hours is a sheet, its timeline inside the screen {sh}")
+    shot(pg, "phone_day")
+    pg.tap("#dayClose")
+    pg.wait_for_function("document.getElementById('panel').classList.contains('open')", timeout=10000)
+    check(pg.evaluate("document.activeElement.id") == "openDay", "phone: closing it brings the sheet back, with focus where it was")
+    check(not errs, f"phone, Light across 24 hours: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- reduced motion
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
@@ -3323,4 +3423,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, room intelligence and the room safety scan, equipment and cables, accessibility, adaptive quality, stats readout, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, room intelligence and the room safety scan, equipment and cables, Light across 24 hours, accessibility, adaptive quality, stats readout, phone)")

@@ -218,7 +218,7 @@ export class Lighting {
     this.day = day;
     // a room mode's look replaces the configured one while it's on, the patient's state's look sits under any mode (the
     // modes are the staff override), and a scene's look (Transform my environment) under both. None changes the option settings
-    const look = this.scene || this.patient || this.env || this.base(hour, day);
+    const look = this.scene || this.plan || this.patient || this.env || this.base(hour, day); // Light across 24 hours' plan sits under the modes
     const k = this.comfort?.kelvin ?? look.kelvin;
     const col = this.colour.copy(kelvinColour(k));
     const night = 1 - day;

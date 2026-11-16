@@ -16,6 +16,7 @@ import { CABLE_TEXT, CHANNELS, KINDS as CABLE_KINDS, ROUTES_BY_STATE } from "./s
 import { parseObject } from "./site/configurator/feature-links.js";
 import { APPLY, BOARD, BOARD_AR, BOARD_CONFIRM, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
 import { BANDS as PRESSURE_BANDS, DEFAULT_MINUTES, DEFAULT_POSITION, GRID, LINES, LINES_TEXT, MOVE_CHECK, PLAN, POSITIONS, POSITION_ORDER, PRESSURE_TEXT, SLACK, SLACK_BY, TIMES, peakOf, pressureMap, sustained } from "./site/configurator/bed.js";
+import { DAY_TEXT, PHASES, QUIET, blindsAt, inQuiet, lookAt, phaseAt, words } from "./site/configurator/day-plan.js";
 import { BACKGROUND, BANDS, FITTINGS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS, SOURCES, levelAt, sourceLevel } from "./site/configurator/acoustic.js";
 import { ACROSS, FIT } from "./site/configurator/fittings-data.js";
 import { DOOR_DEPTH, ROUTES, boxesOverlap, checkLayout, corridor, inPolygon, intrusion, strip } from "./site/configurator/layout.js";
@@ -155,6 +156,7 @@ const api = {
   patient: name => { assert.ok(STATES[name], `a demo sets a patient state that exists (${name})`); calls.push(["patient"]); },
   bed: tab => { assert.ok(["pressure", "lines"].includes(tab), `a demo opens the bed panel's ${tab} tab, which exists`); calls.push(["bed"]); },
   position: (id, minutes) => { assert.ok(POSITIONS[id] && TIMES.some(t => t.minutes === minutes), `a demo shows ${id} for ${minutes} min, a position and time the panel offers`); calls.push(["position"]); },
+  day: h => { assert.ok(h >= 0 && h < 24, `a demo shows the plan at ${h}, an hour of the day`); calls.push(["day"]); },
   askMove: id => { assert.ok(POSITIONS[id], `a demo asks for the line check before a move to ${id}`); calls.push(["askMove"]); },
   today: () => calls.push(["today"]),
   cables: state => { assert.ok([null, "traditional", "organised"].includes(state), `a demo shows the cables ${state}`); calls.push(["cables"]); },
@@ -438,7 +440,7 @@ for (let a = 0; a < lv.length; a++) for (let b = 0; b < lv.length; b++) {
 assert.equal(decide([]), null, "nothing claimed, nothing decided");
 // the page's systems obey the same order: a room mode's light over the patient's state's, over a scene's, over the configured
 const lightsSrc = read("./site/configurator/lights.js");
-assert.ok(/const look = this\.scene \|\| this\.patient \|\| this\.env \|\| this\.base\(hour, day\);/.test(lightsSrc), "the light: a mode (staff) over the patient's state, over a scene (comfort), over the room as configured (decoration)");
+assert.ok(/const look = this\.scene \|\| this\.plan \|\| this\.patient \|\| this\.env \|\| this\.base\(hour, day\);/.test(lightsSrc), "the light: a mode (staff) over Light across 24 hours' plan, over the patient's state, over a scene (comfort), over the room as configured (decoration)");
 for (const [mode, m] of Object.entries(MODES)) {
   const w = wallFor({ mode, scene: "forest", wall: "patient" });
   if (m.scenesOff) assert.ok(!w.scene && !w.light && !w.ceiling, `${mode}: it turns scenes off, and no scene's light or picture outranks it`);
@@ -539,4 +541,24 @@ assert.ok(/Nothing retracts, clamps or disconnects a line/.test(CABLE_TEXT.limit
 assert.ok(byId.get("ceilingPendant")?.objects[0] === "part:cfg_kit_pendant" && byId.get("cableOverlay")?.demo === "cables", "the ceiling pendant has its card, and the cables theirs, with a demo");
 assert.ok(/apis\.setMode\("routing"\)/.test(mainSrc) && !/cables/.test(read("./site/configurator/apis.js")), "APIS's tubing tab is opened as it is: nothing in APIS changed");
 
-console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow; the mode table with its five levels for ${Object.keys(MODES).length} modes across ${SYSTEMS.length} systems, every note one line that keeps medical alarms on, Cleaning's checklist, and the board in Arabic with ${BOARD.length} requests; the digital twin's ${TWIN_SYSTEMS.length} systems and ${HEALTH.length} separate parts, read from the room with no total and no vital signs; room intelligence's ${SENSORS.length} sensors and ${EVENTS.length} made-up events, raised by buttons, and the room safety scan's clear spot; ${CABLE_KINDS.length} kinds of cable, each labelled and coloured, with gas in its own channel`);
+// ---------------------------------------------------------------- Light across 24 hours (day-plan.js)
+assert.deepEqual(PHASES.map(p => p.label), ["Morning daylight", "Afternoon comfort", "Evening wind-down", "Night sleep"], "the brief's four phases, in order");
+assert.ok(PHASES.every((p, i) => i === 0 || p.from === PHASES[i - 1].to) && PHASES[3].to - PHASES[0].from === 24, "they meet end to end and cover the 24 hours");
+let maxK = 0, maxL = 0, maxB = 0;
+for (let h = 0; h < 24; h += 0.25) {
+  assert.ok(phaseAt(h), `${h}: every hour is in a phase`);
+  const a = lookAt(h), b = lookAt(h + 0.25);
+  maxK = Math.max(maxK, Math.abs(a.kelvin - b.kelvin)); maxL = Math.max(maxL, Math.abs(a.level - b.level)); maxB = Math.max(maxB, Math.abs(blindsAt(h) - blindsAt(h + 0.25)));
+  const w = words(h);
+  assert.ok(!/\d/.test(w.light + w.blinds), `${h}: the light and blinds are in words, with no number that looks measured`);
+}
+assert.ok(maxK <= 500 && maxL <= 0.15 && maxB <= 0.2, `every change is gradual: at most ${maxK} K, ${maxL.toFixed(2)} of the level and ${maxB.toFixed(2)} of the blinds in 15 minutes`);
+assert.ok(blindsAt(9) === 0 && lookAt(14.5).level === 1 && lookAt(14.5).kelvin >= 4500 && blindsAt(14.5) === 0.5 && lookAt(2).level < 0.15 && lookAt(2).kelvin <= 2400 && blindsAt(2) === 1,
+  "morning: blinds up; afternoon: bright, cool and the blinds half down; night: warm, low and the blinds down");
+assert.ok(inQuiet(23) && inQuiet(3) && !inQuiet(12) && !inQuiet(21.5) && QUIET.from === 22 && QUIET.to === 6 && /Care still comes first/.test(QUIET.note), "quiet hours run 10 pm to 6 am, and care still comes first");
+assert.ok(/Clinical and Emergency-ready are the staff override and always win/.test(DAY_TEXT.override) && /this\.scene \|\| this\.plan \|\| this\.patient/.test(read("./site/configurator/lights.js")),
+  "the plan's light sits under the room modes: Clinical and Emergency-ready always win");
+const dp = byId.get("dayPlan");
+assert.ok(dp && dp.control === "openDay" && dp.evidence.sourcesFrom === "scheme:circadian" && sourcesOf("scheme:circadian").length === 2 && /found no effect/.test(dp.evidence.text),
+  "the card cites the two lighting studies options.json already holds, the trial that found no effect among them");
+console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow; the mode table with its five levels for ${Object.keys(MODES).length} modes across ${SYSTEMS.length} systems, every note one line that keeps medical alarms on, Cleaning's checklist, and the board in Arabic with ${BOARD.length} requests; the digital twin's ${TWIN_SYSTEMS.length} systems and ${HEALTH.length} separate parts, read from the room with no total and no vital signs; room intelligence's ${SENSORS.length} sensors and ${EVENTS.length} made-up events, raised by buttons, and the room safety scan's clear spot; ${CABLE_KINDS.length} kinds of cable, each labelled and coloured, with gas in its own channel; Light across 24 hours' four phases, gradual, under the modes`);
