@@ -432,6 +432,20 @@ Check 14 tests that medical gas never shares a channel with power or data, that 
 
 **Not done, and why.** No potted plant: living plants stay out of patient-care areas, as the nature card says. No photographic render: the room keeps the site's drawn style. The picture's blue light at every hour was not copied, because warm, dim light in the evening is what this design argues for.
 
+### When someone comes in (16 November 2026)
+
+**A person walks in, and the room is ready for them.** Iham asked to see a nurse, a doctor or the patient walk into the room and the room respond. Three short demos under View do this for a nurse, a doctor and a family visitor. A walking patient was left out: a patient arrives in intensive care on a bed, and admission isn't built. A plain figure, drawn in code in the patient figure's style with no face and no name, walks the route from the door to the bedside that the layout check already uses, at a calm pace, and turns to face the bed. With reduced motion it is at the bedside at once.
+
+**What the room does, and who decides.** The demo plays a badge tapped at the door, and its first caption says so. A badge only wakes screens that staff could open by hand: for a nurse the staff panel leaves standby and the clinician workstation opens in Nurse view, and for a doctor it opens in Doctor view. The light and the room's mode change only when a person chooses: the doctor chooses Clinical mode, a nurse turns on Family visit for the visitor, and each caption names who. For a family visitor the staff panel stays in standby, so nothing clinical is shown to them. Emergency comes first: no arrival demo starts over it.
+
+**What it isn't.** Nothing recognises anyone: there is no camera, no face or voice recognition and no tracking, and the figure senses nothing. It is a demo, so it changes no choice, link or summary, and the room is back as it was when it ends or is stopped. A real one would need the hospital's access-control system and a privacy review.
+
+| File | What it holds |
+|---|---|
+| `arrival-data.js` | The three people, the view an arrival is watched from in each room, and the walk's arithmetic along `layout.js`'s route. No Three.js, so check 14 reads it in Node |
+| `arrival.js` | The figure and its walk |
+| `demos.js` | `arrivalNurse`, `arrivalDoctor`, `arrivalFamily` |
+
 ### Every feature and its status
 
 One row per feature, from the same registry as the feature cards, plus the parts of the site that aren't cards and what isn't built. "What it isn't" is the start of each card's limits; the card has the rest, with its evidence.
@@ -470,6 +484,7 @@ One row per feature, from the same registry as the feature cards, plus the parts
 | Clinical workflow | Digital twin | A digital reflection of the room: its hidden state made visible, so the space, equipment, environment and work can be seen together. | A concept: it reads only this model, with its simulated and illustrative values, and monitors nothing. The five parts are never added into a score, and it shows no vital signs, which are PACS's. | Simulated |
 | Clinical workflow | Room intelligence | A room that notices when help may be needed: it would help staff see a possible safety concern while keeping the room calm and uncluttered. | A concept for monitoring and decision support, not a validated clinical device. Nothing watches or listens: no camera, no microphone and no sensor reading; every event is a button. | Simulated |
 | Clinical workflow | Room safety scan | Check a room digitally before it's built: the items a visitor places, against the space that care needs. | The areas are this model's own, set as data and illustrative: green means no modelled conflict found, never that a room is safe, and it isn't a compliance check against hospital rules. | Tool |
+| Clinical workflow | When someone comes in | The room gets its screens ready for whoever comes in: a nurse, a doctor or a family visitor taps a badge at the door. | Simulated: the demo plays the badge, and a plain figure stands in for the person. Nothing recognises anyone: no camera, no face or voice recognition and no tracking. Only a person changes the light or the room's mode. | Simulated |
 | Clinical workflow | Ceiling pendant | Ceiling services: the monitor, the pumps and the outlets hang from the ceiling at the bed head, so the floor round the bed stays clearer and the essentials are within reach. | A visual model of a pendant, not a specified product. Its position, load, services and the ceiling's structure would need engineering, infection-control and clinical review. | Concept |
 | Clinical workflow | Cables and channels | Less clutter, better access and safer movement: the cables and lines round the bed shown by kind, loose and then organised. | Illustrative routes, not an engineering or clinical design. Nothing retracts, clamps or disconnects a line, and nothing moves by itself. | Concept |
 | The site | Configurator | Rooms W1 and W3 on their measured shape: four themes, every finish, light and fitting as an option, the time of day, ten views, a share link that holds the exact room, a summary and an image. | A design proposal, not a construction or procurement drawing. Furniture and finishes are assumed. | Tool |

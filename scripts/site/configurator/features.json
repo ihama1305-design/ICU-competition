@@ -853,6 +853,28 @@
    ]
   },
   {
+   "id": "arrival",
+   "name": "When someone comes in",
+   "group": "workflow",
+   "purpose": "The room gets its screens ready for whoever comes in: a nurse, a doctor or a family visitor taps a badge at the door.",
+   "how": "Three short demos, under View. In each, a plain figure walks the route from the door to the bedside. For a nurse, the staff panel wakes from standby to observations and care tasks, and the clinician workstation opens in Nurse view. For a doctor, the workstation opens in Doctor view, and the doctor chooses Clinical mode for the examination. For a family visitor, the staff panel stays in standby, and a nurse turns on Family visit. When they leave, the room goes back to how it was set.",
+   "benefit": "Less to set up at the start of each visit: the staff's screens already show the right thing, and a visitor is shown nothing clinical.",
+   "awake": "Nothing changes for the patient when a badge is tapped: the light and the wall they face stay as they were until a person chooses a mode.",
+   "sedated": "The same: a badge wakes the staff's screens, and only a person changes the light.",
+   "limits": "Simulated: the demo plays the badge, and a plain figure stands in for the person. Nothing recognises anyone: no camera, no face or voice recognition and no tracking. A badge only wakes screens that staff could open by hand; the light and the room's mode change only when a person chooses. A real one needs the hospital's access-control system and a privacy review.",
+   "evidence": {
+    "text": "Expected, not shown."
+   },
+   "objects": [],
+   "control": "arrivalPlay",
+   "demo": "arrivalNurse",
+   "demoLabel": "A nurse comes in",
+   "actions": [
+    "demo:arrivalDoctor",
+    "demo:arrivalFamily"
+   ]
+  },
+  {
    "id": "ceilingPendant",
    "name": "Ceiling pendant",
    "group": "workflow",

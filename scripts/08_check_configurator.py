@@ -17,6 +17,7 @@ import functools
 import http.server
 import io
 import json
+import math
 import random
 import re
 import os
@@ -2981,6 +2982,83 @@ with sync_playwright() as p:
     check(not errs, f"phone, Light across 24 hours: no errors {errs[:3]}")
     ctx.close()
 
+    # ---------------------------------------------------------------- when someone comes in: the demo plays a badge, a figure walks the route, the staff's screens are ready, and the room is put back
+    ctx, pg, errs, _, _ = open_page(b, 1366, 820)
+    pg.add_script_tag(url=AXE)
+    AR = "window.__config.arrival()"
+    ARRIVE = {"nurse": "#featureDemo", "doctor": "#objectCard button[data-action='demo:arrivalDoctor']", "family": "#objectCard button[data-action='demo:arrivalFamily']"}
+    SEEN = """() => { const c = window.__config, d = c.demo(); if (!d?.waiting) return null;
+      const w = c.wall(), st = c.station();
+      return { at: d.at, text: document.getElementById('demoText').textContent, a: c.arrival(), mode: c.mode().current, staff: w.staff, tv: w.tv, station: st.open, view: st.view, route: st.route, shown: c.fingerprint().shown }; }"""
+    near = lambda p, q: p is not None and q is not None and math.hypot(p[0] - q[0], p[1] - q[1]) < 0.05
+    for room in ROOMS:
+        go(pg, room)
+        pg.click("#themes button[data-value='future']")
+        pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
+        pg.wait_for_function("!window.__config.state().moving", timeout=60000)
+        before = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
+        check(pg.evaluate(AR)["role"] is None and pg.evaluate("window.__config.wall().staff") == "standby", f"{room}: nobody is in, and the staff panel is in standby")
+        for role in ("nurse", "doctor", "family"):
+            pg.click("#arrivalPlay")
+            pg.wait_for_selector("#objectCard:not([hidden])")
+            if room == ROOMS[0] and role == "nurse":
+                card = pg.inner_text("#objectCard")
+                check("When someone comes in" in card and "Nothing recognises anyone" in card and all(t in card for t in ("A nurse comes in", "A doctor comes in", "A family visitor comes in")), f"the card under View says what it is and isn't, and offers all three {card[:70]!r}")
+                faults = axe_faults(pg, "#objectCard")
+                check(not faults, f"the arrival card passes axe {faults[:3]}")
+            # the click and the first reading in one go: they start at the door, already walking
+            first = pg.evaluate("sel => { document.querySelector(sel).click(); return window.__config.arrival(); }", ARRIVE[role])
+            check(first["role"] == role and first["moving"] and first["shown"] and near(first["at"], first["door"]), f"{room}: the {role} starts at the door, walking {first}")
+            steps = {}
+            while True:
+                pg.wait_for_function("!window.__config.demo() || window.__config.demo().waiting", timeout=120000)
+                got = pg.evaluate(SEEN)
+                if not pg.evaluate("window.__config.demo()"):
+                    break
+                if not got:
+                    continue
+                steps[got["at"]] = got
+                if room == "W1" and got["at"] == 1:
+                    shot(pg, f"arrival_{role}")
+                pg.evaluate("at => { const d = window.__config.demo(); if (d?.at === at && d.waiting) window.__config.demoAdvance(); }", got["at"])
+            st = [steps[k] for k in sorted(steps)]
+            check(len(st) == (4 if role == "doctor" else 3) and "The demo plays the tap: nothing recognises anyone" in st[0]["text"], f"{room}, {role}: {len(st)} captions, and the first says the demo plays the tap")
+            a = st[0]["a"]
+            check(a["role"] == role and not a["moving"] and near(a["at"], a["bedside"]) and st[0]["route"] and st[0]["staff"] == "standby" and st[0]["mode"] == "standard",
+                  f"{room}: the {role} stops at the bedside, along the marked route, and a badge alone changes no light or mode {a} {st[0]['staff']} {st[0]['mode']}")
+            if role == "nurse":
+                check(st[1]["staff"] == "clinical" and st[1]["station"] and st[1]["view"] == "nurse" and st[1]["mode"] == "standard" and st[1]["shown"].get("wall") == "clinical",
+                      f"{room}: for a nurse the staff panel wakes and the workstation opens in Nurse view, with no mode changed {st[1]['staff']} {st[1]['view']} {st[1]['mode']}")
+            if role == "doctor":
+                check(st[1]["staff"] == "clinical" and st[1]["station"] and st[1]["view"] == "doctor" and st[1]["mode"] == "standard", f"{room}: for a doctor the workstation opens in Doctor view {st[1]['view']} {st[1]['mode']}")
+                check(st[2]["mode"] == "clinical" and "The demo plays the doctor" in st[2]["text"], f"{room}: Clinical mode comes on only as the doctor's choice, and the caption says the demo plays the doctor {st[2]['mode']}")
+            if role == "family":
+                check(st[1]["mode"] == "family" and st[1]["staff"] == "standby" and not st[1]["station"] and "A nurse turns on Family visit" in st[1]["text"] and "shown nothing clinical" in st[1]["text"],
+                      f"{room}: for a family visitor a nurse turns on Family visit, and the staff panel stays in standby {st[1]['mode']} {st[1]['staff']}")
+            check(st[-1]["a"]["role"] is None and not st[-1]["a"]["moving"] and st[-1]["mode"] == "standard" and "leaves" in st[-1]["text"], f"{room}: the {role} leaves, and no mode is left on {st[-1]['a']} {st[-1]['mode']}")
+            pg.wait_for_function("!window.__config.state().moving && !window.__config.fading() && !window.__config.mode().easing", timeout=60000)
+            after = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint(), a: window.__config.arrival(), route: window.__config.station().route })")
+            diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k] and k not in ("eye", "target")]
+            check(after["code"] == before["code"] and not diff and after["a"]["role"] is None and not after["a"]["shown"] and not after["route"], f"{room}: after the {role}'s demo the room is back as it was, with nobody in it and no route marked {diff}")
+        # stopping part-way takes the figure away at once
+        pg.click("#arrivalPlay")
+        pg.wait_for_selector("#objectCard:not([hidden])")
+        pg.click("#featureDemo")
+        pg.wait_for_function("window.__config.demo()?.waiting", timeout=120000)
+        pg.click("#demoStop")
+        gone_now = pg.evaluate("({ a: window.__config.arrival(), route: window.__config.station().route, demo: window.__config.demo() })")
+        check(gone_now["demo"] is None and gone_now["a"]["role"] is None and not gone_now["a"]["shown"] and not gone_now["route"], f"{room}: Stop takes the figure and the route away at once {gone_now['a']}")
+    # Emergency comes first: no arrival demo starts over it
+    pg.click("#modeBar button[data-mode='emergency']")
+    pg.click("#arrivalPlay")
+    pg.wait_for_selector("#objectCard:not([hidden])")
+    pg.click("#featureDemo")
+    check(pg.evaluate("window.__config.demo()") is None and pg.evaluate(AR)["role"] is None and "Not during Emergency" in pg.inner_text("#featureStatus"), "in Emergency no one is brought in by a demo: care comes first")
+    pg.keyboard.press("Escape")
+    pg.click("#leaveEmergency")
+    check(not errs, f"when someone comes in: no errors {errs[:3]}")
+    ctx.close()
+
     # ---------------------------------------------------------------- reduced motion
     ctx, pg, errs, _, _ = open_page(b, 1100, 600, query="?tier=low", reduced_motion="reduce")
     pg.click("#views button[data-value='entrance']")
@@ -2989,6 +3067,13 @@ with sync_playwright() as p:
     m = pg.evaluate("window.__config.mode()")
     check(not m["easing"] and m["blinds"] == 1 and m["look"]["level"] == 0.35, f"reduced motion: Comfort is a cut {m}")
     pg.click("#modeBar button[data-mode='standard']")
+    # someone coming in is at the bedside at once, with no walk
+    pg.click("#arrivalPlay")
+    pg.wait_for_selector("#objectCard:not([hidden])")
+    at_once = pg.evaluate("() => { document.querySelector('#featureDemo').click(); return window.__config.arrival(); }")
+    check(at_once["role"] == "nurse" and not at_once["moving"] and math.hypot(at_once["at"][0] - at_once["bedside"][0], at_once["at"][1] - at_once["bedside"][1]) < 0.05, f"reduced motion: the nurse is at the bedside at once {at_once}")
+    pg.click("#demoStop")
+    check(pg.evaluate("window.__config.arrival()")["role"] is None, "reduced motion: and gone at once when the demo stops")
     # the tour cuts between its views, in both rooms, including one started on the dollhouse
     for room in ROOMS:
         go(pg, room)
@@ -3423,4 +3508,4 @@ if fail:
     for m in fail:
         print("  -", m)
     sys.exit(1)
-print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, room intelligence and the room safety scan, equipment and cables, Light across 24 hours, accessibility, adaptive quality, stats readout, phone)")
+print("  configurator check: ok (load, budget, views, orbit limits, moves, dollhouse, sun, time, every option, smart glass, palms, themes, spec codes, summary, tour, grilles and their plan, the smart clinical wall and the workstation, room modes with Family visit and Cleaning, the two tours and Transform the ICU, the digital twin, room intelligence and the room safety scan, equipment and cables, Light across 24 hours, when someone comes in, accessibility, adaptive quality, stats readout, phone)")
