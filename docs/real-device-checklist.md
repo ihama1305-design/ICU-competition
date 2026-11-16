@@ -16,7 +16,7 @@ Close other tabs.
 
 ## 1. Home page and guided tour (1½ min)
 
-1. Tap **Take the 90-second tour**. Count roughly how many seconds pass before the room appears.
+1. Tap **Experience the ICU of the future**. Count roughly how many seconds pass before the room appears.
 2. Let two steps play by themselves, then tap **Pause**, **Next** and **Previous**.
 3. Tap **Restart**. It should go back to step 1 and play again.
 4. Tap **Exit**. The room should look as it did before the tour.
@@ -29,17 +29,18 @@ Note: Do the captions fit, and can you read them? Does the 3D stutter while it m
 2. With the time at afternoon, tap **Comfort**: the lights dim and the blinds lower. Tap **Night**: the blinds should go back up, and one line should say why.
 3. **Quality** (if the switch is there): note what **Auto** chose and its status line. Try **Low**, then **High**, and say whether either feels smoother.
 4. Drag **Biophilic wall panel** from Place items onto a wall. Tap the panel, then the CDC link on its card.
-5. Tap the wardrobe, then **Slide doors open**.
+5. Tap the wardrobe, then **Open cabinet**.
+6. Under Time of day, tap **Light across 24 hours** and drag the hour along the timeline with a finger, then close it.
 
 Note: Smooth, OK or stuttery? Is anything cut off, or too small to tap?
 
 ## 3. PACS (30 s)
 
-Tap **Physiological Adaptive Mode**. Does the panel fit the screen, and does **Exit** bring the room back?
+Tap **OPEN NURSE DASHBOARD**. Does the panel fit the screen, and does **CLOSE DASHBOARD** bring the room back?
 
 ## 4. Walkthrough (1 min)
 
-Go back to the home page (**← Adaptive ICU** at the top of the options, or your browser's back button) and tap **Walk today's floor**.
+Go back to the home page (**Adaptive ICU** at the top of the options, or your browser's back button) and tap **Open the walkthrough**.
 1. Orbit, then tap **First person**.
 2. On a phone or tablet, walk with the joystick. On a laptop, use W, A, S and D.
 3. Drop the person, then tap the view behind them.
