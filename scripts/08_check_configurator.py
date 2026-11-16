@@ -2659,7 +2659,7 @@ with sync_playwright() as p:
             3: st["bed"] and not st["bs"]["open"],
             4: st["station"]["open"] and st["station"]["task"] == "dressing" and st["mode"] == "clinical",
             5: st["mode"] == "family" and not st["station"]["open"],
-            6: st["sel"]["scene"] == "forest" and st["sel"]["workstation"] == "on" and st["sel"]["floor"] == "terrazzo" and st["mode"] == "standard",
+            6: st["sel"]["scene"] == "forest" and st["sel"]["workstation"] == "on" and st["sel"]["floor"] == "slate" and st["sel"]["paint"] == "sky" and st["mode"] == "standard",
             7: True,
         }[i]
         if not ok or st["count"] != f"{i + 1} of 8":
@@ -2694,7 +2694,7 @@ with sync_playwright() as p:
     # Transform the ICU: today's room, then the new one a piece at a time, and the visitor's room back after
     pg.add_script_tag(url=AXE)
     go(pg, "W1")
-    pg.evaluate("window.__config.set('floor', 'slate')")
+    pg.evaluate("window.__config.set('floor', 'oak')")
     before = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
     pg.click("#transformPlay")
     pg.wait_for_function("window.__config.demo() && window.__config.demo().id === 'transformIcu'", timeout=30000)
@@ -2717,8 +2717,8 @@ with sync_playwright() as p:
     after = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
     diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k] and k not in ("eye", "target", "view")]
     check(len(captions) == 7 and "not every ICU" in captions[0] and "how the room works" in captions[-1], f"Transform the ICU: seven captions, from today's room, a typical one, to how the room works {sorted(steps)} {captions[:1]} {captions[-1:]}")
-    check(shown[0].get("floor") == "sand" and shown[1].get("floor") == "terrazzo" and shown[5].get("scene") == "forest", "it starts from today's room and adds the new one a piece at a time, shown, not chosen")
-    check(after["code"] == before["code"] and not diff, f"and when it ends the visitor's own room is back, slate floor and all {diff}")
+    check(shown[0].get("floor") == "sand" and shown[1].get("floor") == "slate" and shown[1].get("paint") == "sky" and shown[1].get("feature") == "ash" and shown[5].get("scene") == "forest", "it starts from today's room and adds the new one a piece at a time, shown, not chosen")
+    check(after["code"] == before["code"] and not diff, f"and when it ends the visitor's own room is back, oak floor and all {diff}")
     check(not errs, f"the presentation: no errors {errs[:3]}")
     ctx.close()
 

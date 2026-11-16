@@ -12,7 +12,7 @@ import { blindsAt, lookAt as planLook } from "./day-plan.js";
 import { POSITIONS as BED_POSITIONS } from "./bed.js";
 import { DEFAULT_STATE, OFFERS, ORIENTATION, STATES, STATE_MS } from "./patient-states.js";
 import { FrontGlass } from "./glass.js";
-import { applyLook } from "./surfaces.js";
+import { applyLook, floorBounce } from "./surfaces.js";
 import { setAddon, setAddonLook, setOldWardrobe, setOrientation, setShade, setTv, setWardrobe, setOrientationLines, syncDampers, syncPalms, tickAddons, tickWardrobe, toggleWardrobe, wardrobeFigures, wardrobeMoving } from "./addons.js";
 import { AcousticView } from "./acoustic-view.js";
 import { BANDS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS } from "./acoustic.js";
@@ -402,7 +402,7 @@ const groupById = id => optionData.sections.flatMap(s => s.groups).find(g => g.i
 
 const EFFECTS = {
   color: e => { for (const n of Object.values(stage.current.parts).flat()) if (!Array.isArray(n.material) && n.material.name === e.material) n.material.color.set(e.value); },
-  material: e => applyLook(stage.current, e.target, e.look),
+  material: e => { applyLook(stage.current, e.target, e.look); if (e.target === "floor") daylight.setBounce(floorBounce(e.look)); },
   visible: e => {
     for (const [name, meshes] of Object.entries(stage.current.parts)) {
       if (e.part ? name === e.part : name.startsWith(e.prefix)) meshes.forEach(n => { n.visible = e.on; });
@@ -681,6 +681,7 @@ function syncUi() {
   const theme = currentTheme();
   $("themes").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.value === theme?.id)));
   $("themeNote").textContent = theme ? theme.blurb : "Custom design. Pick a theme to start over.";
+  document.body.dataset.look = theme?.id || "custom"; // the panel takes the theme's colour (configurator.css)
   if (features?.on) refreshExplore(); // a choice can add, move or swap what Explore marks
   remember();
 }

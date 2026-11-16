@@ -101,7 +101,7 @@ export const FUTURE_STEPS = [
     // the pieces arrive one after another within the step: its reading time starts once the last has landed
     run: async (a, stale) => {
       a.mode("standard"); a.theme("calm"); a.camera("across");
-      for (const piece of [["floor", "terrazzo", "scheme", "circadian", "blinds", "half"], ["ceilingTray", "on"], ["staffPanel", "on", "patientWall", "on", "tvplay", "orientation"], ["workstation", "on", "bedsideCabinet", "on"], ["scene", "forest"]]) {
+      for (const piece of [["paint", "sky", "feature", "ash", "floor", "slate", "scheme", "circadian", "blinds", "half"], ["ceilingTray", "on"], ["staffPanel", "on", "patientWall", "on", "tvplay", "orientation"], ["workstation", "on", "bedsideCabinet", "on"], ["scene", "forest"]]) {
         await a.wait(1600);
         if (stale()) return;
         for (let i = 0; i < piece.length; i += 2) a.option(piece[i], piece[i + 1]);

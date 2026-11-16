@@ -14,6 +14,18 @@ export function kelvinColour(k) {
   return new THREE.Color().setRGB(c(r), c(g), c(b), THREE.SRGBColorSpace);
 }
 
+/**
+ * A light's colour as an eye used to the room sees it. kelvinColour() is measured against daylight, about 6600 K, so a
+ * 4800 K "cool white" comes out orange. A scheme with a `white` point (options.json) is drawn against that instead: light
+ * cooler than it reads blue-white, warmer reads amber. Only the picture changes. The kelvin a card or panel states does not.
+ */
+const balanceTo = new THREE.Color();
+function balanced(colour, white) {
+  const w = balanceTo.copy(kelvinColour(white));
+  colour.setRGB(colour.r / w.r, colour.g / w.g, colour.b / w.b);
+  return colour.multiplyScalar(1 / Math.max(colour.r, colour.g, colour.b));
+}
+
 const between = (a, b, h, x0, x1) => a + (b - a) * Math.min(1, Math.max(0, (h - x0) / (x1 - x0)));
 /** Tunable white: warm at the ends of the day, cool around midday, warmest late at night. */
 export function autoKelvin(h) {
@@ -26,7 +38,7 @@ export const circadianLevel = h => between(1, 0.42, h, 18.5, 21.5);
 const AMBER = new THREE.Color().setRGB(1, 0.42, 0.07, THREE.SRGBColorSpace);
 
 /** Quads with a brightness per corner, for additive glows. */
-class GlowGeometry {
+export class GlowGeometry {
   constructor() { this.p = []; this.c = []; }
   quad(a, b, c, d, ca, cb, cc, cd) {
     this.p.push(...a, ...b, ...c, ...a, ...c, ...d);
@@ -40,7 +52,7 @@ class GlowGeometry {
   }
 }
 
-const glowMaterial = () => new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+export const glowMaterial = () => new THREE.MeshBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide });
 
 export class Lighting {
   constructor(stage, daylight, tier) {
@@ -94,6 +106,7 @@ export class Lighting {
     const mesh = (geo, mat, order = 0) => { const n = new THREE.Mesh(geo, mat); n.renderOrder = order; group.add(n); return n; };
     const f = {
       group, strip, glow, amber, floorGlow,
+      trayGlow: glowMaterial(), // the ceiling tray's halo (fittings.js): it has the tray's light line's colour, in any scheme
       cove: [mesh(coveStrip.build(), strip), mesh(coveGlow.build(), glow, 1)],
       night: [mesh(nightStrip.build(), amber), mesh(nightGlow.build(), floorGlow, 1)],
       slot: [], discs: [],
@@ -221,6 +234,7 @@ export class Lighting {
     const look = this.scene || this.plan || this.patient || this.env || this.base(hour, day); // Light across 24 hours' plan sits under the modes
     const k = this.comfort?.kelvin ?? look.kelvin;
     const col = this.colour.copy(kelvinColour(k));
+    if (s.white) balanced(col, s.white);
     const night = 1 - day;
     let level = look.level;
     level *= this.comfort?.level ?? 1; // transient PACS rendering overlay; original option settings are preserved
@@ -229,6 +243,7 @@ export class Lighting {
     this.spots.forEach(l => { l.color.copy(col); l.intensity = (s.spot || 0) * level * this.spotWeight; });
     f.strip.color.copy(col).multiplyScalar((s.strip || s.disc || 1) * Math.max(level, 0.02));
     f.glow.color.copy(col).multiplyScalar((s.glow || 0) * level * (0.45 + 0.55 * night));
+    f.trayGlow.color.copy(col).multiplyScalar(0.5 * Math.max(level, 0.04) * (1 - 0.35 * night)); // less after dark, when the bloom pass glows too
     for (const n of this.room.parts.cfg_panels || []) {
       n.material.emissive.copy(col);
       n.material.emissiveIntensity = (s.panel || 0) * level;

@@ -239,6 +239,18 @@
         }
        ],
        "code": 5
+      },
+      {
+       "id": "ash",
+       "label": "Grey ash-look",
+       "effects": [
+        {
+         "do": "material",
+         "target": "feature",
+         "look": "ash"
+        }
+       ],
+       "code": 6
       }
      ],
      "code": 1
@@ -437,6 +449,7 @@
          "scheme": {
           "kind": "cove",
           "circadian": true,
+          "white": 4300,
           "rect": 3.4,
           "fill": 0.36,
           "strip": 5,
@@ -1966,9 +1979,11 @@
   {
    "id": "future",
    "label": "Future ICU",
-   "blurb": "Soft white and warm timber, a lit ceiling tray, screens for staff and for the patient, and a desk for the care team.",
+   "blurb": "Cool white and soft blue with pale timber, a lit ceiling tray, screens for staff and for the patient, and a desk for the care team.",
    "sets": {
-    "floor": "terrazzo",
+    "paint": "sky",
+    "feature": "ash",
+    "floor": "slate",
     "scheme": "circadian",
     "temperature": "auto",
     "blinds": "half",

@@ -422,6 +422,16 @@ Check 14 tests that medical gas never shares a channel with power or data, that 
 
 **Two names change, from the Word file:** Emergency-ready is now **Emergency**, and Compare with today's room is now **Before / after**. The checks that read a changed sentence read the new one; where a check guards the meaning (not a compliance check, alarms are not changed, Staff can end it), the words were kept.
 
+### A cooler look, and the panel in step with it (16 November 2026)
+
+**The Future ICU room reads cool by day.** Iham asked for the room to look less dated and nearer the reference picture. The arrangement was already the picture's, so this changes the mood. The theme now sets powder-blue walls, a new **Grey ash-look** feature wall and the slate floor. The circadian scheme is drawn white-balanced: its 4,800 K midday light used to come out orange, because the colour was measured against daylight, and now reads as the cool white its card says it is, with the evening still warm and dim. No stated number changes: every card, the digital twin and Light across 24 hours give the same kelvin as before. A slate floor sends grey light up at the ceiling instead of sand, and the ceiling tray's line of light has a soft halo on the tiles. The halo is drawn, and adds no light to the room.
+
+**What stays as it was.** The other three themes, every option and every share link: a link holds its choices, so a Future ICU link made before today opens with the walls, timber and floor it was made with. Before / after, Transform the ICU and the tour's Before and after step build the new look a piece at a time. The home page's first picture and the link preview were taken again.
+
+**The panel takes the room theme's colour.** The options panel and the bars over the room let a little more of the room show through, with a wider blur and a lit top edge. The accent follows the theme: blue for Future ICU, the site's teal for Calm Clinical and a custom room, clay for Desert Sanctuary and rose-brown for Family Suite. Text contrast was measured from pictures with the darkest and the brightest room behind the panel, light and dark, in all four themes: the lowest is 4.7 to 1, where the page before this change measured 4.75. A phone keeps the lighter blur it had, and a visitor who asks their device for less transparency gets solid panels.
+
+**Not done, and why.** No potted plant: living plants stay out of patient-care areas, as the nature card says. No photographic render: the room keeps the site's drawn style. The picture's blue light at every hour was not copied, because warm, dim light in the evening is what this design argues for.
+
 ### Every feature and its status
 
 One row per feature, from the same registry as the feature cards, plus the parts of the site that aren't cards and what isn't built. "What it isn't" is the start of each card's limits; the card has the rest, with its evidence.

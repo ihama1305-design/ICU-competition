@@ -32,7 +32,7 @@ function speckle(g, w, h, rnd, count, colours, min, max) {
   }
 }
 
-function drawPlanks(g, w, h, { base, dark, planks, vertical, seed }) {
+function drawPlanks(g, w, h, { base, dark, planks, vertical, seed, grain = "70, 42, 18" }) {
   const rnd = random(seed);
   g.fillStyle = base; g.fillRect(0, 0, w, h);
   const across = vertical ? w : h, along = vertical ? h : w, pw = across / planks;
@@ -40,10 +40,10 @@ function drawPlanks(g, w, h, { base, dark, planks, vertical, seed }) {
     const shade = rnd() * 0.16;
     const x0 = p * pw;
     const rect = (a, b, la, lb) => (vertical ? g.fillRect(a, b, la, lb) : g.fillRect(b, a, lb, la));
-    g.fillStyle = `rgba(70, 42, 18, ${shade})`;
+    g.fillStyle = `rgba(${grain}, ${shade})`;
     rect(x0, 0, pw, along);
     for (let i = 0; i < 46; i++) {
-      g.fillStyle = `rgba(70, 42, 18, ${0.03 + rnd() * 0.08})`;
+      g.fillStyle = `rgba(${grain}, ${0.03 + rnd() * 0.08})`;
       rect(x0 + rnd() * pw, rnd() * along, 1 + rnd() * 2, 40 + rnd() * along * 0.5);
     }
     g.fillStyle = dark;
@@ -109,6 +109,8 @@ function drawLattice(g, s, back, wood, line) {
 
 const DRAW = {
   wood: () => texture(1024, 1024, (g, w, h) => drawPlanks(g, w, h, { base: "#b9875a", dark: "rgba(50, 28, 12, 0.5)", planks: 6, vertical: true, seed: 3 })),
+  // the same planks in a pale, greyed timber: grain without the orange, for the Future ICU's cooler room
+  ash: () => texture(1024, 1024, (g, w, h) => drawPlanks(g, w, h, { base: "#b3aca2", dark: "rgba(40, 38, 36, 0.4)", grain: "62, 58, 54", planks: 6, vertical: true, seed: 3 })),
   fabric: () => texture(1024, 1024, (g, w, h) => {
     const rnd = random(5);
     g.fillStyle = "#6f8f90"; g.fillRect(0, 0, w, h);
@@ -183,6 +185,7 @@ export function drawn(name, repeatX = 1, repeatY = 1) {
 const LOOKS = {
   feature: {
     wood: { map: "wood", tile: [1.2, 2.4], roughness: 0.5 },
+    ash: { map: "ash", tile: [1.2, 2.4], roughness: 0.5 },
     fabric: { map: "fabric", tile: [0.6, 1.2], roughness: 0.95 },
     dunes: { map: "dunes", roughness: 0.75 },
     sea: { map: "sea", roughness: 0.75 },
@@ -192,9 +195,12 @@ const LOOKS = {
     sand: { map: "sand", tile: [1.2, 1.2], roughness: 0.42 },
     oak: { map: "oak", tile: [2.4, 2.4], roughness: 0.46 },
     terrazzo: { map: "terrazzo", tile: [1.1, 1.1], roughness: 0.3 },
-    slate: { map: "slate", tile: [1.6, 1.6], roughness: 0.5 },
+    slate: { map: "slate", tile: [1.6, 1.6], roughness: 0.5, bounce: "#b3bcc4" }, // a grey floor sends grey light up at the ceiling, not sand
   },
 };
+
+/** The colour of daylight coming up off a floor, where it isn't the usual warm one (sky.js setBounce). */
+export const floorBounce = lookName => LOOKS.floor[lookName]?.bounce || null;
 
 /** Put a look on a room's surface. Returns false if the surface should be hidden. */
 export function applyLook(room, target, lookName) {
