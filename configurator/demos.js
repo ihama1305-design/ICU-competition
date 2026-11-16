@@ -172,7 +172,7 @@ export const DEMOS = {
     label: "Transform the ICU",
     steps: [
       { say: "Today's room: a typical arrangement, not every ICU.", run: a => { a.today(); a.time("afternoon"); a.camera("across"); } },
-      { say: "A pale, seamless floor, light that follows the day, and the blinds half down.", run: a => { a.option("floor", "terrazzo"); a.option("scheme", "circadian"); a.option("temperature", "auto"); a.option("blinds", "half"); } },
+      { say: "Cool walls, pale timber and a seamless floor, light that follows the day, and the blinds half down.", run: a => { a.option("paint", "sky"); a.option("feature", "ash"); a.option("floor", "slate"); a.option("scheme", "circadian"); a.option("temperature", "auto"); a.option("blinds", "half"); } },
       { say: "A lit ceiling tray over the bed.", run: a => a.option("ceilingTray", "on") },
       { say: "Wall screens: one for staff at the bed head, one for the patient round the TV.", run: a => { a.option("staffPanel", "on"); a.option("patientWall", "on"); a.option("tvplay", "orientation"); } },
       { say: "A desk for the care team, and a cabinet for the patient's own things.", run: a => { a.option("workstation", "on"); a.option("bedsideCabinet", "on"); } },
