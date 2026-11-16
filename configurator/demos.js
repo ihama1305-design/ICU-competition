@@ -166,7 +166,7 @@ export const DEMOS = {
       { say: "Every step ticked: the checklist says it's finished, and never that the room is disinfected.", run: a => a.clean(9) },
     ],
   },
-  // Transform the ICU: Compare with today's room, staged. Today's room, then the Future ICU arriving a piece at a time, and
+  // Transform the ICU: Before / after, staged. Today's room, then the Future ICU arriving a piece at a time, and
   // back to the visitor's own room when it ends
   transformIcu: {
     label: "Transform the ICU",

@@ -17,7 +17,7 @@
 <body>
 <canvas id="c" class="pending" tabindex="0" aria-label="3D view of the room. Drag or use the arrow keys to look around."></canvas>
 <div id="load" role="status">Loading the room…</div>
-<div id="glLost" class="gl-lost" role="alert" hidden><p>The 3D view stopped drawing. Browsers do this to free memory, most often on a phone or tablet. Your room is kept in the link.</p><button type="button" id="glReload">Tap to reload the 3D view</button></div>
+<div id="glLost" class="gl-lost" role="alert" hidden><p>The 3D view stopped to save memory (common on phones). Your room is kept in the link. Tap below to reload.</p><button type="button" id="glReload">Tap to reload the 3D view</button></div>
 <section id="guide" class="guide" aria-labelledby="guideTitle" hidden>
   <div class="guide-top"><span id="guideCount" class="guide-count"></span><span id="guideBar" class="guide-bar" aria-hidden="true"><span id="guideHold" class="guide-hold"></span></span></div>
   <h2 id="guideTitle"></h2>
@@ -53,8 +53,8 @@
       <button type="button" data-mode="family" aria-pressed="false">Family visit</button>
       <button type="button" data-mode="cleaning" aria-pressed="false">Cleaning</button>
     </div>
-    <button type="button" data-mode="emergency" class="mode-emergency" aria-pressed="false">Emergency-ready</button>
-    <span class="alarm-chip"><span class="dot" aria-hidden="true"></span>Clinical alarms unaffected</span>
+    <button type="button" data-mode="emergency" class="mode-emergency" aria-pressed="false">Emergency</button>
+    <span class="alarm-chip"><span class="dot" aria-hidden="true"></span>Medical alarms always stay on</span>
   </div>
   <div class="hud-row">
     <div id="patientBar" class="mode-bar patient-bar" role="group" aria-labelledby="patientTitle">
@@ -74,11 +74,11 @@
   </div>
   <p id="patientNote" class="mode-note" hidden></p>
   <p id="modeNote" class="mode-note" hidden></p>
-  <p id="compareNote" class="mode-note" hidden>Before: today's room, with every option at its default and none of the added items, at the same view and time. Press Compare again for yours; your design and its link are unchanged.</p>
-  <p id="clinicalNote" class="mode-note" hidden>Equipment labels: each piece of equipment named, and hatched keep-clear areas for care around the bed. Illustrative, without dimensions: not a clinical or compliance check.</p>
+  <p id="compareNote" class="mode-note" hidden>This is the room as it is today. Press "Back to your room" to see your design again.</p>
+  <p id="clinicalNote" class="mode-note" hidden>Equipment labels: labels show each piece of equipment, and shaded areas show the space to keep clear around the bed. For illustration only: not a clinical or compliance check.</p>
   <div id="modeBanner" class="mode-banner" hidden>
-    <p><strong>Emergency-ready</strong>, started by staff. Room lights full, task light on, the TV and aquarium screen off, the glazed front clear. The monitor keeps running; clinical alarms and medical devices are not changed.</p>
-    <button type="button" id="leaveEmergency">Exit Emergency-ready</button>
+    <p><strong>Emergency mode</strong> (started by staff): all lights on full, TV and screens off, glass wall clear. The patient monitor keeps working, and alarms and medical devices are not changed.</p>
+    <button type="button" id="leaveEmergency">End emergency mode</button>
   </div>
   <section id="cleaningPanel" class="mode-banner cleaning-panel" aria-labelledby="cleaningTitle" hidden>
     <p id="cleaningTitle" class="vocal-kicker">Cleaning checklist · SIMULATED</p>
@@ -96,7 +96,7 @@
     <button type="button" id="intelAck">Acknowledge</button>
   </section>
   <section id="vocalNotice" class="mode-banner vocal-notice" aria-labelledby="vocalKicker" hidden>
-    <p id="vocalKicker" class="vocal-kicker">Notice at the nurse station · SIMULATED</p>
+    <p id="vocalKicker" class="vocal-kicker">Nurse station notice · SIMULATED</p>
     <p id="vocalText"></p>
     <p id="vocalMeta" class="vocal-meta"></p>
     <button type="button" id="vocalAck">Acknowledge</button>
@@ -134,14 +134,14 @@
   </header>
   <div id="panelBody">
     <section id="profileBar" aria-labelledby="hProfile" hidden>
-      <h2 id="hProfile">Your room idea</h2>
+      <h2 id="hProfile">Suggested changes</h2>
       <p id="profileSummary" class="note" role="status"></p>
       <ul id="profileChanges" class="profile-changes"></ul>
       <div class="profile-buttons">
-        <button type="button" id="profileCompare" class="outline-action" aria-pressed="false">Show the room before</button>
+        <button type="button" id="profileCompare" class="outline-action" aria-pressed="false">Show before</button>
         <button type="button" id="profileUndo" class="outline-action">Undo</button>
       </div>
-      <p class="note">A comfort and furnishing draft, not a care recommendation. Undo stays here until you change something else.</p>
+      <p class="note">These are design suggestions, not medical advice. Press Undo to remove them, until you change something else.</p>
     </section>
 
     <section aria-labelledby="hTheme">
@@ -166,7 +166,7 @@
         <button type="button" data-value="night" aria-pressed="false">Night</button>
       </div>
       <button type="button" id="openDay" class="outline-action day-open" aria-pressed="false">Light across 24 hours</button>
-      <p class="note">The sun path is for Abu Dhabi's latitude in mid-March or late September. North follows the model, as in the renders.</p>
+      <p class="note">Sunlight follows the sun's path over Abu Dhabi in mid-March or late September.</p>
     </section>
 
     <!-- the two deeper demos, PACS and APIS, mount here (pacs.js, apis.js): after Theme and Time of day, so a first visit
@@ -178,7 +178,7 @@
       <div id="views" class="grid" role="group" aria-labelledby="hView">
         <button type="button" data-value="patient" class="wide" aria-pressed="false">Patient view</button>
         <button type="button" id="clinicalToggle" class="wide" aria-pressed="false">Equipment labels and keep-clear areas</button>
-        <button type="button" id="compareToggle" class="wide" aria-pressed="false">Compare with today's room</button>
+        <button type="button" id="compareToggle" class="wide" aria-pressed="false">Before / after</button>
         <button type="button" id="transformPlay" class="wide">Transform the ICU: today's room to the new one</button>
         <button type="button" data-value="overview" aria-pressed="true">Overview</button>
         <button type="button" data-value="family" aria-pressed="false">Family zone</button>
@@ -191,8 +191,8 @@
         <button type="button" data-value="bathroom" aria-pressed="false" hidden>Bathroom</button>
         <button type="button" id="tour" aria-pressed="false">Cinematic tour</button>
       </div>
-      <p class="note">Drag to look around, scroll or pinch to move closer. Click a visible object for its name and details.</p>
-      <p class="note">Patient view stays at the pillow and turns as far as a head can, up to the ceiling. Return, or Esc, goes back.</p>
+      <p class="note">Drag to look around, and scroll or pinch to zoom. Click any object to learn about it.</p>
+      <p class="note">See the room from the patient's bed. Drag to look around, and press Esc to go back.</p>
     </section>
 
     <section aria-labelledby="hRoom">
@@ -208,7 +208,7 @@
       <h2 id="hPlace">Place items</h2>
       <div id="placeItems" class="place-items" role="group" aria-labelledby="hPlace"></div>
       <p id="placeStatus" class="note" role="status"></p>
-      <p class="note">Drag an item onto the room, or choose it and then click or tap where it goes. Drag a placed item to move it, and click it to turn or remove it. Where they go is up to you; the room safety scan checks them against this model's own clear areas, not hospital rules.</p>
+      <p class="note">Drag an item into the room, or click it and then click where it goes. Click a placed item to rotate or remove it. The room safety scan checks them against this model's own clear areas, not hospital rules.</p>
       <button type="button" id="runScan" class="outline-action scan-run">Run the room safety scan</button>
       <p id="scanIntro" class="note"></p>
       <ul id="scanResults" class="scan-results" aria-live="polite"></ul>
@@ -276,17 +276,17 @@
     <details class="section" name="options" id="systemsSection">
       <summary><span class="section-mark">✳</span><span class="section-title">Comfort systems</span></summary>
       <div class="system-demo">
-        <p class="note">SIMULATED. Illustrative controls for the room concept. These do not read patient vitals or control building equipment.</p>
+        <p class="note">SIMULATED. Demo controls only. They don't read vital signs or connect to real equipment.</p>
         <label class="demo-control" for="demoTemp"><span>Room temperature</span><output id="demoTempValue" for="demoTemp">23 °C</output></label>
         <input id="demoTemp" type="range" min="18" max="28" value="23" step="1">
         <label class="demo-control" for="demoHumidity"><span>Room humidity</span><output id="demoHumidityValue" for="demoHumidity">45%</output></label>
         <input id="demoHumidity" type="range" min="30" max="70" value="45" step="1">
         <div class="demo-sounds" role="group" aria-labelledby="hSounds">
-          <p id="hSounds" class="demo-title">Sound sensor: hear through a closed door</p>
+          <p id="hSounds" class="demo-title">Sound sensor: hears the patient through the closed door</p>
           <button type="button" class="outline-action" data-sound="call">Simulate a call for help</button>
           <button type="button" class="outline-action" data-sound="groan">Simulate a groan</button>
         </div>
-        <p id="systemStatus" class="note" role="status">The sound sensor is a concept. No microphone is used, nothing is recorded, and no notice leaves this page.</p>
+        <p id="systemStatus" class="note" role="status">Concept only. No microphone is used, nothing is recorded, and nothing leaves this page.</p>
       </div>
     </details>
 
@@ -300,7 +300,7 @@
       <ul id="presetList" class="preset-list" aria-label="Saved rooms"></ul>
       <button type="button" id="resetRoom" class="outline-action">Reset the room</button>
       <p id="presetStatus" class="note" role="status"></p>
-      <p class="note">Kept in this browser only, never sent anywhere. Don't use a patient's name.</p>
+      <p class="note">Saved in this browser only. Don't use patient names.</p>
     </section>
 
     <section aria-labelledby="hQuality">
@@ -311,11 +311,11 @@
         <button type="button" data-value="low" aria-pressed="false">Low</button>
       </div>
       <p id="qualityStatus" class="note" role="status"></p>
-      <p class="note">Low drops the glow around lights, glass that bends light, sharp shadows and smoothed edges, so slower devices stay smooth. Remembered in this browser.</p>
+      <p class="note">Choose Low if the 3D view is slow on your device.</p>
     </section>
 
     <footer>
-      <p>This is a proposal, not the room as built. The room shape comes from the drawing; the furnishings, finishes and layout are assumed.</p>
+      <p>This is our design idea, not the real room. The room shape is real; everything inside is our proposal.</p>
       <p>Independent student work for the SSMC ICU Interior Design Student Competition. It isn't made or endorsed by Sheikh Shakhbout Medical City, and it isn't for clinical or construction use.</p>
     </footer>
   </div>
@@ -464,7 +464,7 @@
       <button type="button" id="closeProfile" class="sheet-close">Close</button>
     </header>
     <form id="profileForm">
-      <p class="note profile-intro">Answer what you want. This creates an editable comfort and furnishing draft. It does not choose a clinical room or recommend care. Answers stay in this page session and are not included in shared links.</p>
+      <p class="note profile-intro">Answer a few optional questions and we'll suggest furniture and comfort changes. This doesn't affect medical care, and your answers aren't saved or put in shared links.</p>
       <div class="survey-grid">
         <label>Patient group
           <select name="patientType">
@@ -499,8 +499,8 @@
           <textarea name="notes" rows="3" maxlength="240" placeholder="Optional. Do not enter a name, diagnosis, or other private medical details."></textarea>
         </label>
       </div>
-      <p class="note">Sex and care-frequency answers are not used to select a room or alter the layout, and written notes aren't interpreted. Clinical room placement and care decisions stay with the care team.</p>
-      <div class="profile-actions"><button type="submit" class="primary-action">Create room idea</button></div>
+      <p class="note">Answers on sex and care visits don't change the room, and written notes aren't read. Medical decisions stay with the care team.</p>
+      <div class="profile-actions"><button type="submit" class="primary-action">Suggest changes</button></div>
     </form>
   </div>
 </dialog>
@@ -544,8 +544,8 @@
   function cantDraw(reason) {
     window.__cantDraw = reason;
     var why = reason === "importmap"
-      ? "This browser can't draw the 3D room: it's too old for the way the page loads its 3D code. Updating the browser may help."
-      : "This browser can't draw the 3D room: it needs WebGL 2, which is missing or turned off here. Updating the browser, or turning on hardware acceleration in its settings, may help.";
+      ? "Your browser is too old to show the 3D room. Please update it."
+      : "Your browser can't show the 3D room. Try updating it or using a different browser.";
     var load = document.getElementById("load"), p = document.createElement("p"), a = document.createElement("a");
     p.textContent = why + " ";
     a.href = "../"; a.textContent = "See the rooms in pictures on the home page.";

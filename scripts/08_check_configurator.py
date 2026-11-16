@@ -10,7 +10,7 @@ controls and the Day/Night toggle work; a phone gets a bottom sheet with no side
 Every option in options.json changes the picture, in each room it applies to, seen from where its check entry says. Themes apply and stay editable; a spec code restores the
 exact room after a reload, for every theme and 20 random rooms; the summary, image download and tour work. The panel and
 home page have no serious accessibility faults under axe, every control can be reached by keyboard with visible focus, nothing
-draws while the page is idle, and slow frames lower the quality. Suggest a room: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage. Feature cards: every registered feature by a real click in both rooms and from the Features list by keyboard, every demo run and the room and link proved unchanged, Esc, Stop and Emergency-ready ending one, Explore features and its filter, a hover costing one draw, Low graphics and a phone. Patient states: each state's light and screens, the modes winning, the board's three inputs and its nurse-side list, the passport saved in this browser, family connection, Quiet now, the staff view, and a phone.
+draws while the page is idle, and slow frames lower the quality. Suggest a room: a table of answers and rooms, every combination of answers, the real form, comparing, undo, and what stays out of links and storage. Feature cards: every registered feature by a real click in both rooms and from the Features list by keyboard, every demo run and the room and link proved unchanged, Esc, Stop and Emergency ending one, Explore features and its filter, a hover costing one draw, Low graphics and a phone. Patient states: each state's light and screens, the modes winning, the board's three inputs and its nurse-side list, the passport saved in this browser, family connection, Quiet now, the staff view, and a phone.
 Lighting schemes, smart glass, palms and themes get screenshots to look at. Screenshots -> build/shots/config_*.png. Checks the published site in spec site.dir.
 """
 import functools
@@ -363,7 +363,7 @@ with sync_playwright() as p:
     pg.evaluate("window.__config.time(window.__config.stops.night)")
     code0, chosen0 = pg.evaluate("window.__config.code()"), pg.evaluate("window.__config.selected()")
     settled = "!window.__config.mode().easing"
-    check(pg.is_visible("#modeBar") and "alarms unaffected" in pg.inner_text("#modeBar").lower(), "the room-mode bar is on screen and says clinical alarms are unaffected")
+    check(pg.is_visible("#modeBar") and "alarms always stay on" in pg.inner_text("#modeBar").lower(), "the room-mode bar is on screen and says clinical alarms always stay on")
     pg.click("#modeBar button[data-mode='comfort']")
     check(pg.evaluate("window.__config.mode().easing"), "Comfort eases in rather than cutting")
     pg.wait_for_function(settled, timeout=60000)
@@ -371,28 +371,28 @@ with sync_playwright() as p:
     # after sunset there's no daylight to block: Comfort changes only the lighting and says why in one line
     check(m["current"] == "comfort" and m["look"] == {"kelvin": 2700, "level": 0.35} and m["blinds"] == 0 and not m["task"], f"Comfort after dark: warm, dim light, the blinds left as configured, task light left alone {m}")
     note = pg.inner_text("#modeNote")
-    check(pg.locator("#modeBar button[data-mode='comfort']").get_attribute("aria-pressed") == "true" and "unaffected" in note, "Comfort: its button is pressed and the note says what's unaffected")
+    check(pg.locator("#modeBar button[data-mode='comfort']").get_attribute("aria-pressed") == "true" and "not affected" in note, "Comfort: its button is pressed and the note says what's not affected")
     why = pg.locator("#modeNote .mode-why")
-    check(why.count() == 1 and "after sunset" in why.inner_text().lower() and "blinds stay" in why.inner_text() and "blinds lower" not in note, f"Comfort after dark: one line says why the blinds stay ({note!r})")
+    check(why.count() == 1 and "after sunset" in why.inner_text().lower() and "blinds stay" in why.inner_text() and "lowered blinds" not in note, f"Comfort after dark: one line says why the blinds stay ({note!r})")
     shot(pg, "w1_mode_comfort_night")
     pg.evaluate("window.__config.time(window.__config.stops.afternoon)")  # crossing sunrise sets Comfort again, now with the blinds
     code0 = pg.evaluate("window.__config.code()")  # the link holds the time, which changed just now; a mode never does
     m = pg.evaluate("window.__config.mode()")
-    check(m["current"] == "comfort" and m["blinds"] == 1 and m["look"] == {"kelvin": 2700, "level": 0.35} and pg.locator("#modeNote .mode-why").count() == 0 and "blinds lower" in pg.inner_text("#modeNote"),
+    check(m["current"] == "comfort" and m["blinds"] == 1 and m["look"] == {"kelvin": 2700, "level": 0.35} and pg.locator("#modeNote .mode-why").count() == 0 and "lowered blinds" in pg.inner_text("#modeNote"),
           f"Comfort by day: the blinds lower too, and the after-dark line goes {m}")
     shot(pg, "w1_mode_comfort")
     pg.click("#modeBar button[data-mode='emergency']")
     pg.wait_for_function(settled, timeout=60000)
     m = pg.evaluate("window.__config.mode()")
-    check(m["current"] == "emergency" and m["look"] == {"kelvin": 4000, "level": 1} and m["task"], f"Emergency-ready: full light and the task light on {m}")
+    check(m["current"] == "emergency" and m["look"] == {"kelvin": 4000, "level": 1} and m["task"], f"Emergency: full light and the task light on {m}")
     clear = pg.evaluate("window.__config.glassLevel()")
-    check(not m["tvPlaying"] and m["aquariumScreen"] is False and m["glass"] == "clear" and not m["curtain"] and clear < 0.01, f"Emergency-ready: the TV and aquarium screen off, the glazed front clear ({clear:.2f}) {m}")
-    check(pg.is_visible("#modeBanner") and "not changed" in pg.inner_text("#modeBanner"), "Emergency-ready: a banner says alarms and devices are not changed")
+    check(not m["tvPlaying"] and m["aquariumScreen"] is False and m["glass"] == "clear" and not m["curtain"] and clear < 0.01, f"Emergency: the TV and aquarium screen off, the glazed front clear ({clear:.2f}) {m}")
+    check(pg.is_visible("#modeBanner") and "not changed" in pg.inner_text("#modeBanner"), "Emergency: a banner says alarms and devices are not changed")
     shot(pg, "w1_mode_emergency")
     pg.click("#leaveEmergency")
     pg.wait_for_function(settled, timeout=60000)
     m = pg.evaluate("window.__config.mode()")
-    check(m["current"] == "comfort" and m["tvPlaying"] and m["aquariumScreen"] and m["glass"] == "opaque" and m["blinds"] == 1, f"leaving Emergency-ready goes back to Comfort, screens and glass as they were {m}")
+    check(m["current"] == "comfort" and m["tvPlaying"] and m["aquariumScreen"] and m["glass"] == "opaque" and m["blinds"] == 1, f"leaving Emergency mode goes back to Comfort, screens and glass as they were {m}")
     pg.click("#modeBar button[data-mode='clinical']")
     pg.wait_for_function(settled, timeout=60000)
     m = pg.evaluate("window.__config.mode()")
@@ -431,7 +431,7 @@ with sync_playwright() as p:
     pg.wait_for_function("document.body.classList.contains('pacs-active')", timeout=60000)
     check(not pg.is_visible("#modeBar"), "the mode bar steps aside while PACS lays out its own tools")
     pg.evaluate("window.__config.setMode('emergency')")
-    check(not pg.evaluate("document.body.classList.contains('pacs-active')") and pg.evaluate("window.__config.mode().current") == "emergency", "Emergency-ready wins over PACS")
+    check(not pg.evaluate("document.body.classList.contains('pacs-active')") and pg.evaluate("window.__config.mode().current") == "emergency", "Emergency wins over PACS")
     pg.click("#leaveEmergency")
     pg.wait_for_function(settled, timeout=60000)
     # PACS after dark: only the lighting can change, the blinds choice is off and greyed, and the panel says why
@@ -633,14 +633,14 @@ with sync_playwright() as p:
     pg.evaluate("window.__config.camera('overview', { instant: true })")
     pg.click("#clinicalToggle")
     check(not pg.evaluate("window.__config.clinical()")["on"] and not pg.is_visible("#clinicalLabels"), "the toggle turns it off again")
-    # the Clinical and Emergency-ready modes turn them on, and As set puts them back as they were
+    # the Clinical and Emergency modes turn them on, and As set puts them back as they were
     pg.click("#modeBar button[data-mode='clinical']")
     check(pg.evaluate("window.__config.clinical()")["on"], "Clinical mode turns the equipment labels on")
     pg.click("#modeBar button[data-mode='standard']")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
     check(not pg.evaluate("window.__config.clinical()")["on"], "As set turns them back off")
     pg.click("#modeBar button[data-mode='emergency']")
-    check(pg.evaluate("window.__config.clinical()")["on"], "Emergency-ready turns the equipment labels on")
+    check(pg.evaluate("window.__config.clinical()")["on"], "Emergency turns the equipment labels on")
     pg.click("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
     # a placed item gets its own label
@@ -685,7 +685,7 @@ with sync_playwright() as p:
     check(seen[2]["view"] == "patient", f"it shows Patient view {seen[2]}")
     # the wall Patient view faces is mostly television: it shows the day and the time, where off it was a black rectangle
     check(seen[2]["tv"] == "orientation" and seen[2]["screen"] and len(seen[2]["screen"]) >= 5, f"in Patient view the television is on its orientation screen, so the view has something to show {seen[2]}")
-    check(seen[3]["mode"] == "comfort" and seen[4]["mode"] == "clinical" and seen[4]["clinical"] and seen[5]["mode"] == "emergency", f"it shows Comfort, Clinical with the equipment labels, and Emergency-ready {seen[3]} {seen[4]} {seen[5]}")
+    check(seen[3]["mode"] == "comfort" and seen[4]["mode"] == "clinical" and seen[4]["clinical"] and seen[5]["mode"] == "emergency", f"it shows Comfort, Clinical with the equipment labels, and Emergency {seen[3]} {seen[4]} {seen[5]}")
     check(seen[6]["placed"] == 2 and seen[6]["mode"] == "standard", f"it places two items {seen[6]}")
     check(seen[7]["theme"] == "desert", f"it shows a theme at sunset {seen[7]}")
     check(seen[7]["view"] == "overview" and seen[6]["view"] == "overview", f"the theme changes in place, from the view the step before it stood at, facing the window and the low sun {seen[7]}")
@@ -734,7 +734,7 @@ with sync_playwright() as p:
           "Finish puts the room back exactly as it was: choices, view, time, items, mode")
     e = pg.evaluate(ending)
     # the ending: Finish used to take the card away and change the room without a word, leaving nothing to do next
-    check(e["card"] and not e["running"] and e["title"] == "That's the tour" and e["count"] == "Finished" and "undone" in e["text"], f"after Finish the card stays to say the tour is over and its changes are undone {e}")
+    check(e["card"] and not e["running"] and e["title"] == "That's the tour" and e["count"] == "Finished" and "back to how it was" in e["text"], f"after Finish the card stays to say the tour is over and the room is back to how it was {e}")
     check(e["buttons"] == ["Try it yourself", "Watch again"] and not e["steps"] and not e["caveat"] and e["focus"] == "guideTry", f"the ending offers what comes next, in place of the tour's own controls, with the keyboard on the first {e}")
     check(said("Guided tour finished. The room is back as it was."), "the last thing announced after Finish is that the tour finished, after the announcements that putting the room back makes")
     shot(pg, "w1_guide_ending")
@@ -786,7 +786,7 @@ with sync_playwright() as p:
     check(o[5:] == ["You are in hospital, in the intensive care unit.", "Visiting today: 4 to 8 pm · confirmed by staff", "Later: a wash, then a rest"],
           f"beside the time: where the patient is, visiting marked as confirmed by staff, and a plan; never a name or a diagnosis {o[5:]}")
     pg.click("#modeBar button[data-mode='emergency']")
-    check(not pg.evaluate("window.__config.mode()")["tvPlaying"] and pg.evaluate("window.__config.orientation()") is not None, "Emergency-ready turns it off like any screen")
+    check(not pg.evaluate("window.__config.mode()")["tvPlaying"] and pg.evaluate("window.__config.orientation()") is not None, "Emergency turns it off like any screen")
     pg.click("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
     check(pg.evaluate("window.__config.selected().tvplay") == "orientation", "and leaving puts it back")
@@ -950,19 +950,19 @@ with sync_playwright() as p:
     shot(pg, "w1_patio")
     pg.evaluate("window.__config.set('shade', 'sail')")
     shot(pg, "w1_patio_sail")
-    check("pressure regime" in pg.text_content("#options"), "W1: the patio carries the pressure warning")
+    check("air seal" in pg.text_content("#options"), "W1: the patio carries the pressure warning")
     go(pg, "W3")
-    check("pressure regime" not in pg.text_content("#options"), "W3: the patio has no isolation warning")
+    check("air seal" not in pg.text_content("#options"), "W3: the patio has no isolation warning")
     go(pg, "W1")
     pg.evaluate("window.__config.set('patio', 'off')")
-    check("pressure regime" not in pg.text_content("#options"), "W1: no patio warning without a patio")
+    check("air seal" not in pg.text_content("#options"), "W1: no patio warning without a patio")
     pg.evaluate("window.__config.set('patio', 'on')")
     go(pg, "W3")
     pg.evaluate("window.__config.camera('bed_window', { instant: true })")
     shot(pg, "w3_patio_from_bed")
     pg.evaluate("window.__config.set('floor', 'terrazzo'); window.__config.set('feature', 'sea')")  # for the summary below
     pg.evaluate("window.__config.set('aquarium', 'sealed')")
-    check("avoid fish tanks" in pg.text_content("#options"), "the sealed tank carries the CDC note")
+    check("against fish tanks" in pg.text_content("#options"), "the sealed tank carries the CDC note")
     pg.evaluate("window.__config.frameAnchor('aquarium', 1.6, 0.1)")
     shot(pg, "w3_sealed_tank")
     pg.evaluate("window.__config.set('aquarium', 'digital')")
@@ -994,7 +994,7 @@ with sync_playwright() as p:
     pg.click("#openSummary")
     pg.wait_for_selector("#summary[open]")
     text = pg.inner_text("#summary")
-    check("pressure regime" in text and "fall-safety" in text, "a Family Suite summary in W1 carries the patio's warning and concept notes")
+    check("air seal" in text and "fall-safety" in text, "a Family Suite summary in W1 carries the patio's warning and concept notes")
     pg.click("#closeSummary")
     go(pg, "W3")
 
@@ -1071,7 +1071,7 @@ with sync_playwright() as p:
     pg.goto(URL + "?tier=low#c=!!nonsense")
     pg.reload()
     pg.wait_for_function("window.__configReady === true", timeout=120000)
-    check("couldn't be read" in pg.inner_text("#roomStatus"), "a bad code says so and opens the default room")
+    check("didn't work" in pg.inner_text("#roomStatus"), "a bad code says so and opens the default room")
     # a link made before a group was hidden still opens: what it asked for that isn't offered falls back, and the page says so
     ALPHA = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     hidden = [g for g in groups if g.get("hidden")]
@@ -1175,7 +1175,7 @@ with sync_playwright() as p:
             pg.click(groan)
             seen.append(pg.evaluate("(window.__config.vocal().notice || {}).level || null"))
             if n == 1 and rule[0] is None:
-                check(pg.is_hidden("#vocalNotice") and "waits to hear more" in pg.inner_text("#systemStatus"), f"{room}: one groan the rule doesn't act on says so, and tells nobody")
+                check(pg.is_hidden("#vocalNotice") and "waits for more" in pg.inner_text("#systemStatus"), f"{room}: one groan the rule doesn't act on says so, and tells nobody")
         v = pg.evaluate("window.__config.vocal()")
         check(seen == rule and seen[-1] in level_colour and v["groans"] == 3, f"{room}: groans raise the notice the rule gives, {rule}, counting them over the last minute {seen}")
         check("groaning was heard" in pg.inner_text("#vocalNotice") and v["light"]["colour"] == level_colour.get(seen[-1]), f"{room}: the groan's notice says what was heard, in its level's colour")
@@ -1191,7 +1191,7 @@ with sync_playwright() as p:
         card = pg.inner_text("#objectCard")
         limits = pg.evaluate("[...document.querySelectorAll('#objectRows dd')].map(d => d.textContent)")
         check("Sound-level sensor" in card and ("closed isolation door" if room == "W1" else "closed door keeps a patient's voice in") in card and "hearing back" in card, f"{room}: the sensor's card says what a closed door takes away and what the sensor gives back")
-        check(len(limits) == 4 and all(any(w in t for t in limits) for w in ("Ventilated or sedated patients may make no sound", "Alarms", "classified on the device", "no microphone")) and "stored" in " ".join(limits),
+        check(len(limits) == 4 and all(any(w in t for t in limits) for w in ("on a breathing machine or sedated may not make sounds", "Alarms", "classified on the device", "No microphone")) and "stored" in " ".join(limits),
               f"{room}: it lists the limits: silent patients, false alerts from alarms, on-device and never stored, and no microphone here {limits[:1]}")
         buttons = pg.evaluate("[...document.querySelectorAll('#objectCard .object-actions button')].filter(b => !b.hidden).map(b => b.textContent)")
         check(buttons == ["Simulate a call for help", "Simulate a groan"], f"{room}: the card has the two simulated sounds {buttons}")
@@ -1623,7 +1623,7 @@ with sync_playwright() as p:
             if not (ended and seen["bar"] and not seen["card"] and held and not diff and after["code"] == before["code"] and after["focus"] == f["id"]):
                 bad.append((f["id"], menu, ended, seen, held, diff[:4], after["focus"]))
         check(not bad, f"{room}: every demo runs to its end with its caption up and the card out of the way, changes no choice or link while it runs, and puts the room back exactly, with focus back on its button {bad[:2]}")
-    # stopping: Esc, Stop, taking the view, or Emergency-ready
+    # stopping: Esc, Stop, taking the view, or Emergency
     go(pg, ROOMS[0])
     pg.evaluate("window.__config.camera('overview', { instant: true })")
     before = pg.evaluate("window.__config.fingerprint()")
@@ -1657,10 +1657,10 @@ with sync_playwright() as p:
     pg.click(".mode-bar button[data-mode='emergency']")
     m = pg.evaluate("window.__config.mode()")
     check(not pg.evaluate("window.__config.demo()") and m["current"] == "emergency" and pg.evaluate("window.__config.fingerprint().selected") == before["selected"],
-          "Emergency-ready ends a demo at once, and the room's choices are as they were")
+          "Emergency ends a demo at once, and the room's choices are as they were")
     pg.click("#featureList button[data-feature='wardrobe']")
     pg.click("#featureDemo")
-    check(not pg.evaluate("window.__config.demo()") and "Not during Emergency-ready" in pg.inner_text("#featureStatus"), "no demo starts during Emergency-ready, and the card says why")
+    check(not pg.evaluate("window.__config.demo()") and "Not during Emergency mode" in pg.inner_text("#featureStatus"), "no demo starts during Emergency mode, and the card says why")
     pg.keyboard.press("Escape")
     pg.click("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
@@ -1919,7 +1919,7 @@ with sync_playwright() as p:
         pg.keyboard.press("Escape") if pg.evaluate("document.getElementById('acousticPanel').contains(document.activeElement)") else pg.click("#acousticClose")
         check(not pg.evaluate(AC)["on"], f"{room}: Esc in its panel closes it")
     # demo sound: off until asked; heard without and then with the fittings, with everything heard also shown; it stops on Esc,
-    # a hidden tab, a notice, an alarm example, the sound sensor's notice and Emergency-ready; never a microphone
+    # a hidden tab, a notice, an alarm example, the sound sensor's notice and Emergency; never a microphone
     go(pg, ROOMS[0])
     pg.evaluate("window.__config.camera('family', { instant: true })")
     pg.click("#acousticToggle")
@@ -1968,7 +1968,7 @@ with sync_playwright() as p:
     pg.click("#restfulSound")
     check(pg.evaluate(AC)["sound"]["playing"] == "restful" and "restful" in pg.inner_text("#soundCaption"), "Play restful sound plays the restful sound through the same module")
     pg.click(".mode-bar button[data-mode='emergency']")
-    check(pg.evaluate(AC)["sound"]["playing"] is None and not pg.evaluate(AC)["on"], "Emergency-ready stops the sound and ends the mode: comfort yields to care")
+    check(pg.evaluate(AC)["sound"]["playing"] is None and not pg.evaluate(AC)["on"], "Emergency stops the sound and ends the mode: comfort yields to care")
     pg.click("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
     # Explore features shows the fittings while it runs, without choosing them
@@ -2267,11 +2267,11 @@ with sync_playwright() as p:
     pg.evaluate("window.__config.openBedside('staff')")
     pg.click("#pane-staff button:text-is('Open the lines')")
     check(pg.evaluate(BED)["open"] and pg.evaluate(BED)["tab"] == "lines" and not pg.evaluate("window.__config.bedside().open"), "the staff view opens the lines, in the bedside screens' place")
-    # Emergency-ready: care comes first, so the bed panel closes and won't open
+    # Emergency: care comes first, so the bed panel closes and won't open
     pg.click("#modeBar button[data-mode='emergency']")
     em = pg.evaluate(BED)["open"]
     pg.evaluate("window.__config.openBed('pressure')")
-    check(not em and not pg.evaluate(BED)["open"], "Emergency-ready closes the bed panel, and it waits until Emergency-ready ends")
+    check(not em and not pg.evaluate(BED)["open"], "Emergency closes the bed panel, and it waits until Emergency mode ends")
     pg.click("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
     # a sedated patient's dismissed reminder comes back
@@ -2371,7 +2371,7 @@ with sync_playwright() as p:
         pg.click("#views button[data-value='overview']")
         pg.wait_for_function("window.__config.state().view === 'overview' && !window.__config.state().moving", timeout=120000)
         check(pg.evaluate("window.__config.addonShown('ceilingTray')"), f"{room}: and puts it back")
-        # Compare with today's room shows none of them, and puts them back
+        # Before / after shows none of them, and puts them back
         pg.click("#compareToggle")
         cmp_on = pg.evaluate("window.__config.fittings()")
         pg.click("#compareToggle")
@@ -2445,15 +2445,15 @@ with sync_playwright() as p:
               f"{room}: Forest sets the wall, the ceiling over the bed and the light together, the plan and buttons stay over it, and the link keeps it {w['wallScene']} {w['ceilingScene']} {w['env']} {code[5 + 44]}")
         pg.evaluate("window.__config.camera('across', { instant: true })")
         shot(pg, f"{room.lower()}_scene_forest")
-        # Emergency-ready: scenes off, the patient wall off, the station's emergency view; and back
+        # Emergency: scenes off, the patient wall off, the station's emergency view; and back
         mode("emergency")
         w = still_wall()
         check(w["emergency"] and w["tv"] == "off" and not w["wallScene"] and not w["ceilingScene"] and w["env"] is None and w["staff"] == "clinical" and pg.evaluate("window.__config.selected().scene") == "forest",
-              f"{room}: Emergency-ready turns every scene and the patient wall off, and the staff panel to Clinical, without changing the choice {w}")
+              f"{room}: Emergency turns every scene and the patient wall off, and the staff panel to Clinical, without changing the choice {w}")
         pg.click("#openStation") if pg.is_visible("#openStation") else pg.evaluate("window.__config.openStation(true)")
         st = pg.evaluate("window.__config.station()")
         check(st["open"] and st["emergency"] and st["route"] and st["outlined"] and pg.is_visible("#stationEmergency") and "Not a validated emergency protocol" in pg.inner_text("#stationEmergency"),
-              f"{room}: in Emergency-ready the workstation shows where the emergency equipment is, lights it, marks the clear route, and says it isn't a validated protocol {st}")
+              f"{room}: in Emergency mode the workstation shows where the emergency equipment is, lights it, marks the clear route, and says it isn't a validated protocol {st}")
         faults = axe_faults(pg, "#stationPanel")
         check(not faults, f"{room}: the workstation's Emergency view passes axe {faults[:3]}")
         pg.keyboard.press("Escape")
@@ -2461,7 +2461,7 @@ with sync_playwright() as p:
         pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
         w = still_wall()
         st = pg.evaluate("window.__config.station()")
-        check(w["wallScene"] == "forest" and w["env"] == FOREST and not st["route"] and not st["emergency"], f"{room}: leaving Emergency-ready brings the scene back, and takes the route away {w['wallScene']} {st['route']}")
+        check(w["wallScene"] == "forest" and w["env"] == FOREST and not st["route"] and not st["emergency"], f"{room}: leaving Emergency mode brings the scene back, and takes the route away {w['wallScene']} {st['route']}")
         # a sedated patient gets no prompts; Quiet now clears the patient's wall
         pg.click("#patientBar button[data-state='sedated']")
         w = still_wall()
@@ -2547,7 +2547,7 @@ with sync_playwright() as p:
         pg.wait_for_function("!window.__config.mode().easing && !window.__config.fading()", timeout=60000)
 
     bar = pg.evaluate("[...document.querySelectorAll('#modeBar .mode-seg button')].map(b => b.textContent)")
-    check(bar == ["As set", "Comfort", "Privacy", "Clinical", "Family visit", "Cleaning"], f"the bar: As set, Comfort, Privacy, Clinical, Family visit and Cleaning, with Emergency-ready on its own {bar}")
+    check(bar == ["As set", "Comfort", "Privacy", "Clinical", "Family visit", "Cleaning"], f"the bar: As set, Comfort, Privacy, Clinical, Family visit and Cleaning, with Emergency on its own {bar}")
     for room in ROOMS:
         go(pg, room)
         pg.click("#themes button[data-value='future']")
@@ -2592,14 +2592,14 @@ with sync_playwright() as p:
         pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
         c = pg.evaluate("window.__config.cleaning()")
         check(not c["on"] and not c["panel"] and c["figure"] is True and c["ticks"] == [], f"{room}: leaving Cleaning puts the figure back and forgets the ticks {c}")
-        # Emergency-ready from Family visit: it outranks it, and leaving goes back
+        # Emergency from Family visit: it outranks it, and leaving goes back
         set_mode("family")
         set_mode("emergency")
         w = pg.evaluate("window.__config.wall()")
-        check(w["emergency"] and w["tv"] == "off" and not pg.evaluate("window.__config.glass()")["opaque"], f"{room}: Emergency-ready outranks Family visit: screens off and the glass clear")
+        check(w["emergency"] and w["tv"] == "off" and not pg.evaluate("window.__config.glass()")["opaque"], f"{room}: Emergency outranks Family visit: screens off and the glass clear")
         pg.click("#leaveEmergency")
         pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
-        check(pg.evaluate("window.__config.mode().current") == "family", f"{room}: leaving Emergency-ready goes back to Family visit")
+        check(pg.evaluate("window.__config.mode().current") == "family", f"{room}: leaving Emergency mode goes back to Family visit")
         set_mode("standard")
         pg.wait_for_function("!window.__config.fading()", timeout=60000)
         after = pg.evaluate("({ fp: window.__config.fingerprint(), code: window.__config.code() })")
@@ -2620,14 +2620,14 @@ with sync_playwright() as p:
     set_mode("standard")
     check(not errs, f"room modes: no errors {errs[:3]}")
     ctx.close()
-    # the bar on a 390 px phone: two rows of three, Emergency-ready below, nothing off the screen
+    # the bar on a 390 px phone: two rows of three, Emergency below, nothing off the screen
     ctx, pg, errs, _, _ = open_page(b, 390, 844)
     rows = pg.evaluate("""() => { const bs = [...document.querySelectorAll('#modeBar button[data-mode]')];
       return bs.map(b => { const r = b.getBoundingClientRect(); return [b.dataset.mode, Math.round(r.top), Math.round(r.left), Math.round(r.right)]; }); }""")
     tops = sorted({r[1] for r in rows})
     seg = [r for r in rows if r[0] != "emergency"]
     check(len(tops) == 3 and len({r[1] for r in seg}) == 2 and all(r[3] <= 390 for r in rows) and [r for r in rows if r[0] == "emergency"][0][1] == tops[-1],
-          f"390 px: the six modes in two rows of three, Emergency-ready on the row below, nothing off the screen {rows}")
+          f"390 px: the six modes in two rows of three, Emergency on the row below, nothing off the screen {rows}")
     shot(pg, "phone_mode_bar")
     check(not errs, f"the phone's mode bar: no errors {errs[:3]}")
     ctx.close()
@@ -2948,12 +2948,12 @@ with sync_playwright() as p:
         diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k]]
         check(not diff and after["code"] == before["code"] and after["focus"] == "openDay", f"{room}: closing puts the room back exactly, at its own time, focus on the button {diff[:4]}")
     check(not faults, f"axe finds no serious faults in Light across 24 hours {faults[:4]}")
-    # Emergency-ready closes it and it waits; the circadian card opens it
+    # Emergency closes it and it waits; the circadian card opens it
     pg.click("#openDay")
     pg.click("#modeBar button[data-mode='emergency']")
     em = pg.evaluate(DAY)["open"]
     pg.evaluate("window.__config.openDay()")
-    check(not em and not pg.evaluate(DAY)["open"], "Emergency-ready closes Light across 24 hours, and it waits until Emergency-ready ends")
+    check(not em and not pg.evaluate(DAY)["open"], "Emergency closes Light across 24 hours, and it waits until Emergency mode ends")
     pg.click("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)
     pg.evaluate("document.getElementById('featuresSection').open = true")
@@ -3145,7 +3145,7 @@ with sync_playwright() as p:
     check(len(figs) == 6 and all("configurator/#c=" in f["href"] and f["alt"] > 40 and f["lead"] for f in figs), f"the proposal has six features, each with a described picture that opens its room {[f['lead'] for f in figs]}")
     words = pg.inner_text("#proposal")
     check(all(w in words for w in ("Room modes", "PACS", "APIS", "Equipment labels", "Remote care for the isolation room", "simulated")), "the proposal names the modes, PACS, APIS, Equipment labels and Remote care, and says the readings are simulated")
-    check("Six things" in words and "Fewer unnecessary entries, never fewer checks" in words and "look in through the glass first" in words, "Remote care's caption carries its pitch: look in first, fewer entries, never fewer checks")
+    check("Six things" in words and "never fewer checks" in words and "look through the glass first" in words, "Remote care's caption carries its pitch: look in first, fewer entries, never fewer checks")
     check(pg.evaluate("[...document.querySelectorAll('#rooms [role=tab]')].map(t => t.textContent.trim().split(/\\s+/)[0])") == ["Proposed", "Today"], "the first picture compares the proposed room with the room today")
     pg.evaluate("document.querySelectorAll('#proposal img').forEach(i => { i.loading = 'eager'; })")
     pg.wait_for_function("[...document.querySelectorAll('#proposal img')].every(i => i.complete && i.naturalWidth > 0)", timeout=60000)
@@ -3292,7 +3292,7 @@ with sync_playwright() as p:
     # ---------------------------------------------------------------- a browser that can't draw says why, and where the pictures are
     NO_WEBGL2 = "HTMLCanvasElement.prototype.getContext = (g => function (t, ...a) { return /webgl/.test(t) ? null : g.call(this, t, ...a); })(HTMLCanvasElement.prototype.getContext);"
     NO_IMPORT_MAPS = "HTMLScriptElement.supports = t => t !== 'importmap';"
-    for what, init, words in [("no WebGL 2", NO_WEBGL2, "it needs WebGL 2"), ("no import maps", NO_IMPORT_MAPS, "too old for the way the page loads")]:
+    for what, init, words in [("no WebGL 2", NO_WEBGL2, "using a different browser"), ("no import maps", NO_IMPORT_MAPS, "too old to show the 3D room")]:
         ctx = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
         ctx.add_init_script(init)
         pg = ctx.new_page()
@@ -3318,11 +3318,11 @@ with sync_playwright() as p:
     shot(pg, "phone")
     over = pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
     check(over <= 0, f"phone: no sideways scroll ({over})")
-    # every room mode stays on a phone, and Emergency-ready works by touch
+    # every room mode stays on a phone, and Emergency works by touch
     hud = pg.evaluate("(() => { const r = document.getElementById('modeBar').getBoundingClientRect(); return { right: Math.round(r.right), width: innerWidth, small: [...document.querySelectorAll('#modeBar button')].filter(b => b.getBoundingClientRect().height < 40).map(b => b.textContent) }; })()")
     check(hud["right"] <= hud["width"] and not hud["small"], f"phone: every room mode is on screen and large enough to tap {hud}")
     pg.tap("#modeBar button[data-mode='emergency']")
-    check(pg.is_visible("#modeBanner") and pg.evaluate("window.__config.mode().current") == "emergency", "phone: Emergency-ready works by touch")
+    check(pg.is_visible("#modeBanner") and pg.evaluate("window.__config.mode().current") == "emergency", "phone: Emergency works by touch")
     shot(pg, "phone_emergency")
     pg.tap("#leaveEmergency")
     pg.wait_for_function("!window.__config.mode().easing", timeout=60000)

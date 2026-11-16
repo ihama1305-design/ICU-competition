@@ -72,9 +72,9 @@ try {
       const proposed = await page.locator("#apisLayers button").allTextContents();
       assert.notDeepEqual(conventional, proposed);
       const limit = await page.locator("#apisLimit").textContent(); assert.ok(limit.length > 90);
-      if (id === "ecg") assert.match(limit, /insulating/);
+      if (id === "ecg") assert.match(limit, /between the sticker and the skin/);
       if (id === "iv") assert.match(limit, /sterile dressing/);
-      if (id === "urinary") assert.match(limit, /below bladder/);
+      if (id === "urinary") assert.match(limit, /below the bladder/);
       await page.locator("#apisExplode").click(); assert.equal(await page.evaluate(() => window.__config.apis().exploded), true);
       await page.locator("#apisLayers button").nth(1).click(); assert.equal(await page.locator("#apisLayers button").nth(1).getAttribute("aria-pressed"), "true");
       await page.locator("#apisCanvas").focus(); await page.keyboard.press("ArrowRight");

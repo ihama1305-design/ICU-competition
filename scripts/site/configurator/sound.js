@@ -177,7 +177,7 @@ export function playSound(name, { onEvent = () => {}, onPart = () => {}, onEnd =
   SCENES[name]({ onEvent: id => { if (scene === mine) onEvent(id); }, onPart: p => { if (scene === mine) onPart(p); }, onEnd: () => { if (scene === mine) { stopSound(); onEnd(); } } });
 }
 
-/** Silence, at once and for certain: on Mute, on Esc, when the tab is hidden, for Emergency-ready, a notice or an alarm. */
+/** Silence, at once and for certain: on Mute, on Esc, when the tab is hidden, for Emergency mode, a notice or an alarm. */
 export function stopSound() {
   if (!scene) return false;
   const s = scene;

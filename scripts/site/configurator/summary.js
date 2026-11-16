@@ -33,7 +33,7 @@ export function summaryContent(data, selected, room, { roomLabel, picture, code,
     const spec = list();
     counts.forEach((n, label) => row(spec, label, n > 1 ? `${n} placed` : "Placed"));
     box.append(el("div", {}, el("h3", { textContent: "Placed items" }), spec,
-      el("p", { className: "note", textContent: "Placed where you chose: staff access, clearances and infection-control positions haven't been checked." })));
+      el("p", { className: "note", textContent: "Placed where you chose. The room safety scan checks them against this model's own clear areas, not hospital rules." })));
   }
   if (notes.length) {
     const list = el("div", { className: "notes" }, el("h3", { textContent: "Clinical notes" }));
