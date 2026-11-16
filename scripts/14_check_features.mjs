@@ -144,7 +144,7 @@ const calls = [];
 const api = {
   option: (g, o) => { assert.ok(groupById(g)?.options.some(x => x.id === o), `a demo shows ${g}: ${o}, which options.json offers`); calls.push(["option", g]); },
   time: stop => { assert.ok(STOPS.has(stop), `a demo sets the time to ${stop}, a stop main.js has`); calls.push(["time"]); },
-  mode: name => { assert.ok(MODES[name] && name !== "emergency", `a demo sets ${name}, a room mode that isn't Emergency-ready`); calls.push(["mode"]); },
+  mode: name => { assert.ok(MODES[name] && name !== "emergency", `a demo sets ${name}, a room mode that isn't Emergency`); calls.push(["mode"]); },
   camera: v => { for (const [label, r] of Object.entries(ROOMS)) assert.ok(r.views.has(v), `a demo goes to the ${v} view, which ${label} has`); calls.push(["camera"]); },
   frame: id => { assert.ok(byId.get(id)?.objects.length, `a demo stands in front of ${id}, a registered feature with objects`); calls.push(["frame"]); },
   wardrobe: side => { assert.ok([null, "left", "right"].includes(side), `the wardrobe's doors show the left side, the right, or close (${side})`); calls.push(["wardrobe"]); },
@@ -359,7 +359,7 @@ const combos = [];
 for (const wall of WALL_ORDER) for (const mode of Object.keys(MODES)) for (const state of STATE_ORDER) for (const quiet of [false, true]) for (const scene of ["off", ...SCENE_ORDER]) combos.push({ wall, mode, state, quiet, scene });
 for (const c of combos) {
   const w = wallFor(c), who = JSON.stringify(c);
-  if (c.mode === "emergency") assert.ok(w.emergency && w.patient === "off" && !w.scene && !w.ceiling && !w.light && !w.prompts && w.staff === "clinical", `${who}: Emergency-ready turns every scene and the patient wall off, and the staff panel to Clinical`);
+  if (c.mode === "emergency") assert.ok(w.emergency && w.patient === "off" && !w.scene && !w.ceiling && !w.light && !w.prompts && w.staff === "clinical", `${who}: Emergency turns every scene and the patient wall off, and the staff panel to Clinical`);
   else if (MODES[c.mode].wall === "off") assert.ok(w.patient === "off" && !w.scene && !w.ceiling && !w.light && !w.prompts && w.staff === "standby", `${who}: Cleaning: no patient, so nothing on either wall panel and no scene`);
   else {
     assert.equal(w.wall, MODES[c.mode].wall || c.wall, `${who}: a mode's row sets the wall (Clinical to Clinical, Comfort to Relaxation, Family visit to family connection), and otherwise the switch decides`);
@@ -420,8 +420,8 @@ assert.deepEqual(Object.keys(MODE_TABLE).sort(), Object.keys(MODES).sort(), "one
 for (const [mode, row] of Object.entries(MODE_TABLE)) {
   assert.deepEqual(Object.keys(row).sort(), SYSTEMS.map(x => x.id).sort(), `${mode}: its row says something, or "as set", for every system`);
   for (const [sys, cell] of Object.entries(row)) if (cell) assert.ok(typeof cell[0] === "string" && cell[0] && LEVELS.some(l => l.id === cell[1]), `${mode} ${sys}: what it does, in words, at one of the five levels`);
-  if (mode === "emergency") assert.ok(Object.values(row).filter(Boolean).every(c => c[1] === "safety"), "Emergency-ready acts at the highest level, clinical safety, in every system it touches");
-  else assert.ok(Object.values(row).filter(Boolean).every(c => c[1] !== "safety"), `${mode}: only Emergency-ready claims clinical safety`);
+  if (mode === "emergency") assert.ok(Object.values(row).filter(Boolean).every(c => c[1] === "safety"), "Emergency acts at the highest level, clinical safety, in every system it touches");
+  else assert.ok(Object.values(row).filter(Boolean).every(c => c[1] !== "safety"), `${mode}: only Emergency claims clinical safety`);
   // the table and the modes agree: what a mode sets is what its row says
   const m = MODES[mode];
   assert.equal(!!row.light, !!m.light, `${mode}: its row and its light agree`);
@@ -453,7 +453,7 @@ for (const mode of MODE_ORDER.filter(x => x !== "standard")) {
     assert.ok(t.note.endsWith(ALARMS_LINE) && !t.note.includes("\n") && t.note.length <= 260, `${mode}${dark ? " after dark" : ""}: one line, ending that medical alarms always stay on (${t.note.length} characters)`);
   }
 }
-assert.deepEqual(MODE_ORDER, ["standard", "comfort", "privacy", "clinical", "family", "cleaning"], "the bar: As set, Comfort, Privacy, Clinical, Family visit, Cleaning; Emergency-ready on its own");
+assert.deepEqual(MODE_ORDER, ["standard", "comfort", "privacy", "clinical", "family", "cleaning"], "the bar: As set, Comfort, Privacy, Clinical, Family visit, Cleaning; Emergency on its own");
 assert.ok(MODES.family.label === "Family visit" && /Staff can still see in/.test(MODES.family.note) && /end it/.test(MODES.family.note) && MODES.family.softFront && MODES.family.wall === "family", "Family visit: staff can still see in and end it, the glass softened, family connection on the wall");
 assert.ok(MODES.cleaning.label === "Cleaning" && MODES.cleaning.cleaning && MODES.cleaning.scenesOff && MODES.cleaning.wall === "off", "Cleaning: an empty room, no scenes, the patient wall off");
 // Cleaning's checklist: hands first and last, the high-touch surfaces and the equipment, and it never says the room is disinfected
@@ -556,8 +556,8 @@ assert.ok(maxK <= 500 && maxL <= 0.15 && maxB <= 0.2, `every change is gradual: 
 assert.ok(blindsAt(9) === 0 && lookAt(14.5).level === 1 && lookAt(14.5).kelvin >= 4500 && blindsAt(14.5) === 0.5 && lookAt(2).level < 0.15 && lookAt(2).kelvin <= 2400 && blindsAt(2) === 1,
   "morning: blinds up; afternoon: bright, cool and the blinds half down; night: warm, low and the blinds down");
 assert.ok(inQuiet(23) && inQuiet(3) && !inQuiet(12) && !inQuiet(21.5) && QUIET.from === 22 && QUIET.to === 6 && /Care still comes first/.test(QUIET.note), "quiet hours run 10 pm to 6 am, and care still comes first");
-assert.ok(/Clinical and Emergency-ready are the staff override and always win/.test(DAY_TEXT.override) && /this\.scene \|\| this\.plan \|\| this\.patient/.test(read("./site/configurator/lights.js")),
-  "the plan's light sits under the room modes: Clinical and Emergency-ready always win");
+assert.ok(/Clinical and Emergency are the staff override and always win/.test(DAY_TEXT.override) && /this\.scene \|\| this\.plan \|\| this\.patient/.test(read("./site/configurator/lights.js")),
+  "the plan's light sits under the room modes: Clinical and Emergency always win");
 const dp = byId.get("dayPlan");
 assert.ok(dp && dp.control === "openDay" && dp.evidence.sourcesFrom === "scheme:circadian" && sourcesOf("scheme:circadian").length === 2 && /found no effect/.test(dp.evidence.text),
   "the card cites the two lighting studies options.json already holds, the trial that found no effect among them");

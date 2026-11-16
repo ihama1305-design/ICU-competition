@@ -69,7 +69,7 @@ export function twinRead(r) {
       "Daylight sensor on the sill: tells Comfort mode whether there's daylight to block. Sound sensor by the door: a concept, with no microphone.",
     ],
     walls: [
-      f.staffPanel || f.patientWall ? `Smart clinical wall: ${w.wall === "off" ? "off" : w.wall}${w.emergency ? ", Emergency-ready" : ""}. Staff panel ${w.staff === "clinical" ? "showing made-up observations" : "resting"}.` : "No wall panels in this room.",
+      f.staffPanel || f.patientWall ? `Smart clinical wall: ${w.wall === "off" ? "off" : w.wall}${w.emergency ? ", Emergency" : ""}. Staff panel ${w.staff === "clinical" ? "showing made-up observations" : "resting"}.` : "No wall panels in this room.",
       `Patient's screen: ${{ off: "off", on: "playing", orientation: "the orientation screen", scene: `a scene, ${r.sceneLabel}`, family: "family connection" }[r.tv] || "off"}${w.prompts ? ", with the two buttons" : ""}.`,
       glassLine,
       `Comfort control: ${r.temp} °C and ${r.humidity}% humidity, its simulated readout. It changes nothing by itself.`,

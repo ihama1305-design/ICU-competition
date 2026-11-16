@@ -3,8 +3,8 @@
 // teaching figure with no identity, nothing is sent anywhere, and no alarm, device or clinical setting is ever changed.
 //
 // A state is an overlay, like a room mode: it changes no choice, link or summary. Awake is the room as configured, so the
-// room looks the same as it loads. The room modes stay as they were: Clinical and Emergency-ready are the staff override
-// and always win, and Emergency-ready is the brief's fourth mode.
+// room looks the same as it loads. The room modes stay as they were: Clinical and Emergency are the staff override
+// and always win, and Emergency is the brief's fourth mode.
 
 export const STATES = {
   sedated: {

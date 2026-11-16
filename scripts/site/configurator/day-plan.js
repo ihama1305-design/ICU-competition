@@ -1,7 +1,7 @@
 // Light across 24 hours: a plan for the room's light and blinds over a whole day, on top of the circadian scheme (lights.js),
 // the sun path (sky.js) and Comfort mode's after-dark rule (modes.js). Data only, with no Three.js, so the checks can read it
 // in Node. A plan, not a measurement: the light is a design setting, and every change is gradual. The room modes stay the
-// staff override: Clinical and Emergency-ready always win.
+// staff override: Clinical and Emergency always win.
 
 /** The four phases, in the room's solar time. Night sleep runs past midnight to the morning. `light` and `blinds` give each
  * phase's reason, after the hour's own words (see words()), so the panel never says the same thing twice. */
@@ -46,6 +46,6 @@ export function words(h) {
 export const PLAY_MS_PER_HOUR = 1000;
 
 export const DAY_TEXT = {
-  override: "Clinical and Emergency-ready are the staff override and always win: the plan waits while they're on.",
+  override: "Clinical and Emergency are the staff override and always win: the plan waits while they're on.",
   limits: "A plan for the room's light, shown on the room's solar time. It changes no choice or link, and closing it puts the time back. Light alone isn't shown to prevent delirium.",
 };

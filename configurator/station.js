@@ -1,7 +1,7 @@
 // The clinician workstation's panel: a made-up dashboard for the care team, in the options panel's place as the bed panel
 // is. Nurse view and Doctor view show the same patient differently; a task shows what it needs and lights where that is in
 // the room; Done ticks it off here and on the staff panel. Hands-free buttons stand in for spoken commands. In
-// Emergency-ready it shows where the emergency equipment is and the clear route to the bed. It opens PACS as it is.
+// Emergency it shows where the emergency equipment is and the clear route to the bed. It opens PACS as it is.
 // SIMULATED throughout: no name, no diagnosis, nothing listens, nothing is said aloud about the patient, and nothing here
 // changes an alarm, a device or a setting. The data is wall-data.js.
 import { el } from "./panel.js";
@@ -144,7 +144,7 @@ export class Station {
     if (id === "handover") { this.task = null; this.light(null); this.render(); this.api.changed(); this.body.querySelector(".station-handover h3")?.scrollIntoView({ block: "nearest" }); this.api.say("The handover note is on the station's screen. It isn't read aloud."); }
   }
 
-  /** Emergency-ready started or ended: the emergency view, with the route on the floor and the emergency equipment lit. */
+  /** Emergency mode started or ended: the emergency view, with the route on the floor and the emergency equipment lit. */
   setEmergency(on) {
     if (this.emergency === on) return;
     this.emergency = on;

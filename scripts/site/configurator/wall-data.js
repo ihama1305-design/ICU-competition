@@ -42,7 +42,7 @@ export const SCENE_MS = 4000; // a slow change: the light and the pictures ease 
 export const PASSPORT_SCENE = "desert";
 
 /**
- * What the wall shows, kept in step with the room, by the levels in modes.js (LEVELS), highest first. Emergency-ready
+ * What the wall shows, kept in step with the room, by the levels in modes.js (LEVELS), highest first. Emergency
  * (clinical safety: the patient wall's screens and every scene go off, and the staff panel shows its clinical screen); then
  * the room mode staff chose, from its row in the mode table (Clinical turns the wall to Clinical, Comfort to Relaxation,
  * Family visit to family connection, Cleaning off); then Quiet now (the patient wall goes dark); then the wall's own switch
@@ -148,7 +148,7 @@ export const HANDS_FREE = [
 ];
 export const HANDS_FREE_NOTE = "Each button stands in for a spoken command. Nothing listens, and the station answers on its screen only: nothing about the patient is said aloud.";
 
-/** Emergency-ready: where the emergency equipment is, and the clear way to the bed. Not a validated emergency protocol. */
+/** Emergency: where the emergency equipment is, and the clear way to the bed. Not a validated emergency protocol. */
 export const EMERGENCY = {
   title: "Emergency: where things are",
   items: [

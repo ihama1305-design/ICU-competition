@@ -253,7 +253,7 @@ async function setRoom(label, { keepView = true } = {}) {
   syncUi();
   describe();
   say(room.meta.isolation ? `Isolation room ${label}.` : `Standard room ${label}.`);
-  status.textContent = room.meta.isolation ? "With its ante room and toilet." : "Opens straight onto the corridor.";
+  status.textContent = room.meta.isolation ? "Isolation room with its own entry room and toilet." : "Standard room with a door straight onto the corridor.";
   invalidate();
 }
 
@@ -538,7 +538,7 @@ function createProfileIdea(form) {
   for (const c of changes) add(result.why[c.group] || "Back to its usual setting for this starting look.", `${c.label}: ${c.to}`);
   for (const o of result.overruled) add(result.why[o.group], `Left out: ${optionLabel(optionData, o.group, o.wanted)}`);
   $("profileChanges").replaceChildren(...[...byReason].map(([why, lines]) => el("li", {}, el("strong", { textContent: lines.join(" · ") }), el("span", { textContent: why }))));
-  $("profileSummary").textContent = changes.length ? `${changes.length} ${changes.length === 1 ? "change" : "changes"} from your room. It stays ${state.room}, and anything can still be changed.` : `The room already matches. It stays ${state.room}.`;
+  $("profileSummary").textContent = changes.length ? `${changes.length} suggested ${changes.length === 1 ? "change" : "changes"}. You can still edit anything.` : `The room already matches. It stays ${state.room}.`;
   const compare = $("profileCompare");
   compare.setAttribute("aria-pressed", "false");
   compare.disabled = $("profileUndo").disabled = !changes.length;
@@ -614,7 +614,7 @@ function simulateSound(sound) {
   if (sound === "groan") groans.push(now);
   const level = cueFor(sound, sound === "groan" ? groans.length : 0);
   if (!LEVELS[level]) {
-    status.textContent = `Simulated: ${SOUNDS[sound]} was heard. The sensor waits to hear more before it tells anyone.`;
+    status.textContent = `Simulated: ${SOUNDS[sound]} was heard. The sensor waits for more before sending the nurse a notice.`;
     say(status.textContent);
     return;
   }
@@ -634,7 +634,7 @@ function simulateSound(sound) {
   const card = $("objectCard"), a = card.getBoundingClientRect(), b = restingRect($("vocalNotice"));
   if (!card.hidden && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) card.hidden = true;
   paintSensor(level);
-  status.textContent = "Simulated: the sensor's light changed and a notice went to the nurse station. No audio was captured, and nothing left this page.";
+  status.textContent = "A notice was sent to the nurse station (simulated: no audio, and nothing left this page).";
   say(`Simulated notice at the nurse station. ${text.heard} ${text.ask}`);
 }
 
@@ -680,7 +680,7 @@ function syncUi() {
   panelUi?.sync(selected, state.room);
   const theme = currentTheme();
   $("themes").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.value === theme?.id)));
-  $("themeNote").textContent = theme ? theme.blurb : "Your own combination. Choose a theme to start again from it.";
+  $("themeNote").textContent = theme ? theme.blurb : "Custom design. Pick a theme to start over.";
   if (features?.on) refreshExplore(); // a choice can add, move or swap what Explore marks
   remember();
 }
@@ -891,7 +891,7 @@ function syncModes(name) {
   }
   note.hidden = !note.textContent;
   $("modeBanner").hidden = name !== "emergency";
-  if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency-ready is on."); setAcoustic(false); setBed(false); setDay(false); } // comfort yields to care
+  if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency mode is on."); setAcoustic(false); setBed(false); setDay(false); } // comfort yields to care
   if (dayOn) dayView.render(); // the plan says which mode is over it
   if (quietOn) modeApi.screens(false); // a mode turns the screens back on; Quiet now keeps them off
   document.body.classList.toggle("emergency-ready", name === "emergency");
@@ -1003,20 +1003,20 @@ $("clinicalToggle").addEventListener("click", () => {
 const OBJECT_DETAILS = {
   cfg_kit_bed: ["Adjustable ICU bed", "A modeled patient bed with a raised backrest, side rails, mattress, and bedding."],
   cfg_kit_pendant: ["Ceiling service pendant", "A visual equipment pendant with shelves and service outlets."],
-  cfg_kit_monitor: ["Patient monitor", "A modeled bedside monitor. Its display is illustrative and is not connected to a patient."],
-  cfg_kit_pumps: ["Infusion pumps", "Visual pump units mounted at the bedside. They are not functional medical equipment."],
-  cfg_kit_ventilator: ["Ventilator model", "A static equipment model for room layout visualization; it does not provide ventilation."],
-  cfg_kit_iv_pole: ["IV pole", "A mobile pole shown as part of the room layout concept."],
-  cfg_kit_recliner: ["Patient recliner", "A visitor or recovery chair shown as a furniture concept."],
+  cfg_kit_monitor: ["Patient monitor", "The bedside monitor. Its numbers are made up, and it isn't connected to a patient."],
+  cfg_kit_pumps: ["Infusion pumps", "Pumps that give fluids and medicine through the IV. Shown for layout only."],
+  cfg_kit_ventilator: ["Ventilator model", "A breathing machine, shown to plan the room's layout."],
+  cfg_kit_iv_pole: ["IV pole", "A movable stand that holds IV bags."],
+  cfg_kit_recliner: ["Patient recliner", "A reclining chair for the patient or a visitor."],
   cfg_kit_visitor_chair: ["Visitor chair", "A chair for a family member or visitor."],
   cfg_kit_overbed_table: ["Over-bed table", "A movable bedside table for personal items and meals."],
   cfg_kit_exam_light: ["Examination light", "A ceiling-mounted examination light model."],
   cfg_feature_wall: ["Feature wall", "A customizable finish panel behind the bed."],
-  cfg_tv: ["Television", "A wall-mounted television concept. The sample animation is original placeholder content."],
+  cfg_tv: ["Television", "A wall TV. The picture is a sample animation."],
   cfg_tv_screen: ["Television screen", "A display surface for the room's placeholder animation."],
   cfg_curtain: ["Privacy curtain", "A curtain concept at the glazed room front."],
   cfg_blinds: ["Window blinds", "Adjustable blinds at the outside window."],
-  cfg_floor: ["Room flooring", "The configurable resilient floor surface shown in this design proposal."],
+  cfg_floor: ["Room flooring", "The floor. Change it under Floor and ceiling."],
   cfg_paint_walls: ["Room walls", "The room wall finish can be changed in the Walls section."],
   cfg_ceiling: ["Ceiling", "The room ceiling and its lighting layout."],
   cfg_panels: ["Ceiling light panel", "A modeled ceiling light panel; the lighting scheme controls the room's lighting."],
@@ -1145,7 +1145,7 @@ function showObjectCard(info, x, y, opener = document.activeElement) {
     action.hidden = !onFloor;
     action.textContent = "Turn 45°";
     action2.textContent = "Remove";
-    $("objectDescription").textContent = `${f ? `${text} ${CHECK}` : text} Drag it to move it. With this card focused, the arrow keys move it${onFloor ? ", R turns it" : ""} and Delete removes it.`;
+    $("objectDescription").textContent = `${f ? `${text} ${CHECK}` : text} Drag to move it. With this card focused, arrow keys move it${onFloor ? ", R rotates it" : ""} and Delete removes it.`;
   } else if (f) {
     const acts = f.actions || [], few = acts.length <= 2;
     for (const [b, a] of [[action, few ? acts[0] : null], [action2, few ? acts[1] : null]]) {
@@ -1172,7 +1172,7 @@ function showObjectCard(info, x, y, opener = document.activeElement) {
       action2.textContent = "Simulate a groan"; action2.dataset.action = "sound:groan"; action2.hidden = false;
     }
     else if (info.action?.startsWith("apis:")) action.textContent = "Inspect attachment in APIS";
-    else if (info.action === "pacs") action.textContent = "Physiological Adaptive Mode";
+    else if (info.action === "pacs") action.textContent = "Open nurse dashboard";
   }
   card.hidden = false;
   card.scrollTop = 0;
@@ -1307,7 +1307,7 @@ $("exploreFilters").addEventListener("click", e => {
 
 // ---------------------------------------------------------------- See it in action: a feature's demo (demos.js)
 // An overlay, like a room mode: options are shown, not chosen (demoShown), the link and summary stay as they were, and
-// when it ends the room goes back exactly. It never runs during Emergency-ready, and starting one ends any room mode for
+// when it ends the room goes back exactly. It never runs during Emergency mode, and starting one ends any room mode for
 // as long as it runs.
 var demo = null; // { id, feature, steps, at, token, timer, snap, opener }
 const demoSay = text => { $("demoText").textContent = text; say(text); };
@@ -1413,7 +1413,7 @@ const roomStill = () => new Promise(done => {
 async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   const f = features.get(featureId), steps = DEMOS[demoId]?.steps;
   if (!steps) return;
-  if (modes.current === "emergency") { $("featureStatus").textContent = "Not during Emergency-ready: care comes first."; $("featureStatus").hidden = false; say($("featureStatus").textContent); return; }
+  if (modes.current === "emergency") { $("featureStatus").textContent = "Not during Emergency mode: care comes first."; $("featureStatus").hidden = false; say($("featureStatus").textContent); return; }
   const opener = cardOpener;
   endCompare(); // and any demo already running
   setAcoustic(false);
@@ -1521,7 +1521,7 @@ $("featureMenuList").addEventListener("click", e => {
 // ---------------------------------------------------------------- Acoustic comfort mode (acoustic.js, acoustic-view.js, sound.js)
 // An overlay, like Equipment labels: the room's simulated sources, a sound map, a quiet zone, the room without and then with
 // the acoustic fittings, and the three kinds of notification. Every level is ILLUSTRATIVE. The fittings are shown, not
-// chosen, so no choice, link or summary changes, and leaving puts the room back. Emergency-ready ends it. Nothing listens.
+// chosen, so no choice, link or summary changes, and leaving puts the room back. Emergency ends it. Nothing listens.
 const acousticView = new AcousticView({ stage, layer: $("acousticMarks") });
 let acousticOn = false, acousticWith = false;
 const fittingsMap = on => Object.fromEntries(FITTING_GROUPS.map(g => [g, on ? "on" : "off"]));
@@ -1530,7 +1530,7 @@ const fittingsShown = () => Object.fromEntries(FITTING_GROUPS.map(g => [g, shown
 function setAcoustic(on, { fromDemo = false } = {}) {
   if (on === acousticOn) return;
   if (on) {
-    if (modes.current === "emergency") { say("Acoustic comfort mode waits: Emergency-ready is on, and care comes first."); return; }
+    if (modes.current === "emergency") { say("Acoustic comfort mode waits: Emergency mode is on, and care comes first."); return; }
     if (!fromDemo) { endDemo(); endCompare(); }
     setBedside(false); // one panel in the options panel's place at a time
     setBed(false);
@@ -1659,7 +1659,7 @@ const noticeUp = () => !$("vocalNotice").hidden || !$("criticalExample").hidden 
 /** Play a demo sound, only ever from a press. `ui` says where its words and its Mute are. */
 function playDemoSound(name, ui = ACOUSTIC_SOUND_UI) {
   if (modes.current === "emergency" || noticeUp() || quietOn) {
-    ui.caption().textContent = quietOn ? "Demo sound waits: staff have turned on Quiet now." : "Demo sound waits while a notice, a request, an alarm or Emergency-ready is up.";
+    ui.caption().textContent = quietOn ? "Demo sound waits: staff have turned on Quiet now." : "Demo sound waits while a notice, a request, an alarm or Emergency mode is up.";
     say(ui.caption().textContent);
     ui.done?.();
     return false;
@@ -1706,7 +1706,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) stopD
 // ---------------------------------------------------------------- the patient's state and the bedside screens (patient-states.js, bedside.js)
 // A state is an overlay under the room modes: Sedated, Awake (the room as configured) or Recovering. It eases the light by
 // the time of day and changes what the patient's screens offer. It changes no choice, link or summary, and the modes stay
-// the staff override: Clinical and Emergency-ready always win. SIMULATED throughout: nothing leaves this page.
+// the staff override: Clinical and Emergency always win. SIMULATED throughout: nothing leaves this page.
 var patientState = DEFAULT_STATE, patientTween = null, bedsideOn = false, bedsideOpener = null, bedsideFromSheet = false;
 const family = { scene: false, lines: false }; // what family connection has on the TV and the orientation screen
 const easeState = t => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
@@ -1821,7 +1821,7 @@ function bedTab(tab) {
 
 function setBed(on, tab, { fromDemo = false } = {}) {
   if (on) {
-    if (modes.current === "emergency") { say("The bed panel waits: Emergency-ready is on, and care comes first."); return; }
+    if (modes.current === "emergency") { say("The bed panel waits: Emergency mode is on, and care comes first."); return; }
     if (!fromDemo) { endDemo(); endCompare(); }
     setAcoustic(false);
     setBedside(false);
@@ -1916,11 +1916,11 @@ function updateEnv(now) {
 
 // ---------------------------------------------------------------- the clinician workstation (station.js)
 // A staff panel in the options panel's place, as the bed's is. While it's open the desk is in the room, chosen or not. A
-// task lights where its things are; Emergency-ready lights the emergency equipment and marks the clear route on the floor.
+// task lights where its things are; Emergency lights the emergency equipment and marks the clear route on the floor.
 // It changes no choice, link or summary. SIMULATED throughout.
 var stationOn = false, stationOpener = null, stationFromSheet = false, stationPose = null;
 var station = new Station($("stationPanel"), {
-  light: where => { if (stationOn || !where) lightPlace(where); }, // only while its panel is open: Emergency-ready alone looks as it did
+  light: where => { if (stationOn || !where) lightPlace(where); }, // only while its panel is open: Emergency alone looks as it did
   route: on => showRoute(on && stationOn),
   changed: () => syncWall(),
   pacs: () => { setStation(false); pacs.open(); }, // PACS as it is: nothing is copied or changed
@@ -2363,7 +2363,7 @@ $("cableKey").replaceChildren(...CABLE_KINDS.map(k => el("li", {}, el("span", { 
 // ---------------------------------------------------------------- Light across 24 hours (day-plan.js, day-view.js)
 // A panel in the options panel's place with a 24-hour timeline. The room shows the plan's light and blinds at the hour
 // dragged to, with the circadian scheme shown, not chosen. The plan's light sits under the room modes, so Clinical and
-// Emergency-ready always win. The link stays as it was while it's open, and closing it puts the time back.
+// Emergency always win. The link stays as it was while it's open, and closing it puts the time back.
 var dayOn = false, daySnap = null, dayOpener = null, dayFromSheet = false;
 var dayView = new DayView($("dayPanel"), { hour: () => state.hour, setHour: h => { setTime(h); applyDay(); }, mode: () => modes.current, say });
 
@@ -2377,7 +2377,7 @@ function applyDay() {
 
 function setDay(on, { fromDemo = false } = {}) {
   if (on) {
-    if (modes.current === "emergency") { say("Light across 24 hours waits: Emergency-ready is on, and care comes first."); return; }
+    if (modes.current === "emergency") { say("Light across 24 hours waits: Emergency mode is on, and care comes first."); return; }
     if (!fromDemo) { endDemo(); endCompare(); }
     setAcoustic(false);
     setBedside(false);
@@ -2566,7 +2566,7 @@ canvas.addEventListener("pointerup", e => {
   if (!info) {
     const top = stage.topName(hit.object, stage.current.root), known = OBJECT_DETAILS[top];
     const label = top.replace(/^cfg_(kit_|)/, "").replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase()) || "Room object";
-    info = known ? { title: known[0], description: known[1] } : { title: label, description: "A modeled room surface or furnishing in this editable design proposal." };
+    info = known ? { title: known[0], description: known[1] } : { title: label, description: "Part of the room. The side panel lists what you can change." };
     if (top === "cfg_kit_monitor") info.action = "pacs";
   }
   showObjectCard(info, e.clientX, e.clientY);
@@ -2850,7 +2850,7 @@ function setCompare(on) {
     if (c.mode !== "standard") modes.set(c.mode, { instant: true });
   }
   $("compareToggle").setAttribute("aria-pressed", String(on));
-  $("compareToggle").textContent = on ? "Back to your room" : "Compare with today's room";
+  $("compareToggle").textContent = on ? "Back to your room" : "Before / after";
   $("compareNote").hidden = !on;
   stage.renderer.shadowMap.needsUpdate = true;
   syncUi();
@@ -3394,7 +3394,7 @@ async function boot() {
   window.__configStage = "setting the time";
   setTime(state.hour);
   window.__configStage = "drawing the first frame";
-  if (location.hash && !fromLink) $("roomStatus").textContent = "That link's code couldn't be read, so this is the default room.";
+  if (location.hash && !fromLink) $("roomStatus").textContent = "This link didn't work, so we've opened the default room.";
   else if (fromLink?.dropped.length) $("roomStatus").textContent = leftOut(fromLink.dropped);
   $("load").hidden = true;
   syncQuality();

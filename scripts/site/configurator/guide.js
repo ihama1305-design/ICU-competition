@@ -8,49 +8,49 @@
 export const STEPS = [
   {
     title: "An isolation room, as a design proposal",
-    text: "Room W1. Its walls, door and glass match the hospital's drawing; the furniture and finishes are our proposal.",
+    text: "This is isolation room W1. The walls, door and windows follow the hospital's floor plan; the furniture and finishes are our design.",
     run: async a => { await a.room("W1"); a.theme("calm"); a.time("afternoon"); a.camera("dollhouse"); },
   },
   {
     title: "The equipment stays",
-    text: "The Calm Clinical theme keeps the real bed, monitor, pumps and ventilator.",
+    text: "All the medical equipment stays: the bed, monitor, pumps and ventilator.",
     run: async a => { a.camera("overview"); },
   },
   {
     title: "What the patient sees",
-    text: "Patient view looks out from the pillow, turning only as far as a head can. The screen shows the day and time.",
+    text: "This is what the patient sees from the bed. The screen shows the day and time so they can keep track.",
     // the wall ahead is mostly television: on its orientation screen it has something to say, where off it is a black rectangle
     run: async a => { a.option("tvplay", "orientation"); a.camera("patient"); },
   },
   {
     title: "Comfort mode",
-    text: "The lights turn warm and dim, and by day the blinds lower.",
+    text: "One tap makes the room calm: warmer, dimmer lights and lower blinds.",
     run: async a => { a.camera("overview"); a.mode("comfort"); },
   },
   {
     title: "Clinical mode and equipment labels",
-    text: "Bright light for care, labels on the equipment and shaded areas to keep clear. A sketch, not a compliance check.",
+    text: "Bright light for treatment. Labels show each device, and shaded areas show the space to keep clear. A sketch, not a compliance check.",
     run: async a => { a.mode("clinical"); },
   },
   {
-    title: "Emergency-ready",
-    text: "Staff start it: full light, screens off and the glass front clear.",
+    title: "Emergency",
+    text: "In an emergency, staff tap once: full light, screens off, glass clear.",
     run: async a => { a.mode("emergency"); },
   },
   {
     title: "Placing items",
-    text: "Drag items such as a privacy screen or hand-gel dispenser into the room. The room safety scan checks them against this model's clear areas.",
+    text: "Drag in extra items, like a privacy screen or hand-gel dispenser. The room safety scan checks them against this model's clear areas.",
     run: async a => { a.mode("standard"); a.camera("overview", true); a.place(["screen", "rub"]); },
   },
   {
     title: "Themes and the time of day",
-    text: "Desert Sanctuary at sunset. The sun follows its real path over Abu Dhabi.",
+    text: "Change the theme and the time of day. Sunlight follows the sun's path over Abu Dhabi.",
     // from where the last step stood, so the finishes change in place and the low sun comes in through the window
     run: async a => { a.theme("desert"); a.time("sunset"); a.camera("overview"); },
   },
   {
     title: "Two deeper demos",
-    text: "PACS links the monitor to the room's comfort, and APIS shows how tubes and lines attach. Open either below.",
+    text: "Two extra demos: PACS suggests room changes from the patient's vital signs, and APIS shows how tubes and wires attach to the patient.",
     run: async a => { a.camera("overview"); },
     links: [["pacs", "Open the PACS demo"], ["apis", "Explore APIS"]],
   },
@@ -118,14 +118,14 @@ export const FUTURE_STEPS = [
 // What the card says after Finish, once the room is back as it was. Not a step: it has no number and sets nothing up.
 export const ENDING = {
   title: "That's the tour",
-  text: "The tour's changes are undone. The room is yours now: pick a theme, a time of day or a room mode.",
+  text: "The room is back to how it was. Now try it yourself: pick a theme, a time of day or a room mode.",
   go: "Try it yourself",
   again: "Watch again",
 };
 
 export const FUTURE_ENDING = {
   title: "That's the story",
-  text: "The tour's changes are undone. The room is yours now: pick a theme, a time of day or a room mode.",
+  text: "The room is back to how it was. Now try it yourself: pick a theme, a time of day or a room mode.",
   go: "Try it yourself",
   again: "Watch again",
 };
