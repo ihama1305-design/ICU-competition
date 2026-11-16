@@ -7,6 +7,8 @@ import { Daylight, sunAt } from "./sky.js";
 import { Lighting, autoKelvin, circadianLevel } from "./lights.js";
 import { Bedside } from "./bedside.js";
 import { BedView } from "./bed-view.js";
+import { DayView } from "./day-view.js";
+import { blindsAt, lookAt as planLook } from "./day-plan.js";
 import { POSITIONS as BED_POSITIONS } from "./bed.js";
 import { DEFAULT_STATE, OFFERS, ORIENTATION, STATES, STATE_MS } from "./patient-states.js";
 import { FrontGlass } from "./glass.js";
@@ -113,7 +115,7 @@ function resize() {
   stage.resize(w, h);
   stage.camera.aspect = w / h;
   const cls = document.body.classList;
-  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : cls.contains("station-active") ? restingRect($("stationPanel")) : cls.contains("twin-active") ? restingRect($("twinPanel")) : cls.contains("intel-active") ? restingRect($("intelPanel")) : panel.getBoundingClientRect();
+  const rect = cls.contains("pacs-active") ? restingRect($("pacsPanel")) : cls.contains("acoustic-active") ? restingRect($("acousticPanel")) : cls.contains("bedside-active") ? restingRect($("bedside")) : cls.contains("bed-active") ? restingRect($("bedPanel")) : cls.contains("station-active") ? restingRect($("stationPanel")) : cls.contains("twin-active") ? restingRect($("twinPanel")) : cls.contains("intel-active") ? restingRect($("intelPanel")) : cls.contains("day-active") ? restingRect($("dayPanel")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   const coverX = phone || !rect.width ? 0 : w - rect.left;
   const coverY = phone && rect.height ? Math.max(0, h - rect.top) : 0;
@@ -121,7 +123,7 @@ function resize() {
   stage.camera.setViewOffset(w, h, coverX / 2, coverY / 2, w, h);
   rig.visible = { w: w - coverX, h: h };
   if (rig.meta) rig.fit();
-  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active") || cls.contains("station-active") || cls.contains("twin-active") || cls.contains("intel-active"); // off-screen, or covered by a panel in its place
+  const closed = (phone && !panel.classList.contains("open")) || cls.contains("acoustic-active") || cls.contains("bedside-active") || cls.contains("bed-active") || cls.contains("station-active") || cls.contains("twin-active") || cls.contains("intel-active") || cls.contains("day-active"); // off-screen, or covered by a panel in its place
   $("panelBody").inert = closed;
   panel.querySelector(".actions").inert = closed;
   stage.camera.updateProjectionMatrix();
@@ -166,7 +168,7 @@ const clock = h => {
   const m = Math.round(h * 60), hh = Math.floor(m / 60) % 24, mm = m % 60;
   return `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, "0")} ${hh < 12 ? "am" : "pm"}`;
 };
-const isNight = h => h >= NIGHT_FROM;
+const isNight = h => h >= NIGHT_FROM || h < 6; // Light across 24 hours reaches the small hours, which the slider doesn't
 
 /** Between sunset and sunrise, from the sun's height the room's daylight already computed: Comfort and PACS leave the blinds alone. */
 const afterDark = () => daylight.elevation < HORIZON_DEG;
@@ -213,6 +215,7 @@ async function setRoom(label, { keepView = true } = {}) {
   setAcoustic(false); // its map and labels are this room's
   setBed(false); // and the bed panel's
   setStation(false); // and the workstation's, with its lit places
+  setDay(false); // and Light across 24 hours', which puts the time back
   setTwin(false); // and the twin's
   setCables(null, { quietly: true }); // the cable overlay is this room's
   setIntel(false); resetIntel(true); clearScan(); // and room intelligence's, with its made-up events; and the scan's results
@@ -379,9 +382,9 @@ const selected = {};
 // Options shown without being chosen, in layers: a feature demo's on top (demos.js), then Acoustic comfort mode's fittings,
 // the bed panel's line clips, the workstation while its panel is open, staff's Quiet now, the fittings Explore features shows, and the patient's state
 // (patient-states.js). The panel, the link and the summary only ever read `selected`.
-const overlays = { demo: {}, acoustic: {}, bed: {}, station: {}, intel: {}, cables: {}, quiet: {}, explore: {}, patient: {} };
+const overlays = { demo: {}, acoustic: {}, bed: {}, station: {}, intel: {}, cables: {}, day: {}, quiet: {}, explore: {}, patient: {} };
 const demoShown = overlays.demo;
-const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.station[id] ?? overlays.intel[id] ?? overlays.cables[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
+const shownChoice = id => overlays.demo[id] ?? overlays.acoustic[id] ?? overlays.bed[id] ?? overlays.station[id] ?? overlays.intel[id] ?? overlays.cables[id] ?? overlays.day[id] ?? overlays.quiet[id] ?? overlays.explore[id] ?? overlays.patient[id] ?? selected[id];
 /** Set what one layer shows (null: nothing), and bring the room up to whichever layer is on top for each group it touched. */
 function showLayer(layer, values) {
   const touched = new Set([...Object.keys(overlays[layer]), ...Object.keys(values || {})]);
@@ -684,7 +687,7 @@ function syncUi() {
 
 // ---------------------------------------------------------------- sharing: the room is in the URL
 // while today's room is showing for comparison, or a feature demo runs, the link and summary stay with the visitor's own design
-const specCode = () => (compare ? compare.code : demo ? demo.snap.code : encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))));
+const specCode = () => (compare ? compare.code : demo ? demo.snap.code : daySnap ? daySnap.code : encodeSpec(optionData, state, selected, encodePlaced(placement.list(state.room))));
 let rememberTimer = 0;
 function remember() {
   if (!optionData || !window.__configReady) return;
@@ -843,7 +846,7 @@ pacs.restoreViewState = name => { state.view = name; syncViews(); remember(); de
 
 // ---------------------------------------------------------------- room modes: scenes over the configured room (modes.js)
 const modeApi = {
-  baseLight: () => lighting.patient || lighting.env || lighting.base(state.hour), // a patient's state's light, or a scene's, under the modes
+  baseLight: () => lighting.plan || lighting.patient || lighting.env || lighting.base(state.hour), // the 24-hour plan's, a patient's state's or a scene's light, under the modes
   isDark: () => afterDark(),
   setLight: (look, task) => { lighting.scene = look; lighting.sceneTask = task; relight(); },
   blindsNow: () => {
@@ -853,7 +856,13 @@ const modeApi = {
   configuredBlinds: () => optionOf("blinds", shownChoice("blinds"))?.effects.find(e => e.do === "blinds")?.level ?? 0,
   setBlinds: level => { EFFECTS.blinds({ level }); stage.renderer.shadowMap.needsUpdate = true; invalidate(); },
   // a mode lays itself over what the room shows: its choices, or what a feature demo is showing in their place
-  restore: ids => { for (const id of ids) runEffects(groupById(id), shownChoice(id)); stage.renderer.shadowMap.needsUpdate = true; invalidate(); },
+  restore: ids => {
+    for (const id of ids) {
+      if (id === "blinds" && dayOn) EFFECTS.blinds({ level: blindsAt(state.hour) }); // the 24-hour plan's blinds, while it's open
+      else runEffects(groupById(id), shownChoice(id));
+    }
+    stage.renderer.shadowMap.needsUpdate = true; invalidate();
+  },
   screens: on => {
     if (!on) setTv(stage.current, { playing: false });
     // the digital aquarium's picture; its dark case stays, like a screen that's off
@@ -882,7 +891,8 @@ function syncModes(name) {
   }
   note.hidden = !note.textContent;
   $("modeBanner").hidden = name !== "emergency";
-  if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency-ready is on."); setAcoustic(false); setBed(false); } // comfort yields to care
+  if (name === "emergency") { stopDemoSound("Demo sound stopped: Emergency-ready is on."); setAcoustic(false); setBed(false); setDay(false); } // comfort yields to care
+  if (dayOn) dayView.render(); // the plan says which mode is over it
   if (quietOn) modeApi.screens(false); // a mode turns the screens back on; Quiet now keeps them off
   document.body.classList.toggle("emergency-ready", name === "emergency");
   station.setEmergency(name === "emergency"); // the workstation shows where the emergency equipment is
@@ -1038,6 +1048,7 @@ const ACTION_HANDLERS = {
   "bed:pressure": { label: () => "Open the pressure map", run: () => setBed(true, "pressure") },
   "bed:lines": { label: () => "Open the lines", run: () => setBed(true, "lines") },
   station: { label: () => "Open the workstation", run: () => setStation(true) },
+  day: { label: () => "Open Light across 24 hours", run: () => setDay(true) },
   "cables:apis": { label: () => "Lines at the patient, in APIS", run: () => { closeCard(); apis.open(); apis.setMode("routing"); } },
   intel: { label: () => "Open room intelligence", run: () => setIntel(true) },
   scan: { label: () => "Run the room safety scan", run: () => { closeCard(); if (isPhone()) setSheet(true); $("runScan").scrollIntoView({ block: "nearest" }); runScan(); } },
@@ -1182,7 +1193,7 @@ let cardAt = { x: 24, y: 24 }; // where the card was opened from, to fit it agai
 function placeCard(card, x, y) {
   cardAt = { x, y };
   card.style.maxHeight = "";
-  const rect = card.getBoundingClientRect(), panelRect = pacs.active ? restingRect($("pacsPanel")) : acousticOn ? restingRect($("acousticPanel")) : bedsideOn ? restingRect($("bedside")) : panel.getBoundingClientRect();
+  const rect = { width: card.offsetWidth, height: card.offsetHeight }, panelRect = pacs.active // its laid-out size: the opening animation scales it ? restingRect($("pacsPanel")) : acousticOn ? restingRect($("acousticPanel")) : bedsideOn ? restingRect($("bedside")) : panel.getBoundingClientRect();
   const phone = matchMedia("(max-width: 820px)").matches;
   let left = x + 14, top = y + 14;
   if (left + rect.width > panelRect.left && x < panelRect.left) left = Math.max(12, panelRect.left - rect.width - 12);
@@ -1364,6 +1375,7 @@ const demoApi = {
   bed: tab => setBed(true, tab, { fromDemo: true }),
   position: (id, minutes) => bedView.setPosition(id, minutes),
   askMove: id => bedView.ask(id, { focus: false }), // the line check, on screen: the demo says it plays the staff member
+  day: h => { setDay(true, { fromDemo: true }); dayView.set(h); },
   station: view => { if (!stationOn) setStation(true, { fromDemo: true }); station.setView(view, { quietly: true }); },
   // today's room, as Compare shows it: every option at its default and no placed item. The demo's end puts them back
   today: () => {
@@ -1407,6 +1419,7 @@ async function startDemo(featureId, demoId = features.get(featureId)?.demo) {
   setAcoustic(false);
   setBed(false);
   setStation(false);
+  setDay(false);
   tour.stop();
   if (pacs.active) pacs.exit();
   if (guide.running || guide.ended) await guide.exit();
@@ -1454,6 +1467,7 @@ function endDemo(why = "") {
   settle();
   if (acousticOn) setAcoustic(false); // only a demo can have it on now: starting one ends the visitor's
   if (bedOn) setBed(false); // and the same for the bed panel
+  if (dayOn) setDay(false); // and Light across 24 hours, which puts the time back
   bedView.restore(d.snap.bed);
   if (d.hidPlaced) placement.show(stage.current); // the visitor's placed items, hidden while today's room showed
   if (stationOn && !d.snap.stationOn) setStation(false); // and the workstation's, with its views and ticks as they were
@@ -1523,6 +1537,7 @@ function setAcoustic(on, { fromDemo = false } = {}) {
     setStation(false);
     setTwin(false);
     setIntel(false);
+    setDay(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1812,6 +1827,7 @@ function setBed(on, tab, { fromDemo = false } = {}) {
     setBedside(false);
     setStation(false);
     setTwin(false);
+    setDay(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -1972,6 +1988,7 @@ function setStation(on, { fromDemo = false } = {}) {
     setBedside(false);
     setBed(false);
     setTwin(false);
+    setDay(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -2083,7 +2100,7 @@ function twinRefresh() {
 function setTwin(on, { fromDemo = false } = {}) {
   if (on) {
     if (!fromDemo) { endDemo(); endCompare(); }
-    setAcoustic(false); setBedside(false); setBed(false); setStation(false); setIntel(false);
+    setAcoustic(false); setBedside(false); setBed(false); setStation(false); setIntel(false); setDay(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -2136,7 +2153,7 @@ const intelEvents = {}; // id -> { raised, acknowledged }
 function setIntel(on, { fromDemo = false } = {}) {
   if (on) {
     if (!fromDemo) { endDemo(); endCompare(); }
-    setAcoustic(false); setBedside(false); setBed(false); setStation(false); setTwin(false);
+    setAcoustic(false); setBedside(false); setBed(false); setStation(false); setTwin(false); setDay(false);
     tour.stop();
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
@@ -2343,6 +2360,83 @@ $("cablePatient").textContent = CABLE_TEXT.patient;
 $("cableLimits").textContent = CABLE_TEXT.limits;
 $("cableKey").replaceChildren(...CABLE_KINDS.map(k => el("li", {}, el("span", { className: "cable-swatch", style: `background:${k.colour}` }), ` ${k.label}`)));
 
+// ---------------------------------------------------------------- Light across 24 hours (day-plan.js, day-view.js)
+// A panel in the options panel's place with a 24-hour timeline. The room shows the plan's light and blinds at the hour
+// dragged to, with the circadian scheme shown, not chosen. The plan's light sits under the room modes, so Clinical and
+// Emergency-ready always win. The link stays as it was while it's open, and closing it puts the time back.
+var dayOn = false, daySnap = null, dayOpener = null, dayFromSheet = false;
+var dayView = new DayView($("dayPanel"), { hour: () => state.hour, setHour: h => { setTime(h); applyDay(); }, mode: () => modes.current, say });
+
+/** The plan at the room's hour: its light under any mode, and its blinds unless a mode has the blinds. */
+function applyDay() {
+  if (!dayOn) return;
+  lighting.plan = planLook(state.hour);
+  if (modes.current === "standard" && !modes.easing) modeApi.setBlinds(blindsAt(state.hour));
+  relight();
+}
+
+function setDay(on, { fromDemo = false } = {}) {
+  if (on) {
+    if (modes.current === "emergency") { say("Light across 24 hours waits: Emergency-ready is on, and care comes first."); return; }
+    if (!fromDemo) { endDemo(); endCompare(); }
+    setAcoustic(false);
+    setBedside(false);
+    setBed(false);
+    setStation(false);
+    setTwin(false);
+    setIntel(false);
+    tour.stop();
+    if (pacs.active) pacs.exit();
+    $("objectCard").hidden = true;
+    if (!dayOn) {
+      if (!dayOpener) dayOpener = document.activeElement;
+      daySnap = { code: specCode(), hour: state.hour, pose: cameraPose() };
+    }
+    dayOn = true;
+    showLayer("day", { scheme: "circadian", temperature: "auto" }); // the circadian scheme and the colour temperature it sets, shown not chosen: closing puts both back
+    $("dayPanel").hidden = false;
+    document.body.classList.add("day-active");
+    resize();
+    if (rig.meta.cameras.bed_window && state.view !== "bed_window") rig.go("bed_window"); // the window and its blinds, from the bed
+    applyDay();
+    dayView.render();
+    if (!fromDemo) $("dayTitle").focus({ preventScroll: true });
+    say(`Light across 24 hours. ${dayView.handle.getAttribute("aria-valuetext")}. Drag the hour, or use the arrow keys.`);
+  } else {
+    if (!dayOn) return;
+    dayView.stop();
+    dayOn = false;
+    lighting.plan = null;
+    showLayer("day", null);
+    const snap = daySnap;
+    daySnap = null;
+    setTime(snap.hour); // the time it was, and the link with it
+    if (modes.current === "standard") modeApi.restore(["blinds"]);
+    relight();
+    $("dayPanel").hidden = true;
+    document.body.classList.remove("day-active");
+    resize();
+    restorePose(snap.pose);
+    if (dayFromSheet && isPhone()) setSheet(true);
+    dayFromSheet = false;
+    const back = dayOpener?.isConnected && !dayOpener.closest("[hidden]") && !dayOpener.closest("[inert]") && dayOpener.offsetParent ? dayOpener : canvas;
+    dayOpener = null;
+    back.focus({ preventScroll: true });
+    say("Light across 24 hours closed. The room is back at its own time.");
+  }
+  $("openDay").setAttribute("aria-pressed", String(dayOn));
+  invalidate();
+}
+$("openDay").addEventListener("click", () => {
+  if (dayOn) { setDay(false); return; }
+  dayOpener = $("openDay");
+  dayFromSheet = isPhone() && panel.classList.contains("open");
+  if (dayFromSheet) setSheet(false);
+  setDay(true);
+});
+$("dayClose").addEventListener("click", () => setDay(false));
+$("dayPanel").addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); if (dayView.playing) dayView.stop(true); else setDay(false); } });
+
 var bedside = new Bedside($("bedside"), {
   state: () => patientState,
   reminder: () => bedView.reminderState(),
@@ -2367,6 +2461,7 @@ function setBedside(on, tab) {
     setBed(false);
     setStation(false);
     setTwin(false);
+    setDay(false);
     if (pacs.active) pacs.exit();
     $("objectCard").hidden = true;
     if (!bedsideOn && !bedsideOpener) bedsideOpener = document.activeElement;
@@ -3197,6 +3292,10 @@ window.__config = {
   openBed: tab => setBed(true, tab),
   setBed: on => setBed(on),
   bedPosition: (id, minutes) => bedView.setPosition(id, minutes),
+  day: () => ({ open: dayOn, ...dayView.inspect(), plan: lighting.plan && { ...lighting.plan }, blinds: Math.round(modeApi.blindsNow() * 100) / 100, planBlinds: Math.round(blindsAt(state.hour) * 100) / 100, scheme: shownChoice("scheme") }),
+  openDay: () => setDay(true),
+  setDay: on => setDay(on),
+  dayHour: h => { if (dayOn) dayView.set(h); },
   clipPoints: () => (stage.current.addons?.lineClips?.children || []).map(c => { const v = c.getWorldPosition(new THREE.Vector3()); return { line: c.userData.line, at: [v.x, -v.z, v.y].map(n => Math.round(n * 1000) / 1000) }; }),
   bedPoint: id => { const v = bedView.pointOf(id); if (!v) return null; v.project(stage.camera); return { x: ((v.x + 1) / 2) * innerWidth, y: ((1 - v.y) / 2) * innerHeight }; },
   acoustic: () => ({ on: acousticOn, with: acousticWith, reading: acousticOn ? acousticView.readings() : null, marks: acousticView.showing(), sound: soundState(), shown: fittingsShown(), map: !!stage.current.acousticMap, zone: !!stage.current.acousticZone }),
@@ -3253,7 +3352,7 @@ window.__config = {
       wardrobe: w?.userData.side ?? null, wardrobeShown: !!w?.visible, oldWardrobe: !!stage.current.oldWardrobe?.visible, tv: tv ? (tv.screen.material === tv.sceneOn ? "scene" : tv.screen.material === tv.familyOn ? "family" : tv.screen.material === tv.on ? "on" : tv.screen.material === tv.orientOn ? "orientation" : "off") : null,
       glass: [glass.mode, glass.opaque, glass.level], cleaning: JSON.stringify([cleaningOn, [...cleaningTicks], highlight.has("cleaning")]), figure: stage.current.patient ? stage.current.patient.root.visible : null, blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
       overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
-      bed: JSON.stringify([bedOn, bedView.snapshot()]), cables: JSON.stringify([cableState, Object.entries(stage.current.cableViews || {}).filter(([, g]) => g.visible).map(([k]) => k)]), intel: JSON.stringify([intelOn, intelActive, Object.keys(intelEvents), !!stage.current.intelCover?.visible]), twin: JSON.stringify([twinOn, twin.system, highlight.has("twin"), highlight.has("twinAll")]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
+      bed: JSON.stringify([bedOn, bedView.snapshot()]), day: dayOn, plan: JSON.stringify(lighting.plan ?? null), cables: JSON.stringify([cableState, Object.entries(stage.current.cableViews || {}).filter(([, g]) => g.visible).map(([k]) => k)]), intel: JSON.stringify([intelOn, intelActive, Object.keys(intelEvents), !!stage.current.intelCover?.visible]), twin: JSON.stringify([twinOn, twin.system, highlight.has("twin"), highlight.has("twinAll")]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
       wallScenes: JSON.stringify([stage.current.wallState?.wallScene?.visible ?? false, stage.current.wallState?.ceilingScene?.visible ?? false]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,
     };
   },

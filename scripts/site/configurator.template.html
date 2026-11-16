@@ -165,6 +165,7 @@
         <button type="button" data-value="sunset" aria-pressed="false">Sunset</button>
         <button type="button" data-value="night" aria-pressed="false">Night</button>
       </div>
+      <button type="button" id="openDay" class="outline-action day-open" aria-pressed="false">Light across 24 hours</button>
       <p class="note">The sun path is for Abu Dhabi's latitude in mid-March or late September. North follows the model, as in the renders.</p>
     </section>
 
@@ -384,6 +385,17 @@
   <div id="stationHands" class="station-hands"></div>
   <button type="button" id="stationPacs" class="outline-action station-pacs">Open PACS</button>
   <p class="note">A made-up patient: no name and no diagnosis, and every value is made up. It opens PACS as it is, and copies or changes nothing in it. A real station needs integration, infection-control and clinical review.</p>
+</section>
+<section id="dayPanel" class="acoustic-panel day-panel" aria-labelledby="dayTitle" hidden>
+  <button type="button" id="dayClose" class="object-close" aria-label="Close Light across 24 hours">×</button>
+  <p class="object-kicker">Light across 24 hours · a plan</p>
+  <h2 id="dayTitle" tabindex="-1">The room's light, hour by hour</h2>
+  <div id="dayTimeline" class="day-timeline"></div>
+  <p id="dayNow" class="day-now"></p>
+  <dl id="dayFacts" class="day-facts"></dl>
+  <button type="button" id="dayPlay" class="outline-action">Play the day</button>
+  <p id="dayOverride" class="acoustic-note day-override"></p>
+  <p class="acoustic-note">A plan for the room's light, on the room's solar time. It changes no choice or link, and closing it puts the time back. Light alone isn't shown to prevent delirium: a pilot in redesigned rooms saw less delirium, and a randomised trial of bright dynamic light alone found no effect.</p>
 </section>
 <section id="bedPanel" class="acoustic-panel bed-panel" aria-labelledby="bedTitle" hidden>
   <button type="button" id="bedClose" class="object-close" aria-label="Close the bed panel">×</button>
