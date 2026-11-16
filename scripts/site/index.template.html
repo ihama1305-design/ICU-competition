@@ -45,16 +45,16 @@
     <div class="hero-copy">
       <p class="eyebrow">ICU Interior Design Student Competition · design proposal</p>
       <h1>A room that adapts to the patient in it.</h1>
-      <p class="lede">Adaptive ICU is our proposal for the fourth-floor ICU at SSMC: a patient room that changes its light, blinds and glass with the time of day, the patient's own preferences and the care being given. A nurse approves every change.</p>
+      <p class="lede">Adaptive ICU is our design for the ICU on SSMC's fourth floor. The room adjusts its lights, blinds and glass to the time of day, what the patient likes and the care they need. A nurse approves every change.</p>
       <div class="actions">
         <a class="btn primary" href="configurator/?tour=future">Experience the ICU of the future</a>
         <a class="btn quiet" href="configurator/">Configure a room</a>
-        <a class="btn quiet" href="viewer/">Walk today's floor</a>
+        <a class="btn quiet" href="viewer/">Explore the ICU as it is today</a>
       </div>
       <dl class="proof">
         <div><dt>room modes, one tap each</dt><dd>7</dd></div>
-        <div><dt>rooms to configure: isolation and standard</dt><dd>2</dd></div>
-        <div><dt>patient rooms modelled from the drawing</dt><dd>{{ROOMS}}</dd></div>
+        <div><dt>rooms you can design: isolation and standard</dt><dd>2</dd></div>
+        <div><dt>patient rooms built from the real floor plan</dt><dd>{{ROOMS}}</dd></div>
       </dl>
     </div>
     <div class="rooms" id="rooms">
@@ -67,13 +67,13 @@
         <div role="tabpanel" id="room-proposed" aria-labelledby="tab-proposed">
           <figure>
             <a href="configurator/#c={{CODE_FUTURE}}"><!--SHOT proposal-future | The proposed isolation room as the ICU of the future, seen across the room toward the window: a lit ceiling tray over the bed, a flush white panel with two staff screens behind the bed head, a white patient wall with the day and time round the TV, a clinician's desk by the window, and a teaching figure of a patient in the raised bed. | (min-width: 960px) 58vw, 100vw | eager--></a>
-            <figcaption>Isolation room W1 as the ICU of the future: a lit ceiling tray, wall screens for staff and for the patient, and a desk for the care team. Open it to change anything.</figcaption>
+            <figcaption>Our design for isolation room W1 as the ICU of the future: a lit ceiling tray, wall screens for staff and for the patient, and a desk for the care team. Click to open it and change anything.</figcaption>
           </figure>
         </div>
         <div role="tabpanel" id="room-today" aria-labelledby="tab-today">
           <figure>
             <a href="{{FULL:iso_room}}"><!--IMG iso_room | An isolation patient room seen along its length: a recliner in the foreground, a raised bed beside a wood-look feature wall with a TV, a ceiling pendant with a monitor, and a wall of windows at the far end. | (min-width: 960px) 58vw, 100vw | lazy--></a>
-            <figcaption>The same room today. The room comes from the as-built drawing; the equipment is a typical ICU kit, not SSMC's inventory.</figcaption>
+            <figcaption>The same room today, built from the hospital's floor plan. The equipment is a typical ICU setup, not SSMC's actual equipment.</figcaption>
           </figure>
         </div>
       </div>
@@ -86,37 +86,37 @@
     <div class="section-head">
       <p class="eyebrow">The proposal</p>
       <h2>Six things this room does that today's doesn't.</h2>
-      <p>Each one runs in the room configurator, on the measured shape of rooms W1 and W3. Every patient reading is simulated, and nothing here changes an alarm or a medical device.</p>
+      <p>You can try each one in the configurator, using the real shape of rooms W1 and W3. All patient data is made up, and nothing here changes an alarm or a medical device.</p>
     </div>
     <div class="plates">
       <figure class="plate full">
         <a href="configurator/#c={{CODE_MODES}}"><!--SHOT proposal-modes | The isolation room in Comfort mode by day: the room-mode bar at the top with Comfort selected, the window blinds lowered, the light warm and dim, and a note saying the task light, monitor and clinical alarms are unaffected. | 100vw--></a>
-        <figcaption><b>Room modes.</b> One tap sets the room for Comfort, Privacy, Clinical work, a family visit, cleaning between patients or an emergency. The lights, blinds, glass, wall screens and scenes change together. After sunset, Comfort leaves the blinds alone and changes only the light. <span class="opens">Opens room W1. The modes are in the bar at its top.</span></figcaption>
+        <figcaption><b>Room modes.</b> One tap sets the room for rest, privacy, treatment, a family visit, cleaning between patients or an emergency. The lights, blinds, glass, wall screens and scenes all change together. <span class="opens">Opens room W1. The modes are in the bar at its top.</span></figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_PACS}}"><!--SHOT proposal-pacs | Physiological Adaptive Mode in the isolation room: teal lines link the bedside monitor, the ceiling lights and the blinds, and a nurse dashboard on the right shows simulated heart rate, blood pressure, breathing rate and oxygen saturation with three scripted scenarios. | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption><b>PACS, the Physiological Adaptive Comfort System.</b> The monitor's readings and the patient's own preferences lead to a suggestion, such as softer light. A nurse approves it before the room changes. <span class="opens">Opens room W1. PACS is in its options, under Time of day.</span></figcaption>
+        <figcaption><b>PACS, the Physiological Adaptive Comfort System.</b> The room reads simulated vital signs and the patient's preferences, then suggests changes like softer light. A nurse approves before anything changes. <span class="opens">Opens room W1. PACS is in its options, under Time of day.</span></figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_APIS}}"><!--SHOT proposal-apis | The Adaptive Patient Interface System: a panel about a nasogastric feeding tube, with a close-up of its attachment layers, the conventional and proposed arrangements side by side, the possible benefit and the clinical limitations. | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption><b>APIS, the Adaptive Patient Interface System.</b> How tubes, lines and sensors sit on the patient: what touches the skin, how each is secured and where it runs, with its clinical limits stated. <span class="opens">Opens room W1. APIS is in its options, under Time of day.</span></figcaption>
+        <figcaption><b>APIS, the Adaptive Patient Interface System.</b> An idea for a gentler way to attach tubes, wires and sensors to the patient: what touches the skin, how each is held in place, where it runs, and its limits. <span class="opens">Opens room W1. APIS is in its options, under Time of day.</span></figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_PATIENT}}"><!--SHOT proposal-patient | The patient's view from the pillow in the proposed isolation room: a star-patterned feature wall and, on the screen opposite the bed, the weekday, the date, the time and the word Afternoon. | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption><b>What the patient sees.</b> Patient view looks out from the pillow and turns only as far as a head can. The screen opposite can show the day, the date and the time.</figcaption>
+        <figcaption><b>What the patient sees.</b> See the room exactly as the patient does from the bed. The screen in front of them shows the day, date and time.</figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_CLINICAL}}"><!--SHOT proposal-clinical | The standard room with its equipment labelled: labels on the bed, ventilator, infusion pumps, IV pole, ceiling pendant and examination light, and hatched keep-clear areas on the floor beside the bed. | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption><b>Equipment labels.</b> Each piece of equipment named, and shaded areas to keep clear for care around the bed. A sketch for discussion, not a compliance check. <span class="opens">Opens room W3. Press Clinical in the bar at its top.</span></figcaption>
+        <figcaption><b>Equipment labels.</b> Names every piece of equipment and shades the space that must stay clear around the bed. A sketch, not a compliance check. <span class="opens">Opens room W3. Press Clinical in the bar at its top.</span></figcaption>
       </figure>
       <figure class="plate full">
         <a href="configurator/#c={{CODE_REMOTE}}"><!--SHOT proposal-remote | The isolation room seen from inside its glazed front: the sound sensor on the wall glows red, and a notice marked simulated says a call for help was heard in isolation room W1, asks the nurse to look in through the glass now and leaves going in to them. | 100vw--></a>
-        <figcaption><b>Remote care for the isolation room.</b> Every entry costs protective clothing and opens a negative-pressure door. So the sound sensor hears a groan or a call for help and asks the nurse to look in through the glass first. The air is cleaned in the plant, out of sight. Fewer unnecessary entries, never fewer checks. <span class="opens">Opens room W1. The sound sensor's two buttons are in its options, under Comfort systems.</span></figcaption>
+        <figcaption><b>Remote care for the isolation room.</b> Every time a nurse goes in, they need new protective gear and the room's air seal is broken. A sound sensor hears if the patient groans or calls for help, and asks the nurse to look through the glass first. Fewer unnecessary trips in, but never fewer checks. <span class="opens">Opens room W1. The sound sensor's two buttons are in its options, under Comfort systems.</span></figcaption>
       </figure>
     </div>
     <div class="section-foot">
-      <div class="actions"><a class="btn primary" href="configurator/?tour=future">Experience the ICU of the future</a> <a class="btn quiet" href="{{REPO_URL}}/blob/main/REPORT.md">Read how it was built</a></div>
-      <p class="note">A student design proposal, not a clinical product. Each picture opens that room. Where a picture shows something you start yourself, its caption says where to find it.</p>
+      <div class="actions"><a class="btn primary" href="configurator/?tour=future">Experience the ICU of the future</a> <a class="btn quiet" href="{{REPO_URL}}/blob/main/REPORT.md">See how we built it</a></div>
+      <p class="note">A student design, not a real medical product. Click any picture to open that room. Where a picture shows something you start yourself, its caption says where to find it.</p>
     </div>
   </div>
 </section>
@@ -125,27 +125,27 @@
   <div class="wrap">
     <div class="section-head">
       <p class="eyebrow">Try it yourself</p>
-      <h2>Spec a room the way you'd spec a car.</h2>
-      <p>A separate page for trying out a redesign of one room: an isolation room or a standard room, with finishes, lighting schemes, smart glass, a patio and three themes, by day and at night. Each choice shows in 3D straight away, and a link saves the exact room.</p>
-      <p>See the room from the pillow in Patient view, switch it between Comfort, Privacy, Clinical and Emergency-ready modes, label the equipment and its keep-clear areas, drag in items like a privacy screen or hand rub, and compare the result with today's room. Every patient reading in it is simulated.</p>
+      <h2>Design a room the way you'd customise a car.</h2>
+      <p>Redesign an isolation room or a standard room: pick finishes, lighting, smart glass, a patio, or one of four ready-made themes, by day or night. Every change shows in 3D instantly, and you can share your room with a link.</p>
+      <p>You can also see the room from the patient's bed, switch between room modes, label the equipment, drag in extra items and compare your design with today's room. All patient data is simulated.</p>
     </div>
     <div class="plates">
       <figure class="plate full">
         <a href="configurator/#c={{CODE_DESERT}}"><!--SHOT config-desert | The room configurator showing an isolation room at night in the Desert Sanctuary theme: warm cove light around the ceiling, a mashrabiya feature wall and light timber floor, a teaching figure of a patient in the bed, and a panel of options on the right. | 100vw--></a>
-        <figcaption>Desert Sanctuary at night, with its cove lighting. The panel lists every option.</figcaption>
+        <figcaption>Desert Sanctuary theme at night. Every option is in the side panel.</figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_CALM}}"><!--SHOT config-calm | A standard room in the Calm Clinical theme by day: a teal recliner and an IV pole in front, a teaching figure of a patient in the bed with its backrest raised beside the ceiling pendant, a TV on a wood feature wall, and palms outside the window | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption>Calm Clinical: today's standard room, tidied up, by day.</figcaption>
+        <figcaption>Calm Clinical theme: today's room, tidied up, in daytime.</figcaption>
       </figure>
       <figure class="plate half">
         <a href="configurator/#c={{CODE_PATIO}}"><!--SHOT config-patio | The patient's view from the bed in a standard room in the Family Suite theme, turned toward a sliding door and a shaded balcony with palms in planters, past the bed rail and the infusion pumps. | (min-width: 720px) 50vw, 100vw--></a>
-        <figcaption>Family Suite: what the patient sees with their head turned, toward the patio and palms.</figcaption>
+        <figcaption>Family Suite theme: the patient's view toward the patio and palm trees.</figcaption>
       </figure>
     </div>
     <div class="section-foot">
       <div class="actions"><a class="btn primary" href="configurator/">Open the configurator</a> <a class="btn quiet" href="configurator/?tour=guided">Room basics: the nine-step tour <small>about a minute and a half</small></a></div>
-      <p class="note">This is a proposal, not the room as built, and it doesn't change the model on the rest of this page. The patio, finishes and fittings are ideas, and their clinical notes cite their sources.</p>
+      <p class="note">This is our design idea, not the real room. The patio, finishes and fittings are suggestions, and their notes cite their sources.</p>
     </div>
   </div>
 </section>
@@ -155,16 +155,16 @@
     <div class="band-copy">
       <p class="eyebrow">The floor today</p>
       <h2>Drop a person on the floor and walk.</h2>
-      <p>It runs in your browser with nothing to install. Drag <b>Place person</b> onto any open spot and your view drops to their eye level, 1.6 m above the floor.</p>
+      <p>It runs in your browser, with nothing to install. Drag <b>Place person</b> onto the floor to walk around at eye level.</p>
       <ul class="how">
-        <li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to walk, <kbd>Shift</kbd> to run, drag or <kbd>←</kbd> <kbd>→</kbd> to look. On a phone, push the on-screen stick to walk and drag the view to look.</li>
+        <li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to walk, <kbd>Shift</kbd> to run, drag or <kbd>←</kbd> <kbd>→</kbd> to look around. On a phone, use the on-screen stick to walk.</li>
         <li><kbd>V</kbd> shows the person from behind.</li>
-        <li>Walls, counters and the facade stop you. Doors and glass fronts let you through.</li>
+        <li>You can walk through doors, but not through walls.</li>
         <li>The plan in the corner shows where you are. Click it to jump.</li>
-        <li>Click anything to name it and see how sure the model is about it.</li>
+        <li>Click anything to see what it is and how sure we are about it.</li>
       </ul>
       <div class="actions"><a class="btn primary" href="viewer/">Open the walkthrough</a></div>
-      <p class="note">About a {{GLB_WEB_MB}} MB download. The walkthrough uses flat colours; the realistic lighting is in the renders below.</p>
+      <p class="note">A {{GLB_WEB_MB}} MB download. For realistic lighting, see the pictures below.</p>
     </div>
     <div class="shots">
       <figure>
@@ -173,7 +173,7 @@
       </figure>
       <figure>
         <!--SHOT walk-orbit | The same person seen from above in orbit view with the ceiling off, standing in a patient room with the bed, recliner and corridor around them. | (min-width: 960px) 60vw, 100vw-->
-        <figcaption>Orbit circles the person, so you can see where they're standing.</figcaption>
+        <figcaption>Orbit view circles around the person, so you can see where they are.</figcaption>
       </figure>
     </div>
   </div>
@@ -184,7 +184,7 @@
     <div class="section-head">
       <p class="eyebrow">Renders</p>
       <h2>The floor, from the whole wing down to the bedside.</h2>
-      <p>Rendered with Blender Cycles: real sun and sky through the facade, and every ceiling panel a real light. Select an image to see it larger.</p>
+      <p>Realistic images made in Blender, with modelled sunlight and ceiling lights. Click an image to make it bigger.</p>
     </div>
     <div class="plates">
       <figure class="plate full">
@@ -197,7 +197,7 @@
       </figure>
       <figure class="plate half">
         <a href="{{FULL:plan}}"><!--IMG plan | A top-down view of the floor showing all sixteen patient rooms, the central core, the U-shaped nurse station and the north lobby block. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>Top view. The bottom edge follows the wall line where the plan continues onto Part b, which isn't modelled.</figcaption>
+        <figcaption>Top view. The bottom edge is where the floor continues into a part we didn't model.</figcaption>
       </figure>
       <figure class="plate half">
         <a href="{{FULL:bedside}}"><!--IMG bedside | At the bedside: a raised ICU bed with side rails and an overbed table, a ventilator with breathing tubes, a pendant holding infusion pumps and a patient monitor. | (min-width: 720px) 50vw, 100vw | lazy--></a>
@@ -205,15 +205,15 @@
       </figure>
       <figure class="plate half">
         <a href="{{FULL:corridor}}"><!--IMG corridor | The central nurse station seen from the corridor: a raised wood-faced transaction ledge with monitors and chairs behind it, wood handrails along the walls and a lay-in ceiling grid with LED panels. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>The central nurse station from the corridor, with handrails and a 600 mm lay-in ceiling.</figcaption>
+        <figcaption>The central nurse station, seen from the corridor.</figcaption>
       </figure>
       <figure class="plate half">
         <a href="{{FULL:iso_entry}}"><!--IMG iso_entry | The glazed inner door of an isolation room seen from its ante room: two glass panels with a frosted band and a teal curtain gathered behind them, and a plain wall beyond. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>From W1's ante room, through the inner door. With the bed near the drawn bed circle, it's out of sight from here.</figcaption>
+        <figcaption>Looking into room W1 from its entry room. The bed is out of view from here.</figcaption>
       </figure>
       <figure class="plate half">
         <a href="{{FULL:iso_window}}"><!--IMG iso_window | An isolation room's bed seen from near its foot, with a wall of windows beyond it, a visitor chair, a ventilator and a ceiling pendant holding pumps and a monitor. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>W1's bed and window. The window is to the patient's right here, while in standard rooms it's behind them.</figcaption>
+        <figcaption>W1's bed and window. Here the window is on the patient's right; in standard rooms it's behind them.</figcaption>
       </figure>
     </div>
   </div>
@@ -224,7 +224,7 @@
     <div class="section-head">
       <p class="eyebrow">Findings</p>
       <h2>What the floor plan means for a redesign.</h2>
-      <p>These come from the drawing, and the model makes them easy to see. They describe the floor as built, not a proposed design.</p>
+      <p>What we noticed in today's floor plan. These describe the current ICU, not our design.</p>
     </div>
     <div class="findings">
       <figure>
@@ -233,16 +233,16 @@
       </figure>
       <div class="finding-list">
         <div class="finding">
-          <h3>Observation windows are 40 cm slots</h3>
-          <p>The WA31 tag reads sill 1.0 m, head 1.4 m. From the nook you see a strip across the bed, not the whole room. Confirm this against the window schedule before relying on it.</p>
+          <h3>Observation windows are only 40 cm tall</h3>
+          <p>They run from 1.0 m to 1.4 m high, so staff only see a strip across the bed, not the whole room. These heights still need checking.</p>
         </div>
         <div class="finding">
           <h3>Standard room fronts are glazed and about 2.2 m wide</h3>
-          <p>Privacy depends on a curtain behind the glass. The same glass could also carry daylight through to the corridor.</p>
+          <p>Privacy relies on a curtain behind the glass. That same glass could also let daylight into the corridor.</p>
         </div>
         <div class="finding">
-          <h3>Rooms run 7.2 to 9.0 m from front to facade</h3>
-          <p>The slanted facade and stepped corridor give the rooms slightly different shapes, from {{AREA_MIN}} to {{AREA_MAX}} m².</p>
+          <h3>Rooms are 7.2 to 9.0 m deep</h3>
+          <p>The angled outer wall makes each room a slightly different size, from {{AREA_MIN}} to {{AREA_MAX}} m².</p>
         </div>
         <div class="finding">
           <h3>One nurse station and {{NOOKS}} observation nooks</h3>
@@ -257,13 +257,13 @@
   <div class="wrap">
     <div class="section-head">
       <p class="eyebrow">Method</p>
-      <h2>Read from the drawing, not traced by eye.</h2>
+      <h2>Built from the real drawings, not traced by hand.</h2>
     </div>
     <ol class="steps">
-      <li><h3>Read the CAD layers</h3><p>Sheet A1104-a is an AutoCAD PDF that still has its layers. Walls, doors, glazing and joinery come straight from them, and the 9 m structural grid sets the scale.</p></li>
-      <li><h3>Find every opening</h3><p>Each drawn door leaf finds its opening by casting rays to the jambs along the wall line. Door heights come from the H=2410 tags.</p></li>
-      <li><h3>Furnish the rooms</h3><p>All {{ROOMS}} patient rooms get the same typical ICU kit, placed from the bed head. Nurse station and nook desks follow the drawn counters.</p></li>
-      <li><h3>Render and export</h3><p>Blender Cycles renders the scene with sun, sky and {{LIGHTS}} ceiling lights. The same scene exports to the walkthrough, and one spec file controls the heights, materials and positions.</p></li>
+      <li><h3>Read the CAD layers</h3><p>The hospital floor plan still has its CAD layers, so walls, doors and windows were taken directly from it, at the right scale.</p></li>
+      <li><h3>Find every opening</h3><p>Each door was matched to its gap in the wall automatically. Door heights come from labels on the plan.</p></li>
+      <li><h3>Furnish the rooms</h3><p>All {{ROOMS}} patient rooms get the same typical ICU equipment. Desks follow the counters on the plan.</p></li>
+      <li><h3>Render and export</h3><p>Blender makes the realistic images, with sunlight and {{LIGHTS}} ceiling lights. The same model is used for the walkthrough.</p></li>
     </ol>
   </div>
 </section>
@@ -273,20 +273,20 @@
     <div class="section-head">
       <p class="eyebrow">Accuracy</p>
       <h2>What's measured and what's assumed.</h2>
-      <p>The layout is reliable. Height and finish choices that aren't on these sheets are assumptions, and they're marked here and in the walkthrough.</p>
+      <p>The layout is accurate. Heights and finishes that weren't on the plans are our best guess, and they're marked as such.</p>
     </div>
     <table class="accuracy">
       <thead><tr><th scope="col">Item</th><th scope="col">Confidence</th><th scope="col">Basis</th></tr></thead>
       <tbody>
-        <tr><th scope="row">Walls, room shapes, door positions</th><td><span class="conf high">High</span></td><td>Vector CAD geometry, to about 2–3 cm.</td></tr>
-        <tr><th scope="row">Door head height, 2.41 m</th><td><span class="conf high">High</span></td><td>H=2410 tags on the drawing.</td></tr>
-        <tr><th scope="row">Room fronts: 2.2 m glazed opening</th><td><span class="conf med">Medium</span></td><td>Widths are drawn. A breakaway glass door is how the drawn leaf reads.</td></tr>
-        <tr><th scope="row">Observation windows, 1.0–1.4 m</th><td><span class="conf med">Medium</span></td><td>WA31 tag read with the sheet's legend. Check the window schedule.</td></tr>
-        <tr><th scope="row">Facade: 700 mm upstand, curtain wall, fins</th><td><span class="conf med">Medium</span></td><td>Tagged upstand and drawn lines. Mullion and fin spacing are approximate.</td></tr>
-        <tr><th scope="row">Ceiling height, {{CEILING}} m</th><td><span class="conf low">Low</span></td><td>Not on these sheets.</td></tr>
-        <tr><th scope="row">Finishes and colours</th><td><span class="conf low">Low</span></td><td>Finish codes are on the plan. The colours are assumed.</td></tr>
-        <tr><th scope="row">Furniture and equipment</th><td><span class="conf low">Low</span></td><td>A typical kit, repeated in every room and fitted to the two isolation rooms. Not an inventory of SSMC's equipment.</td></tr>
-        <tr><th scope="row">Bed position and direction</th><td><span class="conf low">Low</span></td><td>Head toward the window, foot toward the front. The two isolation rooms have the bed side-on, near the drawn bed circle. An assumption.</td></tr>
+        <tr><th scope="row">Walls, room shapes, door positions</th><td><span class="conf high">High</span></td><td>Taken from the CAD drawing, accurate to about 2–3 cm.</td></tr>
+        <tr><th scope="row">Door head height, 2.41 m</th><td><span class="conf high">High</span></td><td>Labelled on the drawing.</td></tr>
+        <tr><th scope="row">Room fronts: 2.2 m glazed opening</th><td><span class="conf med">Medium</span></td><td>Widths are on the drawing; the door type is our reading of it.</td></tr>
+        <tr><th scope="row">Observation windows, 1.0–1.4 m</th><td><span class="conf med">Medium</span></td><td>Read from a label on the drawing; still needs checking.</td></tr>
+        <tr><th scope="row">Facade: 700 mm upstand, curtain wall, fins</th><td><span class="conf med">Medium</span></td><td>Mostly from the drawing; some spacing is approximate.</td></tr>
+        <tr><th scope="row">Ceiling height, {{CEILING}} m</th><td><span class="conf low">Low</span></td><td>Not on the drawings, so we assumed it.</td></tr>
+        <tr><th scope="row">Finishes and colours</th><td><span class="conf low">Low</span></td><td>The plan lists the finish types; the colours are our guess.</td></tr>
+        <tr><th scope="row">Furniture and equipment</th><td><span class="conf low">Low</span></td><td>Typical ICU equipment in every room, not SSMC's real equipment.</td></tr>
+        <tr><th scope="row">Bed position and direction</th><td><span class="conf low">Low</span></td><td>Our guess: head toward the window, foot toward the door; side-on in the two isolation rooms.</td></tr>
       </tbody>
     </table>
   </div>
@@ -299,11 +299,11 @@
       <h2>Open it in your own tools.</h2>
     </div>
     <ul class="files">
-      <li><a href="downloads/icu.blend">icu.blend</a><span>Editable Blender 5.2 scene, {{BLEND_MB}} MB. Room equipment is linked, so editing one bed changes all {{ROOMS}}.</span></li>
-      <li><a href="downloads/icu.glb">icu.glb</a><span>The model for other 3D tools, {{GLB_MB}} MB. Metres, Y-up, flat colours.</span></li>
+      <li><a href="downloads/icu.blend">icu.blend</a><span>The full 3D model to edit in Blender ({{BLEND_MB}} MB). Change one bed and all {{ROOMS}} update.</span></li>
+      <li><a href="downloads/icu.glb">icu.glb</a><span>The 3D model for other 3D programs ({{GLB_MB}} MB).</span></li>
       <li><a href="{{REPO_URL}}/tree/main/renders">Full-size renders</a><span>The original PNGs, on GitHub.</span></li>
-      <li><a href="{{REPO_URL}}/blob/main/REPORT.md">Full report</a><span>Sources, confidence and known limitations.</span></li>
-      <li><a href="{{REPO_URL}}">Source code</a><span>The scripts and spec that build all of this.</span></li>
+      <li><a href="{{REPO_URL}}/blob/main/REPORT.md">Full report</a><span>Our sources, how sure we are, and its limits.</span></li>
+      <li><a href="{{REPO_URL}}">Source code</a><span>The code that builds everything on this site.</span></li>
     </ul>
   </div>
 </section>
@@ -312,7 +312,7 @@
 <footer class="foot">
   <div class="wrap">
     <p>Independent student work for the SSMC ICU Interior Design Student Competition. It isn't made or endorsed by Sheikh Shakhbout Medical City.</p>
-    <p>The model shows the existing floor as a starting point, and the configurator is a design proposal. Furnishings and finishes are assumed. Neither is for clinical or construction use. The SSMC drawings themselves aren't published here.</p>
+    <p>The 3D model shows the ICU as it is today; the configurator shows our proposal. Furniture and finishes are assumed. Not for medical or construction use. SSMC's original drawings aren't shared here.</p>
   </div>
 </footer>
 <script>

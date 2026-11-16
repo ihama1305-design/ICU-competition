@@ -22,7 +22,7 @@
       "time": "afternoon"
      },
      "note": {
-      "text": "All shown as wipeable, scrubbable finishes."
+      "text": "All finishes shown are easy to clean."
      },
      "options": [
       {
@@ -449,7 +449,7 @@
         "temperature": "auto"
        },
        "note": {
-        "text": "Tunable white that follows the day and dims at night. The evidence is mixed: a pilot of 74 patients in redesigned rooms with dynamic lighting saw less delirium (46% against 76%), but it wasn't randomised and changed more than the lights. A randomised trial of 734 patients found bright dynamic light alone didn't reduce delirium.",
+        "text": "Light that changes through the day like daylight and dims at night. Studies are mixed: a trial of 734 ICU patients found bright light alone didn't reduce delirium.",
         "sources": [
          {
           "label": "Spies et al., Crit Care Med 2024",
@@ -601,7 +601,7 @@
         }
        ],
        "note": {
-        "text": "After dark the main lights go off and only the low amber light stays on, for staff to do rounds with less light in the room."
+        "text": "At night only a soft amber light stays on, so staff can check on the patient with less light in the room."
        },
        "code": 2
       }
@@ -642,7 +642,7 @@
       }
      ],
      "note": {
-      "text": "The ceiling examination light over the bed, on its own switch: room modes and comfort scenes never dim it, and Clinical and Emergency-ready turn it on. Its brightness here is illustrative, not a lux level or a lighting design."
+      "text": "The bright light over the bed for examinations. It has its own switch: no mode or scene dims it, and Clinical and Emergency modes turn it on. Its brightness is only illustrative."
      },
      "code": 32
     }
@@ -665,7 +665,7 @@
       "rooms": [
        "W1"
       ],
-      "text": "This is an isolation room. Whichever option you choose, its door needs a seal along the bottom and testing against positive and negative pressure, so the room holds its pressure.",
+      "text": "This is an isolation room. Whatever you choose, the door must be sealed and tested so the room keeps its air pressure.",
       "sources": [
        {
         "label": "Stanley Access, ICU doors",
@@ -706,7 +706,7 @@
         }
        ],
        "note": {
-        "text": "Switchable glass replaces the curtain: a wall switch takes it from clear to opaque, so staff can still see in when they need to. Memorial Sloan Kettering's ICU did this on its sliding doors, and the project report says removing fabric curtains improved infection control and made cleaning between patients easier. That's a design report, not a trial. CDC guidance counts curtain edges as high-touch surfaces.",
+        "text": "Glass that switches from clear to frosted, instead of a curtain. Staff can still see in when needed, and there's no fabric to collect germs. Memorial Sloan Kettering's ICU has already done this.",
         "sources": [
          {
           "label": "Healthcare Design, Memorial Sloan Kettering ICU",
@@ -767,7 +767,7 @@
       }
      },
      "note": {
-      "text": "Or select the switch on the wall beside the door."
+      "text": "Or click the switch on the wall next to the door."
      },
      "options": [
       {
@@ -908,7 +908,7 @@
       "time": "afternoon"
      },
      "note": {
-      "text": "Planting stays outside the glass. CDC guidance says not to allow fresh flowers or potted plants in patient-care areas for immunosuppressed patients. For greenery inside, place the biophilic wall panel from Place items: a wipe-clean printed panel with no soil or water.",
+      "text": "Plants stay outside the window, because they aren't allowed near patients with weak immune systems. For greenery inside, add the biophilic wall panel from Place items.",
       "sources": [
        {
         "label": "CDC environmental guidelines",
@@ -1033,7 +1033,7 @@
       }
      ],
      "note": {
-      "text": "On the patient's eye line from the bed."
+      "text": "At the patient's eye level from the bed."
      },
      "code": 14
     },
@@ -1068,7 +1068,7 @@
         }
        ],
        "note": {
-        "text": "The picture is an original placeholder animation, not real footage."
+        "text": "The picture is a sample animation."
        },
        "code": 1
       },
@@ -1082,7 +1082,7 @@
         }
        ],
        "note": {
-        "text": "A calm orientation screen: the weekday and date, and the time of day from the room's own sun, large enough to read from the bed and darker at night. A concept: it shows no patient details, and it isn't a claim about delirium or sleep."
+        "text": "A concept: the day, date and time in large text, so the patient can keep track of time from bed. It dims at night, shows no patient information, and makes no claim about delirium or sleep."
        },
        "code": 2
       }
@@ -1449,7 +1449,7 @@
         }
        ],
        "note": {
-        "text": "Animated fish on a wall screen: no water, fish or servicing in the room.",
+        "text": "Animated fish on a screen: the look of an aquarium with no water, fish or cleaning inside the room.",
         "clinical": true
        },
        "code": 1
@@ -1470,7 +1470,7 @@
         }
        ],
        "note": {
-        "text": "CDC guidance says to avoid fish tanks in patient-care areas and to restrict fish from isolation areas, so the digital screen is the default. If a team still wants a tank, this one is sealed, recessed in the wall and serviced from outside the room. Infection control should decide.",
+        "text": "Health guidelines advise against fish tanks near patients, so the screen is the default. If a real tank is wanted, this one is sealed in the wall and cleaned from outside the room. Infection control should decide.",
         "sources": [
          {
           "label": "CDC environmental guidelines",
@@ -1537,11 +1537,11 @@
          "rooms": [
           "W1"
          ],
-         "text": "Warning: an outside door works against an isolation room's pressure regime. A patio suits standard rooms best.",
+         "text": "Not recommended for isolation rooms, because an outside door breaks the room's air seal. Best for standard rooms.",
          "clinical": true
         },
         {
-         "text": "A sliding door across three facade bays leaves about 1.6 m clear, enough for a bed or wheelchair. This is a concept: no structural or fall-safety design has been done, and a confused patient would need someone with them on a fourth-floor balcony.",
+         "text": "A sliding door that opens about 1.6 m, so the patient can be taken outside in their bed or a wheelchair. Concept only: no structural or fall-safety design has been done, and a confused patient would need someone with them.",
          "clinical": true
         }
        ],
@@ -1607,7 +1607,7 @@
       {"id":"on","label":"Add storage","effects":[{"do":"addon","id":"wardrobe","on":true}],"code":0},
       {"id":"off","label":"Remove","effects":[{"do":"addon","id":"wardrobe","on":false}],"code":1}
      ],
-     "note": {"text":"A built-in wardrobe fills its spot at the far wall from floor to ceiling, with flush end and filler panels, so it reads as joinery and leaves no top for dust. The entrance route stays open. Its size and clearances are a design concept for review."},
+     "note": {"text":"A floor-to-ceiling built-in wardrobe with no top for dust to collect. The entrance stays clear. Its size and clearances are a concept, still to be reviewed."},
      "code": 25
     },
     {
@@ -1651,7 +1651,7 @@
       {"id":"off","label":"Hide fixtures","effects":[{"do":"addon","id":"bathroom","on":false}],"code":1}
      ],
      "requires": {"room":"W1"},
-     "note": {"text":"The W1 bathroom uses the existing adjacent room shell. Fixtures are illustrative and need local accessibility, infection-control, and clinical design review."},
+     "note": {"text":"Uses the existing bathroom next to W1. The fixtures are suggestions that need expert review."},
      "code": 28
     },
     {
@@ -1685,7 +1685,7 @@
       {"id":"on","label":"Show the grilles","effects":[{"do":"addon","id":"ventilation","on":true}],"code":0},
       {"id":"off","label":"Hide grilles","effects":[{"do":"addon","id":"ventilation","on":false}],"code":1}
      ],
-     "note": {"text":"The ceiling grilles are the floor's ventilation concept plan, not SSMC's mechanical design. They're visual only: no air moves."},
+     "note": {"text":"Shows our concept for ceiling air vents, not SSMC's design. Display only: no air moves."},
      "code": 30
     },
     {
@@ -1698,7 +1698,7 @@
       {"id":"on","label":"Show sensor","effects":[{"do":"addon","id":"soundSensor","on":true}],"code":0},
       {"id":"off","label":"Hide sensor","effects":[{"do":"addon","id":"soundSensor","on":false}],"code":1}
      ],
-     "note": {"text":"A concept, simulated here. It would hear a groan or a call for help through a closed door and put a notice in front of the nurse. Ventilated or sedated patients may make no sound, and alarms cause false alerts. Sounds would be classified on the device and never stored. This model uses no microphone."},
+     "note": {"text":"A concept: a sensor that would hear a groan or a call for help through the closed door and send the nurse a notice, so they look through the glass before putting on protective gear to go in. Patients on a breathing machine or sedated may not make sounds, and alarms can set it off. Sounds would be classified on the device and never stored. Simulated here, with no microphone."},
      "code": 31
     }
    ]
@@ -1856,7 +1856,7 @@
       {"id":"patient","label":"Patient","effects":[{"do":"wall"}],"note":{"text":"For the patient: the day, the date and the time on the TV, the care team by role and a simple plan for the day over it, and two buttons that open the communication board and family connection. A sedated patient gets no buttons. The staff panel rests on a dark standby screen."},"code":0},
       {"id":"relaxation","label":"Relaxation","effects":[{"do":"wall"}],"note":{"text":"A scene across the patient wall, in place of everything that isn't needed now: the one chosen under Transform my environment, or the desert from the sample comfort passport."},"code":2}
      ],
-     "note": {"text":"One switch for the staff panel and the patient wall in the Future ICU fittings: who the wall is for right now. Room modes move it too: Clinical turns it to Clinical, Comfort to Relaxation, and Emergency-ready turns the patient wall off, and every scene with it. Simulated: every value is made up, and no screen stands in for the bedside monitor."},
+     "note": {"text":"One switch for the staff panel and the patient wall in the Future ICU fittings: who the wall is for right now. Room modes move it too: Clinical turns it to Clinical, Comfort to Relaxation, and Emergency turns the patient wall off, and every scene with it. Simulated: every value is made up, and no screen stands in for the bedside monitor."},
      "code": 43
     },
     {
@@ -1875,7 +1875,7 @@
       {"id":"clearSky","label":"Clear sky","swatch":"#6fb2d6","effects":[{"do":"wall"}],"code":6},
       {"id":"nightSky","label":"Night sky","swatch":"#1b2742","effects":[{"do":"wall"}],"code":7}
      ],
-     "note": {"text":"One choice sets the patient wall, the ceiling above the bed and the room's light together, and changes slowly, over a few seconds. Off goes back to how the room was. Each scene is drawn in code. Without the patient wall, the scene shows on the TV. A room mode, Quiet now and the patient's state come first, and Emergency-ready turns every scene off."},
+     "note": {"text":"One choice sets the patient wall, the ceiling above the bed and the room's light together, and changes slowly, over a few seconds. Off goes back to how the room was. Each scene is drawn in code. Without the patient wall, the scene shows on the TV. A room mode, Quiet now and the patient's state come first, and Emergency turns every scene off."},
      "code": 44
     }
    ]
@@ -1986,13 +1986,13 @@
   {
    "id": "calm",
    "label": "Calm Clinical",
-   "blurb": "Today's room, tidied up.",
+   "blurb": "The current ICU room, tidied up and kept familiar.",
    "sets": {}
   },
   {
    "id": "desert",
    "label": "Desert Sanctuary",
-   "blurb": "Sand and warm white, light timber, a mashrabiya wall.",
+   "blurb": "Warm sand colours, light wood and a traditional mashrabiya wall.",
    "sets": {
     "paint": "sand",
     "feature": "mashrabiya",
@@ -2007,7 +2007,7 @@
   {
    "id": "family",
    "label": "Family Suite",
-   "blurb": "A sofa-bed, a larger TV, warm cove lighting and a patio.",
+   "blurb": "Made for families: a sofa-bed, a bigger TV, warm lighting and a patio.",
    "sets": {
     "paint": "clay",
     "feature": "fabric",
@@ -2040,10 +2040,10 @@
   "_": "The sound sensor's card: the limits of the vocal-distress cue. The cue itself is in vocal.js and main.js. SIMULATED: no microphone, nothing stored.",
   "title": "Limits",
   "rows": [
-   {"id": "silent", "label": "Silent patients", "text": "Ventilated or sedated patients may make no sound. Quiet is never a sign that all is well."},
-   {"id": "false_alerts", "label": "False alerts", "text": "Alarms, visitors and a television can set it off. The nurse looks before acting."},
+   {"id": "silent", "label": "Silent patients", "text": "Patients on a breathing machine or sedated may not make sounds, so silence doesn't mean they're fine."},
+   {"id": "false_alerts", "label": "False alerts", "text": "Alarms, visitors or the TV can set it off, so the nurse always checks first."},
    {"id": "privacy", "label": "Privacy", "text": "Sounds are classified on the device. Nothing is recorded, stored or sent."},
-   {"id": "model", "label": "This model", "text": "Uses no microphone. The sounds are the two buttons."}
+   {"id": "model", "label": "This model", "text": "No microphone: the two buttons play the part of the sounds."}
   ]
  }
 }

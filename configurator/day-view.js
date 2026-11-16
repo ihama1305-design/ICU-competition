@@ -81,7 +81,7 @@ export class DayView {
       ...(quiet ? row("Quiet hours", QUIET.note) : []));
     const staff = mode === "clinical" || mode === "emergency";
     this.override.textContent = mode === "standard" ? DAY_TEXT.override
-      : staff ? `${mode === "clinical" ? "Clinical" : "Emergency-ready"} is on: the staff override wins, and the room shows its light. The plan waits until staff end it.`
+      : staff ? `${mode === "clinical" ? "Clinical" : "Emergency"} is on: the staff override wins, and the room shows its light. The plan waits until staff end it.`
         : `${mode[0].toUpperCase()}${mode.slice(1)} mode is on, over the plan. ${DAY_TEXT.override}`;
     this.override.classList.toggle("day-overridden", mode !== "standard");
   }

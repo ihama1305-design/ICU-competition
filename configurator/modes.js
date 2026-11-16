@@ -13,11 +13,11 @@ export const MODES = {
     blinds: 1,
     blindsByDay: true, // between sunset and sunrise there's no glare to block, so only the lighting changes
     wall: "relaxation",
-    note: "Comfort: the lights warm and dim, the blinds lower and the wall shows a scene; the task light and the monitor are unaffected.",
+    note: "Comfort: warmer, dimmer lights, lowered blinds and a scene on the wall, to help the patient rest. The task light and medical equipment are not affected.",
     say: "Comfort mode. The room lights warm and dim, and the blinds lower. Clinical alarms are unaffected.",
     dark: {
-      note: "Comfort: the lights warm and dim, and the wall shows a scene; the task light and the monitor are unaffected.",
-      why: "It's after sunset, so the blinds stay as they are: there's no daylight to block, and only the lighting changes.",
+      note: "Comfort: warmer, dimmer lights and a scene on the wall, to help the patient rest. The task light and medical equipment are not affected.",
+      why: "It's after sunset, so only the lights change. The blinds stay as they are.",
       say: "Comfort mode. It's after sunset, so only the lights change: they warm and dim, and the blinds stay as they are. Clinical alarms are unaffected.",
     },
   },
@@ -25,7 +25,7 @@ export const MODES = {
     label: "Privacy",
     blinds: 0.5,
     privateFront: true,
-    note: "Privacy: smart glass on the glazed front turns opaque and the window blinds lower halfway. Staff can end it at any moment, and Emergency-ready clears the glass.",
+    note: "Privacy: the glass wall turns frosted and the blinds lower halfway, so the patient isn't on view from the corridor. Staff can end it at any time, and Emergency mode clears the glass.",
     say: "Privacy mode. The glazed front turns opaque and the blinds lower halfway. Staff can end it at any moment.",
   },
   clinical: {
@@ -34,7 +34,7 @@ export const MODES = {
     task: true,
     overlay: true,
     wall: "clinical",
-    note: "Clinical: full, neutral light, the examination task light, the staff panel's clinical screen, and equipment labels with keep-clear areas.",
+    note: "Clinical: bright light for treatment, the exam light on, the staff panel's clinical screen, and labels on all equipment with the space to keep clear.",
     say: "Clinical mode. Full, neutral light and the examination task light on.",
   },
   family: {
@@ -57,7 +57,7 @@ export const MODES = {
     say: "Cleaning mode, for a room between patients. Bright light, the bed empty, and a checklist. Medical alarms always stay on.",
   },
   emergency: {
-    label: "Emergency-ready",
+    label: "Emergency",
     light: { kelvin: 4000, level: 1 },
     task: true,
     screensOff: true,
@@ -65,11 +65,11 @@ export const MODES = {
     overlay: true,
     wall: "off",
     scenesOff: true,
-    note: "Emergency-ready, started by staff: room lights full, task light on, the TV and aquarium screen off, the glazed front clear. The monitor keeps running, and clinical alarms and medical devices are not changed.",
-    say: "Emergency-ready. Lights full, task light on, screens off, the glass clear. Clinical alarms and medical devices are not changed.",
+    note: "Emergency mode (started by staff): all lights on full, TV and screens off, glass wall clear. The patient monitor keeps working, and medical devices are not changed.",
+    say: "Emergency. Lights full, task light on, screens off, the glass clear. Clinical alarms and medical devices are not changed.",
   },
 };
-/** The bar's order: As set first, then the modes staff choose; Emergency-ready has its own button. */
+/** The bar's order: As set first, then the modes staff choose; Emergency has its own button. */
 export const MODE_ORDER = ["standard", "comfort", "privacy", "clinical", "family", "cleaning"];
 /** Every mode's note ends with this. */
 export const ALARMS_LINE = "Medical alarms always stay on.";
@@ -159,7 +159,7 @@ export class RoomModes {
   constructor(api) {
     this.api = api;
     this.current = "standard";
-    this.before = "standard"; // where leaving Emergency-ready goes back to
+    this.before = "standard"; // where leaving Emergency mode goes back to
     this.look = null; // the light look laid over the room now, if any
     this.tween = null;
     this.dark = false; // whether the current mode was set after dark, if that changes what it does
@@ -200,7 +200,7 @@ export class RoomModes {
     return true;
   }
 
-  /** Out of Emergency-ready, to the mode before it. */
+  /** Out of Emergency mode, to the mode before it. */
   exitEmergency() { this.set(this.current === "emergency" ? this.before : this.current); }
 
   /** The time of day changed: a mode that acts differently after dark is set again, at once, if sunset or sunrise was crossed. */

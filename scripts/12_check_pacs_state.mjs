@@ -144,7 +144,7 @@ assert.ok(RESUME_MIN_MS > 0 && RESUME_MIN_MS < HOLD_MS, "the least wait after Pl
 console.log(`PASS guided tour wait: a new step waits ${HOLD_MS / 1000} s, a paused one carries on from where it stopped, and Play always leaves at least ${RESUME_MIN_MS / 1000} s`);
 // ---------------------------------------------------------------- the guided tour's ending: what Finish leaves on the card
 assert.ok(words(ENDING.text) <= 24, `the tour's ending is as short as a step: ${words(ENDING.text)} words`);
-assert.ok(/undone/.test(ENDING.text), "the ending says the tour's changes are undone, since Finish puts the room back");
+assert.ok(/back to how it was/.test(ENDING.text), "the ending says the room goes back to how it was, since Finish puts the room back");
 assert.ok(/theme/.test(ENDING.text) && /time of day/.test(ENDING.text) && /room mode/.test(ENDING.text), "the ending names things to try that are on the screen: a theme, a time of day, a room mode");
 assert.ok(!/simulated|approves every change/i.test(ENDING.text), "the ending repeats no caveat: it shows no demo");
 for (const label of [ENDING.go, ENDING.again]) assert.ok(words(label) <= 3 && !/finish|exit|close/i.test(label), `the ending's button says what happens next, in at most three words: ${label}`);
@@ -248,7 +248,7 @@ assert.ok(/now\.$/.test(LEVELS.now.ask) && /when you can\.$/.test(LEVELS.soon.as
 const cfgOptions = JSON.parse(readFileSync(new URL("./site/configurator/options.json", import.meta.url), "utf8"));
 const limitText = cfgOptions.vocalCue.rows.map(r => r.text).join(" "), soundGroup = cfgOptions.sections.flatMap(sec => sec.groups).find(g => g.id === "soundSensor");
 for (const text of [limitText, soundGroup.note.text]) {
-  assert.ok(/[Vv]entilated or sedated patients may make no sound/.test(text) && /[Aa]larms/.test(text) && /classified on the device/.test(text) && /stored/.test(text) && /no microphone/i.test(text), `the four limits are stated: ${text}`);
+  assert.ok(/on a breathing machine or sedated may not make sounds/.test(text) && /[Aa]larms/.test(text) && /classified on the device/.test(text) && /stored/.test(text) && /no microphone/i.test(text), `the four limits are stated: ${text}`);
 }
 for (const r of cfgOptions.vocalCue.rows) assert.ok(words(r.text) <= 20, `limit "${r.label}" has ${words(r.text)} words`);
 assert.equal(soundGroup.code, 31); assert.deepEqual(soundGroup.options.map(o => [o.id, o.code]), [["on", 0], ["off", 1]]); assert.equal(soundGroup.default, "on");
@@ -282,7 +282,7 @@ assert.ok(/The tour plays the patient/.test(fs["Asking without speaking"].text),
 assert.ok(/not every ICU/.test(fs["Before and after"].text) && /how it works, not only how it looks/.test(fs["Before and after"].text), "before and after: today's room is typical, not every ICU, and the difference is how it works");
 assert.ok(/technology works quietly in the background/.test(fs["Adaptive ICU: a room that cares, connects and adapts"].text) && /patients feel heard/.test(fs["Adaptive ICU: a room that cares, connects and adapts"].text), "the closing lines are Iham's");
 assert.ok(/made-up/.test(fs["The wall and the workstation"].text), "the wall's observations are said to be made up");
-assert.ok(words(FUTURE_ENDING.text) <= 24 && /undone/.test(FUTURE_ENDING.text) && !/simulated|approves every change/i.test(FUTURE_ENDING.text), "the story's ending is short, says its changes are undone, and repeats no caveat");
+assert.ok(words(FUTURE_ENDING.text) <= 24 && /back to how it was/.test(FUTURE_ENDING.text) && !/simulated|approves every change/i.test(FUTURE_ENDING.text), "the story's ending is short, says its changes are undone, and repeats no caveat");
 for (const label of [FUTURE_ENDING.go, FUTURE_ENDING.again]) assert.ok(words(label) <= 3, `the story's ending buttons say what happens next: ${label}`);
 console.log(`PASS the tours: Room basics' ${STEPS.length} steps at ?tour=guided, and Experience the ICU of the future in ${FUTURE_STEPS.length} steps, in the brief's order, ending on Iham's lines`);
 

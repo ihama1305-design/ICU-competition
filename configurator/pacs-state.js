@@ -12,16 +12,16 @@ export const SOURCES = [
 ];
 export const GUIDE = [
   ["Meet the patient monitor", "This is the bedside monitor, where PACS starts.", "stable", "monitor"],
-  ["Monitoring already matters", "ICUs already track vital signs, and control the lights separately. PACS asks what happens if the two work together.", "stable", "monitor"],
-  ["Connect the environment", "PACS links the monitor, the patient's own preferences and the room's controls.", "stable", "overview"],
-  ["Maintain a preferred environment", "The patient is stable, and the room matches their chosen light, blinds and quiet. Stable numbers don't prove comfort.", "stable", "overview", "The patient is stable and the room matches their chosen light. After sunset the blinds stay put. Stable numbers don't prove comfort."],
-  ["Notice a trend", "In this scripted case, heart rate climbs from 78 to 105. Many things could cause that, and PACS doesn't diagnose.", "possible", "monitor"],
-  ["Assess before recommending", "A nurse checks the patient first. Only then does PACS suggest a comfort change.", "possible", "overview"],
-  ["Show nurse oversight", "Here the nurse approves softer light, the blinds and less background noise.", "possible", "overview"],
+  ["Today, they work separately", "ICUs already track vital signs and control the lights, but separately. PACS would connect them.", "stable", "monitor"],
+  ["Connecting the room", "PACS links the monitor, the patient's own preferences and the room's controls.", "stable", "overview"],
+  ["Keeping the room how the patient likes it", "The patient is stable, and the room matches their chosen light, blinds and quiet level. Stable numbers don't prove comfort.", "stable", "overview", "The patient is stable and the room matches their chosen light. After sunset the blinds stay put. Stable numbers don't prove comfort."],
+  ["Spotting a change", "In this scripted case, the heart rate rises from 78 to 105. This could have many causes, and PACS doesn't diagnose.", "possible", "monitor"],
+  ["Check first, suggest second", "A nurse checks the patient first. Only then does PACS suggest a comfort change.", "possible", "overview"],
+  ["The nurse decides", "Here the nurse approves softer light, the blinds and less background noise.", "possible", "overview"],
   ["See the room respond", "The lights and blinds change to the patient's choices. Then the nurse asks the patient how they feel.", "possible", "window", "The lights change to the patient's choices, and after sunset the blinds stay put. Then the nurse asks how they feel."],
-  ["Clinical deterioration", "Now a scripted alert says the patient is getting worse. Comfort changes stop, and the care team is called.", "deterioration", "monitor"],
-  ["Clinical safety takes priority", "Acknowledging shows the alert was seen, and it stays on. PACS never touches medical equipment or alarms.", "deterioration", "overview"],
-  ["The proposed integration", "The idea: a room that responds to each patient's comfort, guided by their own wishes and by their nurse.", "deterioration", "overview"],
+  ["The patient gets worse", "Now a scripted alert says the patient is getting worse. Comfort changes stop, and the care team is called.", "deterioration", "monitor"],
+  ["Safety comes first", "The nurse confirms they've seen the alert, but it stays on. PACS never touches medical equipment or alarms.", "deterioration", "overview"],
+  ["The big idea", "The idea: a room that responds to each patient's comfort, guided by their own wishes and by their nurse.", "deterioration", "overview"],
 ];
 // Between sunset and sunrise there's no daylight or glare for the blinds to manage, so PACS adjusts only the lighting.
 export const NIGHT_LINE = "After sunset: the blinds stay as they are, because there's no daylight to block. Only the lighting is adjusted.";

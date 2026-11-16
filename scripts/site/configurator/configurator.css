@@ -159,7 +159,7 @@ button { font: inherit; color: inherit; }
    It leaves at once: the notes stack, and one that lingered while fading would make the next one jump when it went. */
 .mode-note, .mode-banner { transition: opacity var(--t-enter) var(--ease-out), transform var(--t-enter) var(--ease-out); }
 @starting-style { .mode-note, .mode-banner { opacity: 0; transform: translateY(var(--note-shift)); } }
-/* Emergency-ready edges the whole view, so nobody mistakes it for the room's usual look */
+/* Emergency edges the whole view, so nobody mistakes it for the room's usual look */
 body.emergency-ready::after { content: ""; position: fixed; inset: 0; z-index: 3; border: 3px solid var(--danger); pointer-events: none; }
 .leave-patient { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font: 500 14px/1.2 var(--ui); box-shadow: var(--shadow); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; transition: transform var(--t-spring) var(--spring), background-color var(--t-exit) var(--ease-in); }
 .leave-patient::before { content: "← "; }
@@ -578,7 +578,7 @@ dialog[open]::backdrop { transition: opacity var(--t-enter) var(--ease-out); }
   .hud { right: calc(var(--g) + env(safe-area-inset-right, 0px)); max-width: none; }
   .mode-title { display: none; }
   .mode-bar button { min-height: 40px; padding: 6px 10px; }
-  /* six modes on a phone: two rows of three, Emergency-ready on its own row below */
+  /* six modes on a phone: two rows of three, Emergency on its own row below */
   #modeBar .mode-seg { display: grid; grid-template-columns: repeat(3, 1fr); flex: 1 1 100%; }
   #modeBar .mode-seg button { padding: 6px 4px; }
   .mode-note, .mode-banner { max-width: none; }
