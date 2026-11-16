@@ -4,7 +4,7 @@
 
 **[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Experience the ICU of the future](https://ihama1305-design.github.io/ICU-competition/configurator/?tour=future)** · **[Configure a room](https://ihama1305-design.github.io/ICU-competition/configurator/)** · **[Walk today's floor](https://ihama1305-design.github.io/ICU-competition/viewer/)** · **[See the ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/)** · **[Read the report](REPORT.md)**
 
-![Isolation room W1 as proposed, in the Desert Sanctuary theme at sunset](assets/img/proposal-room-1400.webp)
+![Isolation room W1 as the ICU of the future: a lit ceiling tray, wall screens for staff and patient, and a care team's desk](assets/img/proposal-future-1400.webp)
 
 ## What the room does
 
@@ -17,7 +17,7 @@ Six things this room does that today's doesn't. Each one runs in the [room confi
 - **Equipment labels.** Each piece of equipment named, and shaded areas to keep clear for care around the bed. A sketch for discussion, not a compliance check.
 - **Remote care for the isolation room.** A sound sensor hears a groan or a call for help and asks the nurse to look in through the glass first, and the air is cleaned in the plant, out of sight. Fewer unnecessary entries, never fewer checks. ([More](#remote-care-for-the-isolation-room))
 
-Every patient reading is simulated: the figures are made up, no microphone is used, and nothing here changes an alarm or a medical device.
+Every patient reading is simulated: the figures are made up, no microphone is used, and nothing here changes an alarm or a medical device. [Every feature and its status](#every-feature-and-its-status) lists what each one is and isn't, and what isn't built. To present it, follow [the judges' script](docs/judges-script.md).
 
 ## Built on the floor as it is today
 
@@ -78,6 +78,86 @@ To add an option, edit [`scripts/site/configurator/options.json`](scripts/site/c
 
 To add a feature card, add an entry to [`scripts/site/configurator/features.json`](scripts/site/configurator/features.json), and a demo to `demos.js` if it has one. `node scripts/14_check_features.mjs` says what an entry is missing, without a browser.
 
+## Every feature and its status
+
+One row per feature, from the same registry as the feature cards, plus the parts of the site that aren't cards and what isn't built. "What it isn't" is the start of each card's limits; the card has the rest, with its evidence.
+
+**Status:** *Concept* is shown in the 3D room as a design; a real one would need engineering, infection-control and clinical review. *Simulated* runs on the site with made-up data or events; nothing real is connected, measured or sent. *Tool* does real work on this model: a tour, a check, a plan or a link. *Not built* is listed so nobody looks for it.
+
+| Group | Feature | What it does | What it isn't | Status |
+|---|---|---|---|---|
+| Comfort | Privacy system | Privacy at the glazed front and the window when the patient needs it. Staff can end it at once. | Opaque glass hides the patient from the corridor, so staff decide when it's used. In an isolation room the door still needs its seal and pressure tests. | Concept |
+| Comfort | Patient orientation display | The TV can show the weekday, the date, the time of day and whether it's day or night, with a few calm lines beside them: where the patient is, visiting confirmed by staff, and what's planned. Large enough to read from the bed. | It makes no claim about delirium or sleep. The lines are samples: a real screen would show only what staff have confirmed, and never patient details. | Simulated |
+| Comfort | Nature and environmental display | Calm, natural things to look at from the bed: a scene on the TV, a sky on the ceiling, a digital aquarium and a printed leaf panel. | Emergency turns the screens off. Living plants and fish tanks stay out of patient-care areas, as CDC guidance advises. | Concept |
+| Comfort | Patient states | The room follows the patient: sedated or unresponsive, awake, or recovering. A control above the room, beside the room modes. | Staff decide the state: the room never works it out from the patient. It changes no alarm, device or clinical setting, and it changes no choice or link. | Simulated |
+| Comfort | Communication board | Large buttons for a patient who can't speak: I need help, I am in pain, I feel cold, I feel hot, I need repositioning, I want to contact my family, I need a nurse. | Simulated. It does not replace a certified nurse-call system: a real one is wired, tested and maintained to its own standard. | Simulated |
+| Comfort | Personal comfort passport | A sample record of what a patient would like: light, temperature, music or quiet, a nature scene, family photographs, privacy, how they communicate, and entertainment. | A sample for a made-up patient, with no name. Temperature is shown, not applied: no approved limits were supplied. | Simulated |
+| Comfort | Sound-level sensor | A closed door keeps a patient's voice in. This sensor concept gives that hearing back: it would recognise a groan or a call for help and put a notice in front of the nurse outside, who looks in through the glass before deciding to enter. | Simulated here, with no microphone. Patients on a breathing machine or sedated may not make sounds, and alarms can set it off. It doesn't replace the nurse call. | Simulated |
+| Comfort | Room comfort control | A wall-mounted temperature and humidity control concept. It is not connected to room equipment or patient measurements. | No hospital-approved temperature limits were supplied, so nothing is set from here. Cleaning the air is the plant room's job. | Concept |
+| Comfort | Acoustic comfort mode | A picture of the room's sound: where it comes from, where it's loudest, and what acoustic fittings would change. Simulated. | Not a measurement: no microphone is used, and nothing listens. Every level is illustrative, and the fittings' effect is made up. | Simulated |
+| Comfort | Patient wall | The wall the patient faces, made into one calm surface round the TV. | Simulated: no real names, plans or times. Whether the strip can be read from the pillow depends on the patient's eyesight; Patient view shows the distance. | Simulated |
+| Comfort | Transform my environment | Bringing the outside world into intensive care: the patient chooses a forest, the ocean, mountains, the desert, a garden, a clear sky or a night sky, and the room takes it on. | Drawn scenes, not footage, and a concept: it makes no claim about sleep, delirium or recovery. Living plants stay outside the glass. | Concept |
+| Bed | Pressure-awareness bed | A sensor grid in the mattress shows where the patient's weight bears, so staff can see when a position has been held too long. Simulated. | Simulated: not a measurement. It predicts no injury, and it never moves a patient: staff assess and reposition by the patient's own positioning plan. | Simulated |
+| Bed | Line clips and tags | A clip on each line's route round the patient, with a tag in its colour, and each line's slack shown before a move. Simulated. | Simulated: no tension, force or flow is worked out, and no line or device is monitored. The clips don't secure a line, and nothing here changes a real line, connector or device. | Simulated |
+| Light | Adaptive circadian lighting | Room light that follows the day: cool and bright by day, warm and dim in the evening. | Light alone isn't shown to prevent delirium. Care comes first: Clinical and Emergency modes switch to full, neutral light. | Concept |
+| Light | Light across 24 hours | A plan for the room's light and blinds over a whole day, in four phases: morning daylight, afternoon comfort, evening wind-down and night sleep. | A plan, not a measurement, and light alone isn't shown to prevent delirium. Clinical and Emergency are the staff override and always win. | Concept |
+| Light | Daylight sensor | A small light sensor on the window sill. It tells Comfort mode and PACS whether daylight is coming in. | A concept: it isn't connected to anything, and it reads nothing here. | Concept |
+| Light | Ceiling tray | A calm ceiling over the bed: square tiles in a shallow tray, with a soft line of light round its edge. | A design concept. In this model its light adds no brightness: the room's own lights do that. | Concept |
+| Family | Family connection | Family close by on the bedside screens: photographs, a video call, a voice message, a personal scene, familiar music and a line on the orientation screen. | No photograph is uploaded, no camera or microphone is used, and nothing is sent. A real call would need the hospital's approved system. | Simulated |
+| Family | Family visit | A mode for when family come: the room warms, privacy is as the patient asked, and family connection is on the wall they face. | Simulated: the photographs are drawn placeholders and the message is made up. Softened glass is a concept: a real front needs its privacy level and staff sight lines agreed with the care team. | Simulated |
+| Storage | Built-in sliding wardrobe | Compact, organised storage for the patient's clothing, belongings and daily necessities, built in floor to ceiling against the back wall, clear of the entry route. | It takes about the same floor area as the freestanding wardrobe it replaced: what it adds is height, easier cleaning and a tidier look. A design concept: no inventory display or electronic lock is modelled. | Concept |
+| Storage | Bedside cabinet | A place near the bed for the patient's own small things: glasses, a phone, a book. | A design concept. Clinical supplies are kept apart from it. | Concept |
+| Clinical workflow | Staff panel | Information for the care team on the wall behind the bed head, where staff look and the patient can't. | Simulated: its values are made up and fixed, not readings, and it never stands in for the patient monitor, which stays on the pendant, working, with its alarms unchanged. A real one needs integration, infection-control and regulatory review. | Simulated |
+| Clinical workflow | Clinician workstation | A desk for the care team in the room, by the window and out of the space round the bed. | Simulated: a made-up patient, made-up values and a scripted task list. Nothing listens: each hands-free button stands in for a spoken command. | Simulated |
+| Clinical workflow | Smart clinical wall | One wall, more than one purpose: the staff panel and the patient wall show what each person needs now. Staff get observations, tasks and equipment; the patient gets the day, the time, the care team and the plan; at rest, a calm scene. | Simulated: every value is made up and fixed, and the staff panel never stands in for the bedside monitor, which keeps running with its alarms unchanged. Observations show only in Clinical, so visitors don't see them. | Simulated |
+| Clinical workflow | Room modes | The room changes together: one choice of mode moves the light, the blinds, the glass, the wall screens, scenes, sound, the bedside screens, notices and overlays, in step. | A demonstration of the idea. No mode touches an alarm, a medical device or the bedside monitor. | Simulated |
+| Clinical workflow | Cleaning | A mode for the room between patients: bright light, the bed empty, and the surfaces that are touched most marked one after another. | An order to show the idea, not a cleaning protocol: products, contact times and the order of work are the infection-control team's. Finishing the checklist says it's finished, and never that the room is clean or disinfected. | Simulated |
+| Clinical workflow | Transform the ICU | Today's room, then the room of the future arriving a piece at a time: the difference is how the room works, not only how it looks. | Today's room is a typical arrangement, not every ICU, and the equipment is a typical ICU kit, not SSMC's inventory. A demo: it changes no choice or link. | Tool |
+| Clinical workflow | Digital twin | A digital reflection of the room: its hidden state made visible, so the space, equipment, environment and work can be seen together. | A concept: it reads only this model, with its simulated and illustrative values, and monitors nothing. The five parts are never added into a score, and it shows no vital signs, which are PACS's. | Simulated |
+| Clinical workflow | Room intelligence | A room that notices when help may be needed: it would help staff see a possible safety concern while keeping the room calm and uncluttered. | A concept for monitoring and decision support, not a validated clinical device. Nothing watches or listens: no camera, no microphone and no sensor reading; every event is a button. | Simulated |
+| Clinical workflow | Room safety scan | Check a room digitally before it's built: the items a visitor places, against the space that care needs. | The areas are this model's own, set as data and illustrative: green means no modelled conflict found, never that a room is safe, and it isn't a compliance check against hospital rules. | Tool |
+| Clinical workflow | Ceiling pendant | Ceiling services: the monitor, the pumps and the outlets hang from the ceiling at the bed head, so the floor round the bed stays clearer and the essentials are within reach. | A visual model of a pendant, not a specified product. Its position, load, services and the ceiling's structure would need engineering, infection-control and clinical review. | Concept |
+| Clinical workflow | Cables and channels | Less clutter, better access and safer movement: the cables and lines round the bed shown by kind, loose and then organised. | Illustrative routes, not an engineering or clinical design. Nothing retracts, clamps or disconnects a line, and nothing moves by itself. | Concept |
+| The site | Configurator | Rooms W1 and W3 on their measured shape: four themes, every finish, light and fitting as an option, the time of day, ten views, a share link that holds the exact room, a summary and an image. | A design proposal, not a construction or procurement drawing. Furniture and finishes are assumed. | Tool |
+| The site | Experience the ICU of the future | One patient's story in eight captioned steps, about two minutes, from the main button and the home page. | A tour of this proposal: the patient is played by the tour, and every value is made up. | Tool |
+| The site | Room basics | The first guided tour, nine captioned steps, about a minute and a half, at `?tour=guided`. | A tour of the room's basics, not of the Future ICU. | Tool |
+| The site | Before / after | Every option at its default, with none of the placed items, at the same view and time. Press again for the room as designed. | Today's room is a typical arrangement, not every ICU. | Tool |
+| The site | Patient view | The room from the pillow, turning only as far as a head can. | Eyesight differs: it shows what is in view, not what a patient can read. | Tool |
+| The site | Equipment labels | Names each piece of equipment and shades the space to keep clear for care round the bed. | A sketch for discussion, not a compliance check. The areas carry no dimensions. | Tool |
+| The site | Place items | Drag a tablet arm, privacy screen, hand rub, bins, sharps box, biophilic panel or family chair onto the room. | A visitor's sketch: the room safety scan checks it against this model's own clear areas, not hospital rules. | Tool |
+| The site | Suggest a room | A few questions about the patient give an editable comfort and furnishing draft, with what changed and why, and undo. | A design suggestion: it never recommends care, and the answers stay out of links. | Tool |
+| Clinical systems | PACS, the Physiological Adaptive Comfort System | Simulated vital signs and the patient's preferences lead to a suggestion, such as softer light. A nurse approves it before the room changes. | Not connected to a monitor: every reading is made up and scripted. It never controls an alarm or a device, and infers no diagnosis. | Simulated |
+| Clinical systems | APIS, the Adaptive Patient Interface System | An idea for a gentler way to attach tubes, wires and sensors: what touches the skin, how each is held, where it runs, and its limits. | An idea, not a device: the approved device and its own instructions come first, and no force, flow or pressure is worked out. | Concept |
+| The floor today | Walkthrough | The fourth-floor ICU as built, from the record drawing, to walk through. Click anything to see what it is and how sure we are about it. | Furnishings and finishes are assumed. Not for medical or construction use. | Tool |
+| The floor today | Ventilation plan | Supply, return and exhaust for the floor, the pressure steps from corridor to entry room to bedroom, and a clean-air table. | Concept work, not SSMC's mechanical design: the values are assumed, from Dubai Health Authority guidance. | Concept |
+| Not built | Ceiling lift | A track hoist over the bed for moving a patient, from Iham's list. | Not built: there wasn't time before the 16 November freeze. | Not built |
+| Not built | Admission and room readiness | A board that follows a room from the last patient's discharge to the next one's arrival. Cleaning mode's checklist would be its first stage. | Not built: there wasn't time before the 16 November freeze. | Not built |
+| Not built | Unit board | A board ranking the unit's patients by their vital signs. | Not built, by decision: this site ranks no one and gives no single score. REPORT.md says why. | Not built |
+
+## How the room stays in step
+
+Every system in the room listens to one table, in [`modes.js`](scripts/site/configurator/modes.js), rather than to each other. For each room mode it says, in words, what the mode does to the light, the blinds, the glazed front, the wall screens, the scenes, sound, the bedside screens, notices and overlays, and at which of five levels:
+
+1. Clinical safety and emergency access
+2. What staff have switched on
+3. Patient communication
+4. Patient comfort preferences
+5. Decoration and presentation
+
+| | Comfort | Privacy | Clinical | Family visit | Cleaning | Emergency |
+|---|---|---|---|---|---|---|
+| **Light** | Warm and dim (2) | as set | Full and neutral, with the task light (2) | Warm ambient (2) | Bright, for cleaning (2) | Full, with the task light (1) |
+| **Blinds** | Lowered by day; after sunset as set (2) | Halfway down (2) | as set | as set | as set | as set |
+| **Glazed front** | as set | Smart glass opaque (2) | as set | Softened, as the patient asked; staff can still see in (4) | Clear (2) | Clear (1) |
+| **Wall screens** | Relaxation: a scene (2) | as set | Clinical: the staff panel's made-up observations (2) | Family connection on the patient wall (3) | Off: no patient (2) | Patient wall off; staff panel clinical (1) |
+| **Scenes** | as set | as set | as set | as set | Off (2) | Off (1) |
+| **Sound** | as set | as set | as set | as set | Demo sound stops (2) | Demo sound stops (1) |
+| **Bedside screens** | as set | as set | as set | Family connection offered (3) | Closed: no patient (2) | Panels in the options' place close (1) |
+| **Notices** | as set | as set | as set | as set | as set | Critical alarms as they always are (1) |
+| **Overlays** | as set | as set | Equipment labels and keep-clear areas (2) | as set | High-touch surfaces in turn, hand-hygiene points, equipment to clean, and a checklist (2) | Equipment labels and keep-clear areas (1) |
+
+When two things claim the same system, the higher level wins, and a lower level never overrides a higher one. That's why Clinical and Emergency always win over a scene, a patient's state, Light across 24 hours or a theme. Leaving a mode puts the room back as it was set: no mode changes a choice or a link. Medical alarms are in no row: no mode can touch them. Check 14 tests the table, its levels and the rule.
+
 ## Adaptive Patient Interface System (APIS)
 
 Open **Configure a room → Explore APIS**. APIS is an additive educational feature in the existing Three.js configurator, built around the existing W1 and W3 bed metadata. It does not modify the Blender files, exported room geometry, dimensions, room options, patient-profile answers or share-code format. The separate WASD walkthrough remains intact.
@@ -100,7 +180,7 @@ Verification performed: W1 and W3 attachment interactions, real bedside-marker c
 
 ## Physiological Adaptive Comfort System (PACS)
 
-Open **Configure a room → PHYSIOLOGICAL ADAPTIVE MODE**, or **START PHYSIOLOGICAL ADAPTIVE DEMO** for the approximately 77-second presentation. PACS runs in the same Three.js room and renderer; there is no separate replacement scene, backend, medical-device connection or real clinical notification.
+Open **Configure a room → OPEN NURSE DASHBOARD**, or **PLAY THE 77-SECOND DEMO** for the approximately 77-second presentation. PACS runs in the same Three.js room and renderer; there is no separate replacement scene, backend, medical-device connection or real clinical notification.
 
 - **Three scenarios:** Stable Patient starts at HR 78 bpm, BP 118/76 mmHg, RR 16/min and SpO₂ 98%. Possible Discomfort illustrates HR increasing toward 105 over 12 seconds, alongside other scripted changes; it prompts assessment, not a diagnosis. Clinical Deterioration activates an independently scripted warning and a simulated team notification. No emergency thresholds are calculated from these values. Scenario selection loads a new scripted case and starting environment; it is not a physiological trigger for automatic environmental changes.
 - **Clinical oversight:** A simulated clinical review and explicit nurse approval are required for selected recommendations. Rejecting applies no new adjustment. Revising an in-progress proposal cancels its remaining animation and requires fresh approval; withdrawing clinical review also cancels it. Preferences invalidate old approval. Clinical warnings cancel pending comfort animation, restore entry lighting for assessment, and block new recommendations. Acknowledging the alert leaves it active. Oxygen, ventilator, medication, infusion and medical-alarm controls are not changed.
@@ -159,7 +239,25 @@ The plan also has a clean-air table: two filter stages on the supply, a HEPA-fil
 | [`spec/icu_spec.json`](spec/icu_spec.json) | Every height, material, equipment position, light and camera ([field guide](spec/icu_spec.README.md)) |
 | [`scripts/`](scripts/) | The pipeline, from drawing to website |
 | `index.html`, `viewer/`, `configurator/`, `ventilation/`, `assets/` | The published website, served from the repo root. It is generated, so edit `scripts/site/` and rebuild instead |
-| [`docs/`](docs/) | The configurator's brief and build plan |
+| [`docs/`](docs/) | The judges' script, the real-device checklist, and the configurator's brief and build plan |
+
+## Run it locally
+
+The site is static files in the repo root, so any web server will do:
+
+```bash
+python3 -m http.server 8000
+```
+
+Then open http://localhost:8000/ for the home page, or http://localhost:8000/configurator/ for the room. The configurator loads Three.js from a CDN, so it needs a network connection.
+
+## How it's published
+
+GitHub Pages serves the repo root of `main` at https://ihama1305-design.github.io/ICU-competition/, so a merge to `main` is a release. The published files (`index.html`, `configurator/`, `viewer/`, `ventilation/`, `assets/`) are generated: edit their sources under `scripts/site/` and rebuild with the pipeline below, or with `scripts/06_build_site.py` when the Blender outputs are in place. After a merge, Pages takes a minute or two.
+
+## Testing
+
+Everything was tested automatically in Chromium on one Mac. **Safari, Firefox and real phones have never been tested.** [REPORT.md](REPORT.md#what-was-tested-and-what-wasnt) says exactly what each check covers and what wasn't tested, and [`docs/real-device-checklist.md`](docs/real-device-checklist.md) is the list to work through on a real device.
 
 ## Rebuild
 
