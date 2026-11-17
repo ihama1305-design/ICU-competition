@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Adaptive ICU: a design proposal for SSMC's fourth-floor ICU</title>
-<meta name="description" content="Adaptive ICU is a student design proposal for the SSMC Tower D fourth-floor ICU: a patient room that adapts its light, blinds and glass, shown in 3D on a model built from the as-built drawing.">
+<meta name="description" content="Adaptive ICU is a student design proposal for the SSMC Tower D fourth-floor ICU: a patient room that adapts its light, blinds and glass, shown in 3D.">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#f3f8f9">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Adaptive ICU: a design proposal for SSMC's ICU">
-<meta property="og:description" content="A patient room that adapts its light, blinds and glass, shown in 3D on a model of the existing fourth-floor ICU.">
+<meta property="og:description" content="A patient room that adapts its light, blinds and glass, shown in 3D.">
 <meta property="og:url" content="{{SITE_URL}}">
 <meta property="og:image" content="{{SITE_URL}}assets/img/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -28,13 +28,6 @@
     <nav id="nav" aria-label="Sections">
       <a href="#proposal">Proposal</a>
       <a href="configurator/">Configurator</a>
-      <a href="#walk">Walkthrough</a>
-      <a href="ventilation/">Ventilation</a>
-      <a href="#renders">Renders</a>
-      <a href="#findings">Findings</a>
-      <a href="#method">Method</a>
-      <a href="#accuracy">Accuracy</a>
-      <a href="#files">Files</a>
     </nav>
   </div>
 </header>
@@ -53,7 +46,6 @@
         <div class="actions">
         <a class="btn primary" href="configurator/?tour=future">Experience the ICU of the future</a>
         <a class="btn quiet" href="configurator/">Configure a room</a>
-        <a class="btn quiet" href="viewer/">Explore the ICU as it is today</a>
       </div>
       </div>
     </article>
@@ -143,7 +135,6 @@
       <dl class="proof">
         <div><dt>room modes, one tap each</dt><dd>7</dd></div>
         <div><dt>rooms you can design: isolation and standard</dt><dd>2</dd></div>
-        <div><dt>patient rooms built from the real floor plan</dt><dd>{{ROOMS}}</dd></div>
       </dl>
     </div>
     <div class="rooms" id="rooms">
@@ -238,174 +229,16 @@
     </div>
   </div>
 </section>
-
-<section class="band" id="walk">
-  <div class="wrap">
-    <div class="band-copy">
-      <p class="eyebrow">The floor today</p>
-      <h2>Drop a person on the floor and walk.</h2>
-      <p>It runs in your browser, with nothing to install. Drag <b>Place person</b> onto the floor to walk around at eye level.</p>
-      <ul class="how">
-        <li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to walk, <kbd>Shift</kbd> to run, drag or <kbd>←</kbd> <kbd>→</kbd> to look around. On a phone, use the on-screen stick to walk.</li>
-        <li><kbd>V</kbd> shows the person from behind.</li>
-        <li>You can walk through doors, but not through walls.</li>
-        <li>The plan in the corner shows where you are. Click it to jump.</li>
-        <li>Click anything to see what it is and how sure we are about it.</li>
-      </ul>
-      <div class="actions"><a class="btn primary" href="viewer/">Open the walkthrough</a></div>
-      <p class="note">A {{GLB_WEB_MB}} MB download. For realistic lighting, see the pictures below.</p>
-    </div>
-    <div class="shots">
-      <figure>
-        <!--SHOT walk-behind | The walkthrough viewer in a patient room, with a figure in teal scrubs seen from behind facing the bed, a floor-plan minimap in the corner and a list of rooms at the side. | (min-width: 960px) 60vw, 100vw-->
-        <figcaption>Walking into Room W3, seen from behind the person.</figcaption>
-      </figure>
-      <figure>
-        <!--SHOT walk-orbit | The same person seen from above in orbit view with the ceiling off, standing in a patient room with the bed, recliner and corridor around them. | (min-width: 960px) 60vw, 100vw-->
-        <figcaption>Orbit view circles around the person, so you can see where they are.</figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="renders">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Renders</p>
-      <h2>The floor, from the whole wing down to the bedside.</h2>
-      <p>Realistic images made in Blender, with modelled sunlight and ceiling lights. Click an image to make it bigger.</p>
-    </div>
-    <div class="plates">
-      <figure class="plate full">
-        <a href="{{FULL:aerial}}"><!--IMG aerial | The whole ICU floor from above with the ceiling removed: patient rooms line both wings around a central core, with dark section caps on the cut walls. | 100vw | lazy--></a>
-        <figcaption>The whole floor with the ceiling off. Patient rooms line both wings around a central core.</figcaption>
-      </figure>
-      <figure class="plate half">
-        <a href="{{FULL:aerial_close}}"><!--IMG aerial_close | A close cutaway of the west wing showing patient rooms with beds and pendants, an observation nook with a desk, and glazed room fronts onto the corridor. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>Close cutaway of the west wing: rooms, a shared observation nook and the glazed fronts onto the corridor.</figcaption>
-      </figure>
-      <figure class="plate half">
-        <a href="{{FULL:plan}}"><!--IMG plan | A top-down view of the floor showing all sixteen patient rooms, the central core, the U-shaped nurse station and the north lobby block. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>Top view. The bottom edge is where the floor continues into a part we didn't model.</figcaption>
-      </figure>
-      <figure class="plate half">
-        <a href="{{FULL:bedside}}"><!--IMG bedside | At the bedside: a raised ICU bed with side rails and an overbed table, a ventilator with breathing tubes, a pendant holding infusion pumps and a patient monitor. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>At the bedside: pendant, monitor, infusion pumps, ventilator and overbed table. The screens show made-up waveforms.</figcaption>
-      </figure>
-      <figure class="plate half">
-        <a href="{{FULL:corridor}}"><!--IMG corridor | The central nurse station seen from the corridor: a raised wood-faced transaction ledge with monitors and chairs behind it, wood handrails along the walls and a lay-in ceiling grid with LED panels. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>The central nurse station, seen from the corridor.</figcaption>
-      </figure>
-      <figure class="plate half">
-        <a href="{{FULL:iso_entry}}"><!--IMG iso_entry | The glazed inner door of an isolation room seen from its ante room: two glass panels with a frosted band and a teal curtain gathered behind them, and a plain wall beyond. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>Looking into room W1 from its entry room. The bed is out of view from here.</figcaption>
-      </figure>
-      <figure class="plate half">
-        <a href="{{FULL:iso_window}}"><!--IMG iso_window | An isolation room's bed seen from near its foot, with a wall of windows beyond it, a visitor chair, a ventilator and a ceiling pendant holding pumps and a monitor. | (min-width: 720px) 50vw, 100vw | lazy--></a>
-        <figcaption>W1's bed and window. Here the window is on the patient's right; in standard rooms it's behind them.</figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="findings">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Findings</p>
-      <h2>What the floor plan means for a redesign.</h2>
-      <p>What we noticed in today's floor plan. These describe the current ICU, not our design.</p>
-    </div>
-    <div class="findings">
-      <figure>
-        <a href="{{FULL:observation}}"><!--IMG observation | The view from an observation nook through a narrow horizontal window into a patient room. Only a strip across the bed and recliner is visible. | (min-width: 960px) 55vw, 100vw | lazy--></a>
-        <figcaption>From an observation nook, looking into a patient room through the window as tagged on the drawing.</figcaption>
-      </figure>
-      <div class="finding-list">
-        <div class="finding">
-          <h3>Observation windows are only 40 cm tall</h3>
-          <p>They run from 1.0 m to 1.4 m high, so staff only see a strip across the bed, not the whole room. These heights still need checking.</p>
-        </div>
-        <div class="finding">
-          <h3>Standard room fronts are glazed and about 2.2 m wide</h3>
-          <p>Privacy relies on a curtain behind the glass. That same glass could also let daylight into the corridor.</p>
-        </div>
-        <div class="finding">
-          <h3>Rooms are 7.2 to 9.0 m deep</h3>
-          <p>The angled outer wall makes each room a slightly different size, from {{AREA_MIN}} to {{AREA_MAX}} m².</p>
-        </div>
-        <div class="finding">
-          <h3>One nurse station and {{NOOKS}} observation nooks</h3>
-          <p>Each nook sits between a pair of rooms, with a window into both.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="method">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Method</p>
-      <h2>Built from the real drawings, not traced by hand.</h2>
-    </div>
-    <ol class="steps">
-      <li><h3>Read the CAD layers</h3><p>The hospital floor plan still has its CAD layers, so walls, doors and windows were taken directly from it, at the right scale.</p></li>
-      <li><h3>Find every opening</h3><p>Each door was matched to its gap in the wall automatically. Door heights come from labels on the plan.</p></li>
-      <li><h3>Furnish the rooms</h3><p>All {{ROOMS}} patient rooms get the same typical ICU equipment. Desks follow the counters on the plan.</p></li>
-      <li><h3>Render and export</h3><p>Blender makes the realistic images, with sunlight and {{LIGHTS}} ceiling lights. The same model is used for the walkthrough.</p></li>
-    </ol>
-  </div>
-</section>
-
-<section class="section" id="accuracy">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Accuracy</p>
-      <h2>What's measured and what's assumed.</h2>
-      <p>The layout is accurate. Heights and finishes that weren't on the plans are our best guess, and they're marked as such.</p>
-    </div>
-    <table class="accuracy">
-      <thead><tr><th scope="col">Item</th><th scope="col">Confidence</th><th scope="col">Basis</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">Walls, room shapes, door positions</th><td><span class="conf high">High</span></td><td>Taken from the CAD drawing, accurate to about 2–3 cm.</td></tr>
-        <tr><th scope="row">Door head height, 2.41 m</th><td><span class="conf high">High</span></td><td>Labelled on the drawing.</td></tr>
-        <tr><th scope="row">Room fronts: 2.2 m glazed opening</th><td><span class="conf med">Medium</span></td><td>Widths are on the drawing; the door type is our reading of it.</td></tr>
-        <tr><th scope="row">Observation windows, 1.0–1.4 m</th><td><span class="conf med">Medium</span></td><td>Read from a label on the drawing; still needs checking.</td></tr>
-        <tr><th scope="row">Facade: 700 mm upstand, curtain wall, fins</th><td><span class="conf med">Medium</span></td><td>Mostly from the drawing; some spacing is approximate.</td></tr>
-        <tr><th scope="row">Ceiling height, {{CEILING}} m</th><td><span class="conf low">Low</span></td><td>Not on the drawings, so we assumed it.</td></tr>
-        <tr><th scope="row">Finishes and colours</th><td><span class="conf low">Low</span></td><td>The plan lists the finish types; the colours are our guess.</td></tr>
-        <tr><th scope="row">Furniture and equipment</th><td><span class="conf low">Low</span></td><td>Typical ICU equipment in every room, not SSMC's real equipment.</td></tr>
-        <tr><th scope="row">Bed position and direction</th><td><span class="conf low">Low</span></td><td>Our guess: head toward the window, foot toward the door; side-on in the two isolation rooms.</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section class="section" id="files">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow">Files</p>
-      <h2>Open it in your own tools.</h2>
-    </div>
-    <ul class="files">
-      <li><a href="downloads/icu.blend">icu.blend</a><span>The full 3D model to edit in Blender ({{BLEND_MB}} MB). Change one bed and all {{ROOMS}} update.</span></li>
-      <li><a href="downloads/icu.glb">icu.glb</a><span>The 3D model for other 3D programs ({{GLB_MB}} MB).</span></li>
-      <li><a href="{{REPO_URL}}/tree/main/renders">Full-size renders</a><span>The original PNGs, on GitHub.</span></li>
-      <li><a href="{{REPO_URL}}/blob/main/REPORT.md">Full report</a><span>Our sources, how sure we are, and its limits.</span></li>
-      <li><a href="{{REPO_URL}}">Source code</a><span>The code that builds everything on this site.</span></li>
-    </ul>
-  </div>
-</section>
 </main>
 
 <footer class="foot">
   <div class="wrap">
     <p>Independent student work for the SSMC ICU Interior Design Student Competition. It isn't made or endorsed by Sheikh Shakhbout Medical City.</p>
-    <p>The 3D model shows the ICU as it is today; the configurator shows our proposal. Furniture and finishes are assumed. Not for medical or construction use. SSMC's original drawings aren't shared here.</p>
+    <p>The configurator shows our proposal. Furniture and finishes are assumed. Not for medical or construction use. SSMC's drawings, and our model of the existing floor made from them, aren't shared here.</p>
   </div>
 </footer>
 <script>
-/* On a phone the nine section links sit behind one Menu button, so the header is one row. Choosing a link, or Esc, closes it. */
+/* On a phone the section links sit behind one Menu button, so the header is one row. Choosing a link, or Esc, closes it. */
 (() => {
   const top = document.querySelector(".top"), button = document.getElementById("menu"), nav = document.getElementById("nav");
   const set = open => { top.classList.toggle("open", open); button.setAttribute("aria-expanded", String(open)); };

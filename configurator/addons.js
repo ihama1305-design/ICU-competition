@@ -578,7 +578,7 @@ Object.assign(BUILD, {
     // the same grilles as the floor's ventilation concept plan, from the room's data
     for (const v of room.meta.vents) {
       const [x, y] = v.at, [w, d] = v.size;
-      const plate = tagItem(box(w, 0.012, d, panel), NAMES[v.kind], "A concept position from the floor's ventilation plan, not SSMC's mechanical design. No air moves in this model.");
+      const plate = tagItem(box(w, 0.012, d, panel), NAMES[v.kind], "A concept position, not SSMC's mechanical design. No air moves in this model.");
       plate.position.copy(W2T(x, y, H - 0.006)); g.add(plate);
       const slots = v.kind === "supply" ? 3 : v.kind === "return" ? 5 : 3;
       for (let i = 0; i < slots; i++) {

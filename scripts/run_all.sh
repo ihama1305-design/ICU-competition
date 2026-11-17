@@ -23,4 +23,4 @@ echo "== 05 viewer test (headless Chromium)";  "$PY" -I scripts/05_check_viewer.
 echo "== 07 configurator rooms";               "$PY" -I scripts/07_export_room.py 2>&1 | only '^  assets/|^07:|Error|Traceback'
 echo "== 06 website";                           "$PY" -I scripts/06_build_site.py
 echo "== 08 configurator test (headless Chromium)"; "$PY" -I scripts/08_check_configurator.py
-echo "done -> output/icu.blend, output/icu.glb, output/viewer/index.html, renders/, website (index.html, viewer/, assets/, downloads/)"
+echo "done -> the website (index.html, configurator/, assets/). Kept on this machine and git-ignored: output/, renders/, viewer/, ventilation/, the floor model in assets/model/"

@@ -1259,10 +1259,8 @@ with sync_playwright() as p:
     check(not errs, f"phone, the vocal-distress cue: no errors {errs[:3]}")
     ctx.close()
 
-    # ---------------------------------------------------------------- one set of grilles, and the plan that shows them
+    # ---------------------------------------------------------------- one set of grilles, and the comfort control's clean-air card
     ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
-    plan_vents = json.load(open(os.path.join(SITE, "assets", "model", "vents.json")))["vents"]
-    by_id = {v["id"]: v for v in plan_vents}
     clean_rows = spec["ventilation"]["clean_air"]["rows"]
     for room in ROOMS:
         go(pg, room)
@@ -1276,7 +1274,7 @@ with sync_playwright() as p:
         pg.evaluate("document.getElementById('demoTemp').value = 19; document.getElementById('demoTemp').dispatchEvent(new Event('input'))")
         tint = pg.evaluate("window.__config.comfortTint()")
         check(tint == "63aecd", f"{room}: the temperature demo tints the control's status light ({tint})")
-        # the control's card lists the clean-air concept for this kind of room: the plan page's rows, from options.json. Nothing is added to the room
+        # the control's card lists the clean-air concept for this kind of room: the spec's rows, from options.json. Nothing is added to the room
         kind = "isolation" if room == "W1" else "patient"
         pg.evaluate("window.__config.camera('family', { instant: true }); document.getElementById('objectCard').hidden = true")
         pt = pg.evaluate("window.__config.itemPoint('Room comfort control')")
@@ -1290,57 +1288,27 @@ with sync_playwright() as p:
         said = " ".join(text for _, text in card["rows"])
         check(("isolation room" in card["heading"] and "HEPA" in said and "None is recirculated" in said) if room == "W1" else ("ICU room" in card["heading"] and "Return air" in said and "HEPA" not in said.replace("The HEPA grade", "")),
               f"{room}: it says how this room's air leaves: {'through a HEPA filter and outdoors' if room == 'W1' else 'back through the filters'} ({card['heading']})")
-        check("concept" in card["heading"] and card["links"] == ["../ventilation/#clean-air"] and card["inView"], f"{room}: the card calls it a concept, links the plan's basis and fits the window {card['links']}")
+        check("concept" in card["heading"] and card["links"] == ["https://github.com/ihama1305-design/ICU-competition/blob/main/REPORT.md#clean-air"] and card["inView"], f"{room}: the card calls it a concept, links each row's basis in the report and fits the window {card['links']}")
         shot(pg, f"{room.lower()}_clean_air_card")
         pg.evaluate("document.getElementById('objectCard').hidden = true")
         here = pg.evaluate("window.__config.roomVents()")
-        check(len(here) > 0 and all(by_id.get(v["id"], {}).get("at") == v["at"] for v in here), f"{room}: its {len(here)} grilles are the plan's own")
+        check(len(here) > 0 and len({v["id"] for v in here}) == len(here) and all(v.get("at") for v in here), f"{room}: its {len(here)} grilles each have an id and a place of their own")
         pg.evaluate("window.__config.set('ventilation', 'on')")
         check(pg.evaluate("window.__config.ventPlates()") == len(here), f"{room}: the option draws each of them once")
         kinds = {v["kind"] for v in here}
         check({"supply", "exhaust"} <= kinds and "return" not in {v["kind"] for v in here if v["zone"] == room} if room == "W1" else {"supply", "return"} <= kinds, f"{room}: it has the right kinds of grille {sorted(kinds)}")
     check(not errs, f"grilles in the rooms: no errors {errs[:3]}")
     ctx.close()
+    # the existing floor isn't published: the home page shows and links to nothing of it. (The pipeline still builds the
+    # walkthrough, the ventilation plan, the renders and the floor model on a machine that has the drawings; .gitignore keeps them there.)
     ctx = b.new_context(viewport={"width": 1280, "height": 900})
     pg = ctx.new_page()
-    page_errs = []
-    pg.on("console", lambda m, e=page_errs: e.append(m.text) if m.type == "error" else None)
-    pg.on("pageerror", lambda e, l=page_errs: l.append(str(e)))
-    pg.goto(URL.replace("configurator/", "ventilation/"))
-    text = pg.inner_text("main")
-    check("not SSMC's mechanical design" in pg.inner_text("#status"), "the plan says it's concept work, not SSMC's design")
-    drawn_ids = pg.evaluate("[...document.querySelectorAll('#grilles .v')].map(g => g.dataset.id)")
-    check(sorted(drawn_ids) == sorted(by_id), f"the plan draws exactly the 3D model's grilles ({len(drawn_ids)} of {len(by_id)})")
-    legend = pg.inner_text("#legend")
-    check(all(w in legend for w in ("Supply", "Return", "Exhaust")), "the plan has a legend for supply, return and exhaust")
-    check(all(w in text for w in ("air changes", "Isolation room", "Abu Dhabi", "wasn't found")), "the plan gives its basis, and says what wasn't read")
-    check("W1 isolation" in pg.text_content("svg.plan .room-labels") and "Corridor" in pg.text_content("svg.plan .room-labels"), "the plan names the rooms")
-    # the clean-air layer: filters and UV-C in the plant, as rows with a basis each. It adds no grille (the count above) and claims nothing it shouldn't
-    table = pg.evaluate("[...document.querySelectorAll('#cleanAir tbody tr')].map(r => ({ id: r.dataset.row, cells: [...r.cells].map(c => c.innerText.trim()) }))")
-    check([r["id"] for r in table] == [r["id"] for r in clean_rows] and all(r["cells"][0] == w["label"] and r["cells"][-1] == w["basis"] and w["isolation"] in r["cells"] and w["patient"] in r["cells"] for r, w in zip(table, clean_rows)),
-          f"the plan's clean-air table is the spec's {len(clean_rows)} rows, each with its basis {[r['id'] for r in table]}")
-    clean_text = pg.inner_text("#cleanAir")
-    check(all(w in clean_text for w in ("MERV 8", "MERV 14", "HEPA", "UV-C", "Assumed")), "it has the filter stages, the HEPA exhaust and UV-C, and marks what's assumed")
-    proposed = " ".join(" ".join(r["cells"][:-1]) for r in table if r["id"] != "not_proposed").lower()
-    check(not any(w in proposed for w in ("fogg", "ozone", "ionis", "ioniz", "photocatal")) and "Fogging, ozone, ionisers" in clean_text, "fogging, ozone and ionisers appear only in the row that rules them out")
-    check(all(w in text for w in ("not a mandatory requirement", "Table 7.1 and its notes only", "Annexure A-3")), "the page says UV-C is an extra, and which parts of its sources weren't read")
-    pg.locator("#clean-air").scroll_into_view_if_needed()
-    pg.screenshot(path=os.path.join(SHOTS, "ventilation_clean_air.png"))
-    faded = pg.evaluate("[...document.querySelectorAll('svg.plan, svg.plan g')].filter(g => getComputedStyle(g).animationName !== 'none').map(g => g.getAttribute('class'))")
-    check(not faded, f"nothing on the plan picks up an animation from the site's stylesheet {faded[:3]}")
-    check(pg.locator("svg.plan image").count() == 0 and "<image" not in pg.content(), "the plan embeds no picture, so nothing from the drawings")
-    pg.add_script_tag(url=AXE)
-    faults = axe_faults(pg, "main")
-    check(not faults, f"axe finds no serious faults on the plan page {faults[:4]}")
-    pg.screenshot(path=os.path.join(SHOTS, "ventilation_plan.png"), full_page=True)
-    pg.set_viewport_size({"width": 390, "height": 844})
-    over = pg.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")
-    check(over <= 0, f"the plan page has no sideways scroll on a phone ({over})")
-    pg.screenshot(path=os.path.join(SHOTS, "ventilation_phone.png"))
-    check(not page_errs, f"the plan page has no errors {page_errs[:3]}")
-    check(pg.text_content("main a[href='../']").strip() == "Adaptive ICU" and pg.title().endswith(": Adaptive ICU"), "the plan page calls the site by the proposal's name")
     pg.goto(URL.replace("configurator/", "index.html"))
-    check(pg.locator("a[href='ventilation/']").count() > 0, "the home page links to the plan")
+    floor = pg.evaluate("""[...document.querySelectorAll('a[href], img[src], source[srcset]')].map(e => e.getAttribute('href') || e.getAttribute('src') || e.getAttribute('srcset'))
+      .filter(u => /^(viewer|ventilation|downloads|renders|backups)\\//.test(u) || /\\/tree\\/main\\/renders/.test(u) || /assets\\/(model\\/(icu|vents)|img\\/(aerial|plan|corridor|observation|bedside|walk-))/.test(u))""")
+    check(not floor, f"the home page shows and links to nothing of the existing floor: no walkthrough, plan, renders or downloads {floor[:3]}")
+    check(pg.locator("main > section").count() == 4 and pg.locator("#nav a").count() == 2, "the home page is the story, the comparison, the proposal and the configurator")
+    ctx.close()
     # ---------------------------------------------------------------- Suggest a room: answers to a room, from the data in options.json
     ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
     plain = {"patientType": "adult", "stay": "short", "sex": "skip", "children": "no", "mobility": "independent", "care": "routine", "sensory": "none"}
@@ -2613,7 +2581,7 @@ with sync_playwright() as p:
         done = pg.inner_text("#cleaningDone")
         check(c["done"] and c["next"] is None and not c["outlined"] and "Checklist finished" in done and "doesn't say the room is clean or disinfected" in done,
               f"{room}: finishing says the checklist is finished, and never that the room is disinfected {done!r}")
-        check(pg.get_attribute("#cleaningAir", "href") == "../ventilation/" and "No airflow" in pg.inner_text("#cleaningPanel"), f"{room}: no airflow in the room: the checklist links to the ventilation plan")
+        check(pg.locator("#cleaningAir").count() == 0 and "No airflow" in pg.inner_text("#cleaningPanel"), f"{room}: no airflow in the room, and no link to a plan this site doesn't publish")
         faults = axe_faults(pg, "#hud")
         check(not faults, f"{room}: the bar and the checklist pass axe {faults[:3]}")
         shot(pg, f"{room.lower()}_mode_cleaning")
@@ -3286,12 +3254,12 @@ with sync_playwright() as p:
     check(0 < h["picture"][0] and h["picture"][1] <= h["h"] and h["picture"][1] <= h["action"][0] and h["action"][1] <= h["h"], f"on a phone the first screen shows the room, then the first action {h}")
     pg.click("#menu")
     h = pg.evaluate(home)
-    check(h["expanded"] == "true" and h["onScreen"] == 9 and h["columns"] == 2, f"Menu shows all nine sections on screen, two to a row, each tall enough to tap {h}")
+    check(h["expanded"] == "true" and h["onScreen"] == 2 and h["columns"] == 2, f"Menu shows both links on screen, side by side, each tall enough to tap {h}")
     pg.keyboard.press("Escape")
     h = pg.evaluate(home)
     check(h["expanded"] == "false" and not h["nav"] and h["focus"] == "menu", f"Esc closes the menu and leaves the keyboard on its button {h}")
     pg.click("#menu")
-    pg.click("#nav a[href='#findings']")
+    pg.click("#nav a[href='#proposal']")
     h = pg.evaluate(home)
     check(h["expanded"] == "false" and not h["nav"], f"choosing a section closes the menu {h}")
     ctx.close()
@@ -3300,7 +3268,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     pg.goto(URL.replace("configurator/", "index.html"))
     h = pg.evaluate("(() => { const nav = document.getElementById('nav'); return { menu: getComputedStyle(document.getElementById('menu')).display, nav: getComputedStyle(nav).display, links: nav.querySelectorAll('a').length, scrolls: nav.scrollWidth > nav.clientWidth, sideways: document.documentElement.scrollWidth > innerWidth }; })()")
-    check(h["menu"] == "none" and h["nav"] != "none" and h["links"] == 9 and h["scrolls"] and not h["sideways"], f"without scripts the home page keeps its sections on screen, with no Menu button that would do nothing {h}")
+    check(h["menu"] == "none" and h["nav"] != "none" and h["links"] == 2 and not h["sideways"], f"without scripts the home page keeps its links on screen, with no Menu button that would do nothing {h}")
     ctx.close()
     # that link opens the configurator straight into the tour
     ctx = b.new_context(viewport={"width": 1280, "height": 800})

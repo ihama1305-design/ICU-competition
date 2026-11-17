@@ -2,7 +2,7 @@
 
 **A room that adapts to the patient in it.** Adaptive ICU is our proposal for the fourth-floor ICU at Sheikh Shakhbout Medical City (SSMC), made for the SSMC ICU Interior Design Student Competition. It's a patient room that changes its light, blinds and glass with the time of day, the patient's own preferences and the care being given. A nurse approves every change.
 
-**[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Experience the ICU of the future](https://ihama1305-design.github.io/ICU-competition/configurator/?tour=future)** · **[Configure a room](https://ihama1305-design.github.io/ICU-competition/configurator/)** · **[Walk today's floor](https://ihama1305-design.github.io/ICU-competition/viewer/)** · **[See the ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/)** · **[Read the report](REPORT.md)**
+**[Open the site](https://ihama1305-design.github.io/ICU-competition/)** · **[Experience the ICU of the future](https://ihama1305-design.github.io/ICU-competition/configurator/?tour=future)** · **[Configure a room](https://ihama1305-design.github.io/ICU-competition/configurator/)** · **[Read the report](REPORT.md)**
 
 ![Isolation room W1 as the ICU of the future: a lit ceiling tray, wall screens for staff and patient, and a care team's desk](assets/img/proposal-future-1400.webp)
 
@@ -19,27 +19,15 @@ Six things this room does that today's doesn't. Each one runs in the [room confi
 
 Every patient reading is simulated: the figures are made up, no microphone is used, and nothing here changes an alarm or a medical device. [Every feature and its status](#every-feature-and-its-status) lists what each one is and isn't, and what isn't built. To present it, follow [the judges' script](docs/judges-script.md).
 
-## Built on the floor as it is today
+## Built on the rooms as they are today
 
-The proposal sits on a realistic, walkable 3D model of the existing ICU (Tower D, 4th floor, Part a). The walls, doors, glazing and joinery are read straight from the vector CAD layers of the as-built record drawing. The 16 patient rooms are furnished with a typical ICU kit, and the scene is rendered with Blender Cycles.
+The proposal is for two rooms on Tower D's fourth floor: isolation room W1 and standard room W3. Their shapes are measured, from the as-built record drawing SSMC shared with entrants. Each can be seen as it is today beside the proposal: the home page's **Today** picture, and **Before / after** in the configurator. The equipment is a typical ICU kit, not SSMC's inventory, and furnishings and finishes are assumed.
 
-The model and walkthrough show the floor as built, as the starting point for the redesign. The configurator is the design proposal, built on top of it. All of it is independent student work, not made or endorsed by SSMC. Furnishings and finishes are assumed; [REPORT.md](REPORT.md) separates what is measured from what is assumed.
+All of it is independent student work, not made or endorsed by SSMC.
 
-![A patient room in the model of the floor as built](renders/room_entry.png)
+**The existing floor isn't published.** Our 3D model of the whole floor, its walkthrough, its renders and the ventilation plan drawn on it were taken off this site and out of this repo in November 2026. They are made from SSMC's reference drawings, and the competition's FAQ says those aren't to be published or shared beyond the team and its faculty. [REPORT.md](REPORT.md#what-isnt-published) lists what was removed.
 
-## Walk through it
-
-The [walkthrough](https://ihama1305-design.github.io/ICU-competition/viewer/) runs in the browser. Drag **Place person** onto any open floor spot and your view drops to their eye level.
-
-- <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to walk, <kbd>Shift</kbd> to run, drag or arrow keys to look. Touch screens get a joystick that walks forward, back and sideways, a little or a lot, and you drag the view to turn. On a phone every control is on screen in two rows, each big enough to tap; a line over the model says how to move, and **View from behind** sits beside the joystick.
-- The page draws only when something changes, so an idle page costs almost nothing. That matters most for a phone's battery.
-- **Graphics quality.** A **Quality** control offers Auto, High and Low, and remembers the choice in this browser. High has smoothed edges, glass that bends light (a whole extra render pass) and up to 2 pixels per screen point. Low has neither, with plain see-through glass and up to 1.5. Auto times a few frames after loading and picks; a phone or tablet starts on Low, and you can still choose High. Any device steps its resolution down if it can't keep up. Every feature stays at either tier, and `?tier=low` or `?tier=high` picks one, as on the configurator.
-- <kbd>V</kbd> shows the person from behind.
-- Walls, counters and the facade stop you. Doors and glass fronts let you through.
-- The plan in the corner shows where you are. Click it to jump.
-- Click anything to name it and see how sure the model is about it. Rooms W1 and W3 are marked **configurable**, and their card links to that room in the configurator.
-- If the browser can't draw 3D (no WebGL 2, or too old for the way the page loads its 3D code), this page and the configurator say so and link to the pictures, instead of loading for ever.
-- If the browser drops the 3D view while the page is open (iOS Safari does when memory runs short), both pages stop drawing and say so, with a **Tap to reload the 3D view** button, instead of leaving a frozen picture. The configurator writes its link first, so the reload brings back the same room.
+![The same room today: isolation room W1 as modelled from the record drawing, with a typical ICU kit](assets/img/iso_room-1400.webp)
 
 ## Configure a room
 
@@ -52,7 +40,7 @@ The [configurator](https://ihama1305-design.github.io/ICU-competition/configurat
 - **Room basics (the nine-step tour):** a smaller button under it starts the first guided tour's nine captioned steps, about a minute and a half. They cover the room as a proposal, the as-built kit, Patient view, the Comfort, Clinical and Emergency modes with the equipment labels, placing items, and a theme at sunset, and end by pointing to the PACS and APIS demos. Previous, Pause, Next, Restart and Exit are always there; dragging the room pauses it, and with reduced motion it waits for Next. Each step waits nine seconds once its room has stopped moving, and the bar on its card shows the wait. Exit, Finish or Esc puts the room back exactly as it was, and Restart does the same before playing again from the first step. After Finish the card stays to say the tour's changes are undone, with **Try it yourself**, which brings up the room's options, and **Watch again**. Its link still opens it (`configurator/?tour=guided`).
 - **Before and after:** **Before / after** shows every option at its default, with none of your placed items, at the same view and time. Press it again for your room. Your design and its link don't change while it shows, and any change to the room ends the comparison first. **Transform the ICU**, beside it, plays the same comparison as a short story: today's room, a typical arrangement rather than every ICU, then the Future ICU's pieces arriving one at a time (the floor and the light, the ceiling tray, the wall screens, the desk and the cabinet, a scene, and a mode moving them together), and the visitor's own room back at the end. Its last caption says the difference is how the room works, not only how it looks.
 - **Orientation screen:** the TV can show the weekday, the date and the room's own time of day, large enough to read from the bed and darker at night. It shows no patient details.
-- **Room modes:** As set, Comfort, Privacy, Clinical, Family visit, Cleaning and Emergency, in a bar over the room on every screen size (on a phone, two rows of three with Emergency below). One table in `modes.js` says what each mode does to the light, blinds, glass, wall screens, scenes, sound, bedside screens, notices and overlays, and five levels of priority settle any clash, highest first: clinical safety and emergency access, what staff have switched on, patient communication, patient comfort preferences, and decoration. A lower level never overrides a higher one. Each mode's note says in one line what changed, and that medical alarms always stay on. **Family visit** warms the light, softens smart glass to a frost as the patient's passport asks (staff can still see in), and puts family connection on the patient wall. **Cleaning**, for a room between patients, empties the bed, turns the light up and the screens off, and brings up a checklist that lights each high-touch surface, hand-hygiene point and piece of equipment in turn; finishing it says the checklist is finished, never that the room is disinfected, and it links to the ventilation plan rather than drawing airflow. A mode is a scene laid over the room as configured: it never changes a choice, the link or the summary, and As set puts back exactly what was there. Comfort warms and dims the lights and lowers the blinds over about two seconds. Between sunset and sunrise, from the sun's height the room already computes, it leaves the blinds as they are, changes only the lighting and says why in one line; PACS does the same with its blinds recommendation. A small daylight sensor on each room's window sill stands for that reading, and its card gives the sun's height now. Privacy still lowers the blinds after dark, since they're for privacy there. Privacy turns smart glass on the glazed front opaque and lowers the blinds halfway, and staff can end it at any moment. Clinical turns the light up and the examination task light on. Emergency, started by staff, sets full light and the task light, turns the TV and aquarium screen off and clears the glazed front, and its Exit goes back to the mode before it. A chip says clinical alarms are unaffected, and none of this touches the monitor or any medical device. Changing the room's design ends a mode, and PACS, which keeps its own scene, closes when a mode starts.
+- **Room modes:** As set, Comfort, Privacy, Clinical, Family visit, Cleaning and Emergency, in a bar over the room on every screen size (on a phone, two rows of three with Emergency below). One table in `modes.js` says what each mode does to the light, blinds, glass, wall screens, scenes, sound, bedside screens, notices and overlays, and five levels of priority settle any clash, highest first: clinical safety and emergency access, what staff have switched on, patient communication, patient comfort preferences, and decoration. A lower level never overrides a higher one. Each mode's note says in one line what changed, and that medical alarms always stay on. **Family visit** warms the light, softens smart glass to a frost as the patient's passport asks (staff can still see in), and puts family connection on the patient wall. **Cleaning**, for a room between patients, empties the bed, turns the light up and the screens off, and brings up a checklist that lights each high-touch surface, hand-hygiene point and piece of equipment in turn; finishing it says the checklist is finished, never that the room is disinfected, and it draws no airflow. A mode is a scene laid over the room as configured: it never changes a choice, the link or the summary, and As set puts back exactly what was there. Comfort warms and dims the lights and lowers the blinds over about two seconds. Between sunset and sunrise, from the sun's height the room already computes, it leaves the blinds as they are, changes only the lighting and says why in one line; PACS does the same with its blinds recommendation. A small daylight sensor on each room's window sill stands for that reading, and its card gives the sun's height now. Privacy still lowers the blinds after dark, since they're for privacy there. Privacy turns smart glass on the glazed front opaque and lowers the blinds halfway, and staff can end it at any moment. Clinical turns the light up and the examination task light on. Emergency, started by staff, sets full light and the task light, turns the TV and aquarium screen off and clears the glazed front, and its Exit goes back to the mode before it. A chip says clinical alarms are unaffected, and none of this touches the monitor or any medical device. Changing the room's design ends a mode, and PACS, which keeps its own scene, closes when a mode starts.
 - **Themes:** Future ICU, Calm Clinical, Desert Sanctuary and Family Suite. Anything can still be changed afterwards. A link with no code still opens Calm Clinical, today's room.
 - **Options:** paint, feature walls, floors, a sky ceiling, four lighting schemes, an examination task light on its own switch, smart glass, blinds, TV, seating, an aquarium, a patio and palms. It's an adult ICU room, so there are no toys or games console. Earlier links that set them still open, without those items.
 - **Day and night:** the sun follows a real path at Abu Dhabi's latitude.
@@ -83,7 +71,7 @@ To add a feature card, add an entry to [`scripts/site/configurator/features.json
 
 One row per feature, from the same registry as the feature cards, plus the parts of the site that aren't cards and what isn't built. "What it isn't" is the start of each card's limits; the card has the rest, with its evidence.
 
-**Status:** *Concept* is shown in the 3D room as a design; a real one would need engineering, infection-control and clinical review. *Simulated* runs on the site with made-up data or events; nothing real is connected, measured or sent. *Tool* does real work on this model: a tour, a check, a plan or a link. *Not built* is listed so nobody looks for it.
+**Status:** *Concept* is shown in the 3D room as a design; a real one would need engineering, infection-control and clinical review. *Simulated* runs on the site with made-up data or events; nothing real is connected, measured or sent. *Tool* does real work on this model: a tour, a check, a plan or a link. *Not built* is listed so nobody looks for it. *Not published* is kept off the site, and its row says why.
 
 | Group | Feature | What it does | What it isn't | Status |
 |---|---|---|---|---|
@@ -130,8 +118,7 @@ One row per feature, from the same registry as the feature cards, plus the parts
 | The site | Suggest a room | A few questions about the patient give an editable comfort and furnishing draft, with what changed and why, and undo. | A design suggestion: it never recommends care, and the answers stay out of links. | Tool |
 | Clinical systems | PACS, the Physiological Adaptive Comfort System | Simulated vital signs and the patient's preferences lead to a suggestion, such as softer light. A nurse approves it before the room changes. | Not connected to a monitor: every reading is made up and scripted. It never controls an alarm or a device, and infers no diagnosis. | Simulated |
 | Clinical systems | APIS, the Adaptive Patient Interface System | An idea for a gentler way to attach tubes, wires and sensors: what touches the skin, how each is held, where it runs, and its limits. | An idea, not a device: the approved device and its own instructions come first, and no force, flow or pressure is worked out. | Concept |
-| The floor today | Walkthrough | The fourth-floor ICU as built, from the record drawing, to walk through. Click anything to see what it is and how sure we are about it. | Furnishings and finishes are assumed. Not for medical or construction use. | Tool |
-| The floor today | Ventilation plan | Supply, return and exhaust for the floor, the pressure steps from corridor to entry room to bedroom, and a clean-air table. | Concept work, not SSMC's mechanical design: the values are assumed, from Dubai Health Authority guidance. | Concept |
+| Not published | The existing floor | Our 3D model of the fourth-floor ICU as built, with its walkthrough, its renders and a ventilation plan drawn on it. | Not on this site or in this repo: it is made from SSMC's reference drawings, which the competition's FAQ says aren't to be shared publicly. | Not published |
 | Not built | Ceiling lift | A track hoist over the bed for moving a patient, from Iham's list. | Not built: there wasn't time before the 16 November freeze. | Not built |
 | Not built | Admission and room readiness | A board that follows a room from the last patient's discharge to the next one's arrival. Cleaning mode's checklist would be its first stage. | Not built: there wasn't time before the 16 November freeze. | Not built |
 | Not built | Unit board | A board ranking the unit's patients by their vital signs. | Not built, by decision: this site ranks no one and gives no single score. REPORT.md says why. | Not built |
@@ -207,44 +194,22 @@ Verification performed: PACS state/approval rules; W1 and W3 monitor displays, l
 **Fewer unnecessary entries, never fewer checks.** Every entry to isolation room W1 costs protective clothing and opens the door of a negative-pressure room, so the room helps staff see, hear and know from outside. The glazed front already lets them see. Two concept features add the rest, and both are simulated:
 
 - **Hear: a vocal-distress cue.** In the [configurator](https://ihama1305-design.github.io/ICU-competition/configurator/), open *Comfort systems* or click the sound sensor on the wall, then press *Simulate a call for help* or *Simulate a groan*. The sensor's light changes and a notice marked SIMULATED asks the nurse to look in through the glass, and leaves going in to them. It stays until acknowledged. No microphone is used, nothing is recorded or stored, and no alarm or device changes. The sensor's card lists the limits: ventilated or sedated patients may make no sound, alarms cause false alerts, and a real sensor would classify sounds on the device and never store them.
-- **Clean: a clean-air layer.** The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/#clean-air) has a table of filters and UV-C in the air handling plant, each row with its basis, and the wall comfort control's card shows the same rows for its room. Nothing is added to the room, and fogging, ozone and ionisers aren't proposed.
+- **Clean: a clean-air layer.** The wall comfort control's card has a table of filters and UV-C in the air handling plant for its room, and [REPORT.md](REPORT.md#clean-air) gives each row's basis. Nothing is added to the room, and fogging, ozone and ionisers aren't proposed.
 
 A unit board that ranks patients by their vitals was the third idea. It isn't built: REPORT.md says why.
-
-## Ventilation concept
-
-The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventilation/) shows supply, return and exhaust grilles for the floor, with the air-change and pressure basis for each kind of room. **It's concept work, not SSMC's mechanical design:** the drawings show no grilles, ducts or air data. The grilles are hidden in the walkthrough, the renders and the configurator for now, so the plan is the only place they show. The model still builds them, hidden, from the same list.
-
-The plan also has a clean-air table: two filter stages on the supply, a HEPA-filtered exhaust from the isolation rooms, and UV-C in the plant as an extra. It's all out of sight, with no new grilles, and it doesn't propose fogging, ozone or ionisers. In the configurator, clicking the wall comfort control shows the same rows for that room.
 
 ## The pictures at the top of the home page
 
 The home page opens with the proposed isolation room, W1, in ten pictures. **They were made with an AI image tool.** Each began as a capture of the room in the configurator (Future ICU, with the bed shown empty) and was finished as a photo by Blueprint Studio Asset Generator, told to keep the room's shape and every fitting where it is. They are concept pictures: the timber grain, the reflections and the light are the tool's, not a measured render. The room you can open and change keeps its drawn style, and nothing in it was made this way. [REPORT.md](REPORT.md#the-story-at-the-top-of-the-home-page-17-november-2026) says how they were made and checked, and what is still wrong in them.
 
-## Renders
-
-| | |
-|---|---|
-| ![Whole floor](renders/aerial.png) | ![West wing cutaway](renders/aerial_close.png) |
-| The whole floor with the ceiling off | Close cutaway of the west wing |
-| ![Bedside](renders/bedside.png) | ![Nurse station](renders/corridor.png) |
-| At the bedside (made-up readings, each screen marked SIMULATED) | The central nurse station from the corridor |
-| ![Observation window](renders/observation.png) | ![Top view](renders/plan.png) |
-| Into a patient room through an observation window | Top view |
-| ![Isolation room](renders/iso_room.png) | ![Bed and window](renders/iso_window.png) |
-| Isolation room W1 along its length | W1's bed, with the window beside the patient |
-
 ## Files
 
 | File | What it is |
 |---|---|
-| [`downloads/icu.blend`](downloads/icu.blend) | Editable Blender 5.2 scene with collections Shell, Ceiling, Facade, Doors, Glazing, Joinery, Equipment, Lights, Cameras |
-| [`downloads/icu.glb`](downloads/icu.glb) | The same model for other 3D tools (metres, Y-up, flat colours) |
-| [`renders/`](renders/) | Full-size Cycles renders |
-| [`REPORT.md`](REPORT.md) | How it was built, what is accurate and what is assumed |
+| [`REPORT.md`](REPORT.md) | How the proposal was built, what it assumes, and what was tested |
 | [`spec/icu_spec.json`](spec/icu_spec.json) | Every height, material, equipment position, light and camera ([field guide](spec/icu_spec.README.md)) |
 | [`scripts/`](scripts/) | The pipeline, from drawing to website |
-| `index.html`, `viewer/`, `configurator/`, `ventilation/`, `assets/` | The published website, served from the repo root. It is generated, so edit `scripts/site/` and rebuild instead |
+| `index.html`, `configurator/`, `assets/` | The published website, served from the repo root. It is generated, so edit `scripts/site/` and rebuild instead |
 | [`docs/`](docs/) | The judges' script, the real-device checklist, and the configurator's brief and build plan |
 
 ## Run it locally
@@ -259,7 +224,7 @@ Then open http://localhost:8000/ for the home page, or http://localhost:8000/con
 
 ## How it's published
 
-GitHub Pages serves the repo root of `main` at https://ihama1305-design.github.io/ICU-competition/, so a merge to `main` is a release. The published files (`index.html`, `configurator/`, `viewer/`, `ventilation/`, `assets/`) are generated: edit their sources under `scripts/site/` and rebuild with the pipeline below, or with `scripts/06_build_site.py` when the Blender outputs are in place. After a merge, Pages takes a minute or two.
+GitHub Pages serves the repo root of `main` at https://ihama1305-design.github.io/ICU-competition/, so a merge to `main` is a release. The published files (`index.html`, `configurator/`, `assets/`) are generated: edit their sources under `scripts/site/` and rebuild with the pipeline below, or with `scripts/06_build_site.py` when the Blender outputs are in place. After a merge, Pages takes a minute or two.
 
 ## Testing
 
@@ -277,6 +242,8 @@ The pipeline runs 01 extract plan, 02 Blender scene, 09 fixture check, 10 ventil
 
 Change a number in `spec/icu_spec.json` and run `scripts/run_all.sh` again. A rebuild replaces `output/icu.blend`, so save your own Blender edits under another name.
 
-## The drawings are not in this repo
+## The drawings, and the floor made from them, are not in this repo
 
-`input/` is git-ignored, because the SSMC record drawings were shared with competition entrants and this repo is public. To rebuild, put the four PDFs from *SSMC ICU Design Competition - Reference Drawings v1.zip* in `input/drawings/`.
+`input/` is git-ignored, because the SSMC record drawings were shared with competition entrants and this repo is public. So is everything the pipeline makes from them that shows the existing floor: the walkthrough (`viewer/`), the ventilation plan (`ventilation/`), `renders/`, `downloads/`, and the floor model and its grille list in `assets/model/`. A rebuild still makes them on a machine that has the drawings, and they stay there.
+
+To rebuild, put the four PDFs from *SSMC ICU Design Competition - Reference Drawings v1.zip* in `input/drawings/`.

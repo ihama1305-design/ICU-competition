@@ -63,7 +63,7 @@ p { margin: 0; }
   .has-menu .menu[aria-expanded="true"]::after { margin-top: 4px; transform: rotate(-135deg); }
   .has-menu .menu:active { transform: scale(var(--press)); transition: transform var(--t-press) var(--spring); }
   .has-menu .top nav { display: none; }
-  .has-menu .top.open nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; gap: 0 12px; flex-basis: 100%; margin-inline: 0; padding-bottom: 6px; animation: rise var(--t-enter) var(--ease-out); }
+  .has-menu .top.open nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; flex-basis: 100%; margin-inline: 0; padding-bottom: 6px; animation: rise var(--t-enter) var(--ease-out); }
   .has-menu .top.open nav a { padding-inline: 0; border-top: 1px solid var(--border); border-radius: 0; font-size: 1rem; color: var(--text); }
   .has-menu .top.open nav a::after { content: none; }
 }
