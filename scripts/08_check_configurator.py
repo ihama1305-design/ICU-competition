@@ -2378,6 +2378,23 @@ with sync_playwright() as p:
         pg.click("#compareToggle")
         cmp_off = pg.evaluate("window.__config.fittings()")
         check(cmp_on["shown"] == [] and cmp_on["tvOut"] == 0 and cmp_off["shown"] == FUTURE and cmp_off["tvOut"] == 0.035, f"{room}: today's room has no fittings, and yours gets them back {cmp_on['shown']} {cmp_off['shown']}")
+        # the evening's light: the fittings keep their amber, and what they throw on the cool walls and floor is drawn nearer white, no brighter
+        def light_at(stop):
+            pg.evaluate(f"window.__config.time(window.__config.stops.{stop})")
+            return pg.evaluate("window.__config.lightColour()")
+        lum = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+        sat = lambda c: (max(c) - min(c)) / max(c)
+        by_day, at_night = light_at("afternoon"), light_at("night")
+        check(by_day["lamp"] == by_day["room"] and by_day["lamp"][2] == 1, f"{room}: by day the circadian light is drawn as one cool white, the fitting and what it lights {by_day}")
+        lamp, lit = at_night["lamp"], at_night["room"]
+        check(lamp[0] == 1 and lamp[2] < 0.12 and lit[0] > lit[1] > lit[2] and lit[2] > 2 * lamp[2] and sat(lit) < sat(lamp) - 0.15,
+              f"{room}: at 9 pm the fittings stay amber, and the light on the room is still warm but nearer white {at_night}")
+        check(abs(lum(lit) - lum(lamp)) < 0.005, f"{room}: and it is no brighter for that {lum(lamp):.3f} {lum(lit):.3f}")
+        pg.evaluate("window.__config.set('scheme', 'cove')")
+        plain = pg.evaluate("window.__config.lightColour()")
+        check(plain["lamp"] == plain["room"], f"{room}: a scheme with no white point of its own is drawn as it was, at night too {plain}")
+        pg.evaluate("window.__config.set('scheme', 'circadian'); window.__config.time(window.__config.stops.afternoon)")
+        check(pg.evaluate("window.__config.currentTheme()") == "future" and pg.evaluate("window.__config.lightColour()") == by_day, f"{room}: and the afternoon comes back as it was")
     # the old reference link: the same room, with every fitting off
     pg.evaluate("location.hash = '#c=10030010002000000000000000000000000100'")
     pg.wait_for_function("window.__config.state().room === 'W1' && window.__config.code().startsWith('10030010002000000000000000000000000100')", timeout=60000)

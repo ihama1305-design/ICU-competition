@@ -3292,6 +3292,8 @@ window.__config = {
   intel: () => ({ open: intelOn, active: intelActive, events: JSON.parse(JSON.stringify(intelEvents)), notices: intelNotices().map(e => e.id), banner: !$("intelNotice").hidden, cover: !!stage.current.intelCover?.visible,
     sensors: !!stage.current.addons?.ceilingSensors?.visible, marks: Object.fromEntries(Object.entries(stage.current.intelMarks || {}).map(([k, v]) => [k, v.visible])), station: station.inspect().notices }),
   arrival: () => arrival.state(stage.current),
+  // the electric light's colour as drawn, in linear RGB: the fitting's own, and what it throws on the room
+  lightColour: () => ({ lamp: lighting.lamp.toArray().map(v => +v.toFixed(4)), room: lighting.colour.toArray().map(v => +v.toFixed(4)) }),
   scan: () => ({ shown: scanShown, results: scanResultsNow.map(r => ({ uid: r.uid, label: r.label, level: r.level, why: r.why, spot: r.spot })), marker: scanMarker ? [+scanMarker.position.x.toFixed(2), +(-scanMarker.position.z).toFixed(2)] : null, detail: $("scanDetail").hidden ? null : $("scanDetail").textContent }),
   runScan: () => runScan().map(r => r.level),
   cables: () => { const v = stage.current.cableViews || {}, shown = Object.entries(v).find(([, g]) => g.visible); return { state: cableState, view: shown?.[0] ?? null,
