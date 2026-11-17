@@ -18,12 +18,21 @@ export function kelvinColour(k) {
  * A light's colour as an eye used to the room sees it. kelvinColour() is measured against daylight, about 6600 K, so a
  * 4800 K "cool white" comes out orange. A scheme with a `white` point (options.json) is drawn against that instead: light
  * cooler than it reads blue-white, warmer reads amber. Only the picture changes. The kelvin a card or panel states does not.
+ *
+ * After dark there is no daylight to compare a lamp with, and the eye adapts part of the way to it. `adapt` (0 to 1) draws
+ * the light that much nearer to white, at the brightness it had. Without it a 2300 K evening turned the cool walls and
+ * floor khaki: light with almost no blue in it, on surfaces that are mostly blue.
  */
-const balanceTo = new THREE.Color();
-function balanced(colour, white) {
+const balanceTo = new THREE.Color(), NEUTRAL = new THREE.Color(1, 1, 1);
+const luminance = c => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+function balanced(colour, white, adapt = 0) {
   const w = balanceTo.copy(kelvinColour(white));
   colour.setRGB(colour.r / w.r, colour.g / w.g, colour.b / w.b);
-  return colour.multiplyScalar(1 / Math.max(colour.r, colour.g, colour.b));
+  colour.multiplyScalar(1 / Math.max(colour.r, colour.g, colour.b));
+  if (adapt <= 0) return colour;
+  const was = luminance(colour);
+  colour.lerp(NEUTRAL, Math.min(1, adapt));
+  return colour.multiplyScalar(was / luminance(colour));
 }
 
 const between = (a, b, h, x0, x1) => a + (b - a) * Math.min(1, Math.max(0, (h - x0) / (x1 - x0)));
@@ -81,7 +90,7 @@ export class Lighting {
     this.env = null; // a scene's light from Transform my environment, under the patient's state and the modes
     this.day = 1;
     this.room = null;
-    this.colour = new THREE.Color();
+    this.colour = new THREE.Color(); this.lamp = new THREE.Color();
   }
 
   fixturesFor(room) {
@@ -233,19 +242,23 @@ export class Lighting {
     // modes are the staff override), and a scene's look (Transform my environment) under both. None changes the option settings
     const look = this.scene || this.plan || this.patient || this.env || this.base(hour, day); // Light across 24 hours' plan sits under the modes
     const k = this.comfort?.kelvin ?? look.kelvin;
-    const col = this.colour.copy(kelvinColour(k));
-    if (s.white) balanced(col, s.white);
+    // two colours after dark: `lamp` is the fitting you look at, and `col` is what it throws on the room
+    const col = this.colour.copy(kelvinColour(k)), lamp = this.lamp.copy(col);
     const night = 1 - day;
+    if (s.white) {
+      balanced(lamp, s.white);
+      balanced(col, s.white, k < s.white ? (s.adapt || 0) * night : 0); // by day the eye stays set to daylight
+    }
     let level = look.level;
     level *= this.comfort?.level ?? 1; // transient PACS rendering overlay; original option settings are preserved
 
     this.rects.forEach(l => { l.color.copy(col); l.intensity = (s.rect || 0) * level * this.rectWeight; });
     this.spots.forEach(l => { l.color.copy(col); l.intensity = (s.spot || 0) * level * this.spotWeight; });
-    f.strip.color.copy(col).multiplyScalar((s.strip || s.disc || 1) * Math.max(level, 0.02));
-    f.glow.color.copy(col).multiplyScalar((s.glow || 0) * level * (0.45 + 0.55 * night));
-    f.trayGlow.color.copy(col).multiplyScalar(0.5 * Math.max(level, 0.04) * (1 - 0.35 * night)); // less after dark, when the bloom pass glows too
+    f.strip.color.copy(lamp).multiplyScalar((s.strip || s.disc || 1) * Math.max(level, 0.02));
+    f.glow.color.copy(lamp).multiplyScalar((s.glow || 0) * level * (0.45 + 0.55 * night));
+    f.trayGlow.color.copy(lamp).multiplyScalar(0.5 * Math.max(level, 0.04) * (1 - 0.35 * night)); // less after dark, when the bloom pass glows too
     for (const n of this.room.parts.cfg_panels || []) {
-      n.material.emissive.copy(col);
+      n.material.emissive.copy(lamp);
       n.material.emissiveIntensity = (s.panel || 0) * level;
     }
 

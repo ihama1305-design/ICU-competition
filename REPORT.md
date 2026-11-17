@@ -450,6 +450,12 @@ Check 14 tests that medical gas never shares a channel with power or data, that 
 
 **A fault put right.** The staff panel's standby clock, and the time on its Clinical screen, kept the old time when the time of day changed by the slider, the stops or Day and Night. They are redrawn now whenever the minute they show changes, as the TV's orientation screen already was. Found while taking pictures for the cooler look.
 
+### The Future ICU room at 9 pm (16 November 2026)
+
+**The evening no longer turns the room khaki.** At 9 pm the circadian light is 2,300 K, which has almost no blue in it, and the Future ICU walls and floor are mostly blue. Drawn plainly, that product is a dark yellow, and the room read olive. After dark an eye has no daylight to compare a lamp with and adapts part of the way to it, so the light that falls on the room is now drawn three tenths of the way to white, at the brightness it had. The light lines themselves keep their amber. Measured on the same picture of W1, the wall's colour saturation fell from 46% to 26% and the floor's from 43% to 27%, at about the same hue.
+
+**What stays as it was.** Every stated kelvin and level, the afternoon picture (identical, pixel for pixel), the other light schemes at any hour, and so the other three themes. Sunset moves a little, because the adjustment grows as daylight goes. It is a drawing choice, as the white balance is: the pictures are not a lighting calculation, and no lux level should be read from them.
+
 ### Every feature and its status
 
 One row per feature, from the same registry as the feature cards, plus the parts of the site that aren't cards and what isn't built. "What it isn't" is the start of each card's limits; the card has the rest, with its evidence.
