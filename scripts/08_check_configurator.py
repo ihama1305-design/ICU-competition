@@ -2408,6 +2408,13 @@ with sync_playwright() as p:
         w = still_wall()
         check(w["wall"] == "patient" and w["staff"] == "standby" and w["tv"] == "orientation" and w["strip"] == {"shown": True, "buttons": ["board", "family"]} and not w["wallScene"] and w["env"] is None,
               f"{room}: Future ICU sets the wall for the patient: the orientation screen, the care team and the plan with two buttons, and the staff panel resting {w}")
+        # the staff panel's clock tells the room's time whenever the time changes, as the TV's orientation screen does
+        CLOCK = "({ hour: window.__config.state().hour, drawn: JSON.parse(window.__config.wall().drawn.staffLeft) })"
+        clocks = []
+        for stop in ("night", "morning", "afternoon"):
+            pg.evaluate(f"window.__config.time(window.__config.stops.{stop})")
+            clocks.append(pg.evaluate(CLOCK))
+        check(all(c["drawn"] == ["standby", round(c["hour"] * 60)] for c in clocks) and len({c["drawn"][1] for c in clocks}) == 3, f"{room}: in standby the staff panel's clock follows the time of day {[c['drawn'] for c in clocks]}")
         # from the pillow: the strip reads at least as large as the orientation screen's own lines, and its buttons open the bedside screens
         pg.click("#views button[data-value='patient']")
         pg.wait_for_function("window.__config.state().view === 'patient' && !window.__config.state().moving", timeout=120000)
@@ -2422,6 +2429,10 @@ with sync_playwright() as p:
         # the switch, and the modes moving it without changing it
         pg.evaluate("window.__config.set('wall', 'clinical')")
         w = still_wall()
+        pg.evaluate("window.__config.time(window.__config.stops.midday)")
+        c = pg.evaluate(CLOCK)
+        pg.evaluate("window.__config.time(window.__config.stops.afternoon)")
+        check(c["drawn"] == ["clinical", round(c["hour"] * 60)] and pg.evaluate(CLOCK)["drawn"][1] == round(pg.evaluate("window.__config.state().hour") * 60), f"{room}: in Clinical the staff panel's clock follows the time too {c['drawn']}")
         check(w["staff"] == "clinical" and w["tv"] == "orientation" and w["strip"]["buttons"] == [] and "clinical" in w["drawn"]["staffLeft"], f"{room}: Clinical: made-up observations on the staff panel, the patient keeps the time, and no buttons {w['staff']} {w['drawn'].get('staffLeft')}")
         pg.evaluate("window.__config.set('wall', 'relaxation')")
         w = still_wall()

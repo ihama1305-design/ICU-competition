@@ -210,6 +210,7 @@ function setTime(h) {
   describe();
   pressed($("dayNight"), isNight(h) ? "night" : "day");
   modes.timeChanged(); // Comfort leaves the blinds alone after dark, so crossing sunset or sunrise changes what it does
+  if (stage.current && optionData && station) wallView.clock(stage.current, wallNow(), h); // the staff panel's clock tells the room's time, as the TV's orientation screen does
   const stop = Object.entries(STOPS).find(([, v]) => Math.abs(v - h) < 0.2)?.[0];
   $("stops").querySelectorAll("button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.value === stop)); });
   invalidate();

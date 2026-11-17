@@ -317,8 +317,28 @@ function ceilingRect(room, trayOn) {
  * The wall in one room. apply() is called with the state from wallFor() and what else the screens show; it redraws only
  * what changed. update(now) eases a scene in or out and returns true while it moves.
  */
+/** What the staff panel is showing: its clinical screen, Emergency's, or a dark standby. */
+const staffMode = st => (st.staff === "clinical" ? (st.emergency ? "emergency" : "clinical") : "standby");
+/** The staff panel's left screen, the one with the clock: standby's large time, or the made-up observations with the time. */
+const paintStaffLeft = (panel, mode, hour) => repaint(screenOf(panel, "staffLeft").material.map, (g, W, H) => (mode === "standby" ? standby(g, W, H, "Staff panel · standby", hour) : staffObs(g, W, H, hour)));
+
 export class WallView {
   constructor() { this.fades = new Set(); }
+
+  /**
+   * The room's time has changed: the staff panel's clock follows it. It is the only thing on the wall that tells the time
+   * (the TV's orientation screen has its own, addons.js setOrientation), so nothing else is touched. Returns whether the
+   * screen was drawn again: it is only when the minute it shows has changed.
+   */
+  clock(room, st, hour) {
+    const panel = room?.addons?.staffPanel, w = room?.wallState;
+    if (!panel?.userData.schemeOn || !w) return false; // not in the room, or not drawn yet: apply() draws it first
+    const mode = staffMode(st), k = JSON.stringify([mode, Math.round(hour * 60)]);
+    if (w.key.staffLeft === k) return false;
+    w.key.staffLeft = k;
+    paintStaffLeft(panel, mode, hour);
+    return true;
+  }
 
   /**
    * room: the room on show. st: wallFor()'s result. extra: { hour, done (a Set of task ids), task, view, tv (the TV's own
@@ -332,9 +352,8 @@ export class WallView {
 
     // the staff panel: clinical, Emergency, or a dark standby that shows nothing about the patient
     if (on("staffPanel")) {
-      const left = screenOf(a.staffPanel, "staffLeft"), right = screenOf(a.staffPanel, "staffRight");
-      const mode = st.staff === "clinical" ? (st.emergency ? "emergency" : "clinical") : "standby";
-      draw("staffLeft", [mode, Math.round(extra.hour * 60)], () => repaint(left.material.map, (g, W, H) => (mode === "standby" ? standby(g, W, H, "Staff panel · standby", extra.hour) : staffObs(g, W, H, extra.hour))));
+      const right = screenOf(a.staffPanel, "staffRight"), mode = staffMode(st);
+      draw("staffLeft", [mode, Math.round(extra.hour * 60)], () => paintStaffLeft(a.staffPanel, mode, extra.hour));
       draw("staffRight", [mode, [...extra.done]], () => repaint(right.material.map, (g, W, H) => (mode === "standby" ? standby(g, W, H, "Shows observations in Clinical") : mode === "emergency" ? staffEmergency(g, W, H) : staffTasks(g, W, H, extra.done))));
     }
     // the workstation's two screens
