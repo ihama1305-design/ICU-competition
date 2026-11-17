@@ -450,6 +450,7 @@
           "kind": "cove",
           "circadian": true,
           "white": 4300,
+          "adapt": 0.3,
           "rect": 3.4,
           "fill": 0.36,
           "strip": 5,
