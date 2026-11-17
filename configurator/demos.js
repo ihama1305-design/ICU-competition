@@ -7,7 +7,7 @@
 // marks one feature for the step; oldWardrobe(on) outlines the wardrobe it replaced; acoustic("without" | "with") shows
 // Acoustic comfort mode; notices(open) opens its list of notifications; patient(state) sets the patient's state; station(view) opens the clinician
 // workstation in Nurse or Doctor view, and task(id, done) chooses one of its tasks or presses Done; clean(n) ticks the first n of
-// Cleaning's steps; twin(id) opens the digital twin on one of its systems; intel(id) opens room intelligence, active, and raises a made-up event, "reset" or none; cables(state) shows the cable overlay, "traditional", "organised" or null; today() shows today's room, every option at its default and no placed item, as Compare does. A step's caption can be worked out
+// Cleaning's steps; twin(id) opens the digital twin on one of its systems; intel(id) opens room intelligence, active, and raises a made-up event, "reset" or none; cables(state) shows the cable overlay, "traditional", "organised" or null; today() shows today's room, every option at its default and no placed item, as Compare does; arrive(role) brings a nurse, a doctor or a family visitor in along the route from the door, or (null) takes them out, and arriveView() stands where that is watched from. A step's caption can be worked out
 // from the room: say(api), where api.figures() gives the two wardrobes' sizes as a sentence.
 
 export const DEMOS = {
@@ -180,6 +180,33 @@ export const DEMOS = {
       { say: "The difference isn't only how it looks: it's how the room works. Its modes move all of this together.", run: a => a.mode("comfort") },
     ],
   },
+  // When someone comes in: the demo plays a badge tapped at the door, a plain figure walks the route to the bedside, and the
+  // staff's screens are ready for them. Only a person changes the light or the mode, and the caption says when the demo plays one
+  arrivalNurse: {
+    label: "A nurse comes in",
+    steps: [
+      { say: "A nurse taps a staff badge at the door. The demo plays the tap: nothing recognises anyone.", run: a => { a.time("afternoon"); a.option("staffPanel", "on"); a.arrive("nurse"); } },
+      { say: "The staff panel wakes from standby to made-up observations and care tasks, and the workstation opens in Nurse view.", run: a => { a.option("wall", "clinical"); a.station("nurse"); a.arriveView(); } },
+      { say: "The nurse leaves, and the staff panel goes back to standby. Staff can set the room by hand at any time.", run: a => { a.option("wall", "patient"); a.arrive(null); } },
+    ],
+  },
+  arrivalDoctor: {
+    label: "A doctor comes in",
+    steps: [
+      { say: "A doctor taps a staff badge at the door. The demo plays the tap: nothing recognises anyone.", run: a => { a.time("afternoon"); a.option("staffPanel", "on"); a.arrive("doctor"); } },
+      { say: "The workstation opens in Doctor view, the observations and the plan first, and the staff panel wakes. Every value is made up.", run: a => { a.option("wall", "clinical"); a.station("doctor"); a.arriveView(); } },
+      { say: "For the examination the doctor chooses Clinical mode: full, neutral light and the task light. The demo plays the doctor: the room doesn't decide.", run: a => a.mode("clinical") },
+      { say: "The doctor leaves, and the room goes back to how it was set.", run: a => { a.mode("standard"); a.option("wall", "patient"); a.arrive(null); } },
+    ],
+  },
+  arrivalFamily: {
+    label: "A family visitor comes in",
+    steps: [
+      { say: "A family visitor taps a visitor's pass at the door. The demo plays the tap: nothing recognises anyone.", run: a => { a.time("afternoon"); a.option("staffPanel", "on"); a.arrive("family"); } },
+      { say: "A nurse turns on Family visit: the light warms, and family connection is on the wall the patient faces. The staff panel stays in standby, so a visitor is shown nothing clinical.", run: a => a.mode("family") },
+      { say: "The visitor leaves, and the room goes back to how it was set.", run: a => { a.mode("standard"); a.arrive(null); } },
+    ],
+  },
   // the digital twin: a system read in words, the mode changing what it reads, and the floor against this model's clear areas
   digitalTwin: {
     steps: [
@@ -228,6 +255,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin", "intel", "scan", "cables:apis", "day"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin", "intel", "scan", "cables:apis", "day", "demo:arrivalDoctor", "demo:arrivalFamily"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest

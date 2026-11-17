@@ -12,6 +12,7 @@ import { CLEANING_STEPS, CLEANING_TEXT } from "./site/configurator/cleaning-data
 import { HEALTH, STATES as TWIN_STATES, TWIN_SYSTEMS, TWIN_TEXT, twinRead } from "./site/configurator/twin-data.js";
 import { EVENTS, INTEL_TEXT, SCAN_TEXT, SENSORS } from "./site/configurator/intel-data.js";
 import { suggestSpot } from "./site/configurator/layout.js";
+import { ARRIVALS, ARRIVAL_ORDER, ARRIVAL_TEXT, ARRIVAL_VIEW, along, routeLength, walkTime, walked } from "./site/configurator/arrival-data.js";
 import { CABLE_TEXT, CHANNELS, KINDS as CABLE_KINDS, ROUTES_BY_STATE } from "./site/configurator/cables-data.js";
 import { parseObject } from "./site/configurator/feature-links.js";
 import { APPLY, BOARD, BOARD_AR, BOARD_CONFIRM, CLINICIAN, DEFAULT_STATE, FAMILY, OFFERS, ORIENTATION, PASSPORT, STAFF, STATES, STATE_MS, STATE_ORDER } from "./site/configurator/patient-states.js";
@@ -164,6 +165,8 @@ const api = {
   twin: id => { assert.ok(TWIN_SYSTEMS.some(x => x.id === id), `a demo opens the digital twin on ${id}, a system it reads`); calls.push(["twin"]); },
   clean: n => { assert.ok(Number.isInteger(n) && n >= 0 && n <= CLEANING_STEPS.length, `a demo ticks the first ${n} of Cleaning's steps, which it has`); calls.push(["clean"]); },
   station: view => { assert.ok(STATION_VIEWS[view], `a demo opens the workstation in ${view}, a view it has`); calls.push(["station"]); },
+  arrive: role => { assert.ok(role === null || ARRIVALS[role], `a demo brings in ${role}, someone the arrival data has, or takes them out`); calls.push(["arrive"]); },
+  arriveView: () => calls.push(["arriveView"]),
   task: (id, done) => { assert.ok(TASKS.some(t => t.id === id) && [undefined, true].includes(done), `a demo chooses the task ${id}, or presses its Done`); calls.push(["task"]); },
 };
 let steps = 0;
@@ -561,4 +564,34 @@ assert.ok(/Clinical and Emergency are the staff override and always win/.test(DA
 const dp = byId.get("dayPlan");
 assert.ok(dp && dp.control === "openDay" && dp.evidence.sourcesFrom === "scheme:circadian" && sourcesOf("scheme:circadian").length === 2 && /found no effect/.test(dp.evidence.text),
   "the card cites the two lighting studies options.json already holds, the trial that found no effect among them");
+// ---------------------------------------------------------------- When someone comes in (arrival-data.js, arrival.js)
+// three people, a walk that keeps to the room's route and ends at the bedside facing the bed, and words that say what it isn't
+assert.deepEqual(ARRIVAL_ORDER, ["nurse", "doctor", "family"], "a nurse, a doctor and a family visitor can come in");
+assert.ok(ARRIVAL_ORDER.every(r => ARRIVALS[r].label && ARRIVALS[r].pass && [ARRIVALS[r].top, ARRIVALS[r].legs, ARRIVALS[r].badge].every(col => /^#[0-9a-f]{6}$/.test(col))), "each has a name for their role, clothes, and something to tap at the door");
+for (const label of options.rooms) {
+  const route = ROUTES[label], length = routeLength(route), meta = METAS[label], bed = [meta.bed.head[0] + meta.bed.foot[0], meta.bed.head[1] + meta.bed.foot[1]];
+  const start = along(route, 0, bed), end = along(route, length, bed);
+  assert.ok(Math.hypot(start.x - route[0][0], start.y - route[0][1]) < 1e-9 && Math.hypot(end.x - route.at(-1)[0], end.y - route.at(-1)[1]) < 1e-9, `${label}: the walk starts at the door's end of the route and stops at the bedside`);
+  const lane = corridor(route);
+  for (let d = 0.05; d < length - 0.05; d += 0.05) { const p = along(route, d, bed); assert.ok(inPolygon(p.x, p.y, meta.walkable) && lane.some(q => inPolygon(p.x, p.y, q)), `${label}: ${d.toFixed(2)} m along, the walker is on the route, inside the room`); }
+  const want = Math.atan2(bed[1] - end.y, bed[0] - end.x), off = Math.abs(Math.atan2(Math.sin(end.heading - want), Math.cos(end.heading - want)));
+  assert.ok(off < 0.05, `${label}: at the bedside the walker faces the bed (${off.toFixed(3)} rad off)`);
+  let last = 0, top = 0;
+  for (let t = 0; t <= walkTime(length) + 0.5; t += 0.05) { const d = walked(length, t); assert.ok(d >= last - 1e-9 && d <= length + 1e-9, `${label}: the walk only goes forward`); top = Math.max(top, (d - last) / 0.05); last = d; }
+  assert.ok(Math.abs(last - length) < 1e-9 && top <= 2 && walkTime(length) <= 8, `${label}: the walker arrives, at a walk and never a run (${top.toFixed(2)} m/s at most), in ${walkTime(length).toFixed(1)} s`);
+  const v = ARRIVAL_VIEW[label];
+  assert.ok(v?.eye.length === 3 && v.look.length === 3 && v.eye[0] > meta.room[0] && v.eye[0] < meta.room[2] && v.eye[1] > meta.room[1] && v.eye[1] < meta.room[3] && v.eye[2] > 0 && v.eye[2] < meta.ceiling, `${label}: an arrival is watched from inside the room, under the ceiling`);
+}
+const arr = byId.get("arrival");
+assert.ok(arr && arr.control === "arrivalPlay" && arr.demo === "arrivalNurse" && arr.actions.join() === "demo:arrivalDoctor,demo:arrivalFamily", "the arrival card: its button under View, and a demo for each of the three");
+assert.ok(/Nothing recognises anyone/.test(arr.limits) && /no camera/.test(arr.limits) && /only when a person chooses/.test(arr.limits) && /Nothing recognises anyone/.test(ARRIVAL_TEXT.figure) && /Nothing recognises anyone/.test(ARRIVAL_TEXT.limits), "it says nothing recognises anyone, and that only a person changes the light or the mode");
+for (const id of ["arrivalNurse", "arrivalDoctor", "arrivalFamily"]) {
+  assert.ok(/The demo plays the tap: nothing recognises anyone/.test(DEMOS[id].steps[0].say) && /leaves/.test(DEMOS[id].steps.at(-1).say), `${id}: its first caption says the demo plays the tap, and its last that they leave`);
+}
+// a badge wakes screens. A room mode is a person's choice, and the caption names who chooses
+assert.ok(!DEMOS.arrivalNurse.steps.some(st => /a\.mode\(/.test(String(st.run))), "a nurse's badge changes no room mode");
+assert.ok(/The demo plays the doctor/.test(DEMOS.arrivalDoctor.steps[2].say) && /A nurse turns on Family visit/.test(DEMOS.arrivalFamily.steps[1].say) && /shown nothing clinical/.test(DEMOS.arrivalFamily.steps[1].say), "where a mode changes, the caption names the person who chooses it; a visitor is shown nothing clinical");
+const arrivalSrc = read("./site/configurator/arrival.js") + read("./site/configurator/arrival-data.js");
+assert.ok(/SIMULATED/.test(arrivalSrc) && /no face/.test(arrivalSrc) && !/getUserMedia|FaceDetector|SpeechRecognition|navigator\.|fetch\(|localStorage/.test(arrivalSrc), "the figure is marked simulated and has no face, and its code senses, stores and sends nothing");
+console.log(`PASS when someone comes in: ${ARRIVAL_ORDER.length} people, a walk on the route to the bedside in both rooms, a badge that changes no mode, and words that say nothing recognises anyone`);
 console.log(`PASS feature registry and acoustic model: ${data.features.length} entries (${data.features.filter(f => f.parent).length} of them parts) in ${new Set(data.features.map(f => f.group)).size} groups, ${links} object links in both rooms, every field and evidence line present, sources only from options.json, no outcome claims, and ${Object.keys(DEMOS).length} demos (${steps} steps) that name only what the page has; 6 sound sources, 4 fittings that only take sound away (codes 33 to 36, off by default), and 3 kinds of notification; the bed's 4 positions, 5 lines with slack in words, and the clips at code 37, off by default; the Future ICU theme first, its 5 fittings at codes 38 to 42 (off by default, stills marked SIMULATED), the view across the room appended, and the layout check clear in both rooms; the smart clinical wall and Transform my environment at codes 43 and 44, in step with every mode, state and scene (${combos.length} combinations), the five made-up observations marked, the workstation's places in both rooms, and the strip readable from the pillow; the mode table with its five levels for ${Object.keys(MODES).length} modes across ${SYSTEMS.length} systems, every note one line that keeps medical alarms on, Cleaning's checklist, and the board in Arabic with ${BOARD.length} requests; the digital twin's ${TWIN_SYSTEMS.length} systems and ${HEALTH.length} separate parts, read from the room with no total and no vital signs; room intelligence's ${SENSORS.length} sensors and ${EVENTS.length} made-up events, raised by buttons, and the room safety scan's clear spot; ${CABLE_KINDS.length} kinds of cable, each labelled and coloured, with gas in its own channel; Light across 24 hours' four phases, gradual, under the modes`);
