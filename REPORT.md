@@ -145,7 +145,7 @@ The configurator (`/configurator/`) is a **design proposal**, not a record of th
 
 The page uses Three.js with no bundler, and its choices come from one data file, `scripts/site/configurator/options.json`.
 
-**No third-party assets.** Every finish, mural, palm, toy and fish is drawn in code from a seeded generator, and the TV picture is an original animation. There are no model, image or video files from anyone else and nothing to license. The site's fonts (IBM Plex) load from Google Fonts, and Three.js from a CDN.
+**No third-party assets.** Every finish, mural, palm, toy and fish is drawn in code from a seeded generator, and the TV picture is an original animation. There are no model, image or video files from anyone else and nothing to license. The site's fonts (IBM Plex) load from Google Fonts, and Three.js from a CDN. The one exception is on the home page, not in the configurator: the ten pictures at its top are the 3D room finished as photos with an AI image tool (see [The story at the top of the home page](#the-story-at-the-top-of-the-home-page-17-november-2026)).
 
 ### What differs from the as-built model
 
@@ -430,7 +430,7 @@ Check 14 tests that medical gas never shares a channel with power or data, that 
 
 **The panel takes the room theme's colour.** The options panel and the bars over the room let a little more of the room show through, with a wider blur and a lit top edge. The accent follows the theme: blue for Future ICU, the site's teal for Calm Clinical and a custom room, clay for Desert Sanctuary and rose-brown for Family Suite. Text contrast was measured from pictures with the darkest and the brightest room behind the panel, light and dark, in all four themes: the lowest is 4.7 to 1, where the page before this change measured 4.75. A phone keeps the lighter blur it had, and a visitor who asks their device for less transparency gets solid panels.
 
-**Not done, and why.** No potted plant: living plants stay out of patient-care areas, as the nature card says. No photographic render: the room keeps the site's drawn style. The picture's blue light at every hour was not copied, because warm, dim light in the evening is what this design argues for.
+**Not done, and why.** No potted plant: living plants stay out of patient-care areas, as the nature card says. No photographic render: the room keeps the site's drawn style. (A day later the home page gained ten photo-like pictures of the room, made from the 3D room itself: see the section on the story below. The room in the configurator still keeps its drawn style.) The picture's blue light at every hour was not copied, because warm, dim light in the evening is what this design argues for.
 
 ### When someone comes in (16 November 2026)
 
@@ -455,6 +455,20 @@ Check 14 tests that medical gas never shares a channel with power or data, that 
 **The evening no longer turns the room khaki.** At 9 pm the circadian light is 2,300 K, which has almost no blue in it, and the Future ICU walls and floor are mostly blue. Drawn plainly, that product is a dark yellow, and the room read olive. After dark an eye has no daylight to compare a lamp with and adapts part of the way to it, so the light that falls on the room is now drawn three tenths of the way to white, at the brightness it had. The light lines themselves keep their amber. Measured on the same picture of W1, the wall's colour saturation fell from 46% to 26% and the floor's from 43% to 27%, at about the same hue.
 
 **What stays as it was.** Every stated kelvin and level, the afternoon picture (identical, pixel for pixel), the other light schemes at any hour, and so the other three themes. Sunset moves a little, because the adjustment grows as daylight goes. It is a drawing choice, as the white balance is: the pictures are not a lighting calculation, and no lux level should be read from them.
+
+### The story at the top of the home page (17 November 2026)
+
+**What it is.** The home page now opens with the proposed isolation room, W1, in ten pictures: the whole room, the glazed front from the corridor, the bed-head wall, the clinician's workstation, the patient board seen from the pillow, the recliner, the room in the morning, in the evening and at night, and the view back to the door. The first carries the page's headline and its three actions, and the last opens the same room in the configurator.
+
+**The pictures are the 3D room, finished as photos with an AI image tool. They are concept pictures, not measured renders.** Each began as a capture of the configurator's own room (W1, Future ICU, with the bed shown empty) from one camera. That capture went to Blueprint Studio Asset Generator, whose reply names the model `gpt-image-2.5-sunburst-2026-09-08`, with a written instruction to keep the room's shape and every fitting in place and to give them real materials and light. The page says so beside the pictures. What the tool added is its own: the grain of the timber, the reflections on the floor, the fall of the light and the bedding are not specified anywhere in this proposal.
+
+**What was checked, and what was made again.** Each picture was compared with its capture at full size. The first evening and night pictures came back square and reframed, so both were made again from the room's own captures at those hours. Two pictures came back with the patient board's small print rewritten into sentences this proposal never wrote, and one with the wrong year, so both were made again with only the board's large words kept and the small print drawn as grey lines.
+
+**Known limits.** The bedside monitor in the bed-head and door pictures shows coloured traces with no numbers, and without the SIMULATED mark the configurator draws on its screens. One small mark under "Your team" on the board in the last picture isn't a word. The staff panel reads 3:32 pm in the afternoon pictures, the hour they were captured at. No picture shows a person.
+
+**How the page behaves.** Without scripts, on a phone, on a short window and for a visitor who asks for less motion, the ten pictures are one after another with their words, and a phone's first screen still shows the room and then the first action. On a wide, tall screen a script pins one stage to the window and each picture hands over to the next as the page scrolls: a fade, a slight zoom and a short wipe. Morning, evening and night are one camera, so those two hand-overs only fade. The comparison of the proposed room with the room today, and the three figures that sat beside it, moved to their own block straight after.
+
+**Where things are.** The masters are `scripts/site/story/*.webp`. `06_build_site.py` writes their sizes into `assets/img` (a `STORY` line in `scripts/site/index.template.html`), and `home_from_published.py` rebuilds the page from those. The words, the styles and the script are in the template and `scripts/site/styles.css`. The image tool's terms give its user ownership of what it makes; nothing here is licensed from anyone else.
 
 ### Every feature and its status
 

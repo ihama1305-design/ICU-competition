@@ -199,7 +199,15 @@ def sub_shot(m):
     return img_tag(os.path.join(shots, f"{name}.png"), name, alt, sizes, loading[0] if loading else "lazy")
 
 
+def sub_story(m):
+    # the ten pictures at the top of the page: our 3D room finished as photos with an AI image tool. They are not captured
+    # here; their masters are kept in scripts/site/story (see REPORT.md, "The story at the top of the home page")
+    name, alt, sizes, *loading = (s.strip() for s in m.group(1).split("|"))
+    return img_tag(os.path.join(SRC, "story", f"{name}.webp"), name, alt, sizes, loading[0] if loading else "lazy")
+
+
 page = re.sub(r"<!--IMG (.+?)-->", sub_img, page)
+page = re.sub(r"<!--STORY (.+?)-->", sub_story, page)
 page = re.sub(r"<!--SHOT (.+?)-->", sub_shot, page)
 page = re.sub(r"\{\{FULL:(\w+)\}\}", lambda m: f"assets/img/{m.group(1)}-{min(1920, Image.open(os.path.join(ROOT, 'renders', m.group(1) + '.png')).width)}.webp", page)
 for k, v in values.items():
