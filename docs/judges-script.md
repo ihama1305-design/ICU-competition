@@ -54,4 +54,5 @@ That leaves 15 seconds spare for a pause or a question.
 - **PACS?** Open **OPEN NURSE DASHBOARD** in the panel. Simulated vital signs and the patient's preferences lead to a suggestion such as softer light, and a nurse approves it before anything changes. **PLAY THE 77-SECOND DEMO** runs it end to end.
 - **APIS?** **Explore APIS** shows an idea for a gentler way to attach tubes, wires and sensors, with each material's job and its limits.
 - **The evidence for the lighting?** Mixed, and the card says so: a pilot in redesigned rooms saw less delirium, and a randomised trial of dynamic light alone found no effect.
+- **Can we see someone use the room?** Under **View**, press **When someone comes in**. A nurse, a doctor or a family visitor walks in from the door, and the staff's screens are ready for them. The demo plays the badge at the door: nothing recognises anyone, and only a person changes the light or the mode.
 - **What isn't built?** The ceiling lift, the admission and room readiness board, and a unit board that ranks patients, which we decided against.

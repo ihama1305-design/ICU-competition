@@ -13,6 +13,8 @@ import { POSITIONS as BED_POSITIONS } from "./bed.js";
 import { DEFAULT_STATE, OFFERS, ORIENTATION, STATES, STATE_MS } from "./patient-states.js";
 import { FrontGlass } from "./glass.js";
 import { applyLook, floorBounce } from "./surfaces.js";
+import { Arrival } from "./arrival.js";
+import { ARRIVAL_VIEW } from "./arrival-data.js";
 import { setAddon, setAddonLook, setOldWardrobe, setOrientation, setShade, setTv, setWardrobe, setOrientationLines, syncDampers, syncPalms, tickAddons, tickWardrobe, toggleWardrobe, wardrobeFigures, wardrobeMoving } from "./addons.js";
 import { AcousticView } from "./acoustic-view.js";
 import { BANDS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS } from "./acoustic.js";
@@ -71,6 +73,8 @@ const stage = (() => {
 })();
 const controls = new OrbitControls(stage.camera, canvas);
 const placement = new Placement(stage); // items the visitor places, room by room
+const arrival = new Arrival(); // someone coming in, in a demo: a plain figure on the route from the door (arrival.js)
+let arrivalRoute = false; // whether an arrival marked the route on the floor, so the demo's end can take it away
 const clinical = new ClinicalView({ stage, placement, layer: $("clinicalLabels") });
 let clinicalByHand = false, clinicalByMode = false; // Equipment labels are on if either asks for them
 const state = { room: "W1", view: "overview", hour: STOPS.afternoon };
@@ -1378,6 +1382,19 @@ const demoApi = {
   askMove: id => bedView.ask(id, { focus: false }), // the line check, on screen: the demo says it plays the staff member
   day: h => { setDay(true, { fromDemo: true }); dayView.set(h); },
   station: view => { if (!stationOn) setStation(true, { fromDemo: true }); station.setView(view, { quietly: true }); },
+  // someone comes in along the route from the door: "nurse", "doctor" or "family"; null: whoever is in leaves. The demo plays
+  // the badge tapped at the door, and says so: nothing recognises anyone. The route is marked on the floor while they're in
+  arrive: role => {
+    if (arrival.start(stage.current, role, { instant: matchMedia("(prefers-reduced-motion: reduce)").matches })) { showRoute(true); arrivalRoute = true; stage.renderer.shadowMap.needsUpdate = true; invalidate(); }
+    if (role) demoApi.arriveView();
+  },
+  // where an arrival is watched from: the window end, looking back at the door, the route, the bed and the staff panel
+  arriveView: () => {
+    const v = ARRIVAL_VIEW[state.room];
+    if (!v) return;
+    if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
+    rig.goTo(W2T(...v.eye), W2T(...v.look));
+  },
   // today's room, as Compare shows it: every option at its default and no placed item. The demo's end puts them back
   today: () => {
     for (const g of allGroups()) { demoShown[g.id] = g.default; runEffects(g, g.default); }
@@ -1406,7 +1423,7 @@ const demoApi = {
 };
 /** The room has come to rest: the camera has arrived, and any change of mode or of the glass has finished easing. */
 const roomStill = () => new Promise(done => {
-  const look = () => (rig.tween || modes.easing || glass.fading || patientTween || envTween || wallView.easing || wardrobeMoving(stage.current) ? requestAnimationFrame(look) : done());
+  const look = () => (rig.tween || modes.easing || glass.fading || patientTween || envTween || wallView.easing || arrival.moving || wardrobeMoving(stage.current) ? requestAnimationFrame(look) : done());
   requestAnimationFrame(look);
 });
 
@@ -1475,6 +1492,8 @@ function endDemo(why = "") {
   if (twinOn && !d.snap.twinOn) setTwin(false); // and the twin's, with the system the visitor had chosen
   if (intelOn && !d.snap.intelOn) { resetIntel(true); setIntel(false); } // and room intelligence's, with its made-up events
   setCables(d.snap.cables, { quietly: true }); // and the cable overlay as it was
+  arrival.clear(); // and whoever a demo brought in is gone,
+  if (arrivalRoute) { arrivalRoute = false; showRoute(false); } // with the route they walked, even if they had left already
   twin.system = d.snap.twinSystem;
   station.restore(d.snap.station);
   highlight.clear("demo");
@@ -2862,6 +2881,8 @@ function setCompare(on) {
 function endCompare() { endDemo(); if (compare) setCompare(false); }
 $("compareToggle").addEventListener("click", () => setCompare(!compare));
 // Transform the ICU: the same comparison, staged, as a demo: it changes no choice, and the room comes back when it ends
+// When someone comes in: its card, with a demo for a nurse, a doctor and a family visitor
+$("arrivalPlay").addEventListener("click", e => openFeature("arrival", e.currentTarget));
 $("transformPlay").addEventListener("click", e => { cardOpener = e.currentTarget; startDemo("transformIcu", "transformIcu").catch(err => window.__configErrors.push(String(err))); });
 
 // ---------------------------------------------------------------- the guided tour (guide.js)
@@ -3007,6 +3028,7 @@ function frame(now) {
   if (updatePatient(now)) dirty = true;
   if (wallView.update(now)) dirty = true;
   if (updateEnv(now)) dirty = true;
+  if (arrival.update(now)) { dirty = true; stage.renderer.shadowMap.needsUpdate = true; } // someone walking in or out, and their shadow
   // the twin reads the room again once a mode, a state or a scene has finished easing in
   const easing = modes.easing || !!envTween || !!patientTween;
   if (twinEasing && !easing) twinRefresh();
@@ -3268,6 +3290,7 @@ window.__config = {
   twinChoose: id => twin.choose(id, { toggle: false }),
   intel: () => ({ open: intelOn, active: intelActive, events: JSON.parse(JSON.stringify(intelEvents)), notices: intelNotices().map(e => e.id), banner: !$("intelNotice").hidden, cover: !!stage.current.intelCover?.visible,
     sensors: !!stage.current.addons?.ceilingSensors?.visible, marks: Object.fromEntries(Object.entries(stage.current.intelMarks || {}).map(([k, v]) => [k, v.visible])), station: station.inspect().notices }),
+  arrival: () => arrival.state(stage.current),
   scan: () => ({ shown: scanShown, results: scanResultsNow.map(r => ({ uid: r.uid, label: r.label, level: r.level, why: r.why, spot: r.spot })), marker: scanMarker ? [+scanMarker.position.x.toFixed(2), +(-scanMarker.position.z).toFixed(2)] : null, detail: $("scanDetail").hidden ? null : $("scanDetail").textContent }),
   runScan: () => runScan().map(r => r.level),
   cables: () => { const v = stage.current.cableViews || {}, shown = Object.entries(v).find(([, g]) => g.visible); return { state: cableState, view: shown?.[0] ?? null,
@@ -3354,6 +3377,7 @@ window.__config = {
       glass: [glass.mode, glass.opaque, glass.level], cleaning: JSON.stringify([cleaningOn, [...cleaningTicks], highlight.has("cleaning")]), figure: stage.current.patient ? stage.current.patient.root.visible : null, blinds: r(modeApi.blindsNow()), sky: !!stage.current.addons?.sky?.visible, aquarium: !!stage.current.addons?.digital?.visible,
       overlays: JSON.stringify(overlays), acoustic: acousticOn, patient: patientState, quiet: quietOn, patientLook: JSON.stringify(lighting.patient ?? null), orient: JSON.stringify(stage.current.orientLines), fittings: FITTING_GROUPS.map(g => !!stage.current.addons?.[g]?.visible), sound: soundState().playing,
       bed: JSON.stringify([bedOn, bedView.snapshot()]), day: dayOn, plan: JSON.stringify(lighting.plan ?? null), cables: JSON.stringify([cableState, Object.entries(stage.current.cableViews || {}).filter(([, g]) => g.visible).map(([k]) => k)]), intel: JSON.stringify([intelOn, intelActive, Object.keys(intelEvents), !!stage.current.intelCover?.visible]), twin: JSON.stringify([twinOn, twin.system, highlight.has("twin"), highlight.has("twinAll")]), station: JSON.stringify([stationOn, station.snapshot(), highlight.has("station")]), env: JSON.stringify(lighting.env ?? null),
+      arrival: JSON.stringify([stage.current.arrival?.role ?? null, arrival.moving]),
       wallScenes: JSON.stringify([stage.current.wallState?.wallScene?.visible ?? false, stage.current.wallState?.ceilingScene?.visible ?? false]), clips: !!stage.current.addons?.lineClips?.visible, bedMap: !!stage.current.bedMap?.visible, ghost: bedView.ghosted.size,
     };
   },
