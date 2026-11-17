@@ -446,6 +446,10 @@ Check 14 tests that medical gas never shares a channel with power or data, that 
 | `arrival.js` | The figure and its walk |
 | `demos.js` | `arrivalNurse`, `arrivalDoctor`, `arrivalFamily` |
 
+### The staff panel's clock (16 November 2026)
+
+**A fault put right.** The staff panel's standby clock, and the time on its Clinical screen, kept the old time when the time of day changed by the slider, the stops or Day and Night. They are redrawn now whenever the minute they show changes, as the TV's orientation screen already was. Found while taking pictures for the cooler look.
+
 ### Every feature and its status
 
 One row per feature, from the same registry as the feature cards, plus the parts of the site that aren't cards and what isn't built. "What it isn't" is the start of each card's limits; the card has the rest, with its evidence.
