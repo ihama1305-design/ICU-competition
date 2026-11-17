@@ -83,37 +83,79 @@ p { margin: 0; }
 .btn.quiet::before { background: var(--teal-soft); }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; }
 
-/* hero */
-.hero { padding-block: clamp(32px, 5.5vw, 72px) clamp(40px, 6vw, 80px); }
-.hero .wrap { display: grid; gap: clamp(28px, 4vw, 56px); }
-.hero-copy { display: grid; gap: 22px; align-content: start; min-width: 0; }
+/* the story: the proposed room in ten pictures. This is the page as it stands without the script: one picture after
+   another, each with its words. The first screen keeps the old order on a phone: headline, the room, the first action. */
+.story-stage { display: grid; gap: clamp(28px, 5vw, 56px); padding-block: clamp(16px, 4vw, 40px) clamp(40px, 6vw, 80px); }
+.story-panel { display: grid; gap: 14px; align-items: center; width: min(1180px, 100%); margin-inline: auto; padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); }
+.story-panel img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: var(--r-l); border: 1px solid var(--border); background: var(--teal-soft); }
+.story-copy { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.story-copy h2 { font-size: clamp(1.5rem, 2.6vw, 2.1rem); }
+.story-copy > p:not(.eyebrow):not(.lede) { color: var(--muted); max-width: 34em; }
+.story-copy .actions { margin-top: 8px; }
+.story-lead { gap: 18px; }
+/* one column: the picture comes straight after the headline and the first action straight after the picture, so a phone's
+   first screen shows the room and what to do with it. The copy's own box steps aside so its parts can take that order. */
+@media (max-width: 899px) {
+  .story-lead .story-copy { display: contents; }
+  .story-lead .eyebrow { order: 1; }
+  .story-lead h1 { order: 2; }
+  .story-lead img { order: 3; }
+  .story-lead .actions { order: 4; margin-top: 0; }
+  .story-lead .lede { order: 5; }
+}
+.story-tag { width: min(1180px, 100%); margin: -12px auto 0; padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); font-size: 0.85rem; color: var(--muted); }
+@media (min-width: 900px) {
+  .story-panel { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(28px, 4vw, 56px); }
+  .story-lead { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .story-lead .story-copy { gap: 22px; order: 1; }
+  .story-lead img { order: 2; }
+}
+
+/* pinned: the script adds the class on a wide, tall screen when the visitor hasn't asked for less motion. One stage fills
+   the window and stays put while the page scrolls under it; the script fades, scales and wipes each picture in, through the
+   custom properties below. The rules sit behind the same conditions the script tests, so the moment a window is made narrow
+   the page is back to one picture after another, without waiting for the script to notice. */
+.story-dots, .story-count { display: none; }
+@media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
+  .story.is-pinned { height: calc((var(--story-n, 10) - 1) * 108vh + 100vh); }
+  .story.is-pinned .story-stage { position: sticky; top: 0; display: block; height: 100vh; height: 100svh; padding: 0; overflow: hidden; background: var(--canvas); }
+  .story.is-pinned .story-panel { position: absolute; inset: 0; display: block; width: auto; margin: 0; padding: 0; visibility: hidden; }
+  .story.is-pinned .story-panel.is-on { visibility: visible; }
+  .story.is-pinned .story-panel img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border: 0; border-radius: 0;
+    opacity: var(--o, 1); transform: scale(var(--s, 1.025)); clip-path: var(--clip, none); will-change: transform, opacity; }
+  .story.is-pinned .story-copy { position: absolute; left: max(var(--gutter), env(safe-area-inset-left, 0px)); bottom: clamp(64px, 10vh, 108px); display: grid; gap: 8px; max-width: 27rem; padding: 20px 24px 22px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-m); box-shadow: 0 8px 28px rgba(16, 44, 54, 0.14);
+    opacity: var(--co, 1); transform: translateY(var(--cy, 0%)); will-change: transform, opacity; }
+  .story.is-pinned .story-lead .story-copy, .story.is-pinned .story-close .story-copy { gap: 14px; max-width: 37rem; padding: 26px 30px 28px; border-radius: var(--r-l); }
+  .story.is-pinned .story-lead h1 { font-size: clamp(2.1rem, 3.6vw, 3.2rem); }
+  .story.is-pinned .story-lead .lede { font-size: 1.05rem; }
+  .story.is-pinned .story-close h2 { font-size: clamp(2.1rem, 3.6vw, 3.2rem); }
+  .story.is-pinned .story-tag, .story.is-pinned .story-count { position: absolute; z-index: 3; bottom: clamp(18px, 3vh, 28px); display: block; width: auto; margin: 0; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); }
+  .story.is-pinned .story-tag { left: max(var(--gutter), env(safe-area-inset-left, 0px)); }
+  .story.is-pinned .story-count { right: max(var(--gutter), env(safe-area-inset-right, 0px)); font-family: var(--mono); }
+  .story-count b { color: var(--text); font-weight: 600; }
+  .story.is-pinned .story-dots { position: absolute; z-index: 3; right: clamp(12px, 2vw, 28px); top: 50%; translate: 0 -50%; display: grid; margin: 0; padding: 6px 3px; list-style: none; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
+  .story-dots button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+  .story-dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); transition: transform var(--t-enter) var(--ease-out), background-color var(--t-enter) var(--ease-out); }
+  .story-dots button[aria-current="true"]::before { background: var(--teal); transform: scale(1.6); }
+}
+
+/* the proposed room beside the room today */
+.compare .wrap { display: grid; gap: clamp(28px, 4vw, 56px); }
+.compare-copy { display: grid; gap: 18px; align-content: start; min-width: 0; }
 .proof { display: flex; flex-wrap: wrap; gap: 14px 36px; margin: 6px 0 0; padding: 18px 0 0; border-top: 1px solid var(--border); }
 .proof div { display: grid; min-width: 0; }
 .proof dt { order: 2; font-size: 0.88rem; color: var(--muted); }
 .proof dd { order: 1; margin: 0; font-family: var(--serif); font-size: 1.75rem; line-height: 1.2; font-variant-numeric: lining-nums; }
 .proof dd small { font-size: 0.6em; }
-.hero figure { margin: 0; min-width: 0; }
-.hero figure a { display: block; overflow: hidden; border-radius: var(--r-l); border: 1px solid var(--border); background: var(--teal-soft); }
+.compare figure { margin: 0; min-width: 0; }
+.compare figure a { display: block; overflow: hidden; border-radius: var(--r-l); border: 1px solid var(--border); background: var(--teal-soft); }
 figcaption { margin-top: 10px; font-size: 0.9rem; line-height: 1.45; color: var(--muted); max-width: 62ch; }
 figcaption b { color: var(--text); font-weight: 600; }
 /* what a picture's link opens, when that isn't the picture itself */
 figcaption .opens { display: block; margin-top: 4px; font-size: 0.85rem; }
 @media (min-width: 960px) {
-  .hero .wrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; }
-}
-/* one column: the picture comes straight after the headline, and the first action straight after the picture, so the first
-   screen shows the room and what to do with it. The paragraph that sat between them follows. The copy's own box steps
-   aside so that its parts and the picture can be put in one order. */
-@media (max-width: 959px) {
-  .hero { padding-top: clamp(16px, 4vw, 40px); }
-  .hero .wrap { gap: 18px; }
-  .hero-copy { display: contents; }
-  .hero-copy > .eyebrow { order: 1; }
-  .hero-copy > h1 { order: 2; }
-  .rooms { order: 3; }
-  .hero-copy > .actions { order: 4; }
-  .hero-copy > .lede { order: 5; }
-  .hero-copy > .proof { order: 6; }
+  .compare .wrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; }
 }
 
 /* room carousel: each room and its caption in a snapping scroller, so it still swipes without the script */
@@ -232,7 +274,7 @@ kbd { font: 0.8em var(--mono); padding: 1px 6px; border: 1px solid var(--border-
 /* motion: hover in eases out, hover out eases in and is quicker, and :active stays last so a press always gets the short duration */
 .top nav a, .files a { transition: transform var(--t-spring) var(--spring), color var(--t-exit) var(--ease-in); }
 .top nav a::after, .files a::after { content: ""; position: absolute; background: currentColor; opacity: 0; transform: scaleX(var(--wipe)); transform-origin: right; transition: opacity var(--t-exit) var(--ease-in), transform var(--t-exit) var(--ease-in); }
-.hero figure a, .plate a, .findings figure a { transition: transform var(--t-spring) var(--spring); }
+.compare figure a, .plate a, .findings figure a { transition: transform var(--t-spring) var(--spring); }
 a img { transition: transform var(--t-zoom-out) var(--ease-in); }
 @media (hover: hover) {
   a:hover { color: var(--text); }
@@ -243,7 +285,7 @@ a img { transition: transform var(--t-zoom-out) var(--ease-in); }
   a:hover img { transform: scale(var(--zoom)); transition: transform var(--t-zoom-in) var(--ease-out); }
 }
 .mark:active, .btn:active, .top nav a:active, .files a:active { transform: scale(var(--press)); transition: transform var(--t-press) var(--spring), color var(--t-exit) var(--ease-in); }
-.hero figure a:active, .plate a:active, .findings figure a:active { transform: scale(var(--press-lg)); transition: transform var(--t-press) var(--spring); }
+.compare figure a:active, .plate a:active, .findings figure a:active { transform: scale(var(--press-lg)); transition: transform var(--t-press) var(--spring); }
 
 /* the hero is the page's one entrance; it animates to the resting style, so nothing stays hidden if animations don't run */
 @keyframes rise { from { opacity: 0; transform: translateY(var(--rise)); } }
@@ -253,4 +295,4 @@ a img { transition: transform var(--t-zoom-out) var(--ease-in); }
 .hero-copy > :nth-child(3) { --i: 2; }
 .hero-copy > :nth-child(4) { --i: 3; }
 .hero-copy > :nth-child(5) { --i: 4; }
-.hero figure img { animation: settle calc(var(--t-reveal) * 1.4) var(--ease-out) backwards; }
+.compare figure img { animation: settle calc(var(--t-reveal) * 1.4) var(--ease-out) backwards; }

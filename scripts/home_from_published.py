@@ -12,6 +12,8 @@ Usage: home_from_published.py [--from origin/main] [KEY=value ...]
 
 A new picture needs its WebP files in assets/img first (800, 1400 and full width, as 06's optimise() writes them) and its
 entry in 06's capture_configurator_shots, so a full pipeline run later makes the same page.
+A STORY picture (the ten at the top of the page) is not captured: its master is scripts/site/story/<name>.webp, and its
+WebP sizes in assets/img are written from that master the way 06's optimise() does.
 """
 import glob, os, re, shutil, subprocess, sys
 from PIL import Image
@@ -19,7 +21,7 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IMG = os.path.join(ROOT, "assets", "img")
 TEMPLATE = "scripts/site/index.template.html"
-COMMENT = re.compile(r"<!--(IMG|SHOT) (.+?)-->")
+COMMENT = re.compile(r"<!--(IMG|SHOT|STORY) (.+?)-->")
 args = sys.argv[1:]
 ref = args.pop(args.index("--from") + 1) if "--from" in args else "origin/main"
 extra = dict(a.split("=", 1) for a in args if a != "--from")
@@ -32,7 +34,7 @@ def show(path):
 def values_from(old_t, old_h):
     """The {{KEY}} values the published page was built with."""
     pattern, seen, pos = "", set(), 0
-    for m in re.finditer(r"<!--(?:IMG|SHOT) .+?-->|\{\{FULL:\w+\}\}|\{\{(\w+)\}\}", old_t):
+    for m in re.finditer(r"<!--(?:IMG|SHOT|STORY) .+?-->|\{\{FULL:\w+\}\}|\{\{(\w+)\}\}", old_t):
         pattern += re.escape(old_t[pos:m.start()])
         key = m.group(1)
         if m.group(0).startswith("<!--"):

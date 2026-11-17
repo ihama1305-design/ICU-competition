@@ -217,6 +217,10 @@ The [ventilation plan](https://ihama1305-design.github.io/ICU-competition/ventil
 
 The plan also has a clean-air table: two filter stages on the supply, a HEPA-filtered exhaust from the isolation rooms, and UV-C in the plant as an extra. It's all out of sight, with no new grilles, and it doesn't propose fogging, ozone or ionisers. In the configurator, clicking the wall comfort control shows the same rows for that room.
 
+## The pictures at the top of the home page
+
+The home page opens with the proposed isolation room, W1, in ten pictures. **They were made with an AI image tool.** Each began as a capture of the room in the configurator (Future ICU, with the bed shown empty) and was finished as a photo by Blueprint Studio Asset Generator, told to keep the room's shape and every fitting where it is. They are concept pictures: the timber grain, the reflections and the light are the tool's, not a measured render. The room you can open and change keeps its drawn style, and nothing in it was made this way. [REPORT.md](REPORT.md#the-story-at-the-top-of-the-home-page-17-november-2026) says how they were made and checked, and what is still wrong in them.
+
 ## Renders
 
 | | |

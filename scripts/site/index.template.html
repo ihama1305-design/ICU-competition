@@ -40,17 +40,106 @@
 </header>
 
 <main id="main">
-<section class="hero">
-  <div class="wrap">
-    <div class="hero-copy">
-      <p class="eyebrow">ICU Interior Design Student Competition · design proposal</p>
-      <h1>A room that adapts to the patient in it.</h1>
-      <p class="lede">Adaptive ICU is our design for the ICU on SSMC's fourth floor. The room adjusts its lights, blinds and glass to the time of day, what the patient likes and the care they need. A nurse approves every change.</p>
-      <div class="actions">
+<!-- The proposed room in ten pictures. Without the script, on a phone, or when the visitor asks for less motion, they are
+     one after another on the page. On a wide screen the script pins the stage and each picture hands over to the next. -->
+<section class="hero story" id="story" aria-label="The proposed room, in ten pictures">
+  <div class="story-stage">
+    <article class="story-panel story-lead" data-chapter="The room">
+      <!--STORY story-01-room | The proposed isolation room from a raised corner: the bed in front, the patient board on the left wall, roller blinds half down over the window, and the equipment arm on the right. | 100vw | eager-->
+      <div class="story-copy hero-copy">
+        <p class="eyebrow">ICU Interior Design Student Competition · design proposal</p>
+        <h1>A room that adapts to the patient in it.</h1>
+        <p class="lede">Adaptive ICU is our design for the ICU on SSMC's fourth floor. The room adjusts its lights, blinds and glass to the time of day, what the patient likes and the care they need. A nurse approves every change.</p>
+        <div class="actions">
         <a class="btn primary" href="configurator/?tour=future">Experience the ICU of the future</a>
         <a class="btn quiet" href="configurator/">Configure a room</a>
         <a class="btn quiet" href="viewer/">Explore the ICU as it is today</a>
       </div>
+      </div>
+    </article>
+    <p class="story-tag">Pictures of our 3D room, W1, finished as photos with an AI image tool. A student concept.</p>
+    <article class="story-panel" data-chapter="Arrive">
+      <!--STORY story-02-front | The room's glazed front seen from the corridor, with a pale green curtain drawn part of the way behind the glass. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">Arrive</p>
+        <h2>A glass front</h2>
+        <p>Staff can see in from the corridor. A curtain closes it when the patient wants privacy.</p>
+      </div>
+    </article>
+    <article class="story-panel" data-chapter="The care team">
+      <!--STORY story-03-bedhead | The wall behind the bed head: a white staff panel with two screens, an arm from the ceiling that carries the monitor, and a tall timber wardrobe. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">The care team</p>
+        <h2>One wall behind the bed</h2>
+        <p>A staff panel on the wall, and one arm from the ceiling for the monitor and pumps.</p>
+      </div>
+    </article>
+    <article class="story-panel" data-chapter="The care team">
+      <!--STORY story-04-desk | The clinician's workstation by the window: a timber and white cabinet with a screen, and a second screen on the wall above it. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">The care team</p>
+        <h2>A desk inside the room</h2>
+        <p>The clinician's workstation sits in sight of the patient.</p>
+      </div>
+    </article>
+    <article class="story-panel" data-chapter="The patient">
+      <!--STORY story-05-board | The view from the pillow: a white board on the facing wall that shows the care team, today's plan, the day and the time. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">The patient</p>
+        <h2>What the patient sees</h2>
+        <p>Who is on the team, what happens today, and what time it is.</p>
+      </div>
+    </article>
+    <article class="story-panel" data-chapter="The family">
+      <!--STORY story-06-recliner | A teal reclining chair beside the bed, with the patient board on the wall and the window beyond. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">The family</p>
+        <h2>Somewhere to stay</h2>
+        <p>A recliner beside the bed for whoever stays.</p>
+      </div>
+    </article>
+    <article class="story-panel" data-chapter="Through the day">
+      <!--STORY story-07-morning | The room in the morning: cool daylight through the window, with the roller blinds half down. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">Through the day</p>
+        <h2>Morning</h2>
+        <p>Cool, bright light to start the day.</p>
+      </div>
+    </article>
+    <article class="story-panel" data-chapter="Through the day" data-light>
+      <!--STORY story-08-evening | The same view near sunset, with warm light across the room. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">Through the day</p>
+        <h2>Evening</h2>
+        <p>The light warms as the sun goes down.</p>
+      </div>
+    </article>
+    <article class="story-panel" data-chapter="Through the day" data-light>
+      <!--STORY story-09-night | The same view at night: dark outside, with dim amber light lines around the ceiling and under the wall panels. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">Through the day</p>
+        <h2>Night</h2>
+        <p>Dim amber light lines. Screens dimmed.</p>
+      </div>
+    </article>
+    <article class="story-panel story-close" data-chapter="Explore">
+      <!--STORY story-10-door | The room seen from the window end, looking back past the bed to the door. | 100vw-->
+      <div class="story-copy">
+        <p class="eyebrow">Your turn</p>
+        <h2>Change it yourself</h2>
+        <p>Open this room in 3D and try every option.</p>
+        <div class="actions"><a class="btn primary" href="configurator/#c={{CODE_FUTURE}}">Open this room in 3D</a></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section compare" id="compare">
+  <div class="wrap">
+    <div class="compare-copy">
+      <p class="eyebrow">The same room, twice</p>
+      <h2>What we propose, and the room today</h2>
+      <p class="lede">Isolation room W1, built from the hospital's floor plan. Switch between our design and the room as it is now.</p>
       <dl class="proof">
         <div><dt>room modes, one tap each</dt><dd>7</dd></div>
         <div><dt>rooms you can design: isolation and standard</dt><dd>2</dd></div>
@@ -422,6 +511,102 @@
 
   /* the second room shouldn't still be loading when someone switches to it */
   addEventListener("load", () => root.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = "eager"; }));
+})();
+</script>
+<script>
+// The story at the top of the page. On a wide, tall screen, when the visitor hasn't asked for less motion, the stage is
+// pinned and each picture hands over to the next as the page scrolls: a fade, a slight zoom and a short wipe. Morning, evening
+// and night are one camera, so those two only fade. Anywhere else the pictures stay one after another, as the page has them.
+(() => {
+  const story = document.getElementById("story");
+  if (!story) return;
+  const stage = story.querySelector(".story-stage"), panels = [...story.querySelectorAll(".story-panel")], N = panels.length;
+  const SEG = 1.08;       // window heights of scroll for each hand-off; the stylesheet's 108vh is the same figure
+  const CATCH_UP = 0.75;  // seconds a picture takes to catch up with the scroll
+  const still = matchMedia("(prefers-reduced-motion: reduce)"), small = matchMedia("(max-width: 899px), (max-height: 639px)");
+  const dots = document.createElement("ol"), count = document.createElement("p");
+  dots.className = "story-dots";
+  dots.setAttribute("aria-label", "Pictures");
+  count.className = "story-count";
+  count.setAttribute("aria-hidden", "true");
+  count.innerHTML = `<b>01</b> / ${String(N).padStart(2, "0")}`;
+  panels.forEach((p, i) => {
+    const li = document.createElement("li"), b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("aria-label", `Picture ${i + 1} of ${N}: ${p.dataset.chapter}`);
+    b.addEventListener("click", () => scrollTo({ top: story.offsetTop + i * SEG * innerHeight, behavior: "smooth" }));
+    li.append(b);
+    dots.append(li);
+  });
+  const dotButtons = [...dots.querySelectorAll("button")], number = count.querySelector("b");
+  const clamp01 = v => Math.min(1, Math.max(0, v)), span = (v, a, b) => clamp01((v - a) / (b - a));
+  const inOut = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2), out = t => 1 - Math.pow(1 - t, 3);
+  let cur = 0, target = 0, last = 0, raf = 0, active = -1, pinned = false;
+
+  function draw(p) {
+    panels.forEach((panel, i) => {
+      const t = p - (i - 1), u = p - i;  // 0 to 1 while this picture arrives, and while it leaves
+      const img = panel.querySelector("img"), copy = panel.querySelector(".story-copy");
+      const on = i === 0 ? u < 1 : t > 0 && u < 1;
+      panel.classList.toggle("is-on", on);
+      if (!on) return;
+      const light = panel.hasAttribute("data-light"), nextLight = panels[i + 1] && panels[i + 1].hasAttribute("data-light");
+      const a = i === 0 ? 1 : inOut(span(t, 0.10, 0.82));
+      let scale = 1.025;
+      if (i > 0 && !light) scale = 1.045 - 0.045 * a + 0.025 * inOut(span(t, 0.70, 1));
+      if (!nextLight) scale += 0.05 * inOut(span(u, 0, 0.62));
+      // custom properties, which only the pinned styles read: nothing here can reach the page when it is one picture after another
+      img.style.setProperty("--o", a.toFixed(4));
+      img.style.setProperty("--s", scale.toFixed(4));
+      img.style.setProperty("--clip", i > 0 && !light && a < 1 ? `inset(0 0 0 ${(8 * (1 - a)).toFixed(2)}%)` : "none");
+      const cin = i === 0 ? 1 : out(span(t, 0.30, 0.72)), cout = inOut(span(u, 0, 0.32));
+      copy.style.setProperty("--co", (cin * (1 - cout)).toFixed(4));
+      copy.style.setProperty("--cy", `${((1 - cin) * 12 - cout * 12).toFixed(2)}%`);
+    });
+    const now = Math.min(N - 1, Math.round(p));
+    if (now !== active) {
+      active = now;
+      dotButtons.forEach((b, i) => b.setAttribute("aria-current", i === now ? "true" : "false"));
+      number.textContent = String(now + 1).padStart(2, "0");
+    }
+  }
+  function tick(ts) {
+    const dt = Math.min(0.1, (ts - last) / 1000 || 0.016);
+    last = ts;
+    cur += (target - cur) * (1 - Math.exp(-dt / (CATCH_UP / 4)));
+    if (Math.abs(target - cur) < 0.0004) cur = target;
+    draw(cur);
+    raf = cur === target ? 0 : requestAnimationFrame(tick);
+  }
+  function onScroll() {
+    target = Math.min(N - 1, Math.max(0, (scrollY - story.offsetTop) / (SEG * innerHeight)));
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+  }
+  function setMode() {
+    const want = !(still.matches || small.matches);
+    if (want === pinned) return;
+    pinned = want;
+    story.classList.toggle("is-pinned", pinned);
+    if (pinned) {
+      stage.append(dots, count);
+      addEventListener("scroll", onScroll, { passive: true });
+      active = -1;
+      onScroll();
+      cur = target;
+      draw(cur);
+    } else {
+      removeEventListener("scroll", onScroll);
+      dots.remove();
+      count.remove();
+      for (const panel of panels) panel.classList.remove("is-on");
+    }
+  }
+  still.addEventListener("change", setMode);
+  small.addEventListener("change", setMode);
+  // a resize is heard before the two conditions above report a change, so the window's new size is acted on at once
+  addEventListener("resize", () => { setMode(); if (pinned) onScroll(); });
+  story.style.setProperty("--story-n", N);  // the stylesheet works out how far the pinned story scrolls from this
+  setMode();
 })();
 </script>
 </body>
