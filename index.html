@@ -521,7 +521,7 @@
   const story = document.getElementById("story");
   if (!story) return;
   const stage = story.querySelector(".story-stage"), panels = [...story.querySelectorAll(".story-panel")], N = panels.length;
-  const SEG = 1.08;       // window heights of scroll for each hand-off
+  const SEG = 1.08;       // window heights of scroll for each hand-off; the stylesheet's 108vh is the same figure
   const CATCH_UP = 0.75;  // seconds a picture takes to catch up with the scroll
   const still = matchMedia("(prefers-reduced-motion: reduce)"), small = matchMedia("(max-width: 899px), (max-height: 639px)");
   const dots = document.createElement("ol"), count = document.createElement("p");
@@ -555,12 +555,13 @@
       let scale = 1.025;
       if (i > 0 && !light) scale = 1.045 - 0.045 * a + 0.025 * inOut(span(t, 0.70, 1));
       if (!nextLight) scale += 0.05 * inOut(span(u, 0, 0.62));
-      img.style.opacity = a;
-      img.style.transform = `scale(${scale.toFixed(4)})`;
-      img.style.clipPath = i > 0 && !light && a < 1 ? `inset(0 0 0 ${(8 * (1 - a)).toFixed(2)}%)` : "none";
+      // custom properties, which only the pinned styles read: nothing here can reach the page when it is one picture after another
+      img.style.setProperty("--o", a.toFixed(4));
+      img.style.setProperty("--s", scale.toFixed(4));
+      img.style.setProperty("--clip", i > 0 && !light && a < 1 ? `inset(0 0 0 ${(8 * (1 - a)).toFixed(2)}%)` : "none");
       const cin = i === 0 ? 1 : out(span(t, 0.30, 0.72)), cout = inOut(span(u, 0, 0.32));
-      copy.style.opacity = cin * (1 - cout);
-      copy.style.transform = `translateY(${((1 - cin) * 12 - cout * 12).toFixed(2)}%)`;
+      copy.style.setProperty("--co", (cin * (1 - cout)).toFixed(4));
+      copy.style.setProperty("--cy", `${((1 - cin) * 12 - cout * 12).toFixed(2)}%`);
     });
     const now = Math.min(N - 1, Math.round(p));
     if (now !== active) {
@@ -588,7 +589,6 @@
     story.classList.toggle("is-pinned", pinned);
     if (pinned) {
       stage.append(dots, count);
-      story.style.height = `calc(${((N - 1) * SEG * 100).toFixed(0)}vh + 100vh)`;
       addEventListener("scroll", onScroll, { passive: true });
       active = -1;
       onScroll();
@@ -598,16 +598,14 @@
       removeEventListener("scroll", onScroll);
       dots.remove();
       count.remove();
-      story.style.height = "";
-      for (const panel of panels) {
-        panel.classList.remove("is-on");
-        for (const el of [panel.querySelector("img"), panel.querySelector(".story-copy")]) { el.style.opacity = ""; el.style.transform = ""; el.style.clipPath = ""; }
-      }
+      for (const panel of panels) panel.classList.remove("is-on");
     }
   }
   still.addEventListener("change", setMode);
   small.addEventListener("change", setMode);
-  addEventListener("resize", () => pinned && onScroll());
+  // a resize is heard before the two conditions above report a change, so the window's new size is acted on at once
+  addEventListener("resize", () => { setMode(); if (pinned) onScroll(); });
+  story.style.setProperty("--story-n", N);  // the stylesheet works out how far the pinned story scrolls from this
   setMode();
 })();
 </script>

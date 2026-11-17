@@ -111,26 +111,34 @@ p { margin: 0; }
   .story-lead img { order: 2; }
 }
 
-/* pinned: the script adds this on a wide, tall screen when the visitor hasn't asked for less motion. One stage fills the
-   window and stays put while the page scrolls under it; the script fades, scales and wipes each picture in. */
-.story.is-pinned .story-stage { position: sticky; top: 0; display: block; height: 100vh; height: 100svh; padding: 0; overflow: hidden; background: var(--canvas); }
-.story.is-pinned .story-panel { position: absolute; inset: 0; display: block; width: auto; margin: 0; padding: 0; visibility: hidden; }
-.story.is-pinned .story-panel.is-on { visibility: visible; }
-.story.is-pinned .story-panel img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border: 0; border-radius: 0; will-change: transform, opacity; }
-.story.is-pinned .story-copy { position: absolute; left: max(var(--gutter), env(safe-area-inset-left, 0px)); bottom: clamp(64px, 10vh, 108px); display: grid; gap: 8px; max-width: 27rem; padding: 20px 24px 22px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-m); box-shadow: 0 8px 28px rgba(16, 44, 54, 0.14); will-change: transform, opacity; }
-.story.is-pinned .story-lead .story-copy, .story.is-pinned .story-close .story-copy { gap: 14px; max-width: 37rem; padding: 26px 30px 28px; border-radius: var(--r-l); }
-.story.is-pinned .story-lead h1 { font-size: clamp(2.1rem, 3.6vw, 3.2rem); }
-.story.is-pinned .story-lead .lede { font-size: 1.05rem; }
-.story.is-pinned .story-close h2 { font-size: clamp(2.1rem, 3.6vw, 3.2rem); }
-.story.is-pinned .story-tag, .story-count { position: absolute; z-index: 3; bottom: clamp(18px, 3vh, 28px); width: auto; margin: 0; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); }
-.story.is-pinned .story-tag { left: max(var(--gutter), env(safe-area-inset-left, 0px)); }
-.story-count { right: max(var(--gutter), env(safe-area-inset-right, 0px)); font-family: var(--mono); }
-.story-count b { color: var(--text); font-weight: 600; }
-.story-dots { position: absolute; z-index: 3; right: clamp(12px, 2vw, 28px); top: 50%; translate: 0 -50%; display: grid; margin: 0; padding: 6px 3px; list-style: none; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
-.story-dots button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
-.story-dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); transition: transform var(--t-enter, 220ms) var(--ease-out), background-color var(--t-enter, 220ms) var(--ease-out); }
-.story-dots button[aria-current="true"]::before { background: var(--teal); transform: scale(1.6); }
+/* pinned: the script adds the class on a wide, tall screen when the visitor hasn't asked for less motion. One stage fills
+   the window and stays put while the page scrolls under it; the script fades, scales and wipes each picture in, through the
+   custom properties below. The rules sit behind the same conditions the script tests, so the moment a window is made narrow
+   the page is back to one picture after another, without waiting for the script to notice. */
+.story-dots, .story-count { display: none; }
+@media (min-width: 900px) and (min-height: 640px) and (prefers-reduced-motion: no-preference) {
+  .story.is-pinned { height: calc((var(--story-n, 10) - 1) * 108vh + 100vh); }
+  .story.is-pinned .story-stage { position: sticky; top: 0; display: block; height: 100vh; height: 100svh; padding: 0; overflow: hidden; background: var(--canvas); }
+  .story.is-pinned .story-panel { position: absolute; inset: 0; display: block; width: auto; margin: 0; padding: 0; visibility: hidden; }
+  .story.is-pinned .story-panel.is-on { visibility: visible; }
+  .story.is-pinned .story-panel img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border: 0; border-radius: 0;
+    opacity: var(--o, 1); transform: scale(var(--s, 1.025)); clip-path: var(--clip, none); will-change: transform, opacity; }
+  .story.is-pinned .story-copy { position: absolute; left: max(var(--gutter), env(safe-area-inset-left, 0px)); bottom: clamp(64px, 10vh, 108px); display: grid; gap: 8px; max-width: 27rem; padding: 20px 24px 22px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-m); box-shadow: 0 8px 28px rgba(16, 44, 54, 0.14);
+    opacity: var(--co, 1); transform: translateY(var(--cy, 0%)); will-change: transform, opacity; }
+  .story.is-pinned .story-lead .story-copy, .story.is-pinned .story-close .story-copy { gap: 14px; max-width: 37rem; padding: 26px 30px 28px; border-radius: var(--r-l); }
+  .story.is-pinned .story-lead h1 { font-size: clamp(2.1rem, 3.6vw, 3.2rem); }
+  .story.is-pinned .story-lead .lede { font-size: 1.05rem; }
+  .story.is-pinned .story-close h2 { font-size: clamp(2.1rem, 3.6vw, 3.2rem); }
+  .story.is-pinned .story-tag, .story.is-pinned .story-count { position: absolute; z-index: 3; bottom: clamp(18px, 3vh, 28px); display: block; width: auto; margin: 0; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); }
+  .story.is-pinned .story-tag { left: max(var(--gutter), env(safe-area-inset-left, 0px)); }
+  .story.is-pinned .story-count { right: max(var(--gutter), env(safe-area-inset-right, 0px)); font-family: var(--mono); }
+  .story-count b { color: var(--text); font-weight: 600; }
+  .story.is-pinned .story-dots { position: absolute; z-index: 3; right: clamp(12px, 2vw, 28px); top: 50%; translate: 0 -50%; display: grid; margin: 0; padding: 6px 3px; list-style: none; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
+  .story-dots button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+  .story-dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); transition: transform var(--t-enter) var(--ease-out), background-color var(--t-enter) var(--ease-out); }
+  .story-dots button[aria-current="true"]::before { background: var(--teal); transform: scale(1.6); }
+}
 
 /* the proposed room beside the room today */
 .compare .wrap { display: grid; gap: clamp(28px, 4vw, 56px); }
