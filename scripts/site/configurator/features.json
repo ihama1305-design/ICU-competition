@@ -88,8 +88,8 @@
    "sedated": "Staff use it during care, and clear the glass to look in.",
    "limits": "Opaque glass hides the patient from the corridor, so staff decide when it's used. In an isolation room the door still needs its seal and pressure tests.",
    "evidence": {
-    "text": "Memorial Sloan Kettering's ICU replaced curtains with switchable glass and reported easier cleaning and better infection control.",
-    "strength": "Project report, not a trial",
+    "text": "Memorial Sloan Kettering's ICU replaced curtains with switchable glass and reported easier cleaning and better infection control. The Society of Critical Care Medicine's ICU design guideline recommends high patient visibility, which is why staff can clear the glass at once.",
+    "strength": "Project report, not a trial; guideline, a strong recommendation on low-certainty evidence",
     "sourcesFrom": "front:smart"
    },
    "objects": [
@@ -130,7 +130,7 @@
    "benefit": "Something restful to look at, instead of equipment and a blank ceiling.",
    "awake": "The patient can choose what's on, or turn it off.",
    "sedated": "Staff choose, and keep it still and quiet.",
-   "limits": "Emergency turns the screens off. Living plants and fish tanks stay out of patient-care areas, as CDC guidance advises.",
+   "limits": "Emergency turns the screens off. CDC guidance keeps fish tanks out of patient-care areas, and potted plants and fresh flowers out of areas for immunosuppressed patients, so neither is in this room.",
    "evidence": {
     "text": "Expected, not shown."
    },
@@ -458,7 +458,9 @@
    "benefit": "The blinds don't close on an evening view for no reason.",
    "limits": "A concept: it isn't connected to anything, and it reads nothing here.",
    "evidence": {
-    "text": "Expected, not shown."
+    "text": "The Society of Critical Care Medicine's ICU design guideline recommends windows and natural light in every ICU patient room. What the sensor adds, keeping the blinds open when there's no glare, is expected, not shown.",
+    "strength": "Guideline, a strong recommendation on low-certainty evidence",
+    "sourcesFrom": "blinds"
    },
    "objects": [
     "addon:daylightSensor"
@@ -476,8 +478,8 @@
    "sedated": "Nothing here touches the patient's equipment: its alarms and settings stay as they are.",
    "limits": "Not a measurement: no microphone is used, and nothing listens. Every level is illustrative, and the fittings' effect is made up. Critical alarms are always sounding and visible, and the comfort system has no control over them.",
    "evidence": {
-    "text": "Every ICU in a five-unit study was louder than WHO's hospital guideline, which its authors judged out of reach in an ICU. The fittings' effect is expected, not shown.",
-    "strength": "Observational study of five UK ICUs",
+    "text": "Every ICU in a five-unit study was louder than WHO's hospital guideline, which its authors judged out of reach in an ICU. The Society of Critical Care Medicine's ICU design guideline suggests noise-reduction measures such as sound-absorbing tiles. The fittings' effect here is expected, not shown.",
+    "strength": "Observational study of five UK ICUs; guideline, a conditional recommendation on very low-certainty evidence",
     "sourcesFrom": "acousticPanels"
    },
    "objects": [],
@@ -496,7 +498,9 @@
    "benefit": "Less of every sound bounces back into the room.",
    "limits": "Their effect in Acoustic comfort mode is made up. A real one needs infection-control and manufacturer sign-off.",
    "evidence": {
-    "text": "Expected, not shown."
+    "text": "ICUs are loud: five UK units measured were all above WHO's hospital guideline. The Society of Critical Care Medicine's ICU design guideline suggests noise-reduction measures such as sound-absorbing tiles. These panels' own effect is expected, not shown.",
+    "strength": "Observational study; guideline, a conditional recommendation on very low-certainty evidence",
+    "sourcesFrom": "acousticPanels"
    },
    "objects": [
     "addon:acousticPanels"
@@ -559,7 +563,7 @@
    "benefit": "Staff can see where the weight bears, even under the bedding, and when a position has been held a long time.",
    "awake": "The patient moves by themselves, and the map follows.",
    "sedated": "Staff see the reminder, assess the skin and reposition by the plan.",
-   "limits": "Simulated: not a measurement. It predicts no injury, and it never moves a patient: staff assess and reposition by the patient's own positioning plan. The bed and the figure in this model don't move, so the positions are shown on the map only.",
+   "limits": "Simulated: not a measurement. It predicts no injury, and it never moves a patient: staff assess and reposition by the patient's own positioning plan. The bed and the figure in this model don't move, so the positions are shown on the map only. A 2026 VA/DoD guideline found too little evidence to recommend for or against continuous pressure mapping.",
    "evidence": {
     "text": "Expected, not shown."
    },
@@ -885,7 +889,9 @@
    "sedated": "Staff reach the outlets and pumps from either side of the bed.",
    "limits": "A visual model of a pendant, not a specified product. Its position, load, services and the ceiling's structure would need engineering, infection-control and clinical review.",
    "evidence": {
-    "text": "Expected, not shown."
+    "text": "The Society of Critical Care Medicine's ICU design guideline suggests life-support services that don't come from the wall, such as pendant-mounted booms. This pendant's own effect on the work round the bed is expected, not shown.",
+    "strength": "Guideline, a conditional recommendation on very low-certainty evidence",
+    "sourcesFrom": "cableChannels"
    },
    "objects": [
     "part:cfg_kit_pendant"
