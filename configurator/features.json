@@ -767,7 +767,7 @@
    "name": "Cleaning",
    "group": "workflow",
    "purpose": "A mode for the room between patients: bright light, the bed empty, and the surfaces that are touched most marked one after another.",
-   "how": "Cleaning, above the room. The patient figure goes, and comes back when the mode ends. The light goes bright, the screens go off, and a checklist comes up: hands first, then the bed rails and controls, the overbed table, the monitor and pump screens, the ventilator, the pendant, the wall controls and handles, the chairs, and hands again. Each step lights what it covers in the room; tick it, and the next lights. The hand-hygiene point is the basin in the room. No airflow is drawn, because the grilles are hidden: the checklist links to the ventilation plan.",
+   "how": "Cleaning, above the room. The patient figure goes, and comes back when the mode ends. The light goes bright, the screens go off, and a checklist comes up: hands first, then the bed rails and controls, the overbed table, the monitor and pump screens, the ventilator, the pendant, the wall controls and handles, the chairs, and hands again. Each step lights what it covers in the room; tick it, and the next lights. The hand-hygiene point is the basin in the room. No airflow is drawn, because the grilles are hidden.",
    "benefit": "Cleaning in a set order, with nothing missed, and the equipment that needs it marked.",
    "awake": "Not for an occupied room: the bed is empty.",
    "sedated": "Not for an occupied room: the bed is empty.",

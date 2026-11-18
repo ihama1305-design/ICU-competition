@@ -1,6 +1,6 @@
 # Real-device checklist
 
-About 5 minutes per device, plus one minute on a slow one. Everything so far was tested in headless Chromium on one Mac, so a device only counts as working once it has been through this list.
+About 4 minutes per device, plus one minute on a slow one. Everything so far was tested in headless Chromium on one Mac, so a device only counts as working once it has been through this list.
 
 **Open the site:** scan `docs/qr-live-site.png`, or go to https://ihama1305-design.github.io/ICU-competition/.
 
@@ -38,27 +38,17 @@ Note: Smooth, OK or stuttery? Is anything cut off, or too small to tap?
 
 Tap **OPEN NURSE DASHBOARD**. Does the panel fit the screen, and does **CLOSE DASHBOARD** bring the room back?
 
-## 4. Walkthrough (1 min)
-
-Go back to the home page (**Adaptive ICU** at the top of the options, or your browser's back button) and tap **Open the walkthrough**.
-1. Orbit, then tap **First person**.
-2. On a phone or tablet, walk with the joystick. On a laptop, use W, A, S and D.
-3. Drop the person, then tap the view behind them.
-
-Note: Smooth, OK or stuttery? Does walking feel stuck anywhere?
-
-## 5. Memory test, phones and tablets only (30 s)
+## 4. Memory test, phones and tablets only (30 s)
 
 1. Open the configurator in 3 or 4 tabs, then go back to the first tab.
 2. If the 3D view stopped, it should say **Tap to reload the 3D view**, not show a frozen picture. Tap it: the same room should come back.
 
 Note: what happened, even if nothing did.
 
-## 6. A slow device: send its readout (1 min)
+## 5. A slow device: send its readout (1 min)
 
-On any device that feels slow, open both of these and wait about 5 seconds for the **Draw** line:
+On any device that feels slow, open this and wait about 5 seconds for the **Draw** line:
 - https://ihama1305-design.github.io/ICU-competition/configurator/?stats=1
-- https://ihama1305-design.github.io/ICU-competition/viewer/?stats=1
 
 The box at the bottom left shows the GPU, quality tier, pixel ratio, canvas pixels and the median time to draw a frame. Tap **Copy** and paste it into the notes. The page sends nothing anywhere.
 
@@ -66,13 +56,13 @@ The box at the bottom left shows the GPU, quality tier, pixel ratio, canvas pixe
 
 One line per device, plus a screenshot of anything that looked wrong.
 
-| Device and browser | Tour | Configurator | Quality: Auto chose | PACS | Walkthrough | Memory test | ?stats=1 draw (ms) | Notes |
-|---|---|---|---|---|---|---|---|---|
-| iPhone, Safari | | | | | | | | |
-| iPad, Safari | | | | | | | | |
-| Android, Chrome | | | | | | | | |
-| Windows, Chrome | | | | | | n/a | | |
-| Windows, Edge | | | | | | n/a | | |
-| Mac, Safari | | | | | | n/a | | |
+| Device and browser | Tour | Configurator | Quality: Auto chose | PACS | Memory test | ?stats=1 draw (ms) | Notes |
+|---|---|---|---|---|---|---|---|
+| iPhone, Safari | | | | | | | |
+| iPad, Safari | | | | | | | |
+| Android, Chrome | | | | | | | |
+| Windows, Chrome | | | | | n/a | | |
+| Windows, Edge | | | | | n/a | | |
+| Mac, Safari | | | | | n/a | | |
 
 For each cell, use ✓ (works), ~ (works, with a note) or ✗ (broken, with a note).

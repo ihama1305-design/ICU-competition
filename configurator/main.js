@@ -940,8 +940,7 @@ function cleaningPlace(where) {
 const cleaningList = $("cleaningSteps");
 $("cleaningIntro").textContent = CLEANING_TEXT.intro;
 $("cleaningDone").textContent = CLEANING_TEXT.done;
-$("cleaningAirText").textContent = `${CLEANING_TEXT.air} `;
-Object.assign($("cleaningAir"), { href: CLEANING_TEXT.airLink, textContent: CLEANING_TEXT.airLinkText });
+$("cleaningAirText").textContent = CLEANING_TEXT.air;
 $("cleaningLimits").textContent = CLEANING_TEXT.limits;
 cleaningList.replaceChildren(...CLEANING_STEPS.map((step, i) => {
   const box = Object.assign(document.createElement("input"), { type: "checkbox", id: `clean-${step.id}` });
@@ -1161,8 +1160,8 @@ function showObjectCard(info, x, y, opener = document.activeElement) {
   }
   // a card that cites a source: the same links as the option note it names, so a source lives in one place, options.json
   // a card with a short table: rows from a named block of options.json, in the column for this kind of room where the block
-  // has one. The comfort control's clean-air rows are the same list as the ventilation plan's, and the block's link leads to
-  // the basis there; the sound sensor's are the limits of the vocal-distress cue
+  // has one. The comfort control's clean-air rows are the spec's list, and the block's link leads to each row's basis in the
+  // report; the sound sensor's are the limits of the vocal-distress cue
   const rowsFrom = f ? f.rowsFrom : info.rowsFrom, sourcesFrom = f ? f.sourcesFrom : info.sourcesFrom;
   const table = rowsFrom ? optionData[rowsFrom] : null, kind = rig.meta.isolation ? "isolation" : "patient";
   $("objectRowsTitle").textContent = table ? table.titles?.[kind] ?? table.title : "";

@@ -463,7 +463,7 @@ assert.ok(MODES.cleaning.label === "Cleaning" && MODES.cleaning.cleaning && MODE
 assert.ok(CLEANING_STEPS[0].kind === "hygiene" && CLEANING_STEPS.at(-1).kind === "hygiene" && CLEANING_STEPS.some(x => x.kind === "touch") && CLEANING_STEPS.some(x => x.kind === "equipment"), "hands first and last, high-touch surfaces and equipment between");
 assert.ok(/Checklist finished/.test(CLEANING_TEXT.done) && /doesn't say the room is clean or disinfected/.test(CLEANING_TEXT.done), "finishing says the checklist is finished, and never that the room is disinfected");
 assert.ok(!/\b(is|now) (clean|disinfected|sterile|safe)\b/i.test((JSON.stringify(CLEANING_TEXT) + JSON.stringify(CLEANING_STEPS)).replace("doesn't say the room is clean or disinfected", "")), "nothing else claims the room is clean, disinfected, sterile or safe");
-assert.ok(CLEANING_TEXT.airLink === "../ventilation/" && /No airflow is drawn/.test(CLEANING_TEXT.air), "no airflow in the room: a link to the ventilation plan");
+assert.ok(!("airLink" in CLEANING_TEXT) && /No airflow is drawn/.test(CLEANING_TEXT.air) && !/ventilation plan/.test(CLEANING_TEXT.air), "no airflow in the room, and no link to a plan this site doesn't publish");
 const cleaningPlaces = /return \(\{\n    basin:([\s\S]*?)\n  \}\)\[where\]/.exec(mainSrc)?.[0] || "";
 for (const step of CLEANING_STEPS) assert.ok(new RegExp(`\\b${step.where}:`).test(cleaningPlaces), `Cleaning can light ${step.where}`);
 // the board: Arabic beside English, in one block, and the nurse confirms anything clinical

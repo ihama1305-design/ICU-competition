@@ -23,8 +23,6 @@ export const CLEANING_TEXT = {
   title: "Cleaning checklist · SIMULATED",
   intro: "For a room between patients, so the bed is empty. Tick each step: the next one lights in the room.",
   done: "Checklist finished. That's all it records: it doesn't say the room is clean or disinfected. The hospital's own cleaning procedure and checks decide that.",
-  air: "No airflow is drawn in the room. How the air is changed is on the ventilation plan.",
-  airLink: "../ventilation/",
-  airLinkText: "See the ventilation plan",
+  air: "No airflow is drawn in the room. How the air is changed isn't shown on this site.",
   limits: "An order to show the idea, not a cleaning protocol. Products, contact times and the order of work are set by the hospital's infection-control team.",
 };

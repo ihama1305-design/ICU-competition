@@ -157,7 +157,11 @@ try {
   await page.keyboard.press("Escape"); await page.waitForFunction(() => !window.__config.apis().active);
   console.log("PASS mobile layout, all tabs and Escape");
   }
-  await page.close(); page = await browser.newPage({ viewport: { width: 1366, height: 820 } }); monitor(page);
+  await page.close();
+  // The walkthrough of the existing floor isn't published: the pipeline builds it only on a machine that has the drawings,
+  // and .gitignore keeps it there. Where it has been built, it is checked as before.
+  if (await fs.access(path.join(ROOT, "viewer/index.html")).then(() => true, () => false)) {
+  page = await browser.newPage({ viewport: { width: 1366, height: 820 } }); monitor(page);
   await page.goto(`${base}/viewer/`); await page.waitForFunction(() => window.__viewerReady, null, { timeout: 180000 });
   const spec = JSON.parse(await read("spec/icu_spec.json"));
   const corridor = spec.cameras.corridor_eye || [22.3, 27];
@@ -178,6 +182,7 @@ try {
   assert.ok(await page.evaluate(() => window.__pick(683, 470)));
   assert.deepEqual(await page.evaluate(() => window.__viewerErrors), []);
   console.log("PASS original walkthrough: WASD movement and clickable objects");
+  } else console.log("SKIP original walkthrough: it isn't built in this checkout, and it isn't published");
   assert.deepEqual(errors, []); assert.deepEqual(missing, []);
   console.log("PASS no uncaught browser errors or missing local assets; screenshots in build/shots/");
 } catch (error) {

@@ -5,7 +5,7 @@ import { RoomModes, modeText, MODES } from "./site/configurator/modes.js";
 import { STEPS, CAVEAT, ENDING, ENDING_GUARD_MS, FUTURE_ENDING, FUTURE_STEPS, HOLD_MS, RESUME_MIN_MS, SCRIPTS, TOUR_LINKS, holdLeft } from "./site/configurator/guide.js";
 import { ATTACHMENTS } from "./site/configurator/apis-data.js";
 import { HINT_TEXT } from "./site/configurator/hint.js";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import * as Q from "./site/configurator/quality.js";
 import { cueFor, LEVELS, noticeFor, QUIET, SOUNDS } from "./site/configurator/vocal.js";
 import { readdirSync } from "node:fs";
@@ -195,18 +195,25 @@ assert.equal(budget, Q.PIXEL_BUDGET, "the same pixel budget");
 const ratioInline = new Function("PIXEL_BUDGET", `return ${/pixelRatio: (\(dpr[^\n]*\)\)),\n/.exec(tpl)[1]}`)(budget);
 for (const [dpr, w, h, t, lim] of [[2, 1440, 900, "high"], [2, 2560, 1440, "high"], [3, 390, 844, "low"], [2, 800, 600, "high", 1.25], [1, 1920, 1080, "high"]]) assert.equal(ratioInline(dpr, w, h, t, lim), Q.pixelRatio(dpr, w, h, t, lim));
 console.log("PASS graphics quality: a 3.6 megapixel budget, Auto starts where it measured last, and its choice is monotonic, keeps a fast laptop on High, doesn't flip-flop, never steps a phone up and is the same in the walkthrough");
-// ---------------------------------------------------------------- clean air: one list of rows, on the plan page and on the comfort control's card
+// ---------------------------------------------------------------- clean air: one list of rows, in the spec, on the comfort control's card and in the report
 const icuSpec = JSON.parse(readFileSync(new URL("../spec/icu_spec.json", import.meta.url), "utf8"));
 const clean = icuSpec.ventilation.clean_air.rows;
 for (const copy of ["./site/configurator/options.json", "../configurator/options.json"]) {
-  assert.deepEqual(JSON.parse(readFileSync(new URL(copy, import.meta.url), "utf8")).cleanAir.rows, clean, `${copy}: the comfort control card's clean-air rows are the spec's, which the plan page is built from`);
+  assert.deepEqual(JSON.parse(readFileSync(new URL(copy, import.meta.url), "utf8")).cleanAir.rows, clean, `${copy}: the comfort control card's clean-air rows are the spec's`);
 }
 const htmlEsc = t => t.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#x27;");
-const planPage = readFileSync(new URL("../ventilation/index.html", import.meta.url), "utf8");
+// The card links to the report for each row's basis, so the report's Clean air table has to carry the same rows. The plan
+// page is built from them too, but only on a machine that has the drawings, and it isn't published: it's checked where it exists.
+const planFile = new URL("../ventilation/index.html", import.meta.url);
+const planPage = existsSync(planFile) ? readFileSync(planFile, "utf8") : null;
+const reportText = readFileSync(new URL("../REPORT.md", import.meta.url), "utf8");
+const cleanSource = JSON.parse(readFileSync(new URL("./site/configurator/options.json", import.meta.url), "utf8")).cleanAir.sources;
+assert.ok(cleanSource.length === 1 && /\/REPORT\.md#clean-air$/.test(cleanSource[0].url) && /^### Clean air$/m.test(reportText), "the card's one link leads to the report's Clean air table");
 for (const r of clean) {
   assert.ok(r.label && r.basis, `${r.id} has a label and a basis`);
   for (const k of ["isolation", "patient"]) assert.ok(words(r[k]) <= 20, `clean air "${r.label}" (${k}) has ${words(r[k])} words: ${r[k]}`);
-  assert.ok(planPage.includes(`data-row="${r.id}"`) && planPage.includes(htmlEsc(r.isolation)) && planPage.includes(htmlEsc(r.patient)) && planPage.includes(htmlEsc(r.basis)), `the published plan page has the "${r.label}" row as the spec words it`);
+  assert.ok([r.label, r.isolation, r.patient, r.basis].every(t => reportText.includes(t)), `the report's Clean air table has the "${r.label}" row as the spec words it, with its basis`);
+  if (planPage) assert.ok(planPage.includes(`data-row="${r.id}"`) && planPage.includes(htmlEsc(r.isolation)) && planPage.includes(htmlEsc(r.patient)) && planPage.includes(htmlEsc(r.basis)), `the published plan page has the "${r.label}" row as the spec words it`);
 }
 const cleanRow = id => clean.find(r => r.id === id);
 // what the layer is: two filter stages, a HEPA-filtered isolation exhaust, and UV-C as an extra that replaces nothing
@@ -220,7 +227,7 @@ assert.ok(/Fogging, ozone, ionisers/.test(cleanRow("not_proposed").isolation) &&
 // what wasn't read is marked assumed, and nothing quotes a HEPA efficiency or a lamp dose, which no source read here gives
 assert.equal(cleanRow("not_designed").basis, "Assumed"); assert.ok(/assumed/i.test(cleanRow("leaving_air").basis));
 assert.ok(!/99\.9|mJ|µW|mW\/|W\/m/.test(JSON.stringify(clean)), "no HEPA efficiency or UV dose is quoted");
-console.log(`PASS clean air: ${clean.length} rows, the same on the plan page and the comfort control's card, at most 20 words a cell; filters and a HEPA exhaust with UV-C as an extra; no fogging, ozone or ionisers; the unread marked assumed`);
+console.log(`PASS clean air: ${clean.length} rows, the same in the spec, on the comfort control's card and in the report, at most 20 words a cell; filters and a HEPA exhaust with UV-C as an extra; no fogging, ozone or ionisers; the unread marked assumed`);
 // ---------------------------------------------------------------- the vocal-distress cue: the rule, the notice's words, the limits, and no microphone
 // The rule is a judgement (vocal.js cueFor), so this pins only what any version must keep: a call for help is never ignored,
 // groans can only add urgency, there is a notice by the third, and nothing else raises one.

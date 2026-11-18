@@ -1,7 +1,9 @@
-"""Build the GitHub Pages site (spec site.dir) from renders/, the model and scripts/site/.
+"""Build the GitHub Pages site (spec site.dir) from scripts/site/, the configurator's rooms and one render.
 
-Run after 04_export.py, which writes viewer/ and assets/model/, and 07_export_room.py, which adds the configurator's rooms. Every number on the page
-comes from the build, so it can't drift from the model. Uses ICU_BLEND if set, like the other steps.
+Run after 07_export_room.py, which writes the configurator's rooms to assets/model/. The site is the proposal only: the
+walkthrough, the ventilation plan, the renders and the downloads of the existing floor are made from SSMC's drawings, so
+they aren't published, and this step neither copies nor links them. The one render it uses is renders/iso_room.png, the
+home page's picture of room W1 as it is today.
 """
 import functools
 import http.server
@@ -28,8 +30,6 @@ SRC = os.path.join(ROOT, "scripts", "site")
 SITE_URL = spec["site"]["url"]
 REPO_URL = spec["site"]["repo"]
 WIDTHS = (800, 1400, 1920)
-BLEND = os.environ.get("ICU_BLEND") or os.path.join(ROOT, "output", "icu.blend")
-GLB = os.path.join(ROOT, "output", "icu.glb")
 idx = json.load(open(os.path.join(ROOT, "build", "scene_index.json")))
 plan = json.load(open(os.path.join(ROOT, "build", "plan.json")))
 os.makedirs(IMG, exist_ok=True)
@@ -138,33 +138,9 @@ def capture_configurator_shots(tmp):
     return codes
 
 
-def capture_viewer_shots():
-    """Real screenshots of the walkthrough, for the page's walkthrough section."""
-    tmp = os.path.join(ROOT, "build", "shots")
-    os.makedirs(tmp, exist_ok=True)
-    hero = next(r for r in idx["rooms"] if r["id"] == idx["hero"])
-    url = "file://" + os.path.join(ROOT, "output", "viewer", "index.html")
-    with sync_playwright() as pw:
-        b = pw.chromium.launch(args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
-        pg = b.new_page(viewport={"width": 1440, "height": 860})
-        pg.goto(url)
-        pg.wait_for_function("window.__viewerReady === true", timeout=180000)
-        pg.evaluate("window.__view('first')")
-        nx, ny = hero["front_normal_in"]
-        fx, fy = hero["front"]
-        pg.evaluate(f"window.__teleport({fx + nx * 3.7}, {fy + ny * 3.7})")  # far enough in that the camera clears the curtain
-        pg.keyboard.press("v")
-        settle(pg)
-        pg.screenshot(path=os.path.join(tmp, "walk-behind.png"))
-        pg.keyboard.press("v")
-        pg.evaluate("window.__view('orbit')")
-        settle(pg)
-        pg.screenshot(path=os.path.join(tmp, "walk-orbit.png"))
-        b.close()
-    return tmp
-
-
-shots = capture_viewer_shots()
+# the home page's pictures of the configurator are captured into build/shots
+shots = os.path.join(ROOT, "build", "shots")
+os.makedirs(shots, exist_ok=True)
 config_codes = capture_configurator_shots(shots)
 
 areas = [r["area_m2"] for r in idx["rooms"]]
@@ -178,13 +154,6 @@ values = {
     "CEILING": f"{spec['building']['ceiling_height']:.2f}",
     **{f"CODE_{k.split('-')[1].upper()}": v for k, v in config_codes.items()},
 }
-os.makedirs(os.path.join(SITE_DIR, "downloads"), exist_ok=True)
-shutil.copyfile(BLEND, os.path.join(SITE_DIR, "downloads", "icu.blend"))
-shutil.copyfile(GLB, os.path.join(SITE_DIR, "downloads", "icu.glb"))
-mb = lambda p: f"{os.path.getsize(p) / 1e6:.1f}"  # noqa: E731
-values["BLEND_MB"] = mb(BLEND)
-values["GLB_MB"] = mb(GLB)
-values["GLB_WEB_MB"] = mb(os.path.join(SITE_DIR, "assets", "model", "icu.glb.gz"))
 
 page = open(os.path.join(SRC, "index.template.html")).read()
 
@@ -226,6 +195,6 @@ im = im.resize((1200, round(im.height * scale)), Image.LANCZOS)
 top = (im.height - 630) // 2
 im.crop((0, top, 1200, top + 630)).save(os.path.join(IMG, "og.jpg"), "JPEG", quality=82, optimize=True)
 
-size = sum(os.path.getsize(os.path.join(d, f)) for sub in ("assets", "viewer", "configurator", "downloads")
+size = sum(os.path.getsize(os.path.join(d, f)) for sub in ("assets", "configurator")
            for d, _, fs in os.walk(os.path.join(SITE_DIR, sub)) for f in fs)
 print(f"  website {size / 1e6:.1f} MB; page data: {values}")
