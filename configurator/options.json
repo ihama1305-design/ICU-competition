@@ -720,7 +720,7 @@
         }
        ],
        "note": {
-        "text": "Glass that switches from clear to frosted, instead of a curtain. Staff can still see in when needed, and there's no fabric to collect germs. Memorial Sloan Kettering's ICU has already done this.",
+        "text": "Glass that switches from clear to frosted, instead of a curtain. Staff can still see in when needed, and there's no fabric to collect germs. Memorial Sloan Kettering's ICU has already done this. The Society of Critical Care Medicine's ICU design guideline recommends high patient visibility, so staff can clear the glass at once.",
         "sources": [
          {
           "label": "Healthcare Design, Memorial Sloan Kettering ICU",
@@ -737,6 +737,10 @@
          {
           "label": "CDC environmental services",
           "url": "https://www.cdc.gov/infection-control/hcp/environmental-control/environmental-services.html"
+         },
+         {
+          "label": "SCCM, Guideline on Adult ICU Design 2024",
+          "url": "https://www.sccm.org/clinical-resources/guidelines/guidelines/guideline-on-adult-icu-design-2024"
          }
         ],
         "clinical": true
@@ -910,6 +914,15 @@
        "code": 3
       }
      ],
+     "note": {
+      "text": "The window and its daylight stay. The Society of Critical Care Medicine's ICU design guideline recommends windows and natural light in every patient room, so the blinds are for glare, privacy and sleep.",
+      "sources": [
+       {
+        "label": "SCCM, Guideline on Adult ICU Design 2024",
+        "url": "https://www.sccm.org/clinical-resources/guidelines/guidelines/guideline-on-adult-icu-design-2024"
+       }
+      ]
+     },
      "code": 11
     },
     {
@@ -1194,6 +1207,16 @@
          "on": false
         }
        ],
+       "note": {
+        "text": "A wide seat for two visitors. SSMC's visitor guidelines allow two at a time in intensive care, each over 12, and say nothing about staying overnight, so using it as a bed would need SSMC's agreement.",
+        "sources": [
+         {
+          "label": "SSMC visitor guidelines",
+          "url": "https://ssmc.ae/patients-visitors/visitor-guidelines/"
+         }
+        ],
+        "clinical": true
+       },
        "code": 1
       }
      ],
@@ -1557,6 +1580,10 @@
         {
          "text": "A sliding door that opens about 1.6 m, so the patient can be taken outside in their bed or a wheelchair. Concept only: no structural or fall-safety design has been done, and a confused patient would need someone with them.",
          "clinical": true
+        },
+        {
+         "text": "It would need space outside the existing ICU footprint, which the competition's changes must stay within.",
+         "clinical": true
         }
        ],
        "code": 1
@@ -1730,7 +1757,7 @@
       {"id":"off","label":"Off","effects":[{"do":"addon","id":"acousticPanels","on":false}],"code":0},
       {"id":"on","label":"Wall and ceiling","effects":[{"do":"addon","id":"acousticPanels","on":true}],"code":1}
      ],
-     "note": {"text":"Wipe-clean acoustic panels: two on the family zone's back wall and three ceiling tiles over it, clear of the vents, the lights and the bed. They absorb some of the sound that bounces round the room. In Acoustic comfort mode their effect is made up, not measured. A real one needs infection-control and manufacturer sign-off before it goes in an ICU. Five UK ICUs measured were all louder than WHO's hospital guideline, which the authors judged out of reach in an ICU; that is an observational study, and no fitting was tested.","sources":[{"label":"Darbyshire and Young, Crit Care 2013","url":"https://ccforum.biomedcentral.com/articles/10.1186/cc12870"}]},
+     "note": {"text":"Wipe-clean acoustic panels: two on the family zone's back wall and three ceiling tiles over it, clear of the vents, the lights and the bed. They absorb some of the sound that bounces round the room. In Acoustic comfort mode their effect is made up, not measured. A real one needs infection-control and manufacturer sign-off before it goes in an ICU. Five UK ICUs measured were all louder than WHO's hospital guideline, which the authors judged out of reach in an ICU; that is an observational study, and no fitting was tested. The Society of Critical Care Medicine's ICU design guideline suggests noise-reduction measures such as sound-absorbing tiles, on very low-certainty evidence.","sources":[{"label":"Darbyshire and Young, Crit Care 2013","url":"https://ccforum.biomedcentral.com/articles/10.1186/cc12870"},{"label":"SCCM, Guideline on Adult ICU Design 2024","url":"https://www.sccm.org/clinical-resources/guidelines/guidelines/guideline-on-adult-icu-design-2024"}]},
      "code": 33
     },
     {
@@ -1925,7 +1952,7 @@
       {"id":"off","label":"Off","effects":[{"do":"addon","id":"cableChannels","on":false}],"code":0},
       {"id":"on","label":"Flush, with a docking spot","effects":[{"do":"addon","id":"cableChannels","on":true}],"code":1}
      ],
-     "note": {"text":"Flush channels on the ceiling and on the wall behind the bed head: one for power and data, and a separate one for medical gas, which never shares a channel with anything electrical. A docking spot is marked on the floor where the ventilator stands, fed from the pendant. Illustrative routes, not an engineering design."},
+     "note": {"text":"Flush channels on the ceiling and on the wall behind the bed head: one for power and data, and a separate one for medical gas, which never shares a channel with anything electrical. A docking spot is marked on the floor where the ventilator stands, fed from the pendant. Illustrative routes, not an engineering design. The Society of Critical Care Medicine's ICU design guideline suggests life-support services that don't come from the wall, such as pendant-mounted booms, on very low-certainty evidence.","sources":[{"label":"SCCM, Guideline on Adult ICU Design 2024","url":"https://www.sccm.org/clinical-resources/guidelines/guidelines/guideline-on-adult-icu-design-2024"}]},
      "code": 46
     }
    ]
@@ -1958,7 +1985,7 @@
    "rules": [
      { "id": "patio-by-choice", "tier": "access", "sets": { "patio": "off" }, "because": "A patio stays your own choice. Its notes cover the pressure, structure and fall-safety questions." },
      { "id": "less-on-the-floor", "tier": "access", "when": { "mobility": ["aid", "wheelchair", "assistance"] }, "sets": { "seating": "chairs" }, "because": "The larger sofa-bed is left out, so less stands on the floor. The route through the room hasn't been measured." },
-     { "id": "seat-for-visitors", "tier": "comfort", "when": [{ "children": ["yes", "sometimes"] }, { "sensory": ["company"] }], "sets": { "seating": "sofa" }, "because": "A sofa-bed gives visitors somewhere to stay." },
+     { "id": "seat-for-visitors", "tier": "comfort", "when": [{ "children": ["yes", "sometimes"] }, { "sensory": ["company"] }], "sets": { "seating": "sofa" }, "because": "A sofa-bed seats two visitors side by side." },
      { "id": "lower-stimulation", "tier": "comfort", "when": { "sensory": ["quiet"] }, "sets": { "scheme": "cove", "temperature": "k3000", "tvplay": "off", "aquarium": "none" }, "because": "Softer, warmer light and nothing moving on a screen, for a quieter room." },
      { "id": "clear-cues", "tier": "comfort", "when": { "sensory": ["routine"] }, "sets": { "nightlight": "on" }, "because": "A low night light keeps the room easy to read after dark." },
      { "id": "longer-stay", "tier": "comfort", "when": [{ "stay": ["long"] }, { "patientType": ["longstay"] }], "sets": { "wardrobeFinish": "warm" }, "because": "A warmer wardrobe finish for a longer stay." }
