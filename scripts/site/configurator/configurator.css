@@ -643,6 +643,25 @@ dialog[open]::backdrop { transition: opacity var(--t-enter) var(--ease-out); }
   .patient-bar .patient-screens { display: none; }
 }
 
+/* Small phones (under 360 px wide) and phones held sideways (under 500 px tall): the bars above wrap into five or six rows
+   and cover half the room. Here the modes are one row that scrolls sideways, and the patient's state and the explore
+   buttons share another, so every button is still one tap away; a button cut off at the edge shows there is more. Emergency
+   and "Medical alarms always stay on" keep a row of their own and never scroll out of sight. A 390 px phone, a tablet and a
+   laptop don't match this, and keep the layouts above. */
+@media (max-width: 359px), (max-height: 500px) {
+  .mode-title { display: none; }
+  .hud { gap: 6px; }
+  .mode-bar { gap: 4px 6px; padding: 4px; }
+  #modeBar { max-width: 100%; } /* else it takes the whole row of modes as its width, and the row has nothing to scroll in */
+  .mode-bar button { min-height: 40px; }
+  #modeBar .mode-seg, .hud-row { display: flex; flex: 1 1 100%; flex-wrap: nowrap; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+  #modeBar .mode-seg::-webkit-scrollbar, .hud-row::-webkit-scrollbar { display: none; }
+  #modeBar .mode-seg button, .hud-row button { flex: none; padding: 6px 10px; white-space: nowrap; }
+  .hud-row { gap: 6px; padding-bottom: 6px; } /* room for the buttons' shadow, which the scrolling row would clip */
+  .hud-row > *, .explore-row { flex: none; flex-wrap: nowrap; }
+  .alarm-chip { white-space: nowrap; font-size: 11px; padding: 4px 8px; }
+}
+
 /* ---------------------------------------------------------------- the panel in step with the room
    The room's theme colours the panel: main.js puts the theme on <body data-look>, and each look swaps the accent and the
    page's tint. Calm Clinical and a custom room keep the site's teal. Every accent here keeps 4.5:1 as text on the panel with

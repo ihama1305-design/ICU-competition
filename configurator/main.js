@@ -981,6 +981,12 @@ $("modeBar").addEventListener("click", e => {
   if (b) { endCompare(); modes.set(b.dataset.mode); }
 });
 $("leaveEmergency").addEventListener("click", () => modes.exitEmergency());
+// On a small or sideways phone the modes, and the patient's state with the explore buttons, are rows that scroll sideways
+// (configurator.css). A browser scrolls a focused button into view only when it's wholly hidden, so one half off the edge
+// stayed half off: bring it all the way in. Where the row doesn't scroll, this does nothing.
+for (const row of [$("modeBar").querySelector(".mode-seg"), document.querySelector(".hud-row")]) {
+  row.addEventListener("focusin", e => { if (row.scrollWidth > row.clientWidth) e.target.scrollIntoView({ block: "nearest", inline: "nearest" }); });
+}
 
 // ---------------------------------------------------------------- Cleaning mode (cleaning-data.js)
 // For a room between patients: the patient figure goes, the checklist comes up, and each step lights what it covers in

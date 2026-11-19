@@ -3364,7 +3364,7 @@ with sync_playwright() as p:
     # ---------------------------------------------------------------- a script that can't load says so
     ctx = b.new_context(viewport={"width": 1100, "height": 600})
     pg = ctx.new_page()
-    pg.route("**/three.module.js", lambda r: r.abort())
+    pg.route("**/three.module*.js", lambda r: r.abort())
     pg.goto(URL)
     pg.wait_for_function("window.__configErrors.length > 0", timeout=60000)
     check("could not be loaded" in pg.inner_text("#load"), "if Three.js can't be fetched, the page says so instead of loading for ever")
@@ -3398,7 +3398,7 @@ with sync_playwright() as p:
         ctx.add_init_script(init)
         pg = ctx.new_page()
         if what == "no import maps":
-            pg.route("**/three.module.js", lambda r: r.abort())  # this Chromium has import maps: make "three" fail as it would without them
+            pg.route("**/three.module*.js", lambda r: r.abort())  # this Chromium has import maps: make "three" fail as it would without them
         pg.goto(URL)
         pg.wait_for_function("window.__cantDraw", timeout=60000)
         pg.wait_for_timeout(2000)  # long enough for main.js to have failed, or to have hidden the message by mistake
