@@ -129,6 +129,40 @@ const screen = (w, h, texture, id) => {
 /** The screens' drawing tools, for wall.js. */
 export const PAINT = { simulated, heading, line, trace, INK, DIM, BG };
 
+// ---------------------------------------------------------------- the ceiling tray's rounded outline
+
+export const TRAY_RADIUS = 0.36, TRAY_BAND = 0.08, TRAY_STEPS = 6; // the corners' radius, the border's width, and the straight pieces in a corner
+/** A polygon moved in from its edges by `d`, corners kept sharp. Works for any polygon that turns one way. */
+function inset(pts, d) {
+  if (!d) return pts.map(p => [...p]);
+  const n = pts.length, cx = pts.reduce((s, p) => s + p[0], 0) / n, cy = pts.reduce((s, p) => s + p[1], 0) / n;
+  const inward = pts.map((p, i) => {
+    const [ax, ay] = p, [bx, by] = pts[(i + 1) % n], len = Math.hypot(bx - ax, by - ay), nx = -(by - ay) / len, ny = (bx - ax) / len;
+    return nx * (cx - (ax + bx) / 2) + ny * (cy - (ay + by) / 2) < 0 ? [-nx, -ny] : [nx, ny];
+  });
+  return pts.map(([x, y], i) => {
+    const a = inward[(i + n - 1) % n], b = inward[i], k = d / (1 + a[0] * b[0] + a[1] * b[1]);
+    return [x + (a[0] + b[0]) * k, y + (a[1] + b[1]) * k];
+  });
+}
+/** The same polygon with each corner turned into an arc of radius `r`, in `steps` straight pieces: steps + 1 points a corner. */
+export function roundedOutline(pts, r, steps = TRAY_STEPS) {
+  const out = [], n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], a = pts[(i + n - 1) % n], b = pts[(i + 1) % n];
+    const la = Math.hypot(a[0] - p[0], a[1] - p[1]), lb = Math.hypot(b[0] - p[0], b[1] - p[1]);
+    const ua = [(a[0] - p[0]) / la, (a[1] - p[1]) / la], ub = [(b[0] - p[0]) / lb, (b[1] - p[1]) / lb];
+    const half = Math.acos(Math.max(-1, Math.min(1, ua[0] * ub[0] + ua[1] * ub[1]))) / 2; // half the corner's angle
+    const t = Math.min(r / Math.tan(half), la * 0.45, lb * 0.45), rr = t * Math.tan(half); // how far along each edge the arc starts
+    const bl = Math.hypot(ua[0] + ub[0], ua[1] + ub[1]), c = [p[0] + ((ua[0] + ub[0]) / bl) * (rr / Math.sin(half)), p[1] + ((ua[1] + ub[1]) / bl) * (rr / Math.sin(half))];
+    const from = Math.atan2(p[1] + ua[1] * t - c[1], p[0] + ua[0] * t - c[0]);
+    let sweep = Math.atan2(p[1] + ub[1] * t - c[1], p[0] + ub[0] * t - c[0]) - from;
+    if (sweep > Math.PI) sweep -= 2 * Math.PI; else if (sweep < -Math.PI) sweep += 2 * Math.PI;
+    for (let k = 0; k <= steps; k++) out.push([c[0] + rr * Math.cos(from + (sweep * k) / steps), c[1] + rr * Math.sin(from + (sweep * k) / steps)]);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- the builders (addons.js adds them to its own)
 
 export const FITTINGS = {
@@ -139,48 +173,47 @@ export const FITTINGS = {
    */
   ceilingTray(room) {
     const f = FIT[room.label].tray, H = room.meta.ceiling, g = new THREE.Group();
-    const shape = new THREE.Shape(f.poly.map(([x, y]) => new THREE.Vector2(x, y)));
+    // the outline, and the same outline a distance in from the edge, each with its corners rounded: measured in from the
+    // sharp outline first and rounded after, so every ring has the same number of points and they pair up corner for corner
+    const ring = d => roundedOutline(inset(f.poly, d), Math.max(0.02, TRAY_RADIUS - d));
+    const shapeOf = (outer, inner) => {
+      const s = new THREE.Shape(outer.map(([x, y]) => new THREE.Vector2(x, y)));
+      if (inner) s.holes.push(new THREE.Path(inner.map(([x, y]) => new THREE.Vector2(x, y))));
+      return s;
+    };
+    // a shape's x, y are plan x, y: laid face down at the ceiling, its depth hanging below
+    const hung = (mesh, top) => { mesh.rotation.x = Math.PI / 2; mesh.scale.y = -1; mesh.position.y = top; return mesh; };
     // the tiles: one surface, with a 60 cm grid drawn on it
     const grid = document.createElement("canvas"); grid.width = grid.height = 128;
     const gg = grid.getContext("2d"); gg.fillStyle = "#eef0ee"; gg.fillRect(0, 0, 128, 128); gg.fillStyle = "#c9cdcb"; gg.fillRect(0, 0, 128, 3); gg.fillRect(0, 0, 3, 128);
     const tex = new THREE.CanvasTexture(grid); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1 / 0.6, 1 / 0.6); tex.colorSpace = THREE.SRGBColorSpace;
-    const tiles = new THREE.Mesh(new THREE.ShapeGeometry(shape), std("#ffffff", 0.85, { map: tex }));
-    tiles.rotation.x = Math.PI / 2; tiles.scale.y = -1; // the shape's x, y are plan x, y: lay it face down at the ceiling
-    tiles.position.y = H - 0.004;
+    const tiles = hung(new THREE.Mesh(new THREE.ShapeGeometry(shapeOf(ring(0))), std("#ffffff", 0.85, { map: tex })), H - 0.004);
     tiles.receiveShadow = true;
     g.add(tiles);
-    // the border: a band 8 cm wide, 4 cm down from the ceiling, with the light line on its inner face
-    const band = std("#f3f3f1", 0.5), lit = room.fixtures?.strip || new THREE.MeshBasicMaterial({ color: "#f4f8ff" });
-    const pts = f.poly, cx = pts.reduce((s, p) => s + p[0], 0) / pts.length, cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
-    for (let i = 0; i < pts.length; i++) {
-      const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length], len = Math.hypot(bx - ax, by - ay);
-      let nx = -(by - ay) / len, ny = (bx - ax) / len; // pointing in, toward the tray's middle
-      if (nx * (cx - (ax + bx) / 2) + ny * (cy - (ay + by) / 2) < 0) { nx = -nx; ny = -ny; }
-      const mx = (ax + bx) / 2 + nx * 0.04, my = (ay + by) / 2 + ny * 0.04, rot = Math.atan2(by - ay, bx - ax);
-      const b = box(len + 0.08, 0.04, 0.08, band); b.position.copy(W2T(mx, my, H - 0.02)); b.rotation.y = rot; b.castShadow = false;
-      const l = new THREE.Mesh(new THREE.BoxGeometry(len, 0.012, 0.006), lit); l.position.copy(W2T(mx + nx * 0.043, my + ny * 0.043, H - 0.03)); l.rotation.y = rot;
-      g.add(b, l);
-    }
+    // the border: a band with rounded corners, 4 cm down from the ceiling, and the line of light on its inner face. Each is
+    // one mesh, drawn once, made of a short piece for every step round the outline. The layout check is given each piece's
+    // own box (main.js layoutInputs): the one box round the whole border is as big as the tray, with the pendant standing in it
+    const lit = room.fixtures?.strip || new THREE.MeshBasicMaterial({ color: "#f4f8ff" }), bandMat = std("#f3f3f1", 0.5);
+    const border = (outer, inner, depth, mat, top) => {
+      const pieces = outer.map((p, i) => { const j = (i + 1) % outer.length; return [p, outer[j], inner[j], inner[i]]; });
+      const m = hung(new THREE.Mesh(new THREE.ExtrudeGeometry(pieces.map(q => shapeOf(q)), { depth, bevelEnabled: false }), mat), top);
+      m.receiveShadow = true;
+      m.userData.layoutBoxes = pieces.map(q => [Math.min(...q.map(c => c[0])), Math.min(...q.map(c => c[1])), top - depth, Math.max(...q.map(c => c[0])), Math.max(...q.map(c => c[1])), top].map(v => +v.toFixed(3)));
+      g.add(m);
+    };
+    border(ring(0), ring(TRAY_BAND), 0.04, bandMat, H);
+    border(ring(TRAY_BAND), ring(TRAY_BAND + 0.012), 0.012, lit, H - 0.024);
     // the line's halo on the tiles: bright at the border, gone half a metre in. Drawn, as the cove's is (lights.js), because
-    // real-time light doesn't bounce; it adds no light to the room. `inset` moves the outline in, keeping its corners sharp.
-    const inward = pts.map((p, i) => {
-      const [ax, ay] = p, [bx, by] = pts[(i + 1) % pts.length], len = Math.hypot(bx - ax, by - ay);
-      const n = [-(by - ay) / len, (bx - ax) / len];
-      return n[0] * (cx - (ax + bx) / 2) + n[1] * (cy - (ay + by) / 2) < 0 ? [-n[0], -n[1]] : n;
-    });
-    const inset = d => pts.map(([x, y], i) => {
-      const a = inward[(i + pts.length - 1) % pts.length], b = inward[i], k = d / (1 + a[0] * b[0] + a[1] * b[1]);
-      return [x + (a[0] + b[0]) * k, y + (a[1] + b[1]) * k];
-    });
-    const rim = inset(0.085), fade = inset(0.6), halo = new GlowGeometry(), up = ([x, y]) => { const v = W2T(x, y, H - 0.007); return [v.x, v.y, v.z]; };
-    for (let i = 0; i < pts.length; i++) { const j = (i + 1) % pts.length; halo.quad(up(rim[i]), up(rim[j]), up(fade[j]), up(fade[i]), 1, 1, 0, 0); }
+    // real-time light doesn't bounce; it adds no light to the room
+    const rim = ring(TRAY_BAND + 0.015), fade = ring(0.6), halo = new GlowGeometry(), up = ([x, y]) => { const v = W2T(x, y, H - 0.007); return [v.x, v.y, v.z]; };
+    for (let i = 0; i < rim.length; i++) { const j = (i + 1) % rim.length; halo.quad(up(rim[i]), up(rim[j]), up(fade[j]), up(fade[i]), 1, 1, 0, 0); }
     const glow = new THREE.Mesh(halo.build(), room.fixtures?.trayGlow || glowMaterial());
     glow.renderOrder = 1;
     g.add(glow);
     const disc = new THREE.CylinderGeometry(0.04, 0.04, 0.01, 16);
     for (const [x, y] of f.downlights) { const d = new THREE.Mesh(disc, lit); d.position.copy(W2T(x, y, H - 0.009)); g.add(d); }
     room.ceiling.push(g); // shown and hidden with the ceiling (stage.refreshCeiling)
-    return tag(g, "Ceiling tray", "A shallow tray over the bed, with a line of light round its edge.");
+    return tag(g, "Ceiling tray", "A shallow tray over the bed, with a rounded border and a line of light round its edge.");
   },
 
   /**
@@ -221,6 +254,7 @@ export const FITTINGS = {
   workstation(room) {
     const f = FIT[room.label].desk, w = f.x[1] - f.x[0], D = 0.5, g = onWall(new THREE.Group(), f, 0);
     const white = WHITE(), timber = std("#ffffff", 0.55, { map: drawn("oak", 1, 1) }), dark = std("#262c30", 0.45), plinth = std("#9aa1a4", 0.6);
+    timber.name = "joinery_front"; // takes the wardrobe's finish, so the room's storage is one set of joinery (addons.js setAddonLook)
     const top = rounded(w, D, 0.03, 0.06, white); top.rotation.x = -Math.PI / 2; top.position.set(0, 0.73, D / 2); // its rounded corners face the room
     const tw = w * 0.42, supplies = box(tw, 0.62, D - 0.04, timber, -w / 2 + tw / 2 + 0.01, 0.42, (D - 0.04) / 2), ppe = box(w - tw - 0.03, 0.62, D - 0.04, white, w / 2 - (w - tw - 0.03) / 2 - 0.01, 0.42, (D - 0.04) / 2);
     supplies.name = "ws_supplies"; ppe.name = "ws_ppe"; // the two cupboards the supply locator lights (wall-data.js SUPPLIES)
@@ -248,6 +282,7 @@ export const FITTINGS = {
     const f = FIT[room.label].cabinet, w = f.x[1] - f.x[0], D = 0.45, g = onWall(new THREE.Group(), f, 0);
     const top = rounded(w, D, 0.025, 0.05, WHITE()); top.rotation.x = -Math.PI / 2; top.position.set(0, 0.7, D / 2);
     const timber = std("#ffffff", 0.55, { map: drawn("oak", 1, 1) });
+    timber.name = "joinery_front"; // the wardrobe's finish, as on the desk
     g.add(top, box(w - 0.02, 0.6, D - 0.03, WHITE(), 0, 0.4, (D - 0.03) / 2), box(w - 0.04, 0.4, 0.012, timber, 0, 0.355, D - 0.024),
       box(w - 0.04, 0.12, 0.012, timber, 0, 0.62, D - 0.024), box(w - 0.08, 0.1, D - 0.08, std("#9aa1a4", 0.6), 0, 0.05, (D - 0.08) / 2));
     return tag(g, "Bedside cabinet", "A cabinet at the bed head for the patient's things.");

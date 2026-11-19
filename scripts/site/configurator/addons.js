@@ -8,6 +8,7 @@ import { LINES } from "./bed.js";
 import { FITTINGS } from "./fittings.js";
 import { INTEL } from "./intel.js";
 import { CABLES } from "./cables.js";
+import { placeCompactChair, curtainTrack as buildCurtainTrack } from "./chair.js";
 
 const random = seed => { let a = seed >>> 0; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; }; };
 
@@ -739,6 +740,19 @@ Object.assign(BUILD, {
     return a;
   },
 
+  /**
+   * The compact visitor chair in its bay by the window, in place of the room model's recliner and visitor chair (chair.js).
+   * The same chair in every theme: its upholstery follows the Upholstery and curtain choice.
+   */
+  compactChair(room) {
+    return placeCompactChair(room);
+  },
+
+  /** The privacy curtain's track, set flush into the ceiling along the glazed front (chair.js). Shown with the curtain. */
+  curtainTrack(room) {
+    return buildCurtainTrack(room);
+  },
+
   /** A sofa-bed against the family-zone wall. Its colour follows the upholstery choice. */
   sofa(room) {
     const g = placeAt(new THREE.Group(), room.anchors.seating), cloth = std("#5f8f8a", 0.95);
@@ -879,7 +893,6 @@ export function ensureParts(room, id) {
 /** Apply scaled, reusable surface looks to the added furniture. */
 export function setAddonLook(room, id, look) {
   const addon = room.addons?.[id];
-  if (!addon) return;
   const swap = (mat, texture, repeats, tint = "#ffffff") => {
     mat.map?.dispose();
     mat.map = drawn(texture, repeats[0], repeats[1]);
@@ -887,10 +900,17 @@ export function setAddonLook(room, id, look) {
     mat.needsUpdate = true;
   };
   if (id === "wardrobe") {
-    const map = { oak: ["oak", "#ffffff"], walnut: ["wood", "#ffffff"], linen: ["fabric", "#f1ece0"] }[look];
+    const map = { oak: ["oak", "#ffffff"], walnut: ["wood", "#ffffff"], linen: ["fabric", "#f1ece0"], pearl: ["matt", "#e9eef1"], stone: ["matt", "#d8d5cd"], shell: ["matt", "#efe8df"] }[look];
     if (!map) return;
     // the doors, end panels, fillers and upper panel share one material, so they change together
-    swap((addon.userData.faces || addon.userData.doors)[0].material, map[0], [2.5, 2.2], map[1]);
+    if (addon) swap((addon.userData.faces || addon.userData.doors)[0].material, map[0], [2.5, 2.2], map[1]);
+    // the desk's and the bedside cabinet's fronts take the same finish (fittings.js), so the room's storage reads as one
+    // set of joinery; they follow it whether or not the wardrobe itself is in the room
+    for (const other of ["workstation", "bedsideCabinet"]) {
+      room.addons?.[other]?.traverse(n => { if (n.isMesh && n.material?.name === "joinery_front" && n.material.userData.look !== look) { swap(n.material, map[0], [1, 1], map[1]); n.material.userData.look = look; } });
+    }
+  } else if (!addon) {
+    return;
   } else if (id === "bathroom") {
     const map = { stone: ["slate", "#ffffff"], terrazzo: ["terrazzo", "#ffffff"], sea: ["sand", "#a9cbd0"] }[look];
     if (!map) return;

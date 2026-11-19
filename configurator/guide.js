@@ -100,8 +100,16 @@ export const FUTURE_STEPS = [
     text: "Today's room, typical but not every ICU, then the new one piece by piece: different in how it works, not only how it looks.",
     // the pieces arrive one after another within the step: its reading time starts once the last has landed
     run: async (a, stale) => {
-      a.mode("standard"); a.theme("calm"); a.camera("across");
-      for (const piece of [["paint", "sky", "feature", "ash", "floor", "slate", "scheme", "circadian", "blinds", "half"], ["ceilingTray", "on"], ["staffPanel", "on", "patientWall", "on", "tvplay", "orientation"], ["workstation", "on", "bedsideCabinet", "on"], ["scene", "forest"]]) {
+      // today's room is every choice at its default: no theme is that any more, since every theme shares the new base
+      a.mode("standard"); a.today(); a.camera("across");
+      const pieces = [
+        ["paint", "pearl", "feature", "arcMist", "floor", "mist", "accent", "mist", "wardrobeFinish", "pearl", "wardrobeTrim", "cyan", "scheme", "circadian", "blinds", "half"],
+        ["ceilingTray", "on", "cableChannels", "on"],
+        ["staffPanel", "on", "patientWall", "on", "tvplay", "orientation"],
+        ["workstation", "on", "bedsideCabinet", "on", "seating", "compact"],
+        ["scene", "forest"],
+      ];
+      for (const piece of pieces) {
         await a.wait(1600);
         if (stale()) return;
         for (let i = 0; i < piece.length; i += 2) a.option(piece[i], piece[i + 1]);

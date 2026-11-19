@@ -107,7 +107,61 @@ function drawLattice(g, s, back, wood, line) {
   g.stroke();
 }
 
+/**
+ * A flat, sealed colour panel with one soft arc across it: a wide band a shade lighter than the panel, edged by a thin line.
+ * Printed, with no relief to hold dust. `base`, `band` and `line` are the three colours.
+ */
+function drawArc(g, w, h, { base, band, line }) {
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  // the arc sweeps up from the floor at one side to the top at the other: an ellipse centred off the panel's lower corner
+  const cx = w * 1.02, cy = h * 1.04;
+  g.fillStyle = band;
+  g.beginPath(); g.ellipse(cx, cy, w * 0.86, h * 0.9, 0, 0, Math.PI * 2); g.ellipse(cx, cy, w * 0.6, h * 0.66, 0, 0, Math.PI * 2, true); g.fill();
+  g.strokeStyle = line; g.lineWidth = Math.max(3, w * 0.006);
+  g.beginPath(); g.ellipse(cx, cy, w * 0.86, h * 0.9, 0, 0, Math.PI * 2); g.stroke();
+}
+
+/** Dune lines in close sand tones: long, slow contours, flat and printed, with nothing raised. */
+function drawDuneLines(g, w, h) {
+  g.fillStyle = "#efe4d0"; g.fillRect(0, 0, w, h);
+  const tones = ["#e6d7bd", "#dcc8a6", "#e9dcc5", "#d4bd97", "#e2d1b3", "#cdb38a", "#dfcdae"];
+  tones.forEach((tone, i) => {
+    const y0 = h * (0.16 + i * 0.12), amp = h * (0.05 + 0.012 * (i % 3)), freq = 0.8 + (i % 4) * 0.35, phase = i * 1.7;
+    g.fillStyle = tone;
+    g.beginPath(); g.moveTo(0, h);
+    for (let x = 0; x <= w; x += 8) { const t = x / w; g.lineTo(x, y0 + amp * Math.sin(t * Math.PI * 2 * freq + phase) + amp * 0.4 * Math.sin(t * Math.PI * 3.1 * freq + phase * 2.3)); }
+    g.lineTo(w, h); g.fill();
+    // a fine lighter line along each crest, as light catches a dune's edge
+    g.strokeStyle = "rgba(255, 250, 238, 0.55)"; g.lineWidth = 2;
+    g.beginPath();
+    for (let x = 0; x <= w; x += 8) { const t = x / w, y = y0 + amp * Math.sin(t * Math.PI * 2 * freq + phase) + amp * 0.4 * Math.sin(t * Math.PI * 3.1 * freq + phase * 2.3); g[x ? "lineTo" : "moveTo"](x, y); }
+    g.stroke();
+  });
+}
+
+/** A plain sealed floor or panel: one colour, faintly mottled so it doesn't read as flat paint. */
+function drawPlain(g, w, h, base, seed, depth = 0.05) {
+  const rnd = random(seed);
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * w, y = rnd() * h, r = 60 + rnd() * 160, tone = rnd() > 0.5 ? "255,255,255" : "40,45,50";
+    const c = g.createRadialGradient(x, y, 0, x, y, r);
+    c.addColorStop(0, `rgba(${tone},${depth})`); c.addColorStop(1, `rgba(${tone},0)`);
+    g.fillStyle = c; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  speckle(g, w, h, rnd, 3500, ["rgba(255,255,255,0.05)", "rgba(30,35,40,0.04)"], 1, 2);
+}
+
 const DRAW = {
+  // the four themes' finishes: a sealed colour panel with an arc, a flat dune-line print, a matt joinery face and three pale floors
+  arcMist: () => texture(1024, 1024, (g, w, h) => drawArc(g, w, h, { base: "#d3dfe6", band: "#e9f1f5", line: "#70d7e8" })),
+  arcSage: () => texture(1024, 1024, (g, w, h) => drawArc(g, w, h, { base: "#a5b49e", band: "#bcc8b5", line: "#dfe6d9" })),
+  arcMauve: () => texture(1024, 1024, (g, w, h) => drawArc(g, w, h, { base: "#ada0b6", band: "#c1b6c9", line: "#e6dfea" })),
+  duneLines: () => texture(1400, 1200, drawDuneLines),
+  matt: () => texture(512, 512, (g, w, h) => drawPlain(g, w, h, "#ffffff", 29, 0.035)),
+  mist: () => texture(1024, 1024, (g, w, h) => drawPlain(g, w, h, "#c3ccd2", 31)),
+  stone: () => texture(1024, 1024, (g, w, h) => drawPlain(g, w, h, "#cbc6bc", 37)),
+  dune: () => texture(1024, 1024, (g, w, h) => drawPlain(g, w, h, "#dccfb8", 41)),
   wood: () => texture(1024, 1024, (g, w, h) => drawPlanks(g, w, h, { base: "#b9875a", dark: "rgba(50, 28, 12, 0.5)", planks: 6, vertical: true, seed: 3 })),
   // the same planks in a pale, greyed timber: grain without the orange, for the Future ICU's cooler room
   ash: () => texture(1024, 1024, (g, w, h) => drawPlanks(g, w, h, { base: "#b3aca2", dark: "rgba(40, 38, 36, 0.4)", grain: "62, 58, 54", planks: 6, vertical: true, seed: 3 })),
@@ -190,12 +244,20 @@ const LOOKS = {
     dunes: { map: "dunes", roughness: 0.75 },
     sea: { map: "sea", roughness: 0.75 },
     mashrabiya: { map: "mashrabiya", bump: "mashrabiya_bump", tile: [0.45, 0.45], roughness: 0.6 },
+    // flat and sealed, each stretched over the whole panel so its arc or its dune lines read as one drawing
+    arcMist: { map: "arcMist", roughness: 0.55 },
+    arcSage: { map: "arcSage", roughness: 0.6 },
+    arcMauve: { map: "arcMauve", roughness: 0.6 },
+    duneLines: { map: "duneLines", roughness: 0.65 },
   },
   floor: {
     sand: { map: "sand", tile: [1.2, 1.2], roughness: 0.42 },
     oak: { map: "oak", tile: [2.4, 2.4], roughness: 0.46 },
     terrazzo: { map: "terrazzo", tile: [1.1, 1.1], roughness: 0.3 },
     slate: { map: "slate", tile: [1.6, 1.6], roughness: 0.5, bounce: "#b3bcc4" }, // a grey floor sends grey light up at the ceiling, not sand
+    mist: { map: "mist", tile: [2.4, 2.4], roughness: 0.42, bounce: "#cdd4d9" }, // pale and cool: its bounce is too
+    stone: { map: "stone", tile: [2.4, 2.4], roughness: 0.44, bounce: "#d3cec5" },
+    dune: { map: "dune", tile: [2.4, 2.4], roughness: 0.44 },
   },
 };
 

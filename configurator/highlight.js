@@ -22,7 +22,7 @@ export class Highlight {
   show(key, roots, strength = "strong") {
     this.clear(key);
     const meshes = [], added = [], m = LOOKS[strength];
-    for (const r of roots) r.traverse(n => { if (n.isMesh && !n.isInstancedMesh && !n.userData.outline && n.geometry?.attributes.position) meshes.push(n); });
+    for (const r of roots) r.traverse(n => { if (n.isMesh && !n.isInstancedMesh && !n.userData.outline && !n.userData.notSolid && n.geometry?.attributes.position) meshes.push(n); }); // not a drawn shadow on the floor (chair.js)
     for (const n of meshes) {
       const fill = new THREE.Mesh(n.geometry, m.fill), line = new THREE.LineSegments(edgesOf(n.geometry), m.line);
       for (const o of [fill, line]) {

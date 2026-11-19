@@ -4,6 +4,7 @@
 import * as THREE from "three";
 import { W2T } from "./stage.js";
 import { inside } from "./cameras.js";
+import { compactChair } from "./chair.js";
 
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 export const MAX_PLACED = 16;
@@ -153,14 +154,9 @@ export const ITEMS = [
   },
   {
     id: "chair", code: "f", label: "Compact family chair", on: "floor",
-    description: "A compact, wipe-clean chair for a visitor, small enough to move aside for care.",
-    build() {
-      const g = new THREE.Group(), fabric = mat("#6f9c9a", 0.8), legs = mat("#7a6a58", 0.6);
-      g.add(box(0.52, 0.1, 0.48, fabric, 0, 0.44, 0), box(0.52, 0.48, 0.09, fabric, 0, 0.73, -0.22));
-      g.add(box(0.07, 0.2, 0.46, fabric, -0.29, 0.56, 0), box(0.07, 0.2, 0.46, fabric, 0.29, 0.56, 0));
-      for (const [x, z] of [[-0.23, -0.2], [0.23, -0.2], [-0.23, 0.2], [0.23, 0.2]]) g.add(box(0.04, 0.4, 0.04, legs, x, 0.2, z));
-      return g;
-    },
+    description: "A second compact chair for a visitor, the same design as the room's own (chair.js), small enough to move aside for care. A proposal, not an approved product.",
+    // the room's own compact chair, without its drawn floor shadow: a placed item's size is read from its model
+    build() { return compactChair({ shadow: false, colour: "#6f9c9a" }); },
   },
 ];
 export const itemById = id => ITEMS.find(i => i.id === id);
