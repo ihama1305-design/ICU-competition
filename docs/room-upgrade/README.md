@@ -1,6 +1,6 @@
 # Room upgrade: one clinical base, four themes, a compact chair
 
-Implementation note for review, written 18 to 19 November 2026. Branch `room/four-themes`, cut from `main` at `586f02c`. Nothing is pushed, merged or deployed.
+Implementation note for review, written 18 to 19 November 2026. Branch `room/four-themes`, cut from `main` at `586f02c`. Merged to `main` on 19 November 2026 as #97 (`7809df1`), whose files are those of the tested commit `7633346`, and published by GitHub Pages.
 
 The brief's snapshot was commit `f6d2af5`; `main` had moved on since (the existing floor came off the site, and the home page gained its story). This work is on current `main`, so the walkthrough and ventilation pages the brief lists are no longer in the tree.
 
@@ -45,7 +45,7 @@ The four-panel board was looked at directly. It is a concept illustration with n
 
 ## Decisions made without asking
 
-These were judgement calls. Each is easy to reverse, and each is flagged here so it can be.
+These were judgement calls, flagged here so each could be reversed. Hassan went through items 2 to 7 on 19 November 2026 and kept every one as built, with the Family zone view left pointing at the alcove by the door.
 
 1. **A link with no code opens today's room, as before** (Hassan's decision, 19 November 2026). For a while on 18 November this build opened on Calm Clinical, so that a first visit saw the proposal; that is reversed. Today's room is every option at its default, the room Reset the room and Before / after also show, and old links are untouched. Since all four themes carry the shared clinical base, no theme is today's room: none is pressed at the start, and a theme button shows the proposal.
 2. **The compact chair replaces both the recliner and the visitor chair** while it is chosen. The recliner stood 0.69 m² into a keep-clear area in this model. A chair for getting the patient out of bed is clinical equipment and isn't drawn; the card says so.
@@ -110,16 +110,16 @@ Then open `http://localhost:8000/configurator/?room=W3`. It starts W3 on today's
 
 Presentation links for W3, one per theme, from the view across the room:
 
-| Theme | Local | After publication |
+| Theme | Local | Live site |
 |---|---|---|
 | Future ICU | `http://localhost:8000/configurator/#c=11930a7404300000100020240000000350010000000111110011` | `https://ihama1305-design.github.io/ICU-competition/configurator/#c=11930a7404300000100020240000000350010000000111110011` |
 | Calm Clinical | `http://localhost:8000/configurator/#c=1193008501200000000000250000000430010000000111110001` | `https://ihama1305-design.github.io/ICU-competition/configurator/#c=1193008501200000000000250000000430010000000111110001` |
 | Desert Sanctuary | `http://localhost:8000/configurator/#c=11930b9601110000001000260000000010010000000111110001` | `https://ihama1305-design.github.io/ICU-competition/configurator/#c=11930b9601110000001000260000000010010000000111110001` |
 | Family Suite | `http://localhost:8000/configurator/#c=11930ca101010000000210270000000540010000000111110001` | `https://ihama1305-design.github.io/ICU-competition/configurator/#c=11930ca101010000000210270000000540010000000111110001` |
 
-These links work only once this branch is published: the live site doesn't have the new choices yet.
+The live site has had the new choices since #97 was merged.
 
-To check before publishing:
+To check a change before publishing:
 
 ```bash
 node scripts/14_check_features.mjs && node scripts/12_check_pacs_state.mjs
