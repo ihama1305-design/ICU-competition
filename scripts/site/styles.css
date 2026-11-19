@@ -266,6 +266,14 @@ kbd { font: 0.8em var(--mono); padding: 1px 6px; border: 1px solid var(--border-
 .files span { color: var(--muted); font-size: 0.95rem; }
 @media (min-width: 800px) { .files { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+/* team: one entry per person, two to a row on a wide screen */
+.people { list-style: none; margin: 0; padding: 0; display: grid; gap: 0 clamp(24px, 4vw, 48px); }
+.people li { display: grid; gap: 4px; padding: 18px 0; border-top: 1px solid var(--border); min-width: 0; }
+.people .role { font-size: 0.8rem; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; color: var(--teal); }
+.people .sid { color: var(--muted); }
+.people .sid span { font-family: var(--mono); font-size: 0.95em; color: var(--text); font-variant-numeric: tabular-nums; }
+@media (min-width: 800px) { .people { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* footer */
 .foot { background: var(--teal-soft); padding-block: 32px; font-size: 0.93rem; color: var(--muted); }
 .foot .wrap { display: grid; gap: 10px; }
