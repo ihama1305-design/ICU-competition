@@ -1316,7 +1316,11 @@ with sync_playwright() as p:
     floor = pg.evaluate("""[...document.querySelectorAll('a[href], img[src], source[srcset]')].map(e => e.getAttribute('href') || e.getAttribute('src') || e.getAttribute('srcset'))
       .filter(u => /^(viewer|ventilation|downloads|renders|backups)\\//.test(u) || /\\/tree\\/main\\/renders/.test(u) || /assets\\/(model\\/(icu|vents)|img\\/(aerial|plan|corridor|observation|bedside|walk-))/.test(u))""")
     check(not floor, f"the home page shows and links to nothing of the existing floor: no walkthrough, plan, renders or downloads {floor[:3]}")
-    check(pg.locator("main > section").count() == 4 and pg.locator("#nav a").count() == 2, "the home page is the story, the comparison, the proposal and the configurator")
+    check(pg.locator("main > section").count() == 5 and pg.locator("#nav a").count() == 3, "the home page is the story, the comparison, the proposal, the configurator and the team")
+    # the competition asks for every team member's name; the lead is named as such (Hassan, 19 November 2026)
+    team = pg.evaluate("[...document.querySelectorAll('#team .people li')].map(li => [li.querySelector('h3').textContent, li.querySelector('.role').textContent, li.querySelector('.sid span').textContent])")
+    check(team == [["Iham Alarydah", "Team lead", "100068674"], ["Mohammed Aljerjawi", "Team member", "100065884"]] and pg.locator("#nav a[href='#team']").count() == 1,
+          f"the home page names the team, its lead first, with each student ID, and the header links to it {team}")
     ctx.close()
     # ---------------------------------------------------------------- Suggest a room: answers to a room, from the data in options.json
     ctx, pg, errs, _, _ = open_page(b, 1000, 640, query="?tier=low")
@@ -3270,7 +3274,7 @@ with sync_playwright() as p:
     check(0 < h["picture"][0] and h["picture"][1] <= h["h"] and h["picture"][1] <= h["action"][0] and h["action"][1] <= h["h"], f"on a phone the first screen shows the room, then the first action {h}")
     pg.click("#menu")
     h = pg.evaluate(home)
-    check(h["expanded"] == "true" and h["onScreen"] == 2 and h["columns"] == 2, f"Menu shows both links on screen, side by side, each tall enough to tap {h}")
+    check(h["expanded"] == "true" and h["onScreen"] == 3 and h["columns"] == 2, f"Menu shows all three links on screen, two to a row, each tall enough to tap {h}")
     pg.keyboard.press("Escape")
     h = pg.evaluate(home)
     check(h["expanded"] == "false" and not h["nav"] and h["focus"] == "menu", f"Esc closes the menu and leaves the keyboard on its button {h}")
@@ -3284,7 +3288,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     pg.goto(URL.replace("configurator/", "index.html"))
     h = pg.evaluate("(() => { const nav = document.getElementById('nav'); return { menu: getComputedStyle(document.getElementById('menu')).display, nav: getComputedStyle(nav).display, links: nav.querySelectorAll('a').length, scrolls: nav.scrollWidth > nav.clientWidth, sideways: document.documentElement.scrollWidth > innerWidth }; })()")
-    check(h["menu"] == "none" and h["nav"] != "none" and h["links"] == 2 and not h["sideways"], f"without scripts the home page keeps its links on screen, with no Menu button that would do nothing {h}")
+    check(h["menu"] == "none" and h["nav"] != "none" and h["links"] == 3 and not h["sideways"], f"without scripts the home page keeps its links on screen, with no Menu button that would do nothing {h}")
     ctx.close()
     # that link opens the configurator straight into the tour
     ctx = b.new_context(viewport={"width": 1280, "height": 800})
