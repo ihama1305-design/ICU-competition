@@ -14,6 +14,18 @@ export const ROUTES = {
   W3: [[14.3, 20.7], [12.9, 20.9], [11.95, 20.75]],
 };
 
+/**
+ * The kinds of floor area, and how Equipment labels draws and names each (clinical.js). Every kind has its own pattern as well as its own colour, and a label in words,
+ * so none is told apart by colour alone. `fill` and `line` are r, g, b.
+ */
+export const ZONE_KINDS = {
+  "keep-clear": { label: "Keep clear for care", fill: [11, 109, 117], line: [11, 109, 117], pattern: "hatch" },
+  route: { label: "Route from the door to the bed", fill: [52, 112, 190], line: [38, 92, 168], pattern: "flow" },
+  door: { label: "Door approach", fill: [196, 124, 20], line: [176, 104, 8], pattern: "dash" },
+  wardrobe: { label: "Reach in front of the wardrobe", fill: [108, 96, 150], line: [92, 80, 138], pattern: "dash" },
+  desk: { label: "Standing room at the desk", fill: [108, 96, 150], line: [92, 80, 138], pattern: "dash" },
+  bay: { label: "Chair bay", fill: [47, 143, 91], line: [36, 122, 76], pattern: "solid" },
+};
 /** Two boxes [x0, y0, z0, x1, y1, z1] overlap by more than `tol` metres on every axis. */
 export const boxesOverlap = (a, b, tol = 0.01) =>
   a[3] - b[0] > tol && b[3] - a[0] > tol && a[4] - b[1] > tol && b[4] - a[1] > tol && a[5] - b[2] > tol && b[5] - a[2] > tol;

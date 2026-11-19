@@ -925,7 +925,11 @@ with sync_playwright() as p:
     # ---------------------------------------------------------------- themes
     ctx, pg, errs, _, _ = open_page(b, 1366, 820)
     data = pg.evaluate("window.__config.options()")
-    check(pg.evaluate("window.__config.currentTheme()") == "calm", "the page starts on Calm Clinical")
+    # the page starts on today's room. Since 18 November every theme shares the new clinical base, so no theme is today's
+    # room, and none is pressed until a person picks one
+    todays = {g["id"]: g["default"] for sec in data["sections"] for g in sec["groups"]}
+    check(pg.evaluate("window.__config.selected()") == todays and pg.evaluate("window.__config.currentTheme()") is None and pg.locator("#themes button[aria-pressed='true']").count() == 0 and "Today's room" in pg.inner_text("#themeNote"),
+          "the page starts on today's room: every default, no theme pressed, and the note says so")
     for room in ROOMS:
         go(pg, room)
         for t in data["themes"]:
@@ -944,8 +948,11 @@ with sync_playwright() as p:
         check(pg.evaluate("window.__config.selected().floor") == "slate" and pg.evaluate("window.__config.currentTheme()") is None,
               f"{room}: an option can still be changed after a theme, and the room then belongs to no theme")
         pg.evaluate("window.__config.theme('calm')")
-    # what's said about the patio, and the patient's view from a Family Suite
+    # what's said about the patio, and the patient's view from a Family Suite. The patio is the visitor's own choice now:
+    # no theme turns it on
     pg.evaluate("window.__config.theme('family')")
+    check(pg.evaluate("window.__config.selected().patio") == "off" and pg.evaluate("window.__config.selected().seating") == "compact", "Family Suite leaves the patio and the sofa-bed to the visitor")
+    pg.evaluate("window.__config.set('patio', 'on')")
     go(pg, "W1")
     pg.evaluate("window.__config.time(window.__config.stops.afternoon); window.__config.camera('window', { instant: true })")
     shot(pg, "w1_patio")
@@ -990,12 +997,12 @@ with sync_playwright() as p:
     im = np.asarray(Image.open(file).convert("RGB"))
     check(dl.value.suggested_filename.endswith(".png") and im.std() > 5, f"Save image downloads a real picture ({dl.value.suggested_filename[:30]}, {im.shape[1]} x {im.shape[0]})")
     pg.click("#closeSummary")
-    pg.evaluate("window.__config.theme('family')")
+    pg.evaluate("window.__config.theme('family'); window.__config.set('patio', 'on')")
     go(pg, "W1")
     pg.click("#openSummary")
     pg.wait_for_selector("#summary[open]")
     text = pg.inner_text("#summary")
-    check("air seal" in text and "fall-safety" in text, "a Family Suite summary in W1 carries the patio's warning and concept notes")
+    check("air seal" in text and "fall-safety" in text, "a Family Suite summary in W1 with a patio carries the patio's warning and concept notes")
     pg.click("#closeSummary")
     go(pg, "W3")
 
@@ -1068,7 +1075,9 @@ with sync_playwright() as p:
     pg.goto("about:blank")
     pg.goto(URL + "?tier=low#c=" + short)
     pg.wait_for_function("window.__configReady === true", timeout=120000)
-    check(pg.evaluate("window.__config.selected().patio") == "off" and pg.evaluate("window.__config.selected().paint") == "sand", "an older, shorter code opens with defaults for the rest")
+    sel = pg.evaluate("window.__config.selected()")
+    check(sel["patio"] == "off" and sel["paint"] == "cream" and sel["seating"] == "chairs" and sel["ceilingTray"] == "off",
+          f"an older, shorter code opens with what it names, Desert Sanctuary's paint, and defaults for the rest: today's seating and no tray, not the theme's {sel['paint'], sel['seating'], sel['ceilingTray']}")
     pg.goto(URL + "?tier=low#c=!!nonsense")
     pg.reload()
     pg.wait_for_function("window.__configReady === true", timeout=120000)
@@ -1087,7 +1096,7 @@ with sync_playwright() as p:
     pg.wait_for_function("window.__configReady === true", timeout=120000)
     sel = pg.evaluate("window.__config.selected()")
     check(all(sel[g["id"]] == g["default"] for g in hidden), f"an old link's hidden options fall back to their defaults {[(g['id'], sel[g['id']]) for g in hidden if sel[g['id']] != g['default']]}")
-    check(sel["paint"] == "sand" and sel["feature"] == "mashrabiya", "and the rest of that link's room is kept")
+    check(sel["paint"] == "cream" and sel["feature"] == "duneLines" and sel["seating"] == "compact", "and the rest of that link's room is kept: Desert Sanctuary's paint, feature wall and chair")
     status = pg.inner_text("#roomStatus")
     check(all(g["label"] in status for g in hidden), f"the page names what the link asked for that it left out ({status!r})")
     ctx.close()
@@ -1320,9 +1329,9 @@ with sync_playwright() as p:
         ({"stay": "long"}, "desert", {"wardrobeFinish": "warm"}, []),
         ({"patientType": "longstay"}, "desert", {"wardrobeFinish": "warm"}, []),
         ({"children": "yes", "stay": "long"}, "family", {"seating": "sofa", "wardrobeFinish": "warm"}, []),
-        ({"mobility": "wheelchair", "children": "yes"}, "family", {"seating": "chairs"}, ["seating"]),
-        ({"mobility": "aid", "sensory": "company"}, "family", {"seating": "chairs"}, ["seating"]),
-        ({"mobility": "assistance"}, "calm", {"seating": "chairs"}, []),
+        ({"mobility": "wheelchair", "children": "yes"}, "family", {"seating": "compact"}, ["seating"]),
+        ({"mobility": "aid", "sensory": "company"}, "family", {"seating": "compact"}, ["seating"]),
+        ({"mobility": "assistance"}, "calm", {"seating": "compact"}, []),
         ({"sensory": "quiet"}, "calm", {"tvplay": "off", "aquarium": "none", "scheme": "cove", "temperature": "k3000"}, []),
         ({"sensory": "quiet", "children": "yes"}, "family", {"tvplay": "off", "scheme": "cove", "temperature": "k3000", "seating": "sofa"}, []),
         ({"sensory": "routine"}, "calm", {"nightlight": "on"}, []),
@@ -1370,7 +1379,7 @@ with sync_playwright() as p:
           if (s.patio !== 'off') out.problems.push(`${JSON.stringify(a)}: the patio is on`);
           for (const g of ['wardrobe', 'soundSensor']) if (s[g] !== 'on') out.problems.push(`${JSON.stringify(a)}: ${g} is off`);
           for (const g of Object.values(groups).filter(g => g.hidden)) if (s[g.id] !== g.default) out.problems.push(`${JSON.stringify(a)}: ${g.id}, which isn't offered, is ${s[g.id]}`);
-          if (['aid', 'wheelchair', 'assistance'].includes(a.mobility) && s.seating !== 'chairs') out.problems.push(`${JSON.stringify(a)}: still a lot on the floor`);
+          if (['aid', 'wheelchair', 'assistance'].includes(a.mobility) && s.seating !== 'compact') out.problems.push(`${JSON.stringify(a)}: still a lot on the floor`);
           return;
         }
         const [name, values] = selects[i];
@@ -1414,7 +1423,7 @@ with sync_playwright() as p:
         pg.click("#profileForm button[type=submit]")
         pg.wait_for_function("!document.getElementById('profile').open")
         sel = pg.evaluate("window.__config.selected()")
-        check(sel["seating"] == "chairs" and sel["paint"] == "clay" and sel["playmat"] == "off", f"{room}: the form gives the room its rules say")
+        check(sel["seating"] == "compact" and sel["paint"] == "lilac" and sel["playmat"] == "off", f"{room}: the form gives the room its rules say: Family Suite, with the compact chair kept and the sofa-bed left out")
         check(pg.evaluate("window.__config.state().room") == room, f"{room}: the form doesn't change the room")
         bar = pg.inner_text("#profileBar")
         check(pg.is_visible("#profileBar") and "Sofa-bed" in bar and "hasn't been measured" in bar, f"{room}: the panel says what changed and why, including what was left out")
@@ -1520,7 +1529,7 @@ with sync_playwright() as p:
         go(pg, room)
         set_defaults(pg)
         # what the default room leaves out, so every card has its object in the room
-        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips', 'ceilingTray', 'staffPanel', 'patientWall', 'workstation', 'bedsideCabinet', 'ceilingSensors', 'cableChannels']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
+        pg.evaluate("() => { const c = window.__config; c.set('ceiling', 'sky'); c.set('aquarium', 'digital'); c.set('seating', 'compact'); c.placeInView('leafpanel'); c.placeInView('tablet'); for (const g of ['acousticPanels', 'acousticFront', 'softClose', 'dampers', 'lineClips', 'ceilingTray', 'staffPanel', 'patientWall', 'workstation', 'bedsideCabinet', 'ceilingSensors', 'cableChannels']) c.set(g, 'on'); document.getElementById('objectCard').hidden = true; }")
         views = pg.evaluate("window.__config.views()")
         missed, wrong, covered, stray = [], [], [], []
         for f in feats:
@@ -2275,7 +2284,13 @@ with sync_playwright() as p:
     FUTURE = ["ceilingTray", "staffPanel", "patientWall", "workstation", "bedsideCabinet"]
     themes = pg.evaluate("[...document.querySelectorAll('#themes button')].map(b => [b.dataset.value, b.textContent])")
     check(themes[0] == ["future", "Future ICU"], f"Future ICU is the first theme {themes[:2]}")
-    check(pg.evaluate("window.__config.currentTheme()") == "calm" and pg.evaluate("window.__config.fittings().shown") == [], "a link with no code still opens today's room, with no fitting")
+    todays = pg.evaluate("Object.fromEntries(window.__config.options().sections.flatMap(s => s.groups).map(g => [g.id, g.default]))")
+    check(pg.evaluate("window.__config.selected()") == todays and pg.evaluate("window.__config.fittings().shown") == [] and pg.evaluate("window.__config.currentTheme()") is None, "a link with no code still opens today's room, with no fitting")
+    # and every theme brings in the shared base's five fittings, Calm Clinical among them
+    pg.evaluate("window.__config.theme('calm')")
+    check(pg.evaluate("window.__config.fittings().shown") == FUTURE, "Calm Clinical has the shared base's five fittings, as every theme does")
+    pg.evaluate("document.getElementById('resetRoom').click()")
+    check(pg.evaluate("window.__config.selected()") == todays and pg.evaluate("window.__config.fittings().shown") == [], "and Reset the room is today's room again, with no fitting")
     for room in ROOMS:
         go(pg, room)
         set_defaults(pg)
@@ -2656,7 +2671,7 @@ with sync_playwright() as p:
             3: st["bed"] and not st["bs"]["open"],
             4: st["station"]["open"] and st["station"]["task"] == "dressing" and st["mode"] == "clinical",
             5: st["mode"] == "family" and not st["station"]["open"],
-            6: st["sel"]["scene"] == "forest" and st["sel"]["workstation"] == "on" and st["sel"]["floor"] == "slate" and st["sel"]["paint"] == "sky" and st["mode"] == "standard",
+            6: st["sel"]["scene"] == "forest" and st["sel"]["workstation"] == "on" and st["sel"]["floor"] == "mist" and st["sel"]["paint"] == "pearl" and st["sel"]["seating"] == "compact" and st["mode"] == "standard",
             7: True,
         }[i]
         if not ok or st["count"] != f"{i + 1} of 8":
@@ -2714,7 +2729,8 @@ with sync_playwright() as p:
     after = pg.evaluate("({ code: window.__config.code(), fp: window.__config.fingerprint() })")
     diff = [k for k in before["fp"] if before["fp"][k] != after["fp"][k] and k not in ("eye", "target", "view")]
     check(len(captions) == 7 and "not every ICU" in captions[0] and "how the room works" in captions[-1], f"Transform the ICU: seven captions, from today's room, a typical one, to how the room works {sorted(steps)} {captions[:1]} {captions[-1:]}")
-    check(shown[0].get("floor") == "sand" and shown[1].get("floor") == "slate" and shown[1].get("paint") == "sky" and shown[1].get("feature") == "ash" and shown[5].get("scene") == "forest", "it starts from today's room and adds the new one a piece at a time, shown, not chosen")
+    check(shown[0].get("floor") == "sand" and shown[0].get("seating") == "chairs" and shown[1].get("floor") == "mist" and shown[1].get("paint") == "pearl" and shown[1].get("feature") == "arcMist" and shown[4].get("seating") == "compact" and shown[5].get("scene") == "forest",
+          "it starts from today's room, recliner and all, and adds the new one a piece at a time, the compact chair with the desk: shown, not chosen")
     check(after["code"] == before["code"] and not diff, f"and when it ends the visitor's own room is back, oak floor and all {diff}")
     check(not errs, f"the presentation: no errors {errs[:3]}")
     ctx.close()

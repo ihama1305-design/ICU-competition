@@ -41,7 +41,10 @@ export const SCAN_TEXT = {
   clear: "No modelled conflict found",
   clearance: "A clearance to look at",
   overlap: "An overlap",
-  intro: "Checks each placed item against this model's own clear areas, the doors, the wardrobe's front and the route to the bed. Not hospital rules.",
+  intro: "Checks each placed item, and the room's own chair or sofa-bed, against this model's own clear areas, the doors, the wardrobe's front, the desk and the route to the bed. Not hospital rules.",
+  fixedTitle: "The room's own seating",
+  fixedClear: "It stands where the design puts it, outside this model's clear areas, door approach, storage reach and route. A model result, not a clinical or compliance finding.",
+  fixedLook: "Where it stands is part of the design, so no other spot is suggested: this one needs a designer's look.",
   move: "A nearby spot where it would be clear is marked on the floor. Drag the item there yourself.",
   nowhere: "No clear spot within a couple of metres: try another part of the room.",
 };

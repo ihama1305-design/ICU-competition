@@ -172,10 +172,10 @@ export const DEMOS = {
     label: "Transform the ICU",
     steps: [
       { say: "Today's room: a typical arrangement, not every ICU.", run: a => { a.today(); a.time("afternoon"); a.camera("across"); } },
-      { say: "Cool walls, pale timber and a seamless floor, light that follows the day, and the blinds half down.", run: a => { a.option("paint", "sky"); a.option("feature", "ash"); a.option("floor", "slate"); a.option("scheme", "circadian"); a.option("temperature", "auto"); a.option("blinds", "half"); } },
-      { say: "A lit ceiling tray over the bed.", run: a => a.option("ceilingTray", "on") },
+      { say: "Pearl walls, a sealed panel and a seamless floor, light that follows the day, and the blinds half down.", run: a => { a.option("paint", "pearl"); a.option("feature", "arcMist"); a.option("floor", "mist"); a.option("accent", "mist"); a.option("wardrobeFinish", "pearl"); a.option("wardrobeTrim", "cyan"); a.option("scheme", "circadian"); a.option("temperature", "auto"); a.option("blinds", "half"); } },
+      { say: "A lit ceiling tray over the bed, and flush channels for the cables.", run: a => { a.option("ceilingTray", "on"); a.option("cableChannels", "on"); } },
       { say: "Wall screens: one for staff at the bed head, one for the patient round the TV.", run: a => { a.option("staffPanel", "on"); a.option("patientWall", "on"); a.option("tvplay", "orientation"); } },
-      { say: "A desk for the care team, and a cabinet for the patient's own things.", run: a => { a.option("workstation", "on"); a.option("bedsideCabinet", "on"); } },
+      { say: "A desk for the care team, a cabinet for the patient's own things, and one compact chair by the window in place of the recliner.", run: a => { a.option("workstation", "on"); a.option("bedsideCabinet", "on"); a.option("seating", "compact"); } },
       { say: "A scene the patient chose, on the wall, over the bed and in the light.", run: a => a.option("scene", "forest") },
       { say: "The difference isn't only how it looks: it's how the room works. Its modes move all of this together.", run: a => a.mode("comfort") },
     ],
@@ -255,6 +255,6 @@ export const DEMOS = {
  * The card buttons a feature can name in its `actions`, besides its demo. main.js has a handler for each. "demo:<id>"
  * runs another of the feature's demos, under the label that demo gives.
  */
-export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin", "intel", "scan", "cables:apis", "day", "demo:arrivalDoctor", "demo:arrivalFamily"];
+export const ACTIONS = ["wardrobe", "wardrobe:learn", "demo:wardrobeCompartments", "demo:wardrobeCompare", "sound:call", "sound:groan", "acoustic", "bedside:board", "bedside:passport", "bedside:family", "bed:pressure", "bed:lines", "station", "twin", "intel", "scan", "circulation", "cables:apis", "day", "demo:arrivalDoctor", "demo:arrivalFamily"];
 
 export const HOLD_MS = 3200; // each step, counted from when its room has come to rest

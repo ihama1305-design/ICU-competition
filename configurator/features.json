@@ -1,5 +1,5 @@
 {
- "_": "The feature cards: one entry per feature, and one per part of a feature. main.js shows an entry in the object card when its object is clicked or it's chosen from the panel's Features list; Explore features marks the objects; scripts/14_check_features.mjs checks every entry has its fields, links to an object and names a demo or action that exists. Objects: addon:<id> (an add-on built in addons.js), part:<name> (a part of the room models), placed:<type> (an item from Place items), node:<name> (a named object, such as a wardrobe compartment, which counts only while its door is open), lights (the ceiling lights of the scheme in use), switch (the smart-glass wall switch). After a |, a condition on the room's choices: the object counts for this entry only then. The first object is where Explore's marker goes. A feature worked from a control above the room, with no object of its own, names that control's id in `control` instead. Evidence is either 'Expected, not shown.' or a line with its strength and sources from options.json (sourcesFrom: a group, or group:option). Nothing here is measured: every reading and status on a card is simulated.",
+ "_": "The feature cards: one entry per feature, and one per part of a feature. main.js shows an entry in the object card when its object is clicked or it's chosen from the panel's Features list; Explore features marks the objects; scripts/14_check_features.mjs checks every entry has its fields, links to an object and names a demo or action that exists. Objects: addon:<id> (an add-on built in addons.js), part:<name> (a part of the room models), placed:<type> (an item from Place items), node:<name> (a named object, such as a wardrobe compartment, which counts only while its door is open), lights (the ceiling lights of the scheme in use), switch (the smart-glass wall switch). After a |, a condition on the room's choices: the object counts for this entry only then. The first object is where Explore's marker goes. A feature worked from a control above the room, with no object of its own, names that control's id in `control` instead. Evidence is either 'Expected, not shown.' or a line with its strength and sources from options.json (sourcesFrom: a group, or group:option). An entry can carry `research`, shown on its card as three tabs: `features` (what it is, what changes in the model, its named states), `benefits` (for the patient and family, for staff, and for cleaning) and `evidence` with `validation`: each evidence item names a source in options.json's `research.sources` by id, or an option note's sources with `from`, its kind and what it does and doesn't support, and says what the source is used for here. Nothing here is measured: every reading and status on a card is simulated.",
  "groups": [
   {
    "id": "comfort",
@@ -98,7 +98,42 @@
     "part:cfg_curtain",
     "part:cfg_blinds"
    ],
-   "demo": "privacy"
+   "demo": "privacy",
+   "research": {
+    "features": [
+     "What it is: three ways to give privacy at the glazed front, and blinds at the window.",
+     "In the model: a curtain on a track set flush into the ceiling, parked at the end of the opening and clear of the door; or glass that switches from clear to opaque; or blinds sealed between the panes.",
+     "States: glass clear or opaque; curtain or sealed blinds at the front; window blinds up, half, down or blackout. Emergency clears the front.",
+     "Privacy is not the same as being out of staff's sight: staff can clear the glass at once."
+    ],
+    "benefits": {
+     "patient": "Dignity during care, washing and rest.",
+     "staff": "The front clears in one action to look in, and the curtain has one parked position that leaves the doorway open.",
+     "cleaning": "A flush track with nothing hanging below the ceiling, and glass or sealed blinds in place of fabric where those are chosen."
+    },
+    "evidence": [
+     {
+      "from": "front:smart",
+      "kind": "design",
+      "supports": "A hospital's own account of replacing ICU curtains with switchable glass, and makers' product pages for sealed ICU doors.",
+      "limits": "A project report and product pages, not a trial.",
+      "claim": "That a glazed front without a curtain has been built."
+     },
+     {
+      "source": "sccmDesign",
+      "claim": "Its recommendation of high patient visibility, which is why staff can clear the front."
+     },
+     {
+      "source": "cdcEnvironment",
+      "claim": "Why a washable or replaceable curtain and a flush track are drawn."
+     },
+     {
+      "source": "thisModel",
+      "claim": "Where the curtain parks, and that its track is flush."
+     }
+    ],
+    "validation": "What the glass does when power is lost, sealing in the isolation room, how a curtain is changed and washed, and sight lines from the corridor."
+   }
   },
   {
    "id": "orientation",
@@ -119,7 +154,39 @@
    "demo": "orientation",
    "actions": [
     "bedside:family"
-   ]
+   ],
+   "research": {
+    "features": [
+     "What it is: the TV as an orientation display: the day, the date, the time and three plain lines about today.",
+     "In the model: the time follows the room's clock, and the lines change with the patient's state.",
+     "States: off, on, or orientation. Family connection and the bedside screens are demonstrations beside it.",
+     "Calls and messages are simulated: nothing is sent."
+    ],
+    "benefits": {
+     "patient": "The day, the time and what happens next, in view from the bed.",
+     "staff": "One place for the day's plan, which family can read too.",
+     "cleaning": "A wall screen with nothing to handle."
+    },
+    "evidence": [
+     {
+      "source": "sccmLiberation",
+      "claim": "Family engagement and orientation as parts of care."
+     },
+     {
+      "source": "ssmcVisitors",
+      "claim": "The visiting rules any line about visits has to follow."
+     },
+     {
+      "source": "philipsCareSuite",
+      "claim": "A built example of screens for the patient in the room."
+     },
+     {
+      "source": "thisModel",
+      "claim": "What the screen shows, and that it can be read from the pillow."
+     }
+    ],
+    "validation": "What patients can read from the bed, the wording in Arabic and English, and who keeps it up to date."
+   }
   },
   {
    "id": "nature",
@@ -228,7 +295,35 @@
     "wardrobe",
     "demo:wardrobeCompartments",
     "demo:wardrobeCompare"
-   ]
+   ],
+   "research": {
+    "features": [
+     "What it is: a floor-to-ceiling wardrobe with two flush sliding doors, built in against the back wall.",
+     "In the model: compartments for clothing, daily essentials, a bag and valuables, with a light that comes on when a door opens. The desk and the bedside cabinet take the same finish.",
+     "States: closed, left side open or right side open. One side opens at a time.",
+     "Belongings are kept apart from clinical supplies, which are in the desk's two cupboards."
+    ],
+    "benefits": {
+     "patient": "Their own things in one known place, behind a door.",
+     "staff": "Personal belongings and clinical supplies are in different places, each named.",
+     "cleaning": "Flush faces up to the ceiling, with no top for dust and a recessed plinth."
+    },
+    "evidence": [
+     {
+      "source": "cdcEnvironment",
+      "claim": "Why closed, flush, wipeable faces are drawn."
+     },
+     {
+      "source": "stanfordHospital",
+      "claim": "A built example of room for family and belongings beside the bed."
+     },
+     {
+      "source": "thisModel",
+      "claim": "Its footprint, the same as the freestanding wardrobe it replaced, and the reach kept clear in front of it."
+     }
+    ],
+    "validation": "Capacity, door travel against services in the wall, cleaning inside, and whether it changes anything for staff. None of this is shown."
+   }
   },
   {
    "id": "wardrobeClothing",
@@ -408,6 +503,65 @@
    ]
   },
   {
+   "id": "compactChair",
+   "name": "Compact visitor chair",
+   "group": "family",
+   "purpose": "One compact chair for a visitor, in its own bay by the window, in place of the recliner and the visitor chair in today's room.",
+   "how": "The same chair in all four themes: only its upholstery colour changes, with Upholstery and curtain. It is 66 cm wide, 64 cm deep and 92 cm high, with the seat 46 cm up: a student's design assumptions, fitted to the floor measured in each room model. A gap between the seat and the back lets a cloth pass through. The arms have sealed caps where hands rest. A sled base on two runners reaches past the back, so the backrest stays off the wall. Its bay is marked on the floor with Equipment labels on, and the room safety scan checks it like anything else.",
+   "benefit": "A seat for family by the window and in the patient's view, with the floor beside the bed left open for care.",
+   "awake": "The patient can see a visitor by turning toward the window.",
+   "sedated": "Family can sit with the patient while staff keep both sides of the bed.",
+   "limits": "A design proposal, not an approved product. Its size, stability, loading, upholstery and cleaning agents all need a real product and an infection-control review: CDC guidance asks for care with upholstered furniture where patients are at high risk. It doesn't recline or move in this model. SSMC allows two visitors at a time in intensive care, so a second seat would be added. A chair for getting the patient out of bed is clinical equipment, and isn't drawn.",
+   "evidence": {
+    "text": "CDC's environmental guidance asks for care with upholstered furniture where patients are at high risk, which is why the chair is drawn with one coated surface, few seams and sealed arm caps. SSMC's visitor guidelines allow two visitors at a time in intensive care.",
+    "strength": "Guidance and hospital policy: neither assesses this chair",
+    "sourcesFrom": "seating:compact"
+   },
+   "objects": [
+    "addon:compactChair"
+   ],
+   "actions": [
+    "circulation",
+    "scan"
+   ],
+   "research": {
+    "features": [
+     "What it is: one armchair, the same in all four themes: 66 cm wide, 64 cm deep and 92 cm high, with the seat 46 cm up.",
+     "In the model: it takes the place of the recliner and the visitor chair, and stands in a bay by the window that is marked on the floor with Equipment labels on.",
+     "States: Family seating has three choices. Recliner and chair is today's room; Sofa-bed and Compact chair are proposals.",
+     "Colour: the upholstery follows Upholstery and curtain. The chair's shape never changes."
+    ],
+    "benefits": {
+     "patient": "A visitor sits by the window, in the patient's view from the bed.",
+     "staff": "Both sides of the bed, its foot and the route from the door are left open in this model.",
+     "cleaning": "One coated surface with rounded edges and no piping or buttons drawn, a gap between seat and back for a cloth, sealed arm caps, and a sled base that leaves the floor under it open to a mop."
+    },
+    "evidence": [
+     {
+      "source": "cdcEnvironment",
+      "claim": "Why the chair is drawn with a coated surface, few seams and sealed caps, and why its upholstery is flagged for review."
+     },
+     {
+      "source": "aheFurniture",
+      "claim": "The points a real chair would be checked against: seams, surfaces and durability."
+     },
+     {
+      "source": "ssmcVisitors",
+      "claim": "How many visitors the room seats: two at a time, with no overnight stay assumed."
+     },
+     {
+      "source": "sccmLiberation",
+      "claim": "Why family presence at the bedside is designed for at all."
+     },
+     {
+      "source": "thisModel",
+      "claim": "The chair's footprint, its bay and the result of the layout check."
+     }
+    ],
+    "validation": "A real product, its stability and loading, its upholstery against the hospital's cleaning agents, how it is moved, and whether one chair is enough: all still to be tested with staff, families and infection control."
+   }
+  },
+  {
    "id": "soundSensor",
    "name": "Sound-level sensor",
    "group": "comfort",
@@ -486,7 +640,38 @@
    "demo": "acoustic",
    "actions": [
     "acoustic"
-   ]
+   ],
+   "research": {
+    "features": [
+     "What it is: four optional fittings: wipe-clean panels, an acoustic glazed front, soft-close hardware and damping mounts.",
+     "In the model: Acoustic comfort mode draws six sound sources and an illustrative level at the pillow, with and without the fittings.",
+     "States: each fitting on or off, and the mode open or closed.",
+     "Medical alarms are never muted, lowered or delayed by anything here."
+    ],
+    "benefits": {
+     "patient": "The aim is less noise at the pillow from the corridor, doors and equipment. Here that is illustrated, not measured.",
+     "staff": "Sources of noise are named one by one, so each can be talked about.",
+     "cleaning": "Panels are drawn with a sealed, wipeable face."
+    },
+    "evidence": [
+     {
+      "from": "acousticPanels",
+      "kind": "study",
+      "supports": "Measured sound levels in five intensive care units, and the guideline's suggestion of sound-absorbing finishes.",
+      "limits": "Measured in other units, with no fitting tested: no level here is a measurement of this room.",
+      "claim": "Why noise is treated as a design matter, and why no figure is promised."
+     },
+     {
+      "source": "sccmDesign",
+      "claim": "Its suggestion of noise-reduction measures, on very low-certainty evidence."
+     },
+     {
+      "source": "thisModel",
+      "claim": "Where each fitting is drawn, clear of the vents, the lights and the bed."
+     }
+    ],
+    "validation": "A real acoustic survey, the panels' absorption and cleaning as products, and what staff and patients actually hear."
+   }
   },
   {
    "id": "acousticPanels",
@@ -612,7 +797,42 @@
    },
    "objects": [
     "addon:ceilingTray"
-   ]
+   ],
+   "research": {
+    "features": [
+     "What it is: a shallow tray over the bed with a rounded border, a continuous line of light on its inner edge and a row of small downlights by the window.",
+     "In the model: the line of light takes the colour and level of the room's lighting scheme, and follows the day under Circadian.",
+     "States: off, or over the bed. The examination light is separate, with its own switch: no mode or scene dims it.",
+     "With the printed sky on, the sky fits inside the border."
+    ],
+    "benefits": {
+     "patient": "Soft, indirect light overhead in place of a bright panel in view from the pillow, and a ceiling that changes with the time of day.",
+     "staff": "Room light and task light are separate, so the room can stay low while the examination light is on.",
+     "cleaning": "A shallow, closed border with rounded corners and no open ledge drawn."
+    },
+    "evidence": [
+     {
+      "source": "sccmDesign",
+      "claim": "Why daylight, day and night, and glare are treated as design matters."
+     },
+     {
+      "from": "scheme:circadian",
+      "kind": "study",
+      "supports": "Trials of bright or changing light in intensive care, with mixed results: one of 734 patients found bright light alone didn't lower delirium.",
+      "limits": "They test lighting regimes, not this ceiling, and they don't agree with each other.",
+      "claim": "Why no effect on sleep or delirium is claimed for the light."
+     },
+     {
+      "source": "philipsHealingRoom",
+      "claim": "A built example of a room that changes its light around the patient."
+     },
+     {
+      "source": "thisModel",
+      "claim": "Where the tray sits: clear of the ceiling lights, the pendant and the wardrobe."
+     }
+    ],
+    "validation": "Light levels at the pillow and at the bedside, glare and flicker, and whether the examination light reaches what it must. None is calculated here."
+   }
   },
   {
    "id": "staffPanel",
@@ -669,7 +889,35 @@
    "demo": "workstation",
    "actions": [
     "station"
-   ]
+   ],
+   "research": {
+    "features": [
+     "What it is: a desk against the wall by the window, with two screens, two cupboards and a lit rail.",
+     "In the model: its panel shows made-up tasks, supplies and a handover, and lights each place in the room. The standing room in front of it is one of the floor areas.",
+     "States: closed, or open on one of its views.",
+     "Every value is SIMULATED: no name, no diagnosis and no hospital system."
+    ],
+    "benefits": {
+     "patient": "Staff can chart in the room, within sight of the patient.",
+     "staff": "Information and clinical supplies in one place, outside the modelled care routes.",
+     "cleaning": "A rounded, sealed top and closed cupboards."
+    },
+    "evidence": [
+     {
+      "source": "sccmDesign",
+      "claim": "Its attention to ergonomics, and to seeing the patient from where staff work."
+     },
+     {
+      "source": "chdIcuRoom",
+      "claim": "A staff zone inside the room, as a planning precedent."
+     },
+     {
+      "source": "thisModel",
+      "claim": "Where the desk stands and the room kept clear in front of it."
+     }
+    ],
+    "validation": "Whether it saves steps or time, what the screens may show, ergonomics for different staff, and any link to hospital systems. None is shown."
+   }
   },
   {
    "id": "bedsideCabinet",
@@ -838,6 +1086,58 @@
    ]
   },
   {
+   "id": "circulation",
+   "name": "Clinical circulation",
+   "group": "workflow",
+   "purpose": "The room's circulation drawn on the floor and named in words: the areas to keep clear for care, the route from the door to the bed, the door's approach, the reach in front of storage, and the chair's bay.",
+   "how": "Turn on Equipment labels, or choose Clinical or Emergency: the areas appear on the floor, each with its own pattern and its name. They are the same areas the layout check and the room safety scan use, so the drawing and the check can't disagree. The check compares every solid thing's boxes with each area and reports in words: no modelled conflict found, a clearance to look at, or an overlap. Nothing moves: it only shows.",
+   "benefit": "Where things would get in each other's way can be seen and talked about before anything is built.",
+   "limits": "The areas are this model's own, set without a dimension from any standard: a strip either side of the bed and past its foot, a route 70 cm wide, 90 cm in front of a door and 60 cm in front of storage and the desk. A clear result means no modelled conflict found, never that a room is safe, and it isn't a compliance check. The model's own kit already stands in some areas: the ventilator and the over-bed table beside the bed.",
+   "evidence": {
+    "text": "The Society of Critical Care Medicine's ICU design guideline covers patient visibility and ergonomics for staff. No clause of it, or of Abu Dhabi's Health Facility Guidelines, is applied to this room: its areas are illustrative.",
+    "strength": "Guideline, not applied to this room",
+    "sourcesFrom": "cableChannels"
+   },
+   "objects": [],
+   "control": "clinicalToggle",
+   "actions": [
+    "circulation",
+    "scan"
+   ],
+   "research": {
+    "features": [
+     "What it is: six kinds of floor area, each with its own pattern and its name in words.",
+     "In the model: keep-clear areas beside the bed and past its foot, the route from the door, the door's approach, the reach in front of the wardrobe, the standing room at the desk, and the chair's bay.",
+     "States: off, or on with Equipment labels, Clinical or Emergency. The room safety scan reports each placed item, and the room's own seating, as no modelled conflict found, a clearance to look at, or an overlap.",
+     "Nothing moves: the drawing and the scan only show, and a person decides."
+    ],
+    "benefits": {
+     "patient": "Family seating has a marked place of its own, away from the space staff work in.",
+     "staff": "The working space round the bed and the way in from the door can be seen at a glance, and anything standing in them is named.",
+     "cleaning": "A marked bay shows where furniture goes back to once the floor is clean."
+    },
+    "evidence": [
+     {
+      "source": "sccmDesign",
+      "claim": "Why visibility and working room around the patient are drawn at all."
+     },
+     {
+      "source": "dohHfg",
+      "claim": "The local reference a real layout would be measured against. None of its dimensions is applied here."
+     },
+     {
+      "source": "chdIcuRoom",
+      "claim": "The idea of separate zones for staff, the patient and family."
+     },
+     {
+      "source": "thisModel",
+      "claim": "Every area and every result shown."
+     }
+    ],
+    "validation": "Real clearances from the guideline edition that applies, door swing and bed-transfer paths measured on site, and a walk-through with clinical staff."
+   }
+  },
+  {
    "id": "roomSafetyScan",
    "name": "Room safety scan",
    "group": "workflow",
@@ -898,7 +1198,35 @@
    ],
    "actions": [
     "cables:apis"
-   ]
+   ],
+   "research": {
+    "features": [
+     "What it is: the ceiling pendant over the bed head, carrying the monitor, the pumps and the power, data and gas outlets, with a flush staff panel on the wall behind it.",
+     "In the model: with Cable channels on, power and data run in one flush channel and medical gas in its own, and a docking spot is marked where the ventilator stands.",
+     "States: Cables and channels shows Traditional, with cables loose on the floor, or Organised.",
+     "The monitor stays the monitor: the staff panel's screens are stills marked SIMULATED."
+    ],
+    "benefits": {
+     "patient": "Cables and stands are gathered behind the bed head, out of the view from the pillow.",
+     "staff": "Each service has one labelled place, and the floor round the bed head is drawn clear of cables.",
+     "cleaning": "Flush covers in place of loose cables on the floor."
+    },
+    "evidence": [
+     {
+      "source": "sccmDesign",
+      "claim": "Its suggestion, on very low-certainty evidence, that life-support services need not come from the wall."
+     },
+     {
+      "source": "getingeModuevo",
+      "claim": "That ceiling supply units of this kind exist as products."
+     },
+     {
+      "source": "thisModel",
+      "claim": "Where the pendant, the channels and the docking spot are drawn."
+     }
+    ],
+    "validation": "Mounting and structural capacity, gas and electrical design, reach, slack and device compatibility, and how staff actually work round it."
+   }
   },
   {
    "id": "cableOverlay",

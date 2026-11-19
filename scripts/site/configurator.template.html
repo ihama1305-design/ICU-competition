@@ -75,7 +75,7 @@
   <p id="patientNote" class="mode-note" hidden></p>
   <p id="modeNote" class="mode-note" hidden></p>
   <p id="compareNote" class="mode-note" hidden>This is the room as it is today. Press "Back to your room" to see your design again.</p>
-  <p id="clinicalNote" class="mode-note" hidden>Equipment labels: labels show each piece of equipment, and shaded areas show the space to keep clear around the bed. For illustration only: not a clinical or compliance check.</p>
+  <p id="clinicalNote" class="mode-note" hidden>Equipment labels: labels show each piece of equipment. On the floor, named in words: hatched areas to keep clear around the bed, the route from the door, the door's approach, the reach in front of storage and the chair's bay. These areas are this model's own, drawn without dimensions. For illustration only: not a clinical or compliance check.</p>
   <div id="modeBanner" class="mode-banner" hidden>
     <p><strong>Emergency mode</strong> (started by staff): all lights on full, TV and screens off, glass wall clear. The patient monitor keeps working, and alarms and medical devices are not changed.</p>
     <button type="button" id="leaveEmergency">End emergency mode</button>
@@ -148,6 +148,7 @@
       <h2 id="hTheme">Theme</h2>
       <div id="themes" class="grid" role="group" aria-labelledby="hTheme"></div>
       <p id="themeNote" class="note" role="status"></p>
+      <p id="themeWaiting" class="note theme-waiting" role="status" hidden></p>
     </section>
 
     <section aria-labelledby="hTime">
@@ -213,6 +214,8 @@
       <button type="button" id="runScan" class="outline-action scan-run">Run the room safety scan</button>
       <p id="scanIntro" class="note"></p>
       <ul id="scanResults" class="scan-results" aria-live="polite"></ul>
+      <p id="scanFixedTitle" class="note scan-fixed-title" hidden></p>
+      <ul id="scanFixed" class="scan-results" aria-live="polite" hidden></ul>
       <p id="scanDetail" class="note scan-detail" role="status" hidden></p>
     </section>
 
@@ -446,6 +449,17 @@
   <dl id="objectRows" class="object-rows" hidden></dl>
   <p id="featureEvidence" class="feature-evidence" hidden></p>
   <p id="objectSources" class="object-sources" hidden></p>
+  <section id="research" class="research" aria-labelledby="researchTitle" hidden>
+    <h3 id="researchTitle" class="research-title">Research</h3>
+    <div class="research-tabs" role="tablist" aria-labelledby="researchTitle">
+      <button type="button" role="tab" id="researchTabFeatures" aria-controls="researchPanelFeatures" aria-selected="true" data-tab="features">Features</button>
+      <button type="button" role="tab" id="researchTabBenefits" aria-controls="researchPanelBenefits" aria-selected="false" tabindex="-1" data-tab="benefits">Benefits</button>
+      <button type="button" role="tab" id="researchTabEvidence" aria-controls="researchPanelEvidence" aria-selected="false" tabindex="-1" data-tab="evidence">Evidence and limits</button>
+    </div>
+    <div id="researchPanelFeatures" class="research-panel" role="tabpanel" aria-labelledby="researchTabFeatures" data-tab="features"><ul id="researchFeatures"></ul></div>
+    <div id="researchPanelBenefits" class="research-panel" role="tabpanel" aria-labelledby="researchTabBenefits" data-tab="benefits" hidden><dl id="researchBenefits" class="object-rows"></dl><p class="research-note">What the design is meant to do. None of it has been measured or shown.</p></div>
+    <div id="researchPanelEvidence" class="research-panel" role="tabpanel" aria-labelledby="researchTabEvidence" data-tab="evidence" hidden><ul id="researchEvidence" class="research-sources"></ul><p id="researchValidation" class="research-note"></p></div>
+  </section>
   <div class="object-actions">
     <button type="button" id="featureDemo" class="outline-action feature-demo" hidden>See it in action</button>
     <button type="button" id="objectAction" class="outline-action" hidden></button>

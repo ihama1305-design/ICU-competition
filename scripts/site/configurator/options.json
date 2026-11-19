@@ -154,6 +154,45 @@
         }
        ],
        "code": 9
+      },
+      {
+       "id": "pearl",
+       "label": "Pearl white",
+       "swatch": "#EDF3F6",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#EDF3F6"
+        }
+       ],
+       "code": 10
+      },
+      {
+       "id": "cream",
+       "label": "Dune cream",
+       "swatch": "#F1E7D6",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#F1E7D6"
+        }
+       ],
+       "code": 11
+      },
+      {
+       "id": "lilac",
+       "label": "Lilac white",
+       "swatch": "#EDE6EC",
+       "effects": [
+        {
+         "do": "color",
+         "material": "cfg_paint",
+         "value": "#EDE6EC"
+        }
+       ],
+       "code": 12
       }
      ],
      "code": 0
@@ -251,6 +290,57 @@
         }
        ],
        "code": 6
+      },
+      {
+       "id": "arcMist",
+       "label": "Mist panel with arc",
+       "effects": [
+        {
+         "do": "material",
+         "target": "feature",
+         "look": "arcMist"
+        }
+       ],
+       "code": 7
+      },
+      {
+       "id": "arcSage",
+       "label": "Sage panel with arc",
+       "effects": [
+        {
+         "do": "material",
+         "target": "feature",
+         "look": "arcSage"
+        }
+       ],
+       "code": 8
+      },
+      {
+       "id": "duneLines",
+       "label": "Dune lines print",
+       "effects": [
+        {
+         "do": "material",
+         "target": "feature",
+         "look": "duneLines"
+        }
+       ],
+       "note": {
+        "text": "Dune lines in sand tones, printed flat and sealed under a wipe-clean face. A flat print stands in for carved relief, which would hold dust where a cloth can't reach. The finish itself is a proposal: a real one needs its product and cleaning agents checked."
+       },
+       "code": 9
+      },
+      {
+       "id": "arcMauve",
+       "label": "Mauve panel with arc",
+       "effects": [
+        {
+         "do": "material",
+         "target": "feature",
+         "look": "arcMauve"
+        }
+       ],
+       "code": 10
       }
      ],
      "code": 1
@@ -318,6 +408,42 @@
         }
        ],
        "code": 3
+      },
+      {
+       "id": "mist",
+       "label": "Pale cool grey",
+       "effects": [
+        {
+         "do": "material",
+         "target": "floor",
+         "look": "mist"
+        }
+       ],
+       "code": 4
+      },
+      {
+       "id": "stone",
+       "label": "Warm grey",
+       "effects": [
+        {
+         "do": "material",
+         "target": "floor",
+         "look": "stone"
+        }
+       ],
+       "code": 5
+      },
+      {
+       "id": "dune",
+       "label": "Pale sand",
+       "effects": [
+        {
+         "do": "material",
+         "target": "floor",
+         "look": "dune"
+        }
+       ],
+       "code": 6
       }
      ],
      "code": 2
@@ -1185,8 +1311,18 @@
          "on": false
         },
         {
+         "do": "addon",
+         "id": "compactChair",
+         "on": false
+        },
+        {
          "do": "visible",
          "part": "cfg_kit_visitor_chair",
+         "on": true
+        },
+        {
+         "do": "visible",
+         "part": "cfg_kit_recliner",
          "on": true
         }
        ],
@@ -1202,9 +1338,19 @@
          "on": true
         },
         {
+         "do": "addon",
+         "id": "compactChair",
+         "on": false
+        },
+        {
          "do": "visible",
          "part": "cfg_kit_visitor_chair",
          "on": false
+        },
+        {
+         "do": "visible",
+         "part": "cfg_kit_recliner",
+         "on": true
         }
        ],
        "note": {
@@ -1218,6 +1364,47 @@
         "clinical": true
        },
        "code": 1
+      },
+      {
+       "id": "compact",
+       "label": "Compact chair",
+       "effects": [
+        {
+         "do": "addon",
+         "id": "sofa",
+         "on": false
+        },
+        {
+         "do": "addon",
+         "id": "compactChair",
+         "on": true
+        },
+        {
+         "do": "visible",
+         "part": "cfg_kit_visitor_chair",
+         "on": false
+        },
+        {
+         "do": "visible",
+         "part": "cfg_kit_recliner",
+         "on": false
+        }
+       ],
+       "note": {
+        "text": "One compact chair with its own bay by the window, in place of the recliner and the visitor chair, so the keep-clear areas beside the bed stay empty in this model. Its size, base and coated surface are a student's design assumptions, not an approved product. CDC guidance asks for care with upholstered furniture where patients are at high risk, so a real chair needs its product, seams and cleaning agents checked. SSMC's visitor guidelines, read on 18 November 2026, allow two visitors at a time in intensive care, each over 12: a second seat can be added from Place items.",
+        "sources": [
+         {
+          "label": "CDC, environmental infection control recommendations",
+          "url": "https://www.cdc.gov/infection-control/hcp/environmental-control/recommendations.html"
+         },
+         {
+          "label": "SSMC visitor guidelines",
+          "url": "https://ssmc.ae/patients-visitors/visitor-guidelines/"
+         }
+        ],
+        "clinical": true
+       },
+       "code": 2
       }
      ],
      "code": 17
@@ -1319,6 +1506,94 @@
         }
        ],
        "code": 3
+      },
+      {
+       "id": "mist",
+       "label": "Blue-grey",
+       "effects": [
+        {
+         "do": "color",
+         "material": "upholstery",
+         "value": "#7F98A8"
+        },
+        {
+         "do": "color",
+         "material": "curtain",
+         "value": "#C5D3DB"
+        },
+        {
+         "do": "color",
+         "material": "blanket",
+         "value": "#9CC3D5"
+        }
+       ],
+       "code": 4
+      },
+      {
+       "id": "sage",
+       "label": "Sage",
+       "effects": [
+        {
+         "do": "color",
+         "material": "upholstery",
+         "value": "#8FA389"
+        },
+        {
+         "do": "color",
+         "material": "curtain",
+         "value": "#C9D3C3"
+        },
+        {
+         "do": "color",
+         "material": "blanket",
+         "value": "#9CC3D5"
+        }
+       ],
+       "code": 5
+      },
+      {
+       "id": "dune",
+       "label": "Dune beige",
+       "effects": [
+        {
+         "do": "color",
+         "material": "upholstery",
+         "value": "#C2A781"
+        },
+        {
+         "do": "color",
+         "material": "curtain",
+         "value": "#E2D4BC"
+        },
+        {
+         "do": "color",
+         "material": "blanket",
+         "value": "#9CC3D5"
+        }
+       ],
+       "code": 6
+      },
+      {
+       "id": "mauve",
+       "label": "Soft mauve",
+       "effects": [
+        {
+         "do": "color",
+         "material": "upholstery",
+         "value": "#9C8FA6"
+        },
+        {
+         "do": "color",
+         "material": "curtain",
+         "value": "#D5CBD9"
+        },
+        {
+         "do": "color",
+         "material": "blanket",
+         "value": "#9CC3D5"
+        }
+       ],
+       "code": 7
       }
      ],
      "code": 18
@@ -1660,8 +1935,12 @@
      "options": [
       {"id":"light","label":"Light oak grain","effects":[{"do":"addonLook","id":"wardrobe","look":"oak"}],"code":0},
       {"id":"warm","label":"Warm walnut grain","effects":[{"do":"addonLook","id":"wardrobe","look":"walnut"}],"code":1},
-      {"id":"linen","label":"Textured linen","effects":[{"do":"addonLook","id":"wardrobe","look":"linen"}],"code":2}
+      {"id":"linen","label":"Textured linen","effects":[{"do":"addonLook","id":"wardrobe","look":"linen"}],"code":2},
+      {"id":"pearl","label":"Pearl matt","effects":[{"do":"addonLook","id":"wardrobe","look":"pearl"}],"code":3},
+      {"id":"stone","label":"Warm grey matt","effects":[{"do":"addonLook","id":"wardrobe","look":"stone"}],"code":4},
+      {"id":"shell","label":"Warm white matt","effects":[{"do":"addonLook","id":"wardrobe","look":"shell"}],"code":5}
      ],
+     "note": {"text":"The desk and the bedside cabinet take the same finish, so the room's storage reads as one set of joinery. A timber look is a printed, sealed face: the grain drawn here says nothing about how a real product cleans."},
      "requires": {"wardrobe":"on"},
      "code": 26
     },
@@ -1676,7 +1955,9 @@
       {"id":"teal","label":"Teal","swatch":"#4aaeb2","effects":[{"do":"color","material":"wardrobe_accent","value":"#4aaeb2"}],"code":0},
       {"id":"sand","label":"Sand","swatch":"#c6a77a","effects":[{"do":"color","material":"wardrobe_accent","value":"#c6a77a"}],"code":1},
       {"id":"clay","label":"Clay","swatch":"#b76f58","effects":[{"do":"color","material":"wardrobe_accent","value":"#b76f58"}],"code":2},
-      {"id":"sage","label":"Sage","swatch":"#829b83","effects":[{"do":"color","material":"wardrobe_accent","value":"#829b83"}],"code":3}
+      {"id":"sage","label":"Sage","swatch":"#829b83","effects":[{"do":"color","material":"wardrobe_accent","value":"#829b83"}],"code":3},
+      {"id":"mauve","label":"Soft mauve","swatch":"#ada0b6","effects":[{"do":"color","material":"wardrobe_accent","value":"#ada0b6"}],"code":4},
+      {"id":"cyan","label":"Soft cyan","swatch":"#7fcfde","effects":[{"do":"color","material":"wardrobe_accent","value":"#7fcfde"}],"code":5}
      ],
      "requires": {"wardrobe":"on"},
      "code": 27
@@ -1984,7 +2265,7 @@
    ],
    "rules": [
      { "id": "patio-by-choice", "tier": "access", "sets": { "patio": "off" }, "because": "A patio stays your own choice. Its notes cover the pressure, structure and fall-safety questions." },
-     { "id": "less-on-the-floor", "tier": "access", "when": { "mobility": ["aid", "wheelchair", "assistance"] }, "sets": { "seating": "chairs" }, "because": "The larger sofa-bed is left out, so less stands on the floor. The route through the room hasn't been measured." },
+     { "id": "less-on-the-floor", "tier": "access", "when": { "mobility": ["aid", "wheelchair", "assistance"] }, "sets": { "seating": "compact" }, "because": "The compact chair stays in its bay and the larger sofa-bed is left out, so less stands on the floor. The route through the room hasn't been measured." },
      { "id": "seat-for-visitors", "tier": "comfort", "when": [{ "children": ["yes", "sometimes"] }, { "sensory": ["company"] }], "sets": { "seating": "sofa" }, "because": "A sofa-bed seats two visitors side by side." },
      { "id": "lower-stimulation", "tier": "comfort", "when": { "sensory": ["quiet"] }, "sets": { "scheme": "cove", "temperature": "k3000", "tvplay": "off", "aquarium": "none" }, "because": "Softer, warmer light and nothing moving on a screen, for a quieter room." },
      { "id": "clear-cues", "tier": "comfort", "when": { "sensory": ["routine"] }, "sets": { "nightlight": "on" }, "because": "A low night light keeps the room easy to read after dark." },
@@ -2003,46 +2284,91 @@
      "notes": "*"
    }
  },
+ "themeBase": {
+  "_": "The clinical base all four themes share, so a theme changes how the room looks and never what stands in it: the compact chair in its bay, the lit ceiling border, the staff panel, the patient wall, the desk, the bedside cabinet, the cable channels and the wardrobe. Each theme's `sets` repeats these, so everything that reads a theme sees the whole of it; 14_check_features.mjs fails if a theme leaves one out or changes it. None of it is a default: a visit with no link, Reset the room and Before / after all show every option's default, which is today's room, and no theme is that room.",
+  "sets": {
+   "seating": "compact",
+   "ceilingTray": "on",
+   "staffPanel": "on",
+   "patientWall": "on",
+   "workstation": "on",
+   "bedsideCabinet": "on",
+   "cableChannels": "on",
+   "wardrobe": "on"
+  }
+ },
  "themes": [
   {
    "id": "future",
    "label": "Future ICU",
-   "blurb": "Cool white and soft blue with pale timber, a lit ceiling tray, screens for staff and for the patient, and a desk for the care team.",
+   "blurb": "Pearl white and cool grey with soft cyan, light that follows the day, and screens for staff and for the patient. The same clinical base as the other three.",
    "sets": {
-    "paint": "sky",
-    "feature": "ash",
-    "floor": "slate",
-    "scheme": "circadian",
-    "temperature": "auto",
-    "blinds": "half",
-    "tvplay": "orientation",
+    "seating": "compact",
     "ceilingTray": "on",
     "staffPanel": "on",
     "patientWall": "on",
     "workstation": "on",
     "bedsideCabinet": "on",
+    "cableChannels": "on",
+    "wardrobe": "on",
+    "paint": "pearl",
+    "feature": "arcMist",
+    "floor": "mist",
+    "accent": "mist",
+    "wardrobeFinish": "pearl",
+    "wardrobeTrim": "cyan",
+    "scheme": "circadian",
+    "temperature": "auto",
+    "blinds": "half",
+    "tvplay": "orientation",
     "wall": "patient",
-    "ceilingSensors": "on",
-    "cableChannels": "on"
+    "ceilingSensors": "on"
    }
   },
   {
    "id": "calm",
    "label": "Calm Clinical",
-   "blurb": "The current ICU room, tidied up and kept familiar.",
-   "sets": {}
+   "blurb": "Sage and warm grey with gentle neutral light and quiet contrast, and nothing extra. The same clinical base as the other three.",
+   "sets": {
+    "seating": "compact",
+    "ceilingTray": "on",
+    "staffPanel": "on",
+    "patientWall": "on",
+    "workstation": "on",
+    "bedsideCabinet": "on",
+    "cableChannels": "on",
+    "wardrobe": "on",
+    "paint": "cloud",
+    "feature": "arcSage",
+    "floor": "stone",
+    "accent": "sage",
+    "wardrobeFinish": "stone",
+    "wardrobeTrim": "sage",
+    "scheme": "cove",
+    "temperature": "k4000"
+   }
   },
   {
    "id": "desert",
    "label": "Desert Sanctuary",
-   "blurb": "Warm sand colours, light wood and a traditional mashrabiya wall.",
+   "blurb": "Cream, sand and pale timber with warm light and a sealed print of dune lines. The same clinical base as the other three.",
    "sets": {
-    "paint": "sand",
-    "feature": "mashrabiya",
-    "floor": "oak",
+    "seating": "compact",
+    "ceilingTray": "on",
+    "staffPanel": "on",
+    "patientWall": "on",
+    "workstation": "on",
+    "bedsideCabinet": "on",
+    "cableChannels": "on",
+    "wardrobe": "on",
+    "paint": "cream",
+    "feature": "duneLines",
+    "floor": "dune",
+    "accent": "dune",
+    "wardrobeFinish": "light",
+    "wardrobeTrim": "sand",
     "scheme": "cove",
     "temperature": "k3000",
-    "accent": "clay",
     "planting": "on",
     "reading": "on"
    }
@@ -2050,22 +2376,151 @@
   {
    "id": "family",
    "label": "Family Suite",
-   "blurb": "Made for families: a sofa-bed, a bigger TV, warm lighting and a patio.",
+   "blurb": "Warm neutrals and soft mauve, closed storage for belongings, a bigger TV and warm light. The same clinical base as the other three: a sofa-bed and a patio stay your own choices.",
    "sets": {
-    "paint": "clay",
-    "feature": "fabric",
+    "seating": "compact",
+    "ceilingTray": "on",
+    "staffPanel": "on",
+    "patientWall": "on",
+    "workstation": "on",
+    "bedsideCabinet": "on",
+    "cableChannels": "on",
+    "wardrobe": "on",
+    "paint": "lilac",
+    "feature": "arcMauve",
     "floor": "oak",
+    "accent": "mauve",
+    "wardrobeFinish": "shell",
+    "wardrobeTrim": "mauve",
     "scheme": "cove",
     "temperature": "k2700",
-    "seating": "sofa",
     "tvsize": "s65",
     "tvplay": "on",
-    "reading": "on",
-    "patio": "on",
-    "accent": "clay"
+    "reading": "on"
    }
   }
  ],
+ "research": {
+  "_": "The sources behind the Features, Benefits and Evidence tabs on a feature's card (features.json names them by id in `research.evidence`). One entry per source, so a source's address, what it can support and what it can't live in one place. `kind` is one of `kinds`, and sorts a guideline from a study, a product, a design precedent, a hospital's own policy or this project's own proposal: a product or a design precedent shows that a thing exists, never that it helps a patient. `checked` says whether the page was read for this update, and when. Nothing here is a compliance result. 14_check_features.mjs checks every entry has its fields and every card names only sources listed here.",
+  "kinds": {
+   "guideline": "Guideline",
+   "policy": "Hospital policy",
+   "study": "Empirical study",
+   "product": "Product precedent",
+   "design": "Design precedent",
+   "proposal": "Original proposal"
+  },
+  "sources": [
+   {
+    "id": "dohHfg",
+    "label": "Abu Dhabi Health Facility Guidelines",
+    "url": "https://stem.doh.gov.ae/HealthFacilityGuidelines/",
+    "kind": "guideline",
+    "supports": "The local planning and design reference a room like this would be reviewed against.",
+    "limits": "No clause is quoted or relied on here. The edition and the sections that apply still have to be checked, and nothing in this model is a compliance result.",
+    "checked": "Not reread for this update."
+   },
+   {
+    "id": "sccmDesign",
+    "label": "Society of Critical Care Medicine, Guideline on Adult ICU Design (2024)",
+    "url": "https://www.sccm.org/clinical-resources/guidelines/guidelines/guideline-on-adult-icu-design-2024",
+    "kind": "guideline",
+    "supports": "Attention to patient visibility, windows and daylight, noise, ergonomics, and life-support services that don't come from the wall.",
+    "limits": "Its recommendations rest on evidence of differing strength, much of it low certainty, and it doesn't assess this room or any one technology.",
+    "checked": "Not reread for this update: the wording follows the project's earlier reading."
+   },
+   {
+    "id": "cdcEnvironment",
+    "label": "CDC, environmental infection control recommendations",
+    "url": "https://www.cdc.gov/infection-control/hcp/environmental-control/recommendations.html",
+    "kind": "guideline",
+    "supports": "Designing for cleaning, with cautions about upholstered furniture where patients are at high risk, and about fish tanks and plants near immunosuppressed patients.",
+    "limits": "It approves no material, finish or product drawn here.",
+    "checked": "Not reread for this update: the wording follows the project's earlier reading."
+   },
+   {
+    "id": "aheFurniture",
+    "label": "AHE, health care furniture design guidelines for cleanability",
+    "url": "https://www.ahe.org/health-care-furniture-design-guidelines-cleanability",
+    "kind": "guideline",
+    "supports": "A starting point for seams, surfaces and durability in furniture that has to be cleaned.",
+    "limits": "No product is assessed against it here, and whether the document is still available wasn't checked.",
+    "checked": "Not reread for this update."
+   },
+   {
+    "id": "ssmcVisitors",
+    "label": "SSMC visitor guidelines",
+    "url": "https://ssmc.ae/patients-visitors/visitor-guidelines/",
+    "kind": "policy",
+    "supports": "Two visitors at a time in intensive care, each over 12. No outside blankets or pillows, no electrical appliances, and no flowers outside maternity. Staying overnight isn't mentioned.",
+    "limits": "A hospital's rules change, and exceptions are its own decision. The page shows no date of its own.",
+    "checked": "Read on 18 November 2026."
+   },
+   {
+    "id": "sccmLiberation",
+    "label": "Society of Critical Care Medicine, ICU Liberation",
+    "url": "https://www.sccm.org/clinical-resources/iculiberation",
+    "kind": "guideline",
+    "supports": "Family engagement as a part of intensive care.",
+    "limits": "It is about care. It says nothing about a chair, a room or a drawing.",
+    "checked": "Not reread for this update."
+   },
+   {
+    "id": "chdIcuRoom",
+    "label": "The Center for Health Design, intensive care unit room diagram",
+    "url": "https://www.healthdesign.org/tools/interactive-design-diagrams/inpatient-rooms/intensive-care-unit",
+    "kind": "design",
+    "supports": "How a single ICU room is commonly organised into zones for staff, the patient and family.",
+    "limits": "A planning precedent. It stands in for no local dimensional review.",
+    "checked": "Not reread for this update."
+   },
+   {
+    "id": "getingeModuevo",
+    "label": "Getinge, Maquet Moduevo ceiling supply units",
+    "url": "https://www.getinge.com/us/products/maquet-moduevo-intensive-care-and-recovery-solutions/",
+    "kind": "product",
+    "supports": "Ceiling-mounted units that carry power, data, gas and equipment exist as products.",
+    "limits": "It specifies nothing about this room's mounting, structure or utilities, and shows no benefit to a patient.",
+    "checked": "Not reread for this update."
+   },
+   {
+    "id": "philipsCareSuite",
+    "label": "Philips, Critical Care Experience Suite (iF Design Award entry)",
+    "url": "https://ifdesign.com/en/winner-ranking/project/critical-care-experience-suite/301026",
+    "kind": "design",
+    "supports": "A room where light, screens and surfaces are designed together has been built as a concept.",
+    "limits": "A design award entry, not evidence of any clinical result.",
+    "checked": "Not reread for this update."
+   },
+   {
+    "id": "stanfordHospital",
+    "label": "Stanford Medicine, the new Stanford Hospital",
+    "url": "https://stanmed.stanford.edu/new-stanford-hospital/",
+    "kind": "design",
+    "supports": "A hospital designed around daylight, bedside technology and space for family.",
+    "limits": "A description of one building, not a measured result and not a local standard.",
+    "checked": "Not reread for this update."
+   },
+   {
+    "id": "philipsHealingRoom",
+    "label": "Philips, Adaptive Healing Room (iF Design Award entry)",
+    "url": "https://ifdesign.com/en/winner-ranking/project/adaptive-healing-room/152492",
+    "kind": "design",
+    "supports": "A room that changes its light, sound and images around a patient has been built as a concept.",
+    "limits": "A design precedent. It validates no automated care.",
+    "checked": "Not reread for this update."
+   },
+   {
+    "id": "thisModel",
+    "label": "This project's own room model and layout check",
+    "url": "https://github.com/ihama1305-design/ICU-competition/blob/main/REPORT.md",
+    "kind": "proposal",
+    "supports": "Where each object stands in the two room models, and whether one overlaps another or a marked area.",
+    "limits": "A student's model built from drawings, with rounded dimensions and assumed heights. Its areas are illustrative: a clear result is no clinical or regulatory finding.",
+    "checked": "Run for this update, on 18 November 2026."
+   }
+  ]
+ },
  "cleanAir": {
   "_": "The wall comfort control's card: filters and UV-C in the air handling plant. A concept, with nothing drawn in the room. The rows are a copy of ventilation.clean_air in spec/icu_spec.json; 12_check_pacs_state.mjs fails if they differ. Each row's basis is in REPORT.md, under Clean air, which the card links to.",
   "titles": {"isolation": "Clean air for this isolation room · concept", "patient": "Clean air for this ICU room · concept"},

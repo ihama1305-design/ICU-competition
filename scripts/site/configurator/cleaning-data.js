@@ -14,7 +14,7 @@ export const CLEANING_STEPS = [
   { id: "ventilator", label: "Ventilator's outer surfaces", kind: "equipment", where: "ventilator" },
   { id: "pendant", label: "Pendant shelves and outlet covers", kind: "touch", where: "pendant" },
   { id: "controls", label: "Wall controls, switches and handles", kind: "touch", where: "controls" },
-  { id: "chairs", label: "Recliner and visitor chair", kind: "touch", where: "chairs" },
+  { id: "chairs", label: "Chairs and seating", kind: "touch", where: "chairs" },
   { id: "handsOut", label: "Clean your hands again", kind: "hygiene", where: "basin" },
 ];
 export const CLEANING_KINDS = { hygiene: "Hand hygiene", touch: "High-touch surface", equipment: "Equipment to clean" };

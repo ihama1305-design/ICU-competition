@@ -31,7 +31,9 @@ import { HORIZON_DEG } from "./solar.js";
 import { MAX_PRESETS, deletePreset, readPresets, savePreset } from "./presets.js";
 import { CHECK, ITEMS, MAX_PLACED, Placement, decodePlaced, encodePlaced, itemById, wallsOf } from "./placed.js";
 import { ClinicalView, keepClearAreas } from "./clinical.js";
-import { ACROSS, FITTINGS, syncFittings } from "./fittings.js";
+import { ACROSS, FIT, FITTINGS, syncFittings } from "./fittings.js";
+import { noteSeating, syncSeating } from "./chair.js";
+import { bayOutline } from "./chair-data.js";
 import { DOOR_DEPTH, ROUTES, WARDROBE_REACH, checkLayout, corridor, strip, suggestSpot } from "./layout.js";
 import { EVENTS, INTEL_TEXT, SCAN_TEXT, SENSORS } from "./intel-data.js";
 import { sensorSpots, setCoverage, setEventMark } from "./intel.js";
@@ -238,6 +240,7 @@ async function setRoom(label, { keepView = true } = {}) {
   if (state.room !== label) return; // another room was chosen while this one loaded
   room.meta.cameras.across ||= { ...ACROSS[label] }; // the view across the room, from the reference picture's angle
   stage.show(room);
+  noteSeating(room); // where the model's two chairs stand, before anything moves them: their baked shadows are there (chair.js)
   placement.show(room);
   apis.setRoom(room);
   rig.setRoom(room.meta);
@@ -251,6 +254,7 @@ async function setRoom(label, { keepView = true } = {}) {
   orientationLines();
   setDemoReadout();
   clinical.set(clinical.on, room);
+  refreshZones();
   relight();
   rig.view = null;
   rig.go(keepView ? state.view : "overview", { instant: true });
@@ -344,7 +348,7 @@ canvas.addEventListener("keydown", e => {
 // What counts as solid: the kit in the room models, the add-ons that stand in the room, and the items placed. Not the printed
 // sky, what's outside the window, or the clips on the bed's lines. Each object is the boxes of its own parts.
 const KIT = ["cfg_kit_bed", "cfg_kit_monitor", "cfg_kit_pumps", "cfg_kit_ventilator", "cfg_kit_pendant", "cfg_kit_exam_light", "cfg_kit_iv_pole", "cfg_kit_overbed_table", "cfg_kit_recliner", "cfg_kit_visitor_chair"];
-const NOT_SOLID = new Set(["sky", "palms", "planting", "patio", "ventilation", "lineClips", "cableChannels"]); // the cable channels are flush covers and a floor marking
+const NOT_SOLID = new Set(["sky", "palms", "planting", "patio", "ventilation", "lineClips", "cableChannels", "curtainTrack"]); // the cable channels are flush covers and a floor marking; the curtain's track is flush in the ceiling
 // what's meant to touch: the monitor and pumps hang on the pendant, and the overbed table reaches over the bed
 const MOUNTED = [["part:cfg_kit_monitor", "part:cfg_kit_pendant"], ["part:cfg_kit_pumps", "part:cfg_kit_pendant"], ["part:cfg_kit_overbed_table", "part:cfg_kit_bed"]];
 function layoutNow() {
@@ -362,7 +366,12 @@ function layoutInputs() {
   const solids = [];
   const add = (id, label, roots, fitting = false) => {
     const boxes = [];
-    for (const r of roots) r.traverse(n => { if (n.isMesh && shown(n) && !n.userData.screen) { const b = new THREE.Box3().setFromObject(n); if (!b.isEmpty()) boxes.push(plan(b)); } });
+    for (const r of roots) r.traverse(n => {
+      if (!n.isMesh || !shown(n) || n.userData.screen || n.userData.notSolid) return;
+      if (n.userData.layoutBoxes) { boxes.push(...n.userData.layoutBoxes); return; } // a ring or other hollow shape says what its pieces are (fittings.js)
+      const b = new THREE.Box3().setFromObject(n);
+      if (!b.isEmpty()) boxes.push(plan(b));
+    });
     if (boxes.length) solids.push({ id, label, boxes, fitting, wall: Math.min(...boxes.map(b => b[2])) >= 0.9 }); // off the floor, it takes none
   };
   for (const p of KIT) add(`part:${p}`, p, room.parts[p] || []);
@@ -378,7 +387,33 @@ function layoutInputs() {
     const b = plan(new THREE.Box3().setFromObject(w));
     areas.push({ id: "wardrobe", label: "In front of the wardrobe", kind: "wardrobe", poly: [[b[0], b[1] - WARDROBE_REACH], [b[3], b[1] - WARDROBE_REACH], [b[3], b[1]], [b[0], b[1]]] });
   }
+  const desk = room.addons?.workstation;
+  if (desk && shown(desk)) { // standing room at the desk, as deep as the wardrobe's reach, from where the fitting is set (fittings-data.js)
+    const f = FIT[room.label].desk, near = f.y + f.into * 0.52, far = near + f.into * WARDROBE_REACH;
+    areas.push({ id: "desk", label: "The standing room at the desk", kind: "desk", poly: [[f.x[0], Math.min(near, far)], [f.x[1], Math.min(near, far)], [f.x[1], Math.max(near, far)], [f.x[0], Math.max(near, far)]], within: m.walkable });
+  }
   return { solids, areas };
+}
+
+/**
+ * The floor areas Equipment labels draws (clinical.js): the layout check's own areas, so the drawing and the check can't
+ * disagree, with the route's centre line, and the chair's bay with what the check found there, in words.
+ */
+function circulationZones() {
+  const room = stage.current, { solids, areas } = layoutInputs();
+  const zones = areas.map(a => ({ id: a.id, kind: a.kind, poly: a.poly, polys: a.polys, ...(a.kind === "route" ? { line: ROUTES[room.label] } : {}) }));
+  if (room.addons?.compactChair?.visible) {
+    const mine = checkLayout({ solids, areas, mounted: MOUNTED }).filter(f => f.a === "addon:compactChair" || f.b === "addon:compactChair");
+    const found = mine.some(f => f.level === "overlap") ? SCAN_TEXT.overlap : mine.length ? SCAN_TEXT.clearance : SCAN_TEXT.clear;
+    zones.push({ id: "bay", kind: "bay", poly: bayOutline(room.label), note: found.toLowerCase() });
+  }
+  return zones;
+}
+/** Bring the floor drawing up to the room as it is now, while Equipment labels is on. */
+function refreshZones() {
+  if (!clinical.on || !stage.current) return;
+  clinical.setZones(stage.current, circulationZones());
+  invalidate();
 }
 
 // ---------------------------------------------------------------- options, from options.json
@@ -447,6 +482,8 @@ const allGroups = () => optionData.sections.flatMap(s => s.groups);
 /** What depends on more than one choice, and colours for add-ons built since they were chosen. */
 function settle() {
   syncFittings(stage.current); // the TV onto the patient wall, the sky inside the tray, the chair out of the desk's way
+  syncSeating(stage.current, setAddon); // the floor's baked shadows follow the chairs in the room; the curtain's track shows with the curtain
+  stage.refreshCeiling();
   syncPalms(stage.current, selected.palms === "on", selected.patio === "on");
   syncDampers(stage.current); // the TV's isolators follow its size
   setShade(stage.current, selected.shade);
@@ -454,6 +491,7 @@ function settle() {
     if (selected[g.id] === "custom" || optionOf(g.id, selected[g.id])?.effects.some(e => e.do === "color" || e.do === "addonLook")) runEffects(g, selected[g.id]);
   }
   syncWall(); // what the wall's screens, the ceiling and the TV show, from everything above
+  refreshZones(); // the floor areas follow what stands in the room: the desk, the wardrobe, the chair's bay
   stage.renderer.shadowMap.needsUpdate = true;
 }
 
@@ -492,7 +530,28 @@ function themeSelections(theme) {
   return Object.assign(out, theme.sets);
 }
 
+// A theme chosen while Clinical or Emergency is on waits for the mode to end. Those two modes hold the room's light, its
+// clear front and its labels for care, and a change of look mustn't end them unnoticed, as any other design change ends a
+// mode. Nothing moves and nothing is lost: the note says the theme is waiting, and it is applied as the mode ends.
+const PROTECTED_MODES = { clinical: "Clinical", emergency: "Emergency" };
+let pendingTheme = null;
+function showPendingTheme(text = "") {
+  $("themes").querySelectorAll("button").forEach(b => b.toggleAttribute("data-pending", b.dataset.value === pendingTheme));
+  $("themeWaiting").textContent = text;
+  $("themeWaiting").hidden = !text;
+}
+
 function applyTheme(id) {
+  if (PROTECTED_MODES[modes.current]) {
+    const mode = PROTECTED_MODES[modes.current], label = optionData.themes.find(t => t.id === id).label;
+    pendingTheme = id;
+    const text = `${mode} is on, so ${label} waits and is applied when the mode ends. Until then the room keeps its ${mode.toLowerCase()} light, its labels and its clear front, and nothing moves.`;
+    showPendingTheme(text);
+    say(text);
+    return;
+  }
+  pendingTheme = null;
+  showPendingTheme();
   setAcoustic(false);
   endCompare();
   if (pacs.active) pacs.exit();
@@ -685,7 +744,9 @@ function syncUi() {
   panelUi?.sync(selected, state.room);
   const theme = currentTheme();
   $("themes").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.value === theme?.id)));
-  $("themeNote").textContent = theme ? theme.blurb : "Custom design. Pick a theme to start over.";
+  // no theme: either today's room, with every choice at its default (Reset the room, an old link), or a design of the visitor's own
+  const todays = !theme && allGroups().every(g => selected[g.id] === g.default);
+  $("themeNote").textContent = theme ? theme.blurb : todays ? "Today's room: every choice at its default. Pick a theme to see the proposal." : "Custom design. Pick a theme to start over.";
   document.body.dataset.look = theme?.id || "custom"; // the panel takes the theme's colour (configurator.css)
   if (features?.on) refreshExplore(); // a choice can add, move or swap what Explore marks
   remember();
@@ -905,6 +966,8 @@ function syncModes(name) {
   syncWall();
   say(text.say);
   invalidate();
+  // a theme that waited for Clinical or Emergency to end: applied now, once this change of mode has finished
+  if (pendingTheme && !PROTECTED_MODES[name]) { const id = pendingTheme; pendingTheme = null; queueMicrotask(() => applyTheme(id)); }
 }
 /** Something is about to change the room's design: a mode would hide that, so it ends first. */
 function endMode() {
@@ -932,7 +995,7 @@ function cleaningPlace(where) {
   const basins = Object.entries(room?.parts || {}).filter(([k]) => k.startsWith("basin")).flatMap(([, v]) => v).filter(inRoom);
   return ({
     basin: basins, bed: part("cfg_kit_bed"), table: part("cfg_kit_overbed_table"), screens: [...part("cfg_kit_monitor"), ...part("cfg_kit_pumps")],
-    ventilator: part("cfg_kit_ventilator"), pendant: part("cfg_kit_pendant"), chairs: [...part("cfg_kit_recliner"), ...part("cfg_kit_visitor_chair")],
+    ventilator: part("cfg_kit_ventilator"), pendant: part("cfg_kit_pendant"), chairs: [...part("cfg_kit_recliner"), ...part("cfg_kit_visitor_chair"), ...(room?.addons?.compactChair ? [room.addons.compactChair] : []), ...(room?.addons?.sofa ? [room.addons.sofa] : [])].filter(n => { for (let o = n; o; o = o.parent) if (!o.visible) return false; return true; }),
     controls: [room?.addons?.comfortControl, room?.front?.body?.visible ? room.front.body : null].filter(Boolean),
   })[where] || [];
 }
@@ -992,10 +1055,11 @@ function setCleaning(on) {
 function syncClinical() {
   const on = clinicalByHand || clinicalByMode, was = clinical.on;
   if (stage.current) clinical.set(on, stage.current);
+  refreshZones();
   $("clinicalToggle").setAttribute("aria-pressed", String(on));
   $("clinicalNote").hidden = !on;
   invalidate();
-  if (on !== was) say(on ? `Equipment labels on: ${clinical.fixed.length} pieces of equipment labelled, with keep-clear areas around the bed.` : "Equipment labels off.");
+  if (on !== was) say(on ? `Equipment labels on: ${clinical.fixed.length} pieces of equipment labelled, with keep-clear areas around the bed, and the route, the door, the storage and the chair's bay marked on the floor.` : "Equipment labels off.");
 }
 $("clinicalToggle").addEventListener("click", () => {
   // a mode that turned it on is overruled by hand until the mode changes
@@ -1058,6 +1122,8 @@ const ACTION_HANDLERS = {
   intel: { label: () => "Open room intelligence", run: () => setIntel(true) },
   scan: { label: () => "Run the room safety scan", run: () => { closeCard(); if (isPhone()) setSheet(true); $("runScan").scrollIntoView({ block: "nearest" }); runScan(); } },
   twin: { label: () => "Open the digital twin", run: () => setTwin(true) },
+  // the circulation areas: Equipment labels on, seen from above with the ceiling off
+  circulation: { label: () => "Show the areas on the floor", run: () => { closeCard(); clinicalByHand = true; syncClinical(); tour.stop(); rig.go("dollhouse"); remember(); } },
 };
 // "demo:<id>": another of the feature's demos, such as the wardrobe's compartments, under the label that demo gives
 for (const a of ACTIONS) if (a.startsWith("demo:")) ACTION_HANDLERS[a] = { label: () => DEMOS[a.slice(5)].label, run: () => startDemo($("objectCard").dataset.feature, a.slice(5)).catch(err => window.__configErrors.push(String(err))) };
@@ -1090,6 +1156,53 @@ function sourcesOf(ref) {
   return (o ? optionOf(g, o)?.note?.sources : groupById(g)?.note?.sources) || [];
 }
 
+/**
+ * The card's Research section: three tabs for an entry that carries `research` (features.json). Features: what it is, what
+ * changes in the model, its named states. Benefits: for the patient and family, for staff, for cleaning, as intentions.
+ * Evidence and limits: each source by name, with its kind, what it supports, what it doesn't show and whether it was read
+ * for this update (options.json research.sources), the entry's own limits, and what is still to be validated.
+ */
+const RESEARCH_BENEFITS = [["patient", "Patient and family"], ["staff", "Staff"], ["cleaning", "Cleaning and upkeep"]];
+function fillResearch(f) {
+  const r = f?.research, box = $("research");
+  box.hidden = !r;
+  if (!r) return;
+  $("researchFeatures").replaceChildren(...r.features.map(t => el("li", { textContent: t })));
+  $("researchBenefits").replaceChildren(...RESEARCH_BENEFITS.filter(([k]) => r.benefits[k]).flatMap(([k, label]) => [el("dt", { textContent: label }), el("dd", { textContent: r.benefits[k] })]));
+  const kinds = optionData.research.kinds, catalogue = optionData.research.sources;
+  $("researchEvidence").replaceChildren(...r.evidence.map(e => {
+    // a source from the catalogue, or the sources an option's note already holds, with the kind and limits the entry gives
+    const src = e.source ? catalogue.find(x => x.id === e.source) : { ...e, links: sourcesOf(e.from) };
+    const li = el("li", {}), head = el("p", { className: "research-source" }, el("span", { className: "research-kind", textContent: kinds[src.kind] || src.kind }), " ");
+    if (src.url) head.append(link(src)); else src.links.forEach((s, i) => { head.append(link(s)); if (i < src.links.length - 1) head.append("; "); });
+    li.append(head, el("p", { textContent: `Used here for: ${e.claim}` }), el("p", { textContent: `Supports: ${src.supports}` }), el("p", { textContent: `Doesn't show: ${src.limits}` }));
+    if (src.checked) li.append(el("p", { className: "research-checked", textContent: src.checked }));
+    return li;
+  }), el("li", { className: "research-limits" }, el("p", { className: "research-source", textContent: "This entry's limits" }), el("p", { textContent: f.limits || "" })));
+  $("researchValidation").textContent = `Still to be validated: ${r.validation}`;
+  setResearchTab("features");
+}
+function setResearchTab(name, focus = false) {
+  for (const tab of $("research").querySelectorAll('[role="tab"]')) {
+    const on = tab.dataset.tab === name;
+    tab.setAttribute("aria-selected", String(on));
+    tab.tabIndex = on ? 0 : -1;
+    if (on && focus) tab.focus({ preventScroll: true });
+  }
+  for (const panel of $("research").querySelectorAll('[role="tabpanel"]')) panel.hidden = panel.dataset.tab !== name;
+  const card = $("objectCard");
+  if (!card.hidden) placeCard(card, cardAt.x, cardAt.y); // the card may have grown: keep it on screen
+}
+$("research").addEventListener("click", e => { const tab = e.target.closest('[role="tab"]'); if (tab) setResearchTab(tab.dataset.tab); });
+$("research").addEventListener("keydown", e => {
+  const tabs = [...$("research").querySelectorAll('[role="tab"]')], at = tabs.indexOf(document.activeElement);
+  if (at < 0) return;
+  const to = { ArrowRight: (at + 1) % tabs.length, ArrowLeft: (at + tabs.length - 1) % tabs.length, Home: 0, End: tabs.length - 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  setResearchTab(tabs[to].dataset.tab, true);
+});
+
 /** Fill the card's feature parts, or hide them for an object that isn't a feature. */
 function fillFeature(f, placed = false) {
   const facts = $("featureFacts"), how = $("featureHow");
@@ -1112,6 +1225,7 @@ function fillFeature(f, placed = false) {
     if (s.length) { ev.append(" "); s.forEach((src, i) => { ev.append(link(src)); if (i < s.length - 1) ev.append("; "); }); }
   }
   ev.hidden = !f;
+  fillResearch(f);
   const demoButton = $("featureDemo");
   demoButton.hidden = !f?.demo;
   demoButton.textContent = f?.demoLabel || "See it in action";
@@ -2299,8 +2413,23 @@ function runScan() {
   const room = stage.current, list = placement.list(state.room).filter(p => p.node);
   scanShown = true;
   clearScanMark();
-  if (!list.length) { $("scanResults").replaceChildren(el("li", { textContent: SCAN_TEXT.none })); $("scanDetail").hidden = true; say(SCAN_TEXT.none); return []; }
   const { solids, areas } = layoutInputs(), findings = checkLayout({ solids, areas, mounted: MOUNTED }), name = id => [...solids, ...areas].find(x => x.id === id)?.label || id;
+  // the room's own seating: the compact chair in its bay, or the sofa-bed. Checked the same way and listed apart from what
+  // the visitor placed. No spot is suggested: where it stands is the design's to change, not the visitor's to drag
+  scanFixedNow = FIXED_SEATS.filter(([id]) => room.addons?.[id]?.visible).map(([addon, label]) => {
+    const id = `addon:${addon}`, mine = findings.filter(f => f.a === id || f.b === id);
+    const level = mine.some(f => f.level === "overlap") ? "overlap" : mine.length ? "clearance" : null;
+    return { fixed: addon, label, level, why: mine.map(f => (f.level === "overlap" ? `overlapping ${name(f.a === id ? f.b : f.a).toLowerCase()}` : `in ${name(f.b).toLowerCase()}`)) };
+  });
+  $("scanFixed").replaceChildren(...scanFixedNow.map(r => {
+    const b = el("button", { type: "button", className: `scan-result scan-${r.level || "clear"}` },
+      el("span", { className: "scan-word", textContent: r.level ? SCAN_TEXT[r.level] : SCAN_TEXT.clear }), el("span", { textContent: ` · ${r.label}` }));
+    b.dataset.fixed = r.fixed;
+    b.addEventListener("click", () => explainScan(r));
+    return el("li", {}, b);
+  }));
+  $("scanFixed").hidden = $("scanFixedTitle").hidden = !scanFixedNow.length;
+  if (!list.length) { $("scanResults").replaceChildren(el("li", { textContent: SCAN_TEXT.none })); $("scanDetail").hidden = true; say(scanFixedNow.length ? `${SCAN_TEXT.none} ${SCAN_TEXT.fixedTitle}: ${scanFixedNow.map(r => `${r.label}, ${(r.level ? SCAN_TEXT[r.level] : SCAN_TEXT.clear).toLowerCase()}`).join("; ")}.` : SCAN_TEXT.none); return []; }
   const results = list.map(p => {
     const id = `placed:${p.uid}`, mine = findings.filter(f => f.a === id || f.b === id), item = solids.find(x => x.id === id);
     const level = mine.some(f => f.level === "overlap") ? "overlap" : mine.length ? "clearance" : null;
@@ -2321,18 +2450,20 @@ function runScan() {
   say(bad.length ? `Room safety scan: ${bad.length} of ${results.length} placed items to look at.` : `Room safety scan: ${SCAN_TEXT.clear.toLowerCase()} for ${results.length} placed item${results.length > 1 ? "s" : ""}.`);
   return results;
 }
-var scanResultsNow = [];
+var scanResultsNow = [], scanFixedNow = [];
+const FIXED_SEATS = [["compactChair", "Compact visitor chair"], ["sofa", "Sofa-bed"]]; // the seating the room's own choices put in it
 /** One result: why, the item lit, and a nearby clear spot marked on the floor. The visitor drags it there. */
 function explainScan(r) {
-  const found = placement.find(r.uid);
+  const node = r.fixed ? stage.current.addons?.[r.fixed] : placement.find(r.uid)?.entry.node;
   clearScanMark();
-  if (found?.entry.node) { // stand where the item and the spot near it can both be seen
-    highlight.show("scan", [found.entry.node]);
+  if (node) { // stand where the item and the spot near it can both be seen
+    highlight.show("scan", [node]);
     if (state.view === "dollhouse" || state.view === "patient") rig.go("overview", { instant: true });
-    const { eye, target } = framePose([found.entry.node]);
+    const { eye, target } = framePose([node]);
     rig.goTo(eye, target);
   }
   let text = r.level ? `${r.label}: ${r.why.join(", and ")}. ` : `${r.label}: ${SCAN_TEXT.clear.toLowerCase()}. `;
+  if (r.fixed) text += r.level ? SCAN_TEXT.fixedLook : SCAN_TEXT.fixedClear;
   if (r.level && r.spot) {
     const [x, y] = [r.at[0] + r.spot.dx, r.at[1] + r.spot.dy];
     scanMarker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.28, 40), new THREE.MeshBasicMaterial({ color: "#2f8f5b", transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false }));
@@ -2346,9 +2477,10 @@ function explainScan(r) {
   invalidate();
 }
 function clearScanMark() { if (scanMarker) { scanMarker.removeFromParent(); scanMarker = null; } highlight.clear("scan"); invalidate(); }
-function clearScan() { scanShown = false; scanResultsNow = []; clearScanMark(); $("scanResults").replaceChildren(); $("scanDetail").hidden = true; }
+function clearScan() { scanShown = false; scanResultsNow = []; scanFixedNow = []; clearScanMark(); $("scanResults").replaceChildren(); $("scanFixed").replaceChildren(); $("scanFixed").hidden = $("scanFixedTitle").hidden = true; $("scanDetail").hidden = true; }
 $("runScan").addEventListener("click", () => runScan());
 $("scanIntro").textContent = SCAN_TEXT.intro;
+$("scanFixedTitle").textContent = SCAN_TEXT.fixedTitle;
 
 // ---------------------------------------------------------------- equipment and cables (cables-data.js, cables.js)
 // An overlay, like a room mode: Traditional shows today's arrangement, cables loose on the floor and no channels; Organised
@@ -2905,6 +3037,8 @@ var guide = new GuidedTour({
   },
   room: label => (state.room === label && stage.current ? Promise.resolve() : setRoom(label)),
   theme: id => applyTheme(id),
+  // today's room: every choice at its default, as Reset the room and Before / after have it. No theme is today's room
+  today: () => showSelections(Object.fromEntries(allGroups().map(g => [g.id, g.default]))),
   time: stop => setTime(STOPS[stop]),
   camera: (name, instant) => { if (rig.meta.cameras[name]) rig.go(name, { instant: !!instant }); },
   mode: name => modes.set(name),
@@ -3143,7 +3277,7 @@ window.__config = {
   walkable: () => rig.meta.walkable,
   guide: () => ({ running: guide.running, at: guide.at, playing: guide.playing, still: guide.still, ended: guide.ended, title: $("guideTitle").textContent }),
   guideGo: i => guide.go(i),
-  clinical: () => ({ on: clinical.on, labels: clinical.showing(), zones: !!stage.current.clinicalZones?.visible }),
+  clinical: () => ({ on: clinical.on, labels: clinical.showing(), zones: !!stage.current.clinicalZones?.visible, areas: clinical.zonesShowing() }),
   placed: () => placement.list(state.room).map(({ type, x, y, rot }) => ({ type, x: +x.toFixed(2), y: +y.toFixed(2), rot })),
   /** Whether a wall item of this type, centred at x, y and facing `rot` degrees, would have wall behind all of it. */
   wallClear: (type, x, y, rot) => placement.onWall(stage.current, { type, rot }, x, y),
@@ -3204,6 +3338,9 @@ window.__config = {
     invalidate();
   },
   layout: () => layoutNow(),
+  memory: () => ({ ...stage.renderer.info.memory }), // geometries and textures the renderer holds: steady across theme and room changes
+  pendingTheme: () => ({ theme: pendingTheme, note: $("themeWaiting").hidden ? "" : $("themeWaiting").textContent }),
+  layoutInputs: () => layoutInputs(), // every solid's boxes and every area's outline, in plan metres: what the check above works on
   fittings: () => {
     const a = stage.current.addons || {}, chair = stage.current.root.getObjectByName("cfg_kit_visitor_chair");
     const c = chair ? new THREE.Box3().setFromObject(chair).getCenter(new THREE.Vector3()) : null;
@@ -3293,7 +3430,7 @@ window.__config = {
   arrival: () => arrival.state(stage.current),
   // the electric light's colour as drawn, in linear RGB: the fitting's own, and what it throws on the room
   lightColour: () => ({ lamp: lighting.lamp.toArray().map(v => +v.toFixed(4)), room: lighting.colour.toArray().map(v => +v.toFixed(4)) }),
-  scan: () => ({ shown: scanShown, results: scanResultsNow.map(r => ({ uid: r.uid, label: r.label, level: r.level, why: r.why, spot: r.spot })), marker: scanMarker ? [+scanMarker.position.x.toFixed(2), +(-scanMarker.position.z).toFixed(2)] : null, detail: $("scanDetail").hidden ? null : $("scanDetail").textContent }),
+  scan: () => ({ shown: scanShown, fixed: scanFixedNow.map(r => ({ fixed: r.fixed, label: r.label, level: r.level, why: r.why })), results: scanResultsNow.map(r => ({ uid: r.uid, label: r.label, level: r.level, why: r.why, spot: r.spot })), marker: scanMarker ? [+scanMarker.position.x.toFixed(2), +(-scanMarker.position.z).toFixed(2)] : null, detail: $("scanDetail").hidden ? null : $("scanDetail").textContent }),
   runScan: () => runScan().map(r => r.level),
   cables: () => { const v = stage.current.cableViews || {}, shown = Object.entries(v).find(([, g]) => g.visible); return { state: cableState, view: shown?.[0] ?? null,
     tubes: shown ? shown[1].children.filter(n => n.isMesh).map(n => n.userData.kind) : [], labels: shown ? shown[1].children.filter(n => n.isSprite).map(n => n.userData.kind) : [],
@@ -3411,6 +3548,8 @@ async function boot() {
   if (!fromLink && optionData.rooms.includes(query.get("room"))) state.room = query.get("room");
   renderPresets();
   buildPlaceItems();
+  // a visit with no link opens today's room, every choice at its default, as it always has (Hassan, 19 November 2026): the
+  // themes are the proposal, and no theme is today's room now that all four share the clinical base
   if (fromLink) {
     placement.set(fromLink.room, decodePlaced(fromLink.placed));
     Object.assign(selected, fromLink.selected);

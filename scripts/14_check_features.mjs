@@ -20,7 +20,8 @@ import { BANDS as PRESSURE_BANDS, DEFAULT_MINUTES, DEFAULT_POSITION, GRID, LINES
 import { DAY_TEXT, PHASES, QUIET, blindsAt, inQuiet, lookAt, phaseAt, words } from "./site/configurator/day-plan.js";
 import { BACKGROUND, BANDS, FITTINGS, FITTING_GROUPS, ILLUSTRATIVE, NOTIFICATIONS, SOURCES, levelAt, sourceLevel } from "./site/configurator/acoustic.js";
 import { ACROSS, FIT } from "./site/configurator/fittings-data.js";
-import { DOOR_DEPTH, ROUTES, boxesOverlap, checkLayout, corridor, inPolygon, intrusion, strip } from "./site/configurator/layout.js";
+import { CHAIR, bayOutline, chairBox, chairFootprint } from "./site/configurator/chair-data.js";
+import { DOOR_DEPTH, ROUTES, ZONE_KINDS, boxesOverlap, checkLayout, corridor, inPolygon, intrusion, strip } from "./site/configurator/layout.js";
 import { decodeSpec } from "./site/configurator/state.js";
 import {
   CARE_TEAM, DAY_PLAN, DEFAULT_WALL, EMERGENCY, EQUIPMENT, HANDS_FREE, HANDS_FREE_NOTE, OBS, OBS_NOTE, OVERVIEW, PASSPORT_SCENE, SCENES, SCENE_MS,
@@ -311,8 +312,23 @@ const [future, ...others] = options.themes;
 assert.ok(future.id === "future" && future.label === "Future ICU", "Future ICU is the first theme");
 assert.ok(FUTURE.every(id => future.sets[id] === "on"), "it turns on all five fittings");
 for (const [g, o] of Object.entries(future.sets)) assert.ok(groupById(g)?.options.some(x => x.id === o), `it sets ${g} to ${o}, which options.json offers`);
-assert.ok(!future.sets.seating, "it leaves the seating as it is: W3's sofa would stand on the IV pole");
-assert.ok(others.every(t => FUTURE.every(id => !(id in t.sets))), "the other themes leave the fittings off");
+assert.ok(options.themes.every(t => t.sets.seating !== "sofa"), "no theme puts the sofa-bed in: W3's sofa would stand on the IV pole");
+// the four themes share one clinical base (options.json themeBase): a theme changes how the room looks, never what stands in it
+const base = options.themeBase;
+assert.ok(base && Object.keys(base.sets).length >= 7 && !("start" in base), "the themes' shared base is listed, and it names no starting theme: a visit with no link opens today's room");
+assert.ok(!/startTheme|themeBase\?\.start/.test(mainSrc), "and the page doesn't put a theme on as it starts");
+for (const [g, o] of Object.entries(base.sets)) assert.ok(groupById(g)?.options.some(x => x.id === o), `the shared base sets ${g} to ${o}, which options.json offers`);
+for (const t of options.themes) {
+  for (const [g, o] of Object.entries(base.sets)) assert.equal(t.sets[g], o, `${t.label} keeps the shared base: ${g} is ${o}`);
+  for (const [g, o] of Object.entries(t.sets)) assert.ok(groupById(g)?.options.some(x => x.id === o) && !groupById(g).hidden, `${t.label} sets ${g} to ${o}, which options.json offers`);
+  assert.ok(/same clinical base/.test(t.blurb), `${t.label} says it shares the clinical base`);
+  assert.ok(!("patio" in t.sets), `${t.label} leaves the patio to the person: it is a concept with open questions`);
+}
+assert.ok(FUTURE.every(id => base.sets[id] === "on" || id === "ceilingTray") && base.sets.ceilingTray === "on", "the five fittings are part of that base");
+// what tells the themes apart is finish and light alone: each has its own paint, feature wall, floor, upholstery and joinery
+for (const g of ["paint", "feature", "floor", "accent"]) assert.equal(new Set(options.themes.map(t => t.sets[g])).size, options.themes.length, `each theme has its own ${g}`);
+// today's room is still every option's default: none of the base is a default, so Before / after and old links are unchanged
+assert.ok(groupById("seating").default === "chairs" && FUTURE.every(id => groupById(id).default === "off") && groupById("cableChannels").default === "off", "the defaults are today's room, as before");
 // old links: the view list only grows, and the reference link opens the same room with every fitting off
 assert.deepEqual(options.views.slice(0, 9), ["overview", "family", "entrance", "bed", "bed_window", "window", "dollhouse", "bathroom", "patient"], "the old views keep their places");
 assert.equal(options.views[9], "across", "the view across the room is appended");
@@ -343,6 +359,95 @@ for (const [label, f] of Object.entries(FIT)) {
   for (const [x, y] of f.tray.poly) assert.ok(x > x0 && x < x1 && y > y0 && y < y1, `${label}: the tray is inside the room's ceiling`);
   assert.ok(f.tray.downlights.every(([x, y]) => inPolygon(x, y, f.tray.poly)), `${label}: the tray's downlights are inside it`);
 }
+
+// ---------------------------------------------------------------- the compact chair (chair-data.js, chair.js) and the Research tabs
+// the choice: appended to Family seating, so old links keep their meaning; it swaps both of the model's chairs for the one chair
+const seating = groupById("seating");
+assert.deepEqual(seating.options.map(o => [o.id, o.code]), [["chairs", 0], ["sofa", 1], ["compact", 2]], "Compact chair is appended to Family seating: the old codes keep their meaning");
+const fx = id => seating.options.find(o => o.id === id).effects, has = (list, e) => list.some(x => Object.entries(e).every(([k, v]) => x[k] === v));
+assert.ok(has(fx("compact"), { do: "addon", id: "compactChair", on: true }) && has(fx("compact"), { do: "visible", part: "cfg_kit_recliner", on: false }) && has(fx("compact"), { do: "visible", part: "cfg_kit_visitor_chair", on: false }) && has(fx("compact"), { do: "addon", id: "sofa", on: false }),
+  "Compact chair shows the one chair and hides the recliner, the visitor chair and the sofa-bed: no chair is left under another");
+for (const id of ["chairs", "sofa"]) assert.ok(has(fx(id), { do: "addon", id: "compactChair", on: false }) && has(fx(id), { do: "visible", part: "cfg_kit_recliner", on: true }), `${id}: the compact chair goes and the recliner comes back`);
+assert.ok(ADDONS.has("compactChair") && ADDONS.has("curtainTrack") && byId.get("compactChair")?.objects[0] === "addon:compactChair", "the chair and the curtain's track are add-ons, and the chair has its card");
+assert.ok(/not an approved product/.test(seating.options[2].note.text) && /design assumptions/.test(seating.options[2].note.text) && seating.options[2].note.sources.length >= 2, "the choice says the chair is an assumption, not an approved product, and cites its sources");
+assert.ok(/not an approved product/.test(byId.get("compactChair").limits) && /doesn't recline or move/.test(byId.get("compactChair").limits), "the chair's card says what it isn't, and that it doesn't move");
+// a believable size: inside the range of ordinary armchairs, and the same in every theme
+assert.ok(CHAIR.width >= 0.58 && CHAIR.width <= 0.72 && CHAIR.depth >= 0.58 && CHAIR.depth <= 0.75 && CHAIR.seat >= 0.43 && CHAIR.seat <= 0.5 && CHAIR.height >= 0.8 && CHAIR.height <= 1.0 && CHAIR.arm > CHAIR.seat + 0.15,
+  `the chair is the size of an ordinary armchair, not shrunk to fit: ${JSON.stringify(CHAIR)}`);
+assert.ok(new RegExp(`${Math.round(CHAIR.width * 100)} cm wide, ${Math.round(CHAIR.depth * 100)} cm deep and ${Math.round(CHAIR.height * 100)} cm high`).test(byId.get("compactChair").how), "its card gives the same size the model draws");
+const chairSrc = read("./site/configurator/chair.js");
+assert.ok(/cloth\.name = "upholstery"/.test(chairSrc) && !/label === "W[13]"/.test(chairSrc), "one geometry for both rooms and every theme: only the upholstery's colour is a choice");
+// its bay, in both rooms: on the open floor, clear of each door's way, the route to the bed, the desk and its standing room and
+// the bedside cabinet. The keep-clear areas need the bed's own shape, and the wardrobe its own, so 08 checks those in the page
+for (const label of options.rooms) {
+  const meta = METAS[label], f = FIT[label], box = chairBox(label), bay = bayOutline(label);
+  assert.ok(chairFootprint(label).every(([x, y]) => inPolygon(x, y, meta.walkable)) && bay.every(([x, y]) => inPolygon(x, y, meta.walkable)), `${label}: the chair and its marked bay stand on the open floor`);
+  const deskNear = f.desk.y + f.desk.into * 0.52, deskFar = deskNear + f.desk.into * 0.6;
+  const areas = [
+    ...meta.wall_runs.filter(r => r.door).map((r, i) => ({ id: `door${i}`, kind: "door", poly: strip(r.a, r.b, DOOR_DEPTH), within: meta.walkable })),
+    { id: "route", kind: "route", polys: corridor(ROUTES[label]), within: meta.walkable },
+    { id: "desk", kind: "desk", poly: [[f.desk.x[0], Math.min(deskNear, deskFar)], [f.desk.x[1], Math.min(deskNear, deskFar)], [f.desk.x[1], Math.max(deskNear, deskFar)], [f.desk.x[0], Math.max(deskNear, deskFar)]], within: meta.walkable },
+  ];
+  const fixed = [{ id: "workstation", boxes: [floorBox(f.desk, 0.5, 0.77)] }, { id: "bedsideCabinet", boxes: [floorBox(f.cabinet, 0.45, 0.725)] }];
+  const chair = { id: "compactChair", boxes: [box] };
+  assert.deepEqual(checkLayout({ solids: [...fixed, chair], areas }), [], `${label}: the chair in its bay: no modelled conflict found with the doors, the route, the desk or the cabinet`);
+  // and the check does see it: the same chair pushed onto the route, then onto the desk, is found both times
+  const [rx, ry] = ROUTES[label][1], moved = to => ({ id: "compactChair", boxes: [[to[0] - 0.33, to[1] - 0.32, 0, to[0] + 0.33, to[1] + 0.32, CHAIR.height]] });
+  assert.ok(checkLayout({ solids: [...fixed, moved([rx, ry])], areas }).some(x => x.level === "clearance" && x.a === "compactChair" && x.b === "route"), `${label}: put on the route, the chair is flagged as a clearance to look at`);
+  const onDesk = [(f.desk.x[0] + f.desk.x[1]) / 2, f.desk.y + f.desk.into * 0.25];
+  assert.ok(checkLayout({ solids: [...fixed, moved(onDesk)], areas }).some(x => x.level === "overlap" && [x.a, x.b].includes("compactChair") && [x.a, x.b].includes("workstation")), `${label}: put on the desk, it is flagged as an overlap`);
+  assert.equal(box[5], CHAIR.height, `${label}: the footprint box is the chair's full height`);
+}
+// the scan and the floor drawing use the layout check's own areas and words
+assert.ok(/layoutInputs\(\)/.test(mainSrc.slice(mainSrc.indexOf("function circulationZones"), mainSrc.indexOf("function refreshZones"))), "the floor drawing takes its areas from the layout check, so the two can't disagree");
+assert.ok(/FIXED_SEATS = \[\["compactChair"/.test(mainSrc) && /n\.userData\.notSolid/.test(mainSrc), "the scan covers the room's own seating, and a drawn shadow isn't counted as solid");
+assert.ok(!/\b(safe|compliant|complies|certified|approved)\b/i.test(JSON.stringify([SCAN_TEXT.fixedClear, SCAN_TEXT.fixedLook, SCAN_TEXT.fixedTitle]).replace("not a clinical or compliance finding", "")), "the scan's words for the room's own seating claim nothing");
+assert.deepEqual(Object.keys(ZONE_KINDS), ["keep-clear", "route", "door", "wardrobe", "desk", "bay"], "six kinds of floor area, each named");
+assert.ok(new Set(Object.values(ZONE_KINDS).map(k => k.label)).size === 6 && Object.values(ZONE_KINDS).every(k => ["hatch", "flow", "dash", "solid"].includes(k.pattern)), "each kind has its own name in words and a pattern, so none is told apart by colour alone");
+
+// the Research tabs: Features, Benefits, and Evidence and limits, on the cards the brief names
+const R = options.research, KINDS = Object.keys(R.kinds), sourceIds = new Set();
+assert.deepEqual(KINDS, ["guideline", "policy", "study", "product", "design", "proposal"], "a source is a guideline, a hospital's policy, a study, a product, a design precedent or this project's own proposal");
+for (const x of R.sources) {
+  assert.ok(x.id && !sourceIds.has(x.id), `source ${x.id}: its id is its own`);
+  sourceIds.add(x.id);
+  for (const k of ["label", "supports", "limits", "checked"]) assert.ok(typeof x[k] === "string" && x[k].trim(), `source ${x.id} has its ${k}`);
+  assert.ok(/^https:\/\//.test(x.url) && KINDS.includes(x.kind), `source ${x.id} has an address and a kind`);
+  assert.ok(/^(Read on \d+ \w+ \d{4}\.|Run for this update, on \d+ \w+ \d{4}\.|Not reread for this update)/.test(x.checked), `source ${x.id} says whether it was read for this update: "${x.checked}"`);
+  // a product or a design precedent shows a thing exists, and says it shows no more
+  if (["product", "design"].includes(x.kind)) assert.ok(/\bnot\b|\bno\b|nothing/i.test(x.limits), `source ${x.id}: a ${x.kind} precedent says what it doesn't show`);
+}
+const CLAIMS = /\b(compliant|complies|certified|clinically safe|approved by|meets the standard)\b/i;
+const RESEARCHED = ["compactChair", "circulation", "ceilingTray", "ceilingPendant", "wardrobe", "privacy", "acousticComfort", "workstation", "orientation"];
+for (const id of RESEARCHED) assert.ok(byId.get(id)?.research, `${id}: its card has the Research tabs`);
+let researched = 0, cited = new Set();
+for (const f of data.features.filter(x => x.research)) {
+  const r = f.research, who = `${f.id}'s research`;
+  researched += 1;
+  assert.ok(Array.isArray(r.features) && r.features.length >= 3 && r.features.every(t => typeof t === "string" && t.trim()), `${who} lists its features`);
+  assert.ok(/^What it is:/.test(r.features[0]) && r.features.some(t => /^In the model:/.test(t)) && r.features.some(t => /^States:/.test(t)), `${who}: what it is, what changes in the model, and its named states`);
+  for (const k of ["patient", "staff", "cleaning"]) assert.ok(typeof r.benefits?.[k] === "string" && r.benefits[k].trim(), `${who}: a benefit for ${k}`);
+  for (const t of [...r.features, ...Object.values(r.benefits)]) {
+    assert.ok(!OUTCOME.test(t), `${who} makes no outcome claim: "${OUTCOME.exec(t)?.[0]}" in "${t}"`);
+    assert.ok(!CLAIMS.test(t) && !/\d\s*%/.test(t), `${who} claims no approval and gives no percentage: "${t}"`);
+  }
+  assert.ok(Array.isArray(r.evidence) && r.evidence.length >= 2, `${who} names its sources`);
+  for (const e of r.evidence) {
+    assert.ok(typeof e.claim === "string" && e.claim.trim(), `${who}: each source says what it is used for here`);
+    if (e.source) { assert.ok(sourceIds.has(e.source), `${who}: ${e.source} is in options.json's research sources`); cited.add(e.source); }
+    else {
+      assert.ok(e.from && sourcesOf(e.from).length, `${who}: ${e.from} is an option note with sources`);
+      assert.ok(KINDS.includes(e.kind) && typeof e.supports === "string" && e.supports.trim() && typeof e.limits === "string" && e.limits.trim(), `${who}: a source taken from a note gives its kind, what it supports and what it doesn't show`);
+    }
+  }
+  assert.ok(r.evidence.some(e => e.source === "thisModel"), `${who} says which part is this project's own model`);
+  assert.ok(typeof r.validation === "string" && r.validation.trim() && !CLAIMS.test(r.validation), `${who} says what is still to be validated`);
+}
+assert.deepEqual([...sourceIds].filter(id => !cited.has(id)), [], "every source in the catalogue is used by a card");
+const template = read("./site/configurator.template.html");
+assert.ok(/id="researchTabFeatures"[^>]*>Features</.test(template) && /id="researchTabBenefits"[^>]*>Benefits</.test(template) && /id="researchTabEvidence"[^>]*>Evidence and limits</.test(template) && (template.match(/role="tabpanel"/g) || []).length === 3, "the card has the three tabs, each with its panel");
+assert.ok(/None of it has been measured or shown/.test(template), "the Benefits tab says they are intentions");
+console.log(`PASS the compact chair and the Research tabs: one chair for both rooms and every theme, in a bay clear of the doors, the route, the desk and the cabinet, and found by the check when it's moved onto them; four themes on one shared base; ${researched} cards with Features, Benefits, and Evidence and limits, citing ${cited.size} sources of ${KINDS.length} kinds`);
 
 // ---------------------------------------------------------------- the smart clinical wall, Transform my environment and the clinician workstation (wall-data.js, wall.js, station.js)
 const wallSection = options.sections.find(x => x.id === "smartWall");
@@ -528,7 +633,7 @@ assert.equal(suggestSpot({ item: { id: "placed:3", boxes: [[0.1, 0.1, 0, 0.9, 0.
 
 // ---------------------------------------------------------------- equipment and cables (cables-data.js, cables.js)
 const cableGroup = groupById("cableChannels");
-assert.ok(cableGroup?.code === 46 && cableGroup.default === "off" && ADDONS.has("cableChannels") && future.sets.cableChannels === "on" && others.every(t => !("cableChannels" in t.sets)), "the cable channels are code 46, off by default, on in Future ICU only");
+assert.ok(cableGroup?.code === 46 && cableGroup.default === "off" && ADDONS.has("cableChannels") && options.themes.every(t => t.sets.cableChannels === "on") && options.themeBase.sets.cableChannels === "on", "the cable channels are code 46, off by default, and part of the base all four themes share");
 assert.equal(decodeSpec(options, "#c=10030010002000000000000000000000000100").selected.cableChannels, "off", "the reference link opens with no channels");
 assert.deepEqual(CABLE_KINDS.map(k => k.id), ["power", "data", "gas", "patient"], "power, data, medical gas and the patient's lines");
 assert.ok(CABLE_KINDS.every(k => k.label && /^#[0-9a-f]{6}$/i.test(k.colour)) && new Set(CABLE_KINDS.map(k => k.colour)).size === CABLE_KINDS.length && new Set(CABLE_KINDS.map(k => k.label)).size === CABLE_KINDS.length, "each kind has its own colour and its own label: colour is never the only clue");
