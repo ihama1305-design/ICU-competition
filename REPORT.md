@@ -507,6 +507,18 @@ The initial download is about 2.3 MB. The page draws only when something changes
 
 **These are a best case, not a promise.** A typical integrated GPU will be several times slower, and no phone GPU was measured. So the page protects itself: if frames stay slower than about 30 a second while the view moves, it lowers the resolution step by step, then drops the bloom. Phones and small screens start in the low-power mode, with no bloom or glass transmission and fewer lights.
 
+**Loading on everyday devices (19 November 2026).** Measured cold, with Lighthouse's two profiles emulated in Chromium: a mid-range phone on 4G (390 × 844 at 3x, touch, 150 ms per round trip, 1.6 Mbit/s, the processor slowed four times) and a slow laptop (1366 × 768, 40 ms, 10 Mbit/s, slowed twice). Median of five loads each, on the same local server compressing as GitHub Pages does.
+
+| | Phone: ready | Phone: first paint | Laptop: ready | Downloaded |
+|---|---|---|---|---|
+| Before | 6.84 s | 0.59 s | 1.63 s | 1,012 KB |
+| After | 5.75 s | 0.78 s | 1.19 s | 943 KB |
+
+- **Why it was slow:** on a phone's connection the room downloaded in a chain: the page, then its 57 scripts, then options.json, then the room's data, then the 256 KB model, then its shadow maps. Each link waited for the one before.
+- **What changed:** the page's head now starts what it always needs, alongside the scripts: Three.js's minified build (the same release, 68 KB less), options.json and features.json, and for a link with no room or design in it, W1's model and shadow maps. Those go at low priority behind the styles, so "Loading the room" still shows early; it shows 0.2 s later than before, inside the 1.8 s that counts as good. A link that names W3 or carries a design loads as before, so a phone isn't sent a room it won't show.
+- **Small and sideways phones:** under 360 px wide or 500 px tall, the room modes and the patient and explore buttons wrapped into five or six rows and covered half the room. They are now one row each that scrolls sideways, with Emergency and "Medical alarms always stay on" on a row of their own that never scrolls away. A 390 px phone, tablets and laptops are unchanged.
+- **Still the largest costs:** the model (256 KB), Three.js (about 320 KB with its add-ons) and the page's own scripts (about 285 KB). Making the model smaller needs a change to the Blender export, and loading features only when they are opened needs the scripts reorganised; neither was done before the deadline.
+
 Each lighting scheme only turns on the lights it uses. With all 11 kept on at zero brightness, the 2x case took 43 ms against 22 ms, on the page's own timer. The price is a short recompile the first time a scheme is chosen, typically a fraction of a second.
 
 ### Checks
@@ -519,7 +531,7 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 | Check | What it covers | How |
 |---|---|---|
-| `08_check_configurator.py` | The configurator: load and download budget, every view and route, every option in both rooms (it fails if an option leaves the picture unchanged), themes, old links opening the same room, every feature card by click and by keyboard, every demo, both tours, every mode and panel, the layout check, and no page errors. Accessibility with axe-core 4.10.2 on the panels | Chromium's software renderer, at 1366 × 820 and, with touch emulated, at 390 px wide. 970 checks passed, none failed, on 19 November 2026, after the room upgrade, with a link with no code opening today's room |
+| `08_check_configurator.py` | The configurator: load and download budget, every view and route, every option in both rooms (it fails if an option leaves the picture unchanged), themes, old links opening the same room, every feature card by click and by keyboard, every demo, both tours, every mode and panel, the layout check, and no page errors. Accessibility with axe-core 4.10.2 on the panels | Chromium's software renderer, at 1366 × 820 and, with touch emulated, at 390 px wide. 971 checks passed, none failed, on 19 November 2026, after the room upgrade and the loading and small-phone changes for everyday devices |
 | `11_check_apis.mjs`, `13_check_pacs.mjs` | APIS and PACS in both rooms: their panels, the room's response, Escape, and restoring the room | Chromium, with screenshots for review |
 | `12_check_pacs_state.mjs` | PACS's approval rules, the vocal-distress cue's rules, and both tours' steps and words | Node, no browser |
 | `14_check_features.mjs` | The feature registry, the mode table and its levels, the light's order, and the words: no outcome claim on a card or a demo's caption, no AI claimed for room intelligence, and no reading where nothing is measured (the pressure map, the lines, the wall's stills and the light plan) | Node, no browser |
@@ -529,8 +541,10 @@ Each lighting scheme only turns on the lights it uses. With all 11 kept on at ze
 
 Since 14 November, every change to how the room looks was also approved by Hassan from before-and-after pictures before it was merged.
 
+**Safari's engine and common screen sizes (19 November 2026).** The home page and the configurator were loaded in Playwright's Chromium and WebKit, the engine Safari is built on, at 320 × 568, 360 × 800, 390 × 844, 844 × 390, 768 × 1024 and 1024 × 768 with touch, and at 1366 × 768 and 1920 × 1080: no page errors, no console errors, no sideways scrolling, and the 3D room came up every time. Touch swipes on the one-line control rows, tapping a mode there, and Tab through them were checked at 320 × 568 and 667 × 375.
+
 **What wasn't tested.**
-- **Safari and Firefox:** never. Everything ran in Chromium.
+- **Safari itself and Firefox:** WebKit in Playwright is Safari's engine, not Safari on an iPhone or a Mac, with its memory limits. Firefox never ran.
 - **Real phones and tablets:** never. Phone layouts and touch were emulated in Chromium at 390 px; dragging items by touch most needs a real device. [`docs/real-device-checklist.md`](docs/real-device-checklist.md) is the list to work through.
 - **Other GPUs:** frame times were measured only on the M5. The software renderer shows the page is correct, not that it's fast on a slow machine.
 - **Screen readers:** axe checks the markup, and every panel is tested by keyboard, but no test with a screen reader is recorded.
@@ -542,7 +556,7 @@ Since 14 November, every change to how the room looks was also approved by Hassa
 - **The furniture is low-poly.** It comes from the as-built kit, and it looks blocky next to a car configurator's scanned models.
 - **The toilet is empty.** In the dollhouse view its ceiling stays on for that reason.
 - **W1's bathroom fixtures aren't in W1's toilet.** The fixtures and the Bathroom view stand in a solid wall block in the corner of the ante room, around (17.98, 27.46), and the view works only because walls aren't drawn from behind. Moving them was left for later. The record drawing puts the toilet's WC in its north-east corner, the basin in the south-west alcove and a shower in the south-east alcove.
-- **Not tested in Safari, Firefox or on real phones.** See [What was tested, and what wasn't](#what-was-tested-and-what-wasnt).
+- **Not tested in Safari itself, Firefox or on real phones;** only in WebKit, Safari's engine. See [What was tested, and what wasn't](#what-was-tested-and-what-wasnt).
 
 ## Rebuild and edit
 

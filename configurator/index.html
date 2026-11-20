@@ -9,10 +9,47 @@
 <meta name="theme-color" content="#e4eef0">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="configurator.css">
 <link rel="stylesheet" href="apis.css">
 <link rel="stylesheet" href="pacs.css">
+<!-- The styles come first, so "Loading the room" shows as soon as they arrive; everything below waits its turn behind them.
+     Before anything that loads a module: a browser ignores an import map that comes after a module load has started.
+     The minified build is the same release as the full one, a third smaller to download. -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<!-- On a phone's connection every round trip costs about 150 ms, and the room used to download in a chain: the page, then
+     its scripts, then options.json, then the room's data, then the model, then its shadow maps. These start the files the
+     page always needs now, alongside the scripts. -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js">
+<link rel="modulepreload" href="main.js">
+<link rel="preload" href="options.json" as="fetch" crossorigin>
+<link rel="preload" href="features.json" as="fetch" crossorigin>
+<script>
+  // A link with no room in it opens W1 (main.js, state.room), so its model can start now too. A link that names a room or
+  // carries a design (#...) may open W3: it loads as before rather than spend a phone's data on a room it won't show. A
+  // browser without import maps can't draw the room at all (see the end of the page), so it isn't sent the model either.
+  // The file names are W1's, from assets/model/room_w1.json: if they change there, change them here, or check 08 fails on
+  // the missing file.
+  (function () {
+    var S = window.HTMLScriptElement;
+    if (!(S && S.supports && S.supports("importmap")) || location.hash || /[?&]room=(?!W1(&|$))/.test(location.search)) return;
+    var M = "../assets/model/";
+    [["room_w1.json", "fetch"], ["room_w1.glb.gz", "fetch"],
+     ["room_w1_ao_walls.webp", "image"], ["room_w1_ao_floor.webp", "image"], ["room_w1_ao_ceiling.webp", "image"]].forEach(function (f) {
+      var l = document.createElement("link");
+      l.rel = "preload"; l.href = M + f[0]; l.as = f[1]; l.crossOrigin = "anonymous"; // as fetch() and Three.js ask for them
+      l.setAttribute("fetchpriority", "low"); // after the styles, so "Loading the room" still shows at once
+      document.head.appendChild(l);
+    });
+  })();
+</script>
 </head>
 <body>
 <canvas id="c" class="pending" tabindex="0" aria-label="3D view of the room. Drag or use the arrow keys to look around."></canvas>
@@ -536,12 +573,6 @@
   </div>
 </dialog>
 
-<script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-} }
-</script>
 <script>
   // main.js can't draw anything if this browser lacks WebGL 2 or import maps, or if a module can't be fetched
   // (Three.js comes from a CDN). Each case gets its own message, so the page never says "Loading" for ever.

@@ -31,6 +31,7 @@ Note: Do the captions fit, and can you read them? Does the 3D stutter while it m
 4. Drag **Biophilic wall panel** from Place items onto a wall. Tap the panel, then the CDC link on its card.
 5. Tap the wardrobe, then **Open cabinet**.
 6. Under Time of day, tap **Light across 24 hours** and drag the hour along the timeline with a finger, then close it.
+7. Phones only: turn the phone sideways. The room modes should be one row; if the last ones are cut off, swipe the row sideways. Tap **Cleaning**, then **As set**. **Emergency** and "Medical alarms always stay on" should stay in view throughout. Turn it back upright.
 
 Note: Smooth, OK or stuttery? Is anything cut off, or too small to tap?
 
